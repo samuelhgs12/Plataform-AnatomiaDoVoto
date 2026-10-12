@@ -1,0 +1,22 @@
+# Desenvolvimento com contêineres (opcional): docker compose up --build
+# Precisa de MOTHERDUCK_TOKEN no ambiente (DATABASE padrão: md:bdr).
+services:
+  api:
+    build: ./api
+    environment:
+      DATABASE: ${DATABASE:-md:bdr}
+      MOTHERDUCK_TOKEN: ${MOTHERDUCK_TOKEN:-}
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+  web:
+    build:
+      context: ./web
+      args:
+        API_URL: http://api:8000
+    environment:
+      API_URL: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
