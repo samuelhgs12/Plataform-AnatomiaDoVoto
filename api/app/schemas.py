@@ -1,0 +1,137 @@
+"""Modelos de resposta. SÓ o que está aqui sai pela API (a regra de privacidade é esta lista).
+
+Nunca inclua título eleitoral, CPF, data de nascimento ou documentos de doadores.
+"""
+from pydantic import BaseModel
+
+
+class Cargo(BaseModel):
+    id_cargo: int
+    nome: str
+    unidade: str
+    sistema: str
+    eh_titular: bool
+
+
+class Meta(BaseModel):
+    cargos: list[Cargo]
+    anos: list[int]
+    ufs: list[str]
+
+
+class CandidatoBusca(BaseModel):
+    id_candidato: int
+    nome_civil: str | None
+    nome_urna: str | None
+    uf: str | None
+    ultimo_ano: int
+    partido: str | None
+    ultimo_cargo: str
+    ultimo_eleito: bool
+
+
+class CandidaturaItem(BaseModel):
+    id_candidatura: int
+    id_candidato: int | None
+    nome_urna: str | None
+    numero_urna: str | None
+    uf: str | None
+    ano: int
+    partido: str | None
+    cargo: str
+    resultado: str
+    eleito: bool
+    votos: int
+
+
+class Listagem(BaseModel):
+    total: int
+    pagina: int
+    tamanho: int
+    itens: list[CandidaturaItem]
+
+
+class CarreiraItem(BaseModel):
+    id_candidatura: int
+    ano: int
+    cargo: str
+    id_cargo: int
+    nivel: int
+    eh_titular: bool
+    uf: str | None
+    municipio: str | None
+    partido: str | None
+    nome_urna: str | None
+    numero_urna: str | None
+    tipo_eleicao: str
+    resultado: str
+    eleito: bool
+    disputou: bool
+    votos_1t: int
+
+
+class Troca(BaseModel):
+    ano: int
+    de: str
+    para: str
+
+
+class Resumo(BaseModel):
+    eleicoes_disputadas: int
+    vitorias: int
+    partidos: list[str]
+    primeiro_ano: int | None
+    ultimo_ano: int | None
+
+
+class Pessoa(BaseModel):
+    id_candidato: int
+    nome_civil: str | None
+    genero: str | None
+    ocupacao: str | None
+
+
+class Perfil(BaseModel):
+    candidato: Pessoa
+    resumo: Resumo
+    carreira: list[CarreiraItem]
+    trocas: list[Troca]
+
+
+class CategoriaGasto(BaseModel):
+    categoria: str
+    publicidade: bool
+    valor: float
+    pct: float
+    mediana_cargo: float | None = None     # mediana de quem gastou nessa categoria (mesmo cargo, ano e UF)
+
+
+class Despesas(BaseModel):
+    id_candidatura: int
+    ano: int
+    cargo: str
+    uf: str | None
+    total: float
+    propaganda: float
+    pct_propaganda: float
+    categorias: list[CategoriaGasto]
+    n_comparaveis: int
+
+
+class Palavra(BaseModel):
+    termo: str
+    freq: int
+
+
+class Receitas(BaseModel):
+    id_candidatura: int
+    publica: float
+    privada: float
+    total: float
+    pct_publica: float | None
+    mediana_pct_publica_cargo: float | None = None
+
+
+class Saude(BaseModel):
+    status: str
+    db: str

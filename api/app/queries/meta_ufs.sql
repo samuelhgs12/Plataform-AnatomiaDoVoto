@@ -1,0 +1,1 @@
+SELECT DISTINCT uf FROM candidatura WHERE uf IS NOT NULL AND uf <> 'BR' ORDER BY uf
