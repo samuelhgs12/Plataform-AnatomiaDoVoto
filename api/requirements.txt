@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+# Mesma versão usada no projeto de carga: o formato do arquivo .duckdb e o MotherDuck exigem versões compatíveis.
+duckdb==1.5.6
+pydantic-settings>=2.2
+cachetools>=5.3
