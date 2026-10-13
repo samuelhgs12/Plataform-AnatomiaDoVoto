@@ -1,7 +1,11 @@
 import type { CarreiraItem } from "@/lib/types";
 import { corPartido, ROTULO_RESULTADO, inteiro } from "@/lib/format";
 
-const NIVEIS: [number, string][] = [[6, "Presidente"], [5, "Gov. / Senador"], [4, "Dep. federal"], [3, "Dep. estadual"], [2, "Prefeito"], [1, "Vereador"]];
+const NIVEIS: [number, string][] = [[7, "Presidente"], [6, "Governador"], [5, "Senador"], [4, "Dep. federal"], [3, "Dep. estadual"], [2, "Prefeito"], [1, "Vereador"]];
+const TOPO = NIVEIS[0][0];
+// nível pelo id_cargo (vices e suplentes no nível do titular). É a mesma escala de NIVEL_CARGO em
+// api/app/routers/util.py, mas calculada aqui para o gráfico não depender de respostas antigas em cache.
+const NIVEL_CARGO: Record<number, number> = { 13: 1, 11: 2, 12: 2, 7: 3, 8: 3, 6: 4, 5: 5, 9: 5, 10: 5, 3: 6, 4: 6, 1: 7, 2: 7 };
 
 /**
  * Linha do tempo da carreira (pergunta 10): anos no eixo X, nível do cargo no eixo Y.
@@ -9,11 +13,11 @@ const NIVEIS: [number, string][] = [[6, "Presidente"], [5, "Gov. / Senador"], [4
  * Se quiser interatividade (zoom, tooltips ricos), troque por Observable Plot ou ECharts.
  */
 export function Timeline({ carreira, nome }: { carreira: CarreiraItem[]; nome: string }) {
-  const W = 760, H = 330, L = 104, R = 20, T = 24, B = 34, pw = W - L - R, ph = H - T - B;
+  const W = 760, H = 370, L = 104, R = 20, T = 24, B = 34, pw = W - L - R, ph = H - T - B;
   const a0 = 1998, a1 = 2024;
   const X = (ano: number) => L + ((ano - a0) / (a1 - a0)) * pw;
-  const Y = (nivel: number) => T + ((6 - nivel) / 5) * ph;
-  const pts = [...carreira].sort((a, b) => a.ano - b.ano);
+  const Y = (nivel: number) => T + ((TOPO - nivel) / (TOPO - 1)) * ph;
+  const pts = [...carreira].sort((a, b) => a.ano - b.ano).map((p) => ({ ...p, nivel: NIVEL_CARGO[p.id_cargo] ?? p.nivel }));
   const anosEixo = Array.from({ length: (a1 - a0) / 2 + 1 }, (_, i) => a0 + i * 2);
   const descricao = `Linha do tempo de ${nome}: ${pts.map((p) => `${p.ano} ${p.cargo} (${p.eleito ? "eleito" : "não eleito"})`).join("; ")}.`;
 
@@ -36,7 +40,7 @@ export function Timeline({ carreira, nome }: { carreira: CarreiraItem[]; nome: s
               <circle cx={cx} cy={cy} r="6.5" fill={p.eleito ? "var(--ok)" : "var(--panel)"} stroke={p.eleito ? "var(--ok)" : "var(--fg)"} strokeWidth="1.8">
                 <title>{`${p.ano} · ${p.cargo} · ${p.partido ?? "?"} · ${ROTULO_RESULTADO[p.resultado] ?? p.resultado}${p.votos_1t ? ` · ${inteiro(p.votos_1t)} votos` : ""}`}</title>
               </circle>
-              <text x={cx} y={p.nivel === 6 ? cy + 20 : cy - 11} textAnchor={cx > W - 70 ? "end" : cx < L + 30 ? "start" : "middle"} fontSize="9" style={{ fill: cor }}>{p.partido}</text>
+              <text x={cx} y={p.nivel === TOPO ? cy + 20 : cy - 11} textAnchor={cx > W - 70 ? "end" : cx < L + 30 ? "start" : "middle"} fontSize="9" style={{ fill: cor }}>{p.partido}</text>
             </g>
           );
         })}
