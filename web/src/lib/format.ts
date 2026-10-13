@@ -3,6 +3,11 @@ const nf = new Intl.NumberFormat("pt-BR");
 export const inteiro = (n: number) => nf.format(Math.round(n));
 export const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 export const pct = (v: number, casas = 1) => `${(v * 100).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
+/** Diferença entre duas proporções, em pontos percentuais e com sinal (0,012 → "+1,2 p.p."). */
+export const pp = (v: number, casas = 1) => {
+  const n = Math.abs(v * 100).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+  return `${v > 0 ? "+" : v < 0 ? "−" : ""}${n} p.p.`;
+};
 
 export function compacto(n: number): string {
   if (n >= 1e6) return `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
