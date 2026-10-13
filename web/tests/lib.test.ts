@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { agruparFluxo, type LinhaFluxo } from "../src/lib/fluxo";
-import { compacto, iniciais, pp } from "../src/lib/format";
+import { compacto, iniciais, pctSinal } from "../src/lib/format";
 
 const fluxo = (o: Partial<LinhaFluxo>): LinhaFluxo => ({ ano_mandato: 2016, cargo_origem: "Vereador", nivel_origem: 1, uf: "MG", genero: "FEMININO", destino: "Reeleito", n: 10, ...o });
 
@@ -24,7 +24,8 @@ describe("format", () => {
     expect(compacto(629200)).toBe("629,2 mil");
     expect(compacto(3700000)).toBe("3,7 mi");
     expect(iniciais("MARIA DA SILVA")).toBe("MS");
-    expect(pp(0.012)).toBe("+1,2 p.p.");
-    expect(pp(-0.1091)).toBe("−10,9 p.p.");
+    expect(pctSinal(0.25)).toBe("+25%");
+    expect(pctSinal(-0.555, 1)).toBe("−55,5%");
+    expect(pctSinal(-0.004)).toBe("0%");
   });
 });

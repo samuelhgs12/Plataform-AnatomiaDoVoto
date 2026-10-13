@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buscarPartido, compararCiclos, cortesTom, faixaEventos, filtrar, indicePartidos, lerParametros, proporcao, resumoCiclos,
-  resumoSerie, serie, sugestoes, TODOS, type EventoPartido, type LinhaLegenda, type Linhagem,
+  anosCiclo, hrefLegenda, resolverSelecao, resumoSerie, serie, sugestoes, tabelaPartidos, trechos, TODOS,
+  type EventoPartido, type LinhaLegenda, type Linhagem,
 } from "../src/lib/legenda";
 
 const l = (o: Partial<LinhaLegenda>): LinhaLegenda => ({ ano: 2018, cargo: "Deputado federal", uf: "MG", numero: 13, partido: "PT", votos_nominais: 900, votos_legenda: 100, eleitos: 1, ...o });
@@ -20,12 +21,15 @@ const linhas: LinhaLegenda[] = [
   l({ ano: 2020, cargo: "Vereador", votos_nominais: 1000, votos_legenda: 50 }),
   l({ uf: "PE", votos_nominais: 300, votos_legenda: 100 }),
 ];
-const linhagem: Linhagem[] = [{ partido: "DEM", atual: "UNIÃO", ano: 2022 }, { partido: "PSL", atual: "UNIÃO", ano: 2022 }];
+const linhagem: Linhagem[] = [
+  { partido: "DEM", sucessor: "UNIÃO", atual: "UNIÃO", ano: 2022 }, { partido: "PSL", sucessor: "UNIÃO", atual: "UNIÃO", ano: 2022 },
+  { partido: "PRP", sucessor: "PATRIOTA", atual: "PRD", ano: 2019 },
+];
 const eventos: EventoPartido[] = [
-  { ano: 2019, partido: "REPUBLICANOS", tipo: "renomeacao", rotulo: "ex-PRB" },
-  { ano: 2022, partido: "UNIÃO", tipo: "fusao", rotulo: "DEM + PSL" },
-  { ano: 2022, partido: "DEM", tipo: "extincao", rotulo: "→ UNIÃO" },
-  { ano: 2023, partido: "PODEMOS", tipo: "incorporacao", rotulo: "+ PSC" },
+  { ano: 2019, partido: "REPUBLICANOS", tipo: "renomeacao", rotulo: "PRB → REPUBLICANOS", descricao: "" },
+  { ano: 2022, partido: "UNIÃO", tipo: "fusao", rotulo: "DEM + PSL", descricao: "" },
+  { ano: 2022, partido: "DEM", tipo: "extincao", rotulo: "→ UNIÃO", descricao: "" },
+  { ano: 2023, partido: "PODEMOS", tipo: "incorporacao", rotulo: "+ PSC", descricao: "" },
 ];
 const mg = filtrar(linhas, { uf: "MG" });
 
@@ -93,13 +97,15 @@ describe("indicePartidos e buscarPartido", () => {
   it("sem juntar, cada sigla aponta para si mesma", () => {
     const i = indicePartidos(linhas, false, linhagem);
     expect(i.find((e) => e.sigla === "DEM")).toEqual({ sigla: "DEM", numero: 25, partido: "DEM" });
-    expect(buscarPartido(i, "25")).toEqual(["DEM"]);
+    expect(buscarPartido(i, "25").map((e) => e.partido)).toEqual(["DEM"]);
   });
   it("com juntar, a sigla antiga aponta para o partido atual", () => {
     const i = indicePartidos(linhas, true, linhagem);
     expect(i.find((e) => e.sigla === "DEM")?.partido).toBe("UNIÃO");
-    expect(buscarPartido(i, "dem")).toEqual(["UNIÃO"]);
-    expect(buscarPartido(i, "uniao")).toEqual(["UNIÃO"]);
+    expect(buscarPartido(i, "dem")).toEqual([{ sigla: "DEM", numero: 25, partido: "UNIÃO" }]);
+    expect(buscarPartido(i, "uniao").map((e) => e.partido)).toEqual(["UNIÃO"]);
+    expect(buscarPartido(i, "uniao", ["UNIÃO"])).toEqual([]);
+    expect(buscarPartido(i, "p").map((e) => e.partido)).toEqual(["PCO", "UNIÃO", "PSOL", "PT"]);   // PSL → UNIÃO
     expect(buscarPartido(i, "  ")).toEqual([]);
   });
 });
@@ -117,8 +123,7 @@ describe("compararCiclos", () => {
     const { anos, pares } = compararCiclos(mg, geral, linhagem);
     expect(anos).toEqual([2018, 2022]);
     const pt = pares.find((p) => p.partido === "PT")!;
-    expect(pt).toMatchObject({ numero: 13, anterior: 0.1, recente: 0.2, eleitosRecente: 2, status: null });
-    expect(pt.variacao).toBeCloseTo(0.1);
+    expect(pt).toMatchObject({ numero: 13, anterior: 100, recente: 200, variacao: 1, eleitosRecente: 2, status: null });
     expect(pt.fatia).toBeCloseTo(200 / 445);
   });
   it("explica quem falta em um dos anos", () => {
@@ -127,13 +132,13 @@ describe("compararCiclos", () => {
   });
   it("com juntar, UNIÃO tem os dois anos", () => {
     const u = compararCiclos(filtrar(mg, { juntar: true, linhagem }), geral, linhagem).pares.find((p) => p.partido === "UNIÃO")!;
-    expect(u.anterior).toBeCloseTo(150 / 1050);
+    expect(u.anterior).toBe(150);
     expect(u.status).toBeNull();
   });
   it("ordena pela soma, pelo ano recente e pelo crescimento", () => {
     const ordem = (o: "soma" | "recente" | "crescimento") => compararCiclos(mg, { ...geral, ordem: o }, linhagem).pares.map((p) => p.partido);
     expect(ordem("soma")).toEqual(["PT", "PSOL", "UNIÃO", "DEM", "PSL", "PCO", "NOVATO"]);
-    expect(ordem("recente")).toEqual(["PT", "UNIÃO", "NOVATO", "PSOL", "DEM", "PSL", "PCO"]);
+    expect(ordem("recente")).toEqual(["PT", "UNIÃO", "PSOL", "NOVATO", "DEM", "PSL", "PCO"]);
   });
   it("a ordenação por crescimento deixa por último quem não tem os dois anos", () => {
     const pares = compararCiclos(mg, { ...geral, ordem: "crescimento" }, linhagem).pares;
@@ -154,14 +159,14 @@ describe("resumos", () => {
   });
   it("resumoCiclos conta altas e quedas", () => {
     const c = compararCiclos(mg, { ciclo: "geral", cargo: "ambos", ordem: "soma" }, linhagem);
-    expect(resumoCiclos(c)).toBe("Entre 2018 e 2022, 1 partido aumentou a proporção de legenda e 1 diminuiu. Maior alta: PT (+10,0 p.p.). Maior queda: PSOL (−10,9 p.p.).");
+    expect(resumoCiclos(c)).toBe("Entre 2018 e 2022, 1 partido aumentou os votos de legenda e 1 diminuiu. Maior alta: PT (+100%). Maior queda: PSOL (−55%).");
     expect(resumoCiclos({ anos: null, pares: [] })).toBe("Não há duas eleições deste ciclo para comparar.");
   });
 });
 
 describe("lerParametros", () => {
   it("usa os padrões quando não há parâmetros", () => {
-    expect(lerParametros({})).toEqual({ uf: undefined, juntar: false, p: ["PT", "PL", "NOVO"], ciclo: "geral", cargo: "ambos", ordem: "soma", todos: true });
+    expect(lerParametros({})).toEqual({ uf: undefined, juntar: false, p: ["PT", "PL", "NOVO"], ciclo: "geral", cargo: "ambos", ordem: "soma", todos: false });
   });
   it("corta p com 5 siglas para 3", () => {
     expect(lerParametros({ p: "PT,PL,NOVO,PSOL,MDB" }).p).toEqual(["PT", "PL", "NOVO"]);
@@ -169,9 +174,56 @@ describe("lerParametros", () => {
   });
   it("valida contra os dados e volta ao padrão quando o valor é inválido", () => {
     const opcoes = { ufs: ["MG", "PE"], partidos: ["PT", "PCdoB", "UNIÃO"] };
-    expect(lerParametros({ uf: "mg", p: "pcdob,XYZ", juntar: "1", todos: "0" }, opcoes)).toMatchObject({ uf: "MG", p: ["PCdoB"], juntar: true, todos: false });
+    expect(lerParametros({ uf: "mg", p: "pcdob,XYZ", juntar: "1", todos: "1" }, opcoes)).toMatchObject({ uf: "MG", p: ["PCdoB"], juntar: true, todos: true });
     expect(lerParametros({ uf: "SP", p: "XYZ", ciclo: "x", cargo: "vereador", ordem: "y", juntar: "talvez" }, opcoes))
-      .toEqual({ uf: undefined, juntar: false, p: ["PT", "PL", "NOVO"], ciclo: "geral", cargo: "ambos", ordem: "soma", todos: true });
+      .toEqual({ uf: undefined, juntar: false, p: ["PT", "PL", "NOVO"], ciclo: "geral", cargo: "ambos", ordem: "soma", todos: false });
     expect(lerParametros({ ciclo: "municipal", cargo: "federal", ordem: "crescimento" })).toMatchObject({ ciclo: "municipal", cargo: "federal", ordem: "crescimento" });
+  });
+});
+
+describe("lerParametros: p vazio e todos", () => {
+  it("p vazio é escolha válida; todos=1 liga a lista completa", () => {
+    expect(lerParametros({ p: "" }).p).toEqual([]);
+    expect(lerParametros({ todos: "1" }).todos).toBe(true);
+  });
+});
+
+describe("resolverSelecao", () => {
+  it("com juntar, troca absorvidos pelo partido atual sem repetir", () => {
+    expect(resolverSelecao(["DEM", "PSL", "PT"], true, linhagem)).toEqual(["UNIÃO", "PT"]);
+    expect(resolverSelecao(["PRP"], true, linhagem)).toEqual(["PRD"]);
+    expect(resolverSelecao(["DEM", "PT"], false, linhagem)).toEqual(["DEM", "PT"]);
+  });
+});
+
+describe("tabelaPartidos e trechos", () => {
+  it("lista todos os partidos do que tem mais legenda para o que tem menos", () => {
+    expect(tabelaPartidos(mg).map((s) => s.partido)).toEqual(["PT", "PSOL", "UNIÃO", "DEM", "PSL", "PCO", "NOVATO"]);
+  });
+  it("interrompe a linha onde falta um ano", () => {
+    const anos = [2018, 2020, 2022, 2024];
+    expect(trechos([{ ano: 2018 }, { ano: 2020 }, { ano: 2024 }], anos)).toEqual([[{ ano: 2018 }, { ano: 2020 }], [{ ano: 2024 }]]);
+    expect(trechos([], anos)).toEqual([]);
+  });
+});
+
+describe("anosCiclo", () => {
+  it("pega as duas eleições mais recentes do ciclo", () => {
+    expect(anosCiclo(mg, "geral")).toEqual([2018, 2022]);
+    expect(anosCiclo(mg, "municipal")).toBeNull();
+  });
+});
+
+describe("hrefLegenda", () => {
+  const padrao = lerParametros({});
+  it("omite o que está no padrão", () => {
+    expect(hrefLegenda(padrao)).toBe("/analises/legenda");
+    expect(hrefLegenda(padrao, { uf: "MG", juntar: true })).toBe("/analises/legenda?uf=MG&juntar=1");
+  });
+  it("mantém os outros parâmetros, grava p vazio e volta igual pelo lerParametros", () => {
+    const atual = lerParametros({ uf: "PE", ciclo: "municipal", todos: "1" });
+    expect(hrefLegenda(atual, { p: [] })).toBe("/analises/legenda?uf=PE&p=&ciclo=municipal&todos=1");
+    const volta = Object.fromEntries(new URLSearchParams(hrefLegenda(atual, { p: ["PSOL", "PT"] }).split("?")[1]));
+    expect(lerParametros(volta)).toMatchObject({ uf: "PE", p: ["PSOL", "PT"], ciclo: "municipal", todos: true });
   });
 });
