@@ -13,17 +13,46 @@ docs/       arquitetura, API, esboço das telas, decisões, plano de trabalho
 
 ## Começar em 10 minutos
 
-Pré-requisitos: Python 3.12+, Node 20.9+ (recomendado 22) e acesso ao banco no MotherDuck (`DATABASE=md:bdr` e `MOTHERDUCK_TOKEN` em `api/.env`; também aceita `md:_share/bdr/<codigo>` ou o caminho de um arquivo `.duckdb`).
+Pré-requisitos: Python 3.12+, Node 20.9+ (recomendado 22) e uma conta na organização do MotherDuck com acesso ao share do banco `bdr`.
+
+**0. Acesso ao banco (MotherDuck)**
+
+1. No MotherDuck, gere seu token pessoal (Settings → Access Tokens). Cada pessoa usa o próprio token.
+2. Peça ao dono do banco o link do share, no formato `md:_share/bdr/<codigo>`.
+3. Em `api/.env` (criado no passo 1), preencha:
+   ```
+   DATABASE=md:_share/bdr/<codigo>
+   MOTHERDUCK_TOKEN=<seu token>
+   ```
+
+Na primeira execução a API anexa o share à sua conta com o nome `bdr`. O MotherDuck guarda esse anexo na conta, então nas próximas execuções a API só o reutiliza. Se você já tiver anexado o share por conta própria (pela interface do MotherDuck, por exemplo), também funciona. Outras opções para `DATABASE`: `md:bdr` (share já anexado como `bdr`) ou o caminho de um arquivo `.duckdb` local.
 
 **1. API**
+
+Rode tudo de dentro da pasta `api/` (o `app.main` é relativo a ela) e com o ambiente virtual ativo. Sem ele, o `pip` instala os pacotes no Python global e o comando `uvicorn` pode não ser encontrado.
+
+Linux/Mac:
 ```bash
 cd api
-python -m venv .venv && source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env                                     # ajuste DATABASE (arquivo ou md:...)
+cp .env.example .env                                     # preencha DATABASE e MOTHERDUCK_TOKEN (passo 0)
 pytest                                                   # 16 testes, usam um banco de teste pequeno
 uvicorn app.main:app --reload                            # http://localhost:8000/docs
 ```
+
+Windows (PowerShell):
+```powershell
+cd api
+python -m venv .venv
+.venv\Scripts\Activate.ps1                               # se bloquear: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+pip install -r requirements-dev.txt
+copy .env.example .env                                   # preencha DATABASE e MOTHERDUCK_TOKEN (passo 0)
+pytest
+uvicorn app.main:app --reload                            # http://localhost:8000/docs
+```
+
+Para conferir a conexão com o banco, abra http://localhost:8000/api/health: deve responder `{"status":"ok","db":"ok"}`. Se responder 503, a mensagem diz o motivo (token ausente, share sem acesso etc.).
 
 **2. Análises agregadas** (uma vez, ou quando o banco mudar)
 ```bash
