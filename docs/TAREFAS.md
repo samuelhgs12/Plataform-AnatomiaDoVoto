@@ -35,4 +35,4 @@
 
 ## TODOs deixados no código
 
-Procure por `TODO`: referências pré-calculadas (`despesas_referencia.sql`, `receitas_referencia.sql`), nuvem de palavras real (`WordList.tsx`), gráfico e mapa da legenda, e-mail de contato em `sobre/page.tsx`.
+Procure por `TODO`: referências pré-calculadas (`despesas_referencia.sql`, `receitas_referencia.sql`), nuvem de palavras real (`WordList.tsx`), mapa da legenda por município, e-mail de contato em `sobre/page.tsx`.
