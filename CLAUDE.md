@@ -13,7 +13,7 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 - `pipeline/export_static.py` roda `pipeline/sql/q5.sql` e `q10.sql`; cada `COPY (...) TO 'x.csv'` vira a chave `x`
   em `web/public/data/q5.json` / `q10.json`, no formato `{colunas: [...], linhas: [[...]]}` (`TabelaEstatica`).
-  q5 tem `legenda_partido`, `legenda_total`, `legenda_municipio` e `legenda_ranking`.
+  q5 tem `legenda`, `eventos` e `linhagem` (tipos em `src/lib/legenda.ts`).
 - Na página (componente de servidor, `async`): `await lerEstatico("q5")` (`src/lib/data.ts`, lê do disco, devolve
   `null` se o arquivo não existe) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
 - Se a tabela faltar, mostre o `card aviso` pedindo para rodar `python export_static.py` (veja `analises/legenda`).
@@ -44,6 +44,7 @@ Só com estado/eventos/efeitos do navegador: `Filters` (selects que aplicam na h
 
 ## Testes do web
 
-- Vitest (`vitest.config.ts` inclui `tests/**/*.test.ts`); hoje tudo em `web/tests/lib.test.ts`, um `describe` por
-  função de `src/lib`, com uma fábrica de linha (`const l = (o: Partial<Linha>) => ({...padrão, ...o})`).
+- Vitest (`vitest.config.ts` inclui `tests/**/*.test.ts`): `web/tests/legenda.test.ts` para `src/lib/legenda.ts` e
+  `web/tests/lib.test.ts` para o resto; um `describe` por função de `src/lib`, com uma fábrica de linha
+  (`const l = (o: Partial<Linha>) => ({...padrão, ...o})`) e poucas linhas inventadas.
 - Só lógica pura é testada (sem render de componente). Antes do PR: `npm run lint && npm run typecheck && npm test && npm run build`.
