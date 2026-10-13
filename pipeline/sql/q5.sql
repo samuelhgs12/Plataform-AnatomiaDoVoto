@@ -1,65 +1,52 @@
--- Copiado do repositório de carga (consultas/q5_painel.sql). Se a regra mudar lá, atualize aqui.
--- Pergunta 5 — votos de legenda x partido (DuckDB). Roda no banco final (bdr_final.duckdb ou MotherDuck).
--- Uso: python rodar_paineis.py q5        (gera os CSVs em painel_q5/)
+-- Pergunta 5 — votos de legenda x partido (DuckDB). Regra copiada de q5_materializada.sql (repositório de carga).
+-- Roda no banco final (bdr_final.duckdb ou MotherDuck), que é SOMENTE LEITURA: só TEMP TABLE e VALUES aqui.
+-- Uso: python export_static.py  (cada COPY ... TO 'x.csv' vira a chave x de web/public/data/q5.json)
 --
--- Só cargos PROPORCIONAIS (vereador, deputado federal e estadual): é onde existe voto de legenda. 1º turno,
--- só eleição ordinária. Percentual de legenda = legenda / (legenda + nominais).
--- Atenção: partidos que se fundiram aparecem separados (ex.: DEM e PSL em 2018 e 2020, UNIÃO em 2022 e 2024);
--- quando partido.id_partido_sucessor for preenchido, dá para agrupá-los.
+-- Regras:
+--   * só cargos proporcionais (onde existe voto de legenda), 1º turno, eleição ordinária, 2018–2024
+--   * partido identificado pelo NÚMERO dentro do ano (a sigla varia entre arquivos: 51 = PATRI/PATRIOTA)
+--   * siglas renomeadas são unificadas; fusões (DEM/PSL → UNIÃO, PTB/PATRIOTA → PRD) ficam separadas
+--   * proporção = votos_legenda / (votos_legenda + votos_nominais), calculada no front depois de somar
 
-CREATE OR REPLACE TEMP TABLE legenda AS
-SELECT e.ano, g.nome AS cargo, m.uf, m.id_municipio, m.nome AS municipio, p.numero, p.sigla,
-       v.votos_nominais, v.votos_legenda
-FROM votos_partido_municipio v
-JOIN eleicao e   ON e.id_eleicao = v.id_eleicao
-JOIN cargo g     ON g.id_cargo = e.id_cargo
-JOIN municipio m ON m.id_municipio = v.id_municipio
-JOIN partido p   ON p.id_partido = v.id_partido
-WHERE g.sistema = 'proporcional' AND v.turno = 1 AND e.tipo_eleicao = 'ORDINARIA'
-  AND coalesce(v.votos_nominais, 0) + coalesce(v.votos_legenda, 0) > 0;   -- partido sem voto na UF não entra
+CREATE OR REPLACE TEMP TABLE renomeado AS
+SELECT * FROM (VALUES ('PRB', 'REPUBLICANOS'), ('PR', 'PL'), ('PPS', 'CIDADANIA'), ('PATRI', 'PATRIOTA'),
+                      ('PTC', 'AGIR'), ('PMN', 'MOBILIZA'), ('PODE', 'PODEMOS'), ('PC do B', 'PCdoB')) t(sigla, partido);
 
 -------------------------------------------------------------------------------
--- 1. Por partido, cargo, UF e ano: quanto do voto do partido foi de legenda
+-- 1. legenda: ano x cargo x UF x partido, com os eleitos de vw_eleito_efetivo
 -------------------------------------------------------------------------------
 COPY (
-    SELECT ano, cargo, uf, numero, sigla,
-           sum(votos_nominais) AS votos_nominais, sum(votos_legenda) AS votos_legenda,
-           round(100.0 * sum(votos_legenda) / nullif(sum(votos_legenda + votos_nominais), 0), 2) AS pct_legenda
-    FROM legenda
-    GROUP BY ALL ORDER BY ano, cargo, uf, sigla
-) TO 'painel_q5/legenda_partido.csv' (HEADER);
-
--------------------------------------------------------------------------------
--- 2. Total geral por cargo, UF e ano (a referência para comparar cada partido)
--------------------------------------------------------------------------------
-COPY (
-    SELECT ano, cargo, uf, sum(votos_nominais) AS votos_nominais, sum(votos_legenda) AS votos_legenda,
-           round(100.0 * sum(votos_legenda) / nullif(sum(votos_legenda + votos_nominais), 0), 2) AS pct_legenda
-    FROM legenda
-    GROUP BY ALL ORDER BY ano, cargo, uf
-) TO 'painel_q5/legenda_total.csv' (HEADER);
-
--------------------------------------------------------------------------------
--- 3. Por município (para mapa): legenda de todos os partidos somados
--------------------------------------------------------------------------------
-COPY (
-    SELECT ano, cargo, uf, id_municipio, municipio,
-           sum(votos_nominais) AS votos_nominais, sum(votos_legenda) AS votos_legenda,
-           round(100.0 * sum(votos_legenda) / nullif(sum(votos_legenda + votos_nominais), 0), 2) AS pct_legenda
-    FROM legenda
-    GROUP BY ALL ORDER BY ano, cargo, uf, municipio
-) TO 'painel_q5/legenda_municipio.csv' (HEADER);
-
--------------------------------------------------------------------------------
--- 4. Ranking: partidos que mais dependem de legenda (partido x ano x cargo, com pelo menos 10 mil votos)
--------------------------------------------------------------------------------
-COPY (
-    SELECT *, rank() OVER (PARTITION BY ano, cargo ORDER BY pct_legenda DESC) AS posicao
-    FROM (SELECT ano, cargo, numero, sigla,
-                 sum(votos_nominais) AS votos_nominais, sum(votos_legenda) AS votos_legenda,
-                 round(100.0 * sum(votos_legenda) / nullif(sum(votos_legenda + votos_nominais), 0), 2) AS pct_legenda
-          FROM legenda
-          GROUP BY ano, cargo, numero, sigla
-          HAVING sum(votos_legenda + votos_nominais) >= 10000)
-    ORDER BY ano, cargo, posicao
-) TO 'painel_q5/legenda_ranking.csv' (HEADER);
+    WITH votos AS (
+        SELECT e.ano, g.id_cargo, g.nome AS cargo, m.uf, p.numero,
+               max(coalesce(r.partido, p.sigla))     AS partido,
+               sum(coalesce(v.votos_nominais, 0))    AS votos_nominais,
+               sum(coalesce(v.votos_legenda, 0))     AS votos_legenda
+        FROM votos_partido_municipio v
+        JOIN eleicao e   ON e.id_eleicao = v.id_eleicao
+        JOIN cargo g     ON g.id_cargo = e.id_cargo
+        JOIN municipio m ON m.id_municipio = v.id_municipio
+        JOIN partido p   ON p.id_partido = v.id_partido
+        LEFT JOIN renomeado r ON r.sigla = p.sigla
+        WHERE g.sistema = 'proporcional'
+          AND v.turno = 1
+          AND e.tipo_eleicao = 'ORDINARIA'
+          AND e.ano BETWEEN 2018 AND 2024
+        GROUP BY e.ano, g.id_cargo, g.nome, m.uf, p.numero
+    ),
+    eleitos AS (
+        SELECT el.ano, el.id_cargo, el.uf, p.numero, count(*) AS eleitos
+        FROM vw_eleito_efetivo el
+        JOIN partido p USING (id_partido)
+        WHERE el.sistema = 'proporcional' AND el.ordinaria
+        GROUP BY ALL
+    )
+    SELECT v.ano,
+           CASE WHEN v.ano % 4 = 2 THEN 'geral' ELSE 'municipal' END AS tipo_eleicao,
+           v.cargo, v.uf, v.numero, v.partido,
+           v.votos_nominais, v.votos_legenda,
+           coalesce(el.eleitos, 0) AS eleitos
+    FROM votos v
+    LEFT JOIN eleitos el USING (ano, id_cargo, uf, numero)
+    WHERE v.votos_nominais + v.votos_legenda > 0
+    ORDER BY v.ano, v.cargo, v.uf, v.votos_legenda DESC
+) TO 'painel_q5/legenda.csv' (HEADER);
