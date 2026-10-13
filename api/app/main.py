@@ -1,4 +1,4 @@
-"""API da plataforma eleitoral. Rodar: uvicorn app.main:app --reload"""
+"""API da plataforma Anatomia do Voto. Rodar: uvicorn app.main:app --reload"""
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,7 +7,7 @@ from . import db
 from .config import get_settings
 from .routers import busca, candidaturas, candidatos, meta, saude
 
-app = FastAPI(title="Plataforma Eleitoral BDR", version="0.1.0",
+app = FastAPI(title="Anatomia do Voto", version="0.1.0",
               description="Dados eleitorais do TSE (1998–2024) para AP, ES, MG, PE, RJ e RR. Somente leitura.")
 
 app.add_middleware(CORSMiddleware, allow_origins=get_settings().origens, allow_methods=["GET"], allow_headers=["*"])

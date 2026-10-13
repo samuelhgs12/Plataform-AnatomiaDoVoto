@@ -35,6 +35,13 @@ def test_busca_ignora_acento_e_caixa(client):
     assert maria["ultimo_ano"] == 2022 and maria["ultimo_cargo"] == "Deputado estadual" and maria["ultimo_eleito"] is False
 
 
+def test_busca_casa_inicio_de_palavra_e_ordena_por_relevancia(client):
+    assert [x["id_candidato"] for x in client.get("/api/busca", params={"q": "comer"}).json()] == [2]   # COMERCIO
+    assert client.get("/api/busca", params={"q": "ercio"}).json() == []      # trecho no meio da palavra não conta
+    r = client.get("/api/busca", params={"q": "maria"}).json()
+    assert [x["id_candidato"] for x in r] == [1, 4]       # palavra inteira (MARIA) antes do início de palavra (MARIANA)
+
+
 def test_busca_exige_3_letras_e_nao_aceita_coringa(client):
     assert client.get("/api/busca", params={"q": "ab"}).status_code == 422
     assert client.get("/api/busca", params={"q": "%%%"}).json() == []      # o % digitado não vira coringa
@@ -57,6 +64,19 @@ def test_listagem_filtros_ordem_e_paginacao(client):
     r = client.get("/api/candidaturas", params={"ano": 2022, "tamanho": 1, "pagina": 2}).json()
     assert r["total"] == 2 and len(r["itens"]) == 1 and r["itens"][0]["nome_urna"] == "MARIA DA SILVA"
     assert client.get("/api/candidaturas", params={"uf": "pe"}).json()["total"] == 2        # 2016 e 2020 do João
+
+
+def test_listagem_filtra_por_partido(client):
+    r = client.get("/api/candidaturas", params={"ano": 2022, "partido": "PSD"}).json()
+    assert r["total"] == 1 and r["itens"][0]["nome_urna"] == "MARIA DA SILVA"
+    assert client.get("/api/candidaturas", params={"ano": 2022, "partido": "PT"}).json()["total"] == 0
+
+
+def test_partidos_da_eleicao(client):
+    assert client.get("/api/partidos", params={"ano": 2020, "cargo": 13}).json() == ["PSB"]
+    assert client.get("/api/partidos", params={"ano": 2020, "cargo": 11}).json() == ["PT"]     # sem a suplementar
+    assert client.get("/api/partidos", params={"ano": 2022, "cargo": 7, "uf": "rj"}).json() == []
+    assert client.get("/api/partidos", params={"ano": 2022}).status_code == 422                # cargo é obrigatório
 
 
 def test_perfil_carreira_resumo_e_trocas(client):

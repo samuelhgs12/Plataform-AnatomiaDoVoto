@@ -2,8 +2,10 @@
 import re
 import unicodedata
 
-# nível do cargo na linha do tempo (1 vereador ... 6 presidente), igual ao projeto de carga
-NIVEL_CARGO = {13: 1, 11: 2, 12: 2, 7: 3, 8: 3, 6: 4, 9: 4, 10: 4, 3: 5, 4: 5, 5: 5, 1: 6, 2: 6}
+# nível do cargo na linha do tempo do perfil: 1 vereador, 2 prefeito, 3 dep. estadual, 4 dep. federal, 5 senador,
+# 6 governador, 7 presidente (vices e suplentes ficam no nível do titular). Difere da escala do q10.sql,
+# que põe governador e senador juntos no nível 5.
+NIVEL_CARGO = {13: 1, 11: 2, 12: 2, 7: 3, 8: 3, 6: 4, 5: 5, 9: 5, 10: 5, 3: 6, 4: 6, 1: 7, 2: 7}
 
 
 def sem_acento(texto: str) -> str:
@@ -15,6 +17,11 @@ def padrao_like(texto: str) -> str:
     t = sem_acento(texto).lower().strip()
     t = t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{t}%"
+
+
+def palavras_busca(texto: str) -> list[str]:
+    """Texto digitado -> palavras sem acento e minúsculas (só letras e números; o resto separa palavras)."""
+    return re.findall(r"[a-z0-9]+", sem_acento(texto).lower())
 
 
 STOPWORDS = set("""

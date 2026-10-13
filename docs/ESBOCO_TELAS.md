@@ -9,7 +9,7 @@ Estado: ✅ implementado no esqueleto · 🔲 a fazer.
 | Rota | Tela | Estado |
 |---|---|---|
 | `/` | Início: busca com sugestões, atalhos por UF, cartões das análises | ✅ |
-| `/candidatos` | Listagem por cargo, ano e UF (cards com avatar de iniciais, partido, resultado, votos), filtros e paginação | ✅ |
+| `/candidatos` | Candidatos de uma eleição: padrão = ano mais recente; presidente em ano de eleição geral, prefeito em ano municipal; cargo estadual/municipal sem UF pede a escolha do estado antes de listar. Cards com avatar de iniciais, partido, resultado, votos; paginação | ✅ |
 | `/candidato/[id]` | Perfil: cabeçalho + KPIs, carreira (P10), gastos (P9), receitas (P8) | ✅ (💡 custo por voto e percentil: 🔲) |
 | `/analises/pos-mandato` | Fluxo depois do mandato, por UF e ano (P10) | ✅ |
 | `/analises/legenda` | Votos de legenda por partido e ano (P5) | ✅ tabela · 🔲 gráfico e mapa |

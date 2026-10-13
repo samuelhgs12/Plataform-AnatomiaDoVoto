@@ -7,7 +7,8 @@ Com a API rodando, a documentação interativa (gerada automaticamente) fica em 
 | GET | `/api/health` | — | `{status, db}`; 503 se o banco não abrir |
 | GET | `/api/meta` | — | cargos, anos de eleição ordinária e UFs (para os filtros) |
 | GET | `/api/busca` | `q` (3 a 80 letras; ignora acentos e maiúsculas) | até 20 pessoas, com a candidatura mais recente de cada |
-| GET | `/api/candidaturas` | `cargo` (id), `ano`, `uf`, `eleito`, `ordem` (`votos`\|`nome`), `pagina`, `tamanho` (≤100), `incluir_suplementares` | listagem paginada de titulares |
+| GET | `/api/candidaturas` | `cargo` (id), `ano`, `uf`, `partido` (sigla), `eleito`, `ordem` (`votos`\|`nome`), `pagina`, `tamanho` (≤100), `incluir_suplementares` | listagem paginada de titulares |
+| GET | `/api/partidos` | `ano`, `cargo` (id, obrigatório), `uf` | siglas com titulares na eleição ordinária (opções do filtro de partido) |
 | GET | `/api/candidatos/{id}` | — | cabeçalho, resumo, carreira completa e trocas de partido |
 | GET | `/api/candidaturas/{id}/despesas` | — | gasto por categoria + mediana do cargo/ano/UF (pergunta 9) |
 | GET | `/api/candidaturas/{id}/palavras` | `limite` (≤100) | termos das despesas de propaganda (nuvem de palavras) |

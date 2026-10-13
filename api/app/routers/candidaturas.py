@@ -14,6 +14,7 @@ def listar(
     cargo: int | None = Query(None, description="id_cargo (ver /api/meta)"),
     ano: int | None = None,
     uf: str | None = Query(None, min_length=2, max_length=2),
+    partido: str | None = Query(None, max_length=20, description="sigla do partido na candidatura"),
     eleito: bool | None = None,
     ordem: Literal["votos", "nome"] = "votos",
     pagina: int = Query(1, ge=1),
@@ -22,10 +23,21 @@ def listar(
 ):
     """Listagem de titulares por cargo, ano e UF (inspirada no especial do G1). Padrão: só eleição ordinária."""
     uf = uf.upper() if uf else None
-    params = (incluir_suplementares, cargo, cargo, ano, ano, uf, uf, eleito, eleito, ordem, tamanho, (pagina - 1) * tamanho)
+    params = (incluir_suplementares, cargo, cargo, ano, ano, uf, uf, partido, partido, eleito, eleito, ordem, tamanho, (pagina - 1) * tamanho)
     linhas = db.consultar("candidaturas_lista", params)
     total = linhas[0]["total"] if linhas else 0
     return Listagem(total=total, pagina=pagina, tamanho=tamanho, itens=linhas)
+
+
+@router.get("/partidos", response_model=list[str])
+def partidos(
+    ano: int,
+    cargo: int = Query(..., description="id_cargo (ver /api/meta)"),
+    uf: str | None = Query(None, min_length=2, max_length=2),
+):
+    """Siglas que tiveram candidatos titulares nessa eleição ordinária (opções do filtro de partido)."""
+    uf = uf.upper() if uf else None
+    return [r["sigla"] for r in db.consultar("partidos_eleicao", (cargo, ano, uf, uf))]
 
 
 def _contexto(id_candidatura: int) -> dict:

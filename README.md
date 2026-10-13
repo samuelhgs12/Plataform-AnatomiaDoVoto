@@ -1,4 +1,4 @@
-# Plataforma Eleitoral (BDR / UFPI)
+# Anatomia do Voto (BDR / UFPI)
 
 Plataforma web sobre os dados eleitorais do TSE (1998–2024) de AP, ES, MG, PE, RJ e RR: **carreira** de cada político (pergunta 10), **gastos de campanha** por categoria (pergunta 9), votos de legenda (pergunta 5) e mais. O layout do perfil do candidato se inspira no especial "Quem são os candidatos" do G1.
 

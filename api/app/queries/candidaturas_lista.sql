@@ -1,4 +1,4 @@
--- Parâmetros (nesta ordem): incluir_suplementares, cargo, cargo, ano, ano, uf, uf, eleito, eleito, ordem, tamanho, deslocamento.
+-- Parâmetros (nesta ordem): incluir_suplementares, cargo, cargo, ano, ano, uf, uf, partido, partido, eleito, eleito, ordem, tamanho, deslocamento.
 -- Só titulares que chegaram a disputar. Votos do 1º turno.
 WITH base AS (
     SELECT c.id_candidatura, c.id_candidato, c.nome_urna, c.numero_urna, c.uf, c.ano,
@@ -17,6 +17,7 @@ WITH base AS (
       AND (?::INTEGER IS NULL OR e.id_cargo = ?::INTEGER)
       AND (?::INTEGER IS NULL OR c.ano = ?::INTEGER)
       AND (?::VARCHAR IS NULL OR c.uf = ?::VARCHAR)
+      AND (?::VARCHAR IS NULL OR p.sigla = ?::VARCHAR)
       AND (?::BOOLEAN IS NULL OR r.eleito = ?::BOOLEAN)
 )
 SELECT *, count(*) OVER () AS total
