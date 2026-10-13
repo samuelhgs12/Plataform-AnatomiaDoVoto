@@ -25,6 +25,27 @@ class BancoIndisponivel(RuntimeError):
     """O banco não pôde ser aberto (arquivo ausente, token inválido, share sem acesso...)."""
 
 
+def _anexar_share(con: duckdb.DuckDBPyConnection, alvo: str) -> str:
+    """Anexa o share do MotherDuck como `bdr` e devolve o nome com que ele está anexado.
+
+    No MotherDuck o ATTACH de um share fica salvo na conta (não só na sessão): da segunda
+    execução em diante o share já aparece anexado, e anexá-lo de novo dá erro.
+    """
+    caminho = alvo.removeprefix("md:").split("?")[0]
+    ja_anexado = con.execute(
+        "SELECT database_name FROM duckdb_databases() WHERE path = ? LIMIT 1", [caminho]
+    ).fetchone()
+    if ja_anexado:
+        return ja_anexado[0]
+    if con.execute("SELECT 1 FROM duckdb_databases() WHERE database_name = 'bdr'").fetchone():
+        raise BancoIndisponivel(
+            "Já existe um banco chamado 'bdr' na sua conta do MotherDuck que não é este share. "
+            "Use DATABASE=md:bdr ou faça DETACH bdr."
+        )
+    con.execute("ATTACH '" + alvo.replace("'", "''") + "' AS bdr")
+    return "bdr"
+
+
 def _abrir() -> duckdb.DuckDBPyConnection:
     s = get_settings()
     alvo = s.database
@@ -33,10 +54,11 @@ def _abrir() -> duckdb.DuckDBPyConnection:
             if not s.motherduck_token:
                 raise BancoIndisponivel("Falta MOTHERDUCK_TOKEN no servidor.")
             if alvo.startswith("md:_share"):
-                con = duckdb.connect(f"md:?motherduck_token={s.motherduck_token}")
-                con.execute("ATTACH '" + alvo.replace("'", "''") + "' AS bdr")
-                con.execute("USE bdr")
-                return con
+                # Anexa (se preciso) e reabre já apontando para o share: um `USE bdr` não vale
+                # para os cursores criados em consultar(), que voltariam ao banco padrão da conta.
+                with duckdb.connect(f"md:?motherduck_token={s.motherduck_token}") as con:
+                    nome = _anexar_share(con, alvo)
+                return duckdb.connect(f"md:{nome}?motherduck_token={s.motherduck_token}")
             sep = "&" if "?" in alvo else "?"
             return duckdb.connect(f"{alvo}{sep}motherduck_token={s.motherduck_token}")
         if not Path(alvo).exists():
