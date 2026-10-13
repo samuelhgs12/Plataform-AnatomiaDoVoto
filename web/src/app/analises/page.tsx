@@ -10,7 +10,7 @@ export default function Analises() {
       <p className="muted">Resultados agregados. Para ver uma pessoa, use a busca ou a listagem de candidatos.</p>
       <div className="cards3">
         <Link href="/analises/pos-mandato" className="card card-link"><div className="kicker">Pergunta 10</div><h3>Depois de um mandato</h3><p className="muted">Reeleição, mudança de cargo, derrota ou saída.</p></Link>
-        <Link href="/analises/legenda" className="card card-link"><div className="kicker">Pergunta 5</div><h3>Votos de legenda</h3><p className="muted">Por partido, cargo e ano.</p></Link>
+        <Link href="/analises/legenda" className="card card-link"><div className="kicker">Pergunta 5</div><h3>Voto de legenda</h3><p className="muted">Série histórica por partido e UF, comparação entre ciclos e mudanças nos partidos (2018–2024).</p></Link>
       </div>
       <p className="muted" style={{ marginTop: 18 }}>Próximas: retenção por turma de estreia, trocas de partido, propaganda por cargo, receita pública × privada e IBGE.</p>
     </>

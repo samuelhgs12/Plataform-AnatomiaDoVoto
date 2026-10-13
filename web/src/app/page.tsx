@@ -29,8 +29,8 @@ export default function Home() {
           </Link>
           <Link href="/analises/legenda" className="card card-link">
             <div className="kicker">Pergunta 5</div>
-            <h3>Votos de legenda por partido</h3>
-            <p className="muted">Quanto do voto de cada partido foi só para a sigla, de 2018 a 2024.</p>
+            <h3>Voto de legenda</h3>
+            <p className="muted">Quantos votos e que proporção cada partido recebeu só na sigla, de 2018 a 2024, com fusões e renomeações marcadas.</p>
           </Link>
           <Link href="/candidatos" className="card card-link">
             <div className="kicker">Perguntas 9 e 10</div>
