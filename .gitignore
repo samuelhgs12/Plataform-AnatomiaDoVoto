@@ -27,6 +27,8 @@ coverage/
 *.duckdb
 *.duckdb.wal
 data/
+# ...exceto os JSONs das análises agregadas, que são versionados (decisão 4 de docs/DECISOES.md)
+!web/public/data/
 
 # Editor / sistema
 .vscode/
