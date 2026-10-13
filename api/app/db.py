@@ -104,7 +104,7 @@ def _cache_ttl() -> TTLCache:
 
 def consultar(nome: str, params: tuple | list = (), cache: bool = True) -> list[dict]:
     """Executa queries/<nome>.sql com os parâmetros e devolve uma lista de dicionários."""
-    chave = (nome, tuple(params))
+    chave = (nome, tuple(tuple(p) if isinstance(p, list) else p for p in params))   # listas não servem de chave
     if cache and chave in _cache_ttl():
         return _cache_ttl()[chave]
     cur = conexao().cursor()

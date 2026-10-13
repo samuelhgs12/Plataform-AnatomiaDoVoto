@@ -17,6 +17,11 @@ def padrao_like(texto: str) -> str:
     return f"%{t}%"
 
 
+def palavras_busca(texto: str) -> list[str]:
+    """Texto digitado -> palavras sem acento e minúsculas (só letras e números; o resto separa palavras)."""
+    return re.findall(r"[a-z0-9]+", sem_acento(texto).lower())
+
+
 STOPWORDS = set("""
 para com por uma uns umas dos das nos nas aos como mais menos entre sobre sem ate apos ante desde pela pelo pelas pelos
 este esta estes estas esse essa esses essas isso isto aquele aquela seu sua seus suas nosso nossa que quem qual quais
