@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <>
       <section className="hero">
-        <h1>Trajetórias eleitorais</h1>
+        <h1>Anatomia do Voto</h1>
         <p>Seis estados, 1998–2024, mais de meio milhão de políticos. Veja a carreira de cada candidato, para onde foi o dinheiro da propaganda e como os partidos dependem do voto de legenda.</p>
         <SearchBox />
       </section>
