@@ -6,7 +6,7 @@ import type { CandidatoBusca } from "@/lib/types";
 import { PartyChip } from "./PartyChip";
 
 /** Busca com sugestões. Chama /api/busca (o Next repassa para a API FastAPI). */
-export function SearchBox() {
+export function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
   const [q, setQ] = useState("");
   const [res, setRes] = useState<CandidatoBusca[]>([]);
   const [estado, setEstado] = useState<"parado" | "buscando" | "erro">("parado");
@@ -35,7 +35,7 @@ export function SearchBox() {
   return (
     <div role="search">
       <label htmlFor="busca" className="muted" style={{ fontSize: 13 }}>Buscar candidato pelo nome</label>
-      <input id="busca" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ex.: Maria da Silva" autoComplete="off"
+      <input id="busca" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ex.: Maria da Silva" autoComplete="off" autoFocus={autoFocus}
         style={{ width: "100%", maxWidth: 520, display: "block", marginTop: 4, fontSize: 16 }} />
       <div aria-live="polite" className="muted" style={{ fontSize: 12, minHeight: 18, marginTop: 4 }}>
         {!curto && estado === "buscando" && "Buscando…"}
