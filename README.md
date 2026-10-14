@@ -1,6 +1,6 @@
 # Anatomia do Voto (BDR / UFPI)
 
-Plataforma web sobre os dados eleitorais do TSE (1998–2024) de AP, ES, MG, PE, RJ e RR: **carreira** de cada político (pergunta 10), **gastos de campanha** por categoria (pergunta 9), votos de legenda (pergunta 5) e mais. O layout do perfil do candidato se inspira no especial "Quem são os candidatos" do G1.
+Plataforma web sobre os dados eleitorais do TSE (1998–2024) de AP, ES, MG, PE, RJ e RR: **carreira** de cada político (pergunta 10), **gastos de campanha** por categoria (pergunta 9), votos de legenda (pergunta 5), recursos públicos × sucesso eleitoral (pergunta 8) e mais. O layout do perfil do candidato se inspira no especial "Quem são os candidatos" do G1.
 
 Os dados vêm do banco `bdr_final` (DuckDB / MotherDuck), carregado e validado no **repositório de carga**. Este repositório só lê.
 
@@ -37,7 +37,7 @@ cd api
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env                                     # preencha DATABASE e MOTHERDUCK_TOKEN (passo 0)
-pytest                                                   # 16 testes, usam um banco de teste pequeno
+pytest                                                   # 20 testes, usam um banco de teste pequeno
 uvicorn app.main:app --reload                            # http://localhost:8000/docs
 ```
 
@@ -58,7 +58,7 @@ Para conferir a conexão com o banco, abra http://localhost:8000/api/health: dev
 ```bash
 cd pipeline
 pip install -r requirements.txt
-python export_static.py                                  # grava web/public/data/q5.json e q10.json
+python export_static.py                                  # grava web/public/data/q5.json, q8.json e q10.json
 ```
 
 **3. Site**

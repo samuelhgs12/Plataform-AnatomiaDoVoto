@@ -32,6 +32,11 @@ export default function Home() {
             <h3>Votos de legenda por partido</h3>
             <p className="muted">Quanto do voto de cada partido foi só para a sigla, de 2018 a 2024.</p>
           </Link>
+          <Link href="/analises/financiamento" className="card card-link">
+            <div className="kicker">Pergunta 8</div>
+            <h3>Dinheiro público e sucesso eleitoral</h3>
+            <p className="muted">Quem recebe mais dinheiro público para a campanha se elege mais?</p>
+          </Link>
           <Link href="/candidatos" className="card card-link">
             <div className="kicker">Perguntas 9 e 10</div>
             <h3>Perfil do candidato</h3>

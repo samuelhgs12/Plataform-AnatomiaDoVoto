@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gera os JSONs estáticos das páginas agregadas (perguntas 5 e 10) para o front-end.
+"""Gera os JSONs estáticos das páginas agregadas (perguntas 5, 8 e 10) para o front-end.
 
 Os dados são históricos: calcule uma vez e sirva como arquivo (CDN), em vez de consultar o banco a cada visita.
 
@@ -7,7 +7,7 @@ Uso (a partir da pasta pipeline/):
   python export_static.py                                    # usa DATABASE e MOTHERDUCK_TOKEN do api/.env
   python export_static.py --banco /caminho/bdr_final.duckdb  # arquivo local
   python export_static.py --banco md:_share/bdr/<codigo>     # MotherDuck (token no .env ou no ambiente)
-Saída: ../web/public/data/q5.json e q10.json, no formato {tabela: {colunas: [...], linhas: [[...]]}}.
+Saída: ../web/public/data/q5.json, q8.json e q10.json, no formato {tabela: {colunas: [...], linhas: [[...]]}}.
 """
 import argparse
 import json
@@ -93,7 +93,7 @@ def main():
     con = conectar(a.banco)
     destino = Path(a.saida)
     destino.mkdir(parents=True, exist_ok=True)
-    for q in ("q5", "q10"):
+    for q in ("q5", "q8", "q10"):
         dados = executar(con, RAIZ / "sql" / f"{q}.sql")
         arq = destino / f"{q}.json"
         arq.write_text(json.dumps(dados, default=_json, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")

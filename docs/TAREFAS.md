@@ -2,8 +2,8 @@
 
 ## O que o esqueleto já faz
 
-- API com busca, listagem, perfil, gastos por categoria (com mediana do cargo), palavras e receitas, 16 testes e teste de privacidade.
-- Front com início, listagem com filtros, perfil (linha do tempo, gastos, palavras, receitas), duas análises agregadas e página "Sobre".
+- API com busca, listagem, perfil, gastos por categoria (com mediana do cargo), palavras e receitas por fonte, 20 testes e teste de privacidade.
+- Front com início, listagem com filtros, perfil (linha do tempo, de onde veio o dinheiro), três análises agregadas (P5, P8, P10) e página "Sobre".
 - Exportação dos agregados das perguntas 5 e 10 para JSON.
 - CI (testes da API; lint, tipos, testes e build do front), Docker e `.env.example`.
 
