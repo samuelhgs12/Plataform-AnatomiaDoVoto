@@ -4,8 +4,10 @@ Regras:
   * o banco é aberto SOMENTE para leitura;
   * toda consulta usa parâmetros (`?`), nunca texto concatenado;
   * cada requisição usa seu próprio cursor (conexões do DuckDB não são seguras entre threads);
-  * o token do MotherDuck nunca aparece em mensagens de erro.
+  * o token do MotherDuck nunca aparece em mensagens de erro;
+  * se o MotherDuck falhar, usa o arquivo DuckDB local da carga (DATABASE_LOCAL), quando ele existe.
 """
+import logging
 import threading
 from functools import lru_cache
 from pathlib import Path
@@ -15,6 +17,7 @@ from cachetools import TTLCache
 
 from .config import get_settings
 
+log = logging.getLogger(__name__)
 QUERIES = Path(__file__).parent / "queries"
 _lock = threading.Lock()
 _con: duckdb.DuckDBPyConnection | None = None
@@ -46,29 +49,49 @@ def _anexar_share(con: duckdb.DuckDBPyConnection, alvo: str) -> str:
     return "bdr"
 
 
-def _abrir() -> duckdb.DuckDBPyConnection:
-    s = get_settings()
-    alvo = s.database
+def _abrir_arquivo(alvo: str) -> duckdb.DuckDBPyConnection:
+    if not Path(alvo).exists():
+        raise BancoIndisponivel(f"Banco não encontrado: {alvo}")
     try:
-        if alvo.startswith("md:"):
-            if not s.motherduck_token:
-                raise BancoIndisponivel("Falta MOTHERDUCK_TOKEN no servidor.")
-            if alvo.startswith("md:_share"):
-                # Anexa (se preciso) e reabre já apontando para o share: um `USE bdr` não vale
-                # para os cursores criados em consultar(), que voltariam ao banco padrão da conta.
-                with duckdb.connect(f"md:?motherduck_token={s.motherduck_token}") as con:
-                    nome = _anexar_share(con, alvo)
-                return duckdb.connect(f"md:{nome}?motherduck_token={s.motherduck_token}")
-            sep = "&" if "?" in alvo else "?"
-            return duckdb.connect(f"{alvo}{sep}motherduck_token={s.motherduck_token}")
-        if not Path(alvo).exists():
-            raise BancoIndisponivel(f"Banco não encontrado: {alvo}")
         return duckdb.connect(alvo, read_only=True)
+    except duckdb.Error as e:
+        raise BancoIndisponivel(f"Não foi possível abrir o banco local ({type(e).__name__}).") from None
+
+
+def _abrir_motherduck(alvo: str) -> duckdb.DuckDBPyConnection:
+    s = get_settings()
+    try:
+        if not s.motherduck_token:
+            raise BancoIndisponivel("Falta MOTHERDUCK_TOKEN no servidor.")
+        if alvo.startswith("md:_share"):
+            # Anexa (se preciso) e reabre já apontando para o share: um `USE bdr` não vale
+            # para os cursores criados em consultar(), que voltariam ao banco padrão da conta.
+            with duckdb.connect(f"md:?motherduck_token={s.motherduck_token}") as con:
+                nome = _anexar_share(con, alvo)
+            return duckdb.connect(f"md:{nome}?motherduck_token={s.motherduck_token}")
+        sep = "&" if "?" in alvo else "?"
+        return duckdb.connect(f"{alvo}{sep}motherduck_token={s.motherduck_token}")
     except BancoIndisponivel:
         raise
     except duckdb.Error as e:
         # a mensagem original pode conter o token da conexão: não a repassamos
         raise BancoIndisponivel(f"Não foi possível abrir o banco ({type(e).__name__}).") from None
+
+
+def _abrir() -> duckdb.DuckDBPyConnection:
+    s = get_settings()
+    if not s.database.startswith("md:"):
+        return _abrir_arquivo(s.database)
+    try:
+        return _abrir_motherduck(s.database)
+    except BancoIndisponivel as erro_md:
+        # o plano gratuito do MotherDuck limita a organização a 3 pessoas: quem ficou de fora lê a carga local
+        local = Path(s.database_local).expanduser() if s.database_local else None
+        if not local or not local.exists():
+            raise BancoIndisponivel(f"{erro_md} Sem fallback local: não há banco em {local or '(DATABASE_LOCAL vazio)'}; "
+                                    "defina DATABASE_LOCAL com o caminho completo do bdr_final.duckdb da carga.") from None
+        log.warning("MotherDuck indisponível (%s); usando o banco local %s", erro_md, local)
+        return _abrir_arquivo(str(local))
 
 
 def conexao() -> duckdb.DuckDBPyConnection:
