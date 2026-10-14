@@ -3,6 +3,11 @@ const nf = new Intl.NumberFormat("pt-BR");
 export const inteiro = (n: number) => nf.format(Math.round(n));
 export const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 export const pct = (v: number, casas = 1) => `${(v * 100).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
+/** Porcentagem com sinal, para variações (0,25 → "+25%"; −0,1 → "−10%"). */
+export function pctSinal(v: number, casas = 0): string {
+  const r = Number((v * 100).toFixed(casas));   // o sinal segue o valor arredondado: −0,4% com 0 casas vira "0%"
+  return `${r > 0 ? "+" : r < 0 ? "−" : ""}${pct(Math.abs(r) / 100, casas)}`;
+}
 
 export function compacto(n: number): string {
   if (n >= 1e6) return `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;

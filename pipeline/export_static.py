@@ -50,7 +50,11 @@ def conectar(banco: str):
         if not token:
             sys.exit("Falta MOTHERDUCK_TOKEN.")
         con = duckdb.connect(f"md:?motherduck_token={token}")
-        con.execute("ATTACH '" + banco.replace("'", "''") + "' AS bdr")
+        try:
+            con.execute("ATTACH '" + banco.replace("'", "''") + "' AS bdr")
+        except duckdb.InvalidInputException as e:
+            if "already attached" not in str(e):    # o MotherDuck guarda shares anexados na conta: reaproveita
+                raise
         con.execute("USE bdr")
         return con
     if banco.startswith("md:"):
