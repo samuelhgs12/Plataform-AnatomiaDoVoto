@@ -7,6 +7,8 @@ Uso (a partir da pasta pipeline/):
   python export_static.py                                    # usa DATABASE e MOTHERDUCK_TOKEN do api/.env
   python export_static.py --banco /caminho/bdr_final.duckdb  # arquivo local
   python export_static.py --banco md:_share/bdr/<codigo>     # MotherDuck (token no .env ou no ambiente)
+Se o MotherDuck falhar (sem token, fora da organização...), usa o banco local da carga: DATABASE_LOCAL ou, por padrão,
+../load_BDR/dados_bdr/bdr_final.duckdb (repositórios lado a lado).
 Saída: ../web/public/data/q5.json e q10.json, no formato {tabela: {colunas: [...], linhas: [[...]]}}.
 """
 import argparse
@@ -23,6 +25,7 @@ import duckdb
 RAIZ = Path(__file__).resolve().parent
 COPY_RE = re.compile(r"COPY\s*\((.*)\)\s*TO\s*'[^']*?([A-Za-z0-9_]+)\.csv'\s*\(HEADER\)", re.S | re.I)
 IGNORAR = {"politicos", "trajetorias"}      # volumosos: a busca por pessoa usa a API
+BANCO_DA_CARGA = RAIZ.parents[1] / "load_BDR" / "dados_bdr" / "bdr_final.duckdb"
 
 
 def carregar_env() -> None:
@@ -44,11 +47,15 @@ def carregar_env() -> None:
                 os.environ[chave] = valor
 
 
-def conectar(banco: str):
+class SemBanco(RuntimeError):
+    pass
+
+
+def _conectar(banco: str):
     token = os.environ.get("MOTHERDUCK_TOKEN") or os.environ.get("motherduck_token")
     if banco.startswith("md:_share"):
         if not token:
-            sys.exit("Falta MOTHERDUCK_TOKEN.")
+            raise SemBanco("Falta MOTHERDUCK_TOKEN.")
         con = duckdb.connect(f"md:?motherduck_token={token}")
         try:
             con.execute("ATTACH '" + banco.replace("'", "''") + "' AS bdr")
@@ -59,11 +66,27 @@ def conectar(banco: str):
         return con
     if banco.startswith("md:"):
         if not token:
-            sys.exit("Falta MOTHERDUCK_TOKEN.")
+            raise SemBanco("Falta MOTHERDUCK_TOKEN.")
         return duckdb.connect(f"{banco}{'&' if '?' in banco else '?'}motherduck_token={token}")
     if not Path(banco).exists():
-        sys.exit(f"Banco não encontrado: {banco}")
+        raise SemBanco(f"Banco não encontrado: {banco}")
     return duckdb.connect(banco, read_only=True)
+
+
+def conectar(banco: str):
+    """Conecta ao banco pedido; se for o MotherDuck e falhar, cai para o arquivo local da carga."""
+    try:
+        return _conectar(banco)
+    except (SemBanco, duckdb.Error) as e:
+        # a mensagem do duckdb pode conter o token: mostramos só o tipo do erro
+        motivo = str(e) if isinstance(e, SemBanco) else type(e).__name__
+        local = str(Path(os.environ.get("DATABASE_LOCAL") or BANCO_DA_CARGA).expanduser())
+        if not banco.startswith("md:"):
+            sys.exit(f"Não foi possível abrir o banco ({motivo}).")
+        if not Path(local).exists():
+            sys.exit(f"Não foi possível abrir o MotherDuck ({motivo}) e não há banco local em {local}: defina DATABASE_LOCAL.")
+        print(f"MotherDuck indisponível ({motivo}); usando o banco local {local}", file=sys.stderr)
+        return duckdb.connect(local, read_only=True)
 
 
 def executar(con, arquivo: Path) -> dict:
