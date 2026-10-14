@@ -19,6 +19,37 @@ def test_health_sem_banco(monkeypatch, tmp_path):
     db.reiniciar()
 
 
+def test_fallback_local_quando_motherduck_falha(monkeypatch, banco):
+    from fastapi.testclient import TestClient
+    from app import db
+
+    monkeypatch.setenv("DATABASE", "md:bdr")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "")      # vazio vence o api/.env: sem token o MotherDuck falha...
+    monkeypatch.setenv("DATABASE_LOCAL", banco)     # ...e a API lê o arquivo local
+    db.reiniciar()
+    from app.main import app
+
+    c = TestClient(app)
+    assert c.get("/api/health").json() == {"status": "ok", "db": "ok"}
+    assert c.get("/api/meta").json()["ufs"] == ["MG", "PE", "RJ"]
+    db.reiniciar()
+
+
+def test_sem_motherduck_e_sem_fallback(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    from app import db
+
+    monkeypatch.setenv("DATABASE", "md:bdr")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "")
+    monkeypatch.setenv("DATABASE_LOCAL", str(tmp_path / "nao_existe.duckdb"))
+    db.reiniciar()
+    from app.main import app
+
+    r = TestClient(app).get("/api/health")
+    assert r.status_code == 503 and "DATABASE_LOCAL" in r.json()["db"]
+    db.reiniciar()
+
+
 def test_meta(client):
     m = client.get("/api/meta").json()
     assert {c["nome"] for c in m["cargos"]} >= {"Vereador", "Prefeito", "Deputado federal", "Deputado estadual"}

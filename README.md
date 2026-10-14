@@ -11,10 +11,6 @@ pipeline/   gera os JSONs estáticos das análises agregadas (perguntas 5 e 10)
 docs/       arquitetura, API, esboço das telas, decisões, plano de trabalho
 ```
 
-## Começar em 10 minutos
-
-Pré-requisitos: Python 3.12+, Node 20.9+ (recomendado 22) e uma conta na organização do MotherDuck com acesso ao share do banco `bdr`.
-
 **0. Acesso ao banco (MotherDuck)**
 
 1. No MotherDuck, gere seu token pessoal (Settings → Access Tokens). Cada pessoa usa o próprio token.
@@ -27,6 +23,14 @@ Pré-requisitos: Python 3.12+, Node 20.9+ (recomendado 22) e uma conta na organi
 
 Na primeira execução a API anexa o share à sua conta com o nome `bdr`. O MotherDuck guarda esse anexo na conta, então nas próximas execuções a API só o reutiliza. Se você já tiver anexado o share por conta própria (pela interface do MotherDuck, por exemplo), também funciona. Outras opções para `DATABASE`: `md:bdr` (share já anexado como `bdr`) ou o caminho de um arquivo `.duckdb` local.
 
+**Sem acesso ao MotherDuck**: rode a carga no repositório `load_BDR` para gerar `dados_bdr/bdr_final.duckdb` (veja o README de lá). Se o MotherDuck falhar (sem token, conta fora da organização, share sem acesso), a API e o `export_static.py` passam a ler esse arquivo sozinhos. Por padrão procuram em `../load_BDR/dados_bdr/bdr_final.duckdb`, com as duas pastas lado a lado:
+```
+BDR/
+├── load_BDR/dados_bdr/bdr_final.duckdb
+└── Plataform-AnatomiaDoVoto/
+```
+Em outro lugar, informe o caminho em `api/.env` com `DATABASE_LOCAL=/caminho/para/bdr_final.duckdb`. Quando o fallback é usado, o terminal da API mostra o aviso `MotherDuck indisponível (...); usando o banco local ...`. O DuckDB não deixa abrir o arquivo enquanto a carga estiver escrevendo nele: rode a carga antes de subir a API.
+
 **1. API**
 
 Rode tudo de dentro da pasta `api/` (o `app.main` é relativo a ela) e com o ambiente virtual ativo. Sem ele, o `pip` instala os pacotes no Python global e o comando `uvicorn` pode não ser encontrado.
@@ -37,7 +41,7 @@ cd api
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env                                     # preencha DATABASE e MOTHERDUCK_TOKEN (passo 0)
-pytest                                                   # 20 testes, usam um banco de teste pequeno
+pytest                                                   # testes com um banco de teste pequeno
 uvicorn app.main:app --reload                            # http://localhost:8000/docs
 ```
 
@@ -72,15 +76,3 @@ Outros comandos: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build
 
 Com Docker: `docker compose up --build` (não foi testado ainda).
 
-## Regras importantes
-
-1. **Privacidade:** nunca exibir título eleitoral, CPF, data de nascimento ou documento de doador. O que sai pela API é só o que está em `api/app/schemas.py`; há um teste que garante isso.
-2. **Token do MotherDuck** (`MOTHERDUCK_TOKEN`) só no servidor da API, nunca no front-end nem no Git. Cada pessoa usa o token da própria conta.
-3. **Regras dos dados:** titulares, eleição ordinária; gasto = prestação final sem transferências. Ver `docs/ARQUITETURA.md`.
-4. As consultas das perguntas 5 e 10 em `pipeline/sql/` são cópia do repositório de carga: se a regra mudar lá, atualize aqui.
-
-## Estado atual
-
-Esqueleto funcional, **testado com dados de exemplo** (banco de teste pequeno, criado pelos testes). Ainda não foi rodado com o banco real: o primeiro passo da equipe é conferir os números contra o projeto de carga (por exemplo, 887.801 candidaturas e percentual de legenda de 7,4% em 2018, 5,6% em 2020, 5,1% em 2022 e 3,8% em 2024).
-
-Veja `docs/TAREFAS.md` para as fases e a divisão sugerida, e `docs/ESBOCO_TELAS.md` para as telas.
