@@ -40,8 +40,10 @@ INSERT INTO despesa_campanha (id_despesa, id_candidatura, id_categoria_despesa, 
   (5, 2, 1, 'Impressão de santinhos', 500, 'PARCIAL'),
   (6, 5, 2, 'Impulsionamento de conteúdo', 4000, 'FINAL'),
   (7, 5, 1, 'Impressão de santinhos e adesivos', 1000, 'FINAL');
-INSERT INTO receita_campanha (id_receita, id_candidatura, id_fonte_recurso, valor_receita, repasse_entre_candidatos, tipo_prestacao_contas) VALUES
-  (1, 2, 1, 4000, false, 'FINAL'), (2, 2, 2, 1500, false, 'FINAL'), (3, 2, 2, 300, true, 'FINAL'), (4, 5, 2, 5000, false, 'FINAL');
+INSERT INTO receita_campanha (id_receita, id_candidatura, id_fonte_recurso, origem_receita, valor_receita, repasse_entre_candidatos, tipo_prestacao_contas) VALUES
+  (1, 2, 1, 'Recursos de partido político', 4000, false, 'FINAL'), (2, 2, 2, 'Recursos de pessoas físicas', 1000, false, 'FINAL'),
+  (5, 2, 2, 'Recursos próprios', 500, false, 'FINAL'), (3, 2, 2, 'Recursos de outros candidatos', 300, true, 'FINAL'),
+  (4, 5, 2, 'Recursos de pessoas físicas', 5000, false, 'FINAL');
 -- votos de partido (para os painéis agregados da pergunta 5): 2020 vereador e 2022 deputado
 INSERT INTO votos_partido_municipio (id_votos, id_eleicao, id_partido, id_municipio, turno, votos_nominais, votos_legenda) VALUES
   (1, 4, 1, 1, 1, 400, 120), (2, 4, 2, 1, 1, 900, 60), (3, 4, 3, 2, 1, 1000, 50), (4, 7, 1, 1, 1, 700, 70), (5, 7, 4, 3, 1, 600, 0);

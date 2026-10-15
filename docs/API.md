@@ -12,7 +12,7 @@ Com a API rodando, a documentação interativa (gerada automaticamente) fica em 
 | GET | `/api/candidatos/{id}` | — | cabeçalho, resumo, carreira completa e trocas de partido |
 | GET | `/api/candidaturas/{id}/despesas` | — | gasto por categoria + mediana do cargo/ano/UF (pergunta 9) |
 | GET | `/api/candidaturas/{id}/palavras` | `limite` (≤100) | termos das despesas de propaganda (nuvem de palavras) |
-| GET | `/api/candidaturas/{id}/receitas` | — | receita pública × privada + mediana (pergunta 8) |
+| GET | `/api/candidaturas/{id}/receitas` | — | receita pública × privada, valor por fonte (fundo eleitoral, fundo partidário, doações de pessoas, recursos próprios, outros privados) + mediana (pergunta 8) |
 
 Exemplos:
 

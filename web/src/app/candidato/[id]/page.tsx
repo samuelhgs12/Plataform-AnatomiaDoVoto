@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { apiGet } from "@/lib/api";
-import type { Perfil } from "@/lib/types";
+import { apiGet, apiGetOpcional } from "@/lib/api";
+import type { Perfil, Receitas } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/components/PartyChip";
 import { Timeline } from "@/components/Timeline";
+import { DinheiroCampanha } from "@/components/DinheiroCampanha";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
+const ANO_RECEITAS = 2018;   // a base só tem prestação de contas (receitas) de 2018 em diante
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -16,8 +18,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: p?.candidato.nome_civil ?? "Candidato" };
 }
 
-export default async function PerfilCandidato({ params }: Props) {
+export default async function PerfilCandidato({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = (await searchParams) ?? {};
   if (!/^\d+$/.test(id)) notFound();
 
   const perfil = await apiGet<Perfil>(`/candidatos/${id}`);
@@ -26,6 +29,11 @@ export default async function PerfilCandidato({ params }: Props) {
   const disputadas = carreira.filter((c) => c.eh_titular && c.tipo_eleicao === "ORDINARIA" && c.disputou);
   const ultima = disputadas.at(-1);
   const nome = candidato.nome_civil ?? ultima?.nome_urna ?? "Candidato";
+  // pergunta 8: campanhas com dados de receita, da mais recente para a mais antiga; ?campanha=<id_candidatura> escolhe outra
+  const comReceitas = disputadas.filter((c) => c.ano >= ANO_RECEITAS).reverse();
+  const pedida = Number(Array.isArray(sp.campanha) ? sp.campanha[0] : sp.campanha);
+  const campanha = comReceitas.find((c) => c.id_candidatura === pedida) ?? comReceitas[0];
+  const receitas = campanha ? await apiGetOpcional<Receitas>(`/candidaturas/${campanha.id_candidatura}/receitas`) : null;
 
   return (
     <>
@@ -64,6 +72,7 @@ export default async function PerfilCandidato({ params }: Props) {
         )}
       </section>
 
+      <DinheiroCampanha opcoes={comReceitas} escolhida={campanha} receitas={receitas} hrefDe={(c) => `/candidato/${id}?campanha=${c}#dinheiro`} />
     </>
   );
 }

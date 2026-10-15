@@ -77,11 +77,11 @@ def palavras(id_candidatura: int, limite: int = Query(50, ge=1, le=100)):
 
 @router.get("/candidaturas/{id_candidatura}/receitas", response_model=Receitas)
 def receitas(id_candidatura: int):
-    """Receita pública x privada (pergunta 8), sem repasses entre candidatos."""
+    """Receita pública x privada e por fonte (pergunta 8), sem repasses entre candidatos."""
     _contexto(id_candidatura)
-    r = db.um("receitas", (id_candidatura,)) or {"publica": 0, "privada": 0, "total": 0}
+    r = {k: float(v or 0) for k, v in (db.um("receitas", (id_candidatura,)) or {}).items()}
     ref = db.um("receitas_referencia", (id_candidatura,))
-    total = float(r["total"] or 0)
-    return Receitas(id_candidatura=id_candidatura, publica=float(r["publica"] or 0), privada=float(r["privada"] or 0), total=total,
-                    pct_publica=(float(r["publica"] or 0) / total) if total else None,
+    total = r.get("total", 0.0)
+    return Receitas(id_candidatura=id_candidatura, **{k: v for k, v in r.items() if k != "total"}, total=total,
+                    pct_publica=(r["publica"] / total) if total else None,
                     mediana_pct_publica_cargo=float(ref["mediana_pct_publica"]) if ref and ref["mediana_pct_publica"] is not None else None)

@@ -150,6 +150,13 @@ def test_receitas_publica_x_privada_sem_repasses(client):
     r = client.get("/api/candidaturas/2/receitas").json()
     assert (r["publica"], r["privada"], r["total"]) == (4000, 1500, 5500)      # o repasse de 300 não entra
     assert round(r["pct_publica"], 3) == 0.727
+    fontes = {k: r[k] for k in ("fundo_eleitoral", "fundo_partidario", "doacoes_pessoas", "recursos_proprios", "outros_privados")}
+    assert fontes == {"fundo_eleitoral": 4000, "fundo_partidario": 0, "doacoes_pessoas": 1000, "recursos_proprios": 500, "outros_privados": 0}
+
+
+def test_receitas_candidatura_sem_receita(client):
+    r = client.get("/api/candidaturas/1/receitas").json()
+    assert r["total"] == 0 and r["pct_publica"] is None and r["fundo_eleitoral"] == 0
 
 
 def test_candidatura_inexistente(client):

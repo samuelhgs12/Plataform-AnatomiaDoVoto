@@ -3,7 +3,7 @@ import path from "node:path";
 import type { TabelaEstatica } from "./types";
 
 /** Lê public/data/<nome>.json (gerado por pipeline/export_static.py). Devolve null se ainda não foi gerado. */
-export async function lerEstatico(nome: "q5" | "q10"): Promise<Record<string, TabelaEstatica> | null> {
+export async function lerEstatico(nome: "q5" | "q8" | "q10"): Promise<Record<string, TabelaEstatica> | null> {
   try {
     const texto = await readFile(path.join(process.cwd(), "public", "data", `${nome}.json`), "utf-8");
     return JSON.parse(texto);

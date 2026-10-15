@@ -130,6 +130,12 @@ class Receitas(BaseModel):
     total: float
     pct_publica: float | None
     mediana_pct_publica_cargo: float | None = None
+    # as 5 fontes da pergunta 8 (públicas: fundo eleitoral e partidário; o resto é privado)
+    fundo_eleitoral: float = 0
+    fundo_partidario: float = 0
+    doacoes_pessoas: float = 0
+    recursos_proprios: float = 0
+    outros_privados: float = 0
 
 
 class Saude(BaseModel):

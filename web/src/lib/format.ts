@@ -15,6 +15,18 @@ export function compacto(n: number): string {
   return inteiro(n);
 }
 
+/** Valor em reais por extenso curto, para leigos: "R$ 1,7 bilhão", "R$ 120 milhões", "R$ 20 mil", "R$ 950". */
+export function reais(n: number): string {
+  const curto = (v: number, um: string, varios: string) => {
+    const r = v < 10 ? Math.round(v * 10) / 10 : Math.round(v);
+    return `R$ ${r.toLocaleString("pt-BR")} ${r < 2 ? um : varios}`;
+  };
+  if (n >= 999_500_000) return curto(n / 1e9, "bilhão", "bilhões");
+  if (n >= 999_500) return curto(n / 1e6, "milhão", "milhões");
+  if (n >= 1e4) return `R$ ${Math.round(n / 1e3).toLocaleString("pt-BR")} mil`;
+  return brl(n);
+}
+
 export function iniciais(nome: string | null): string {
   const p = (nome ?? "?").trim().split(/\s+/).filter(Boolean);
   return ((p[0]?.[0] ?? "?") + (p.length > 1 ? (p[p.length - 1][0] ?? "") : "")).toUpperCase();

@@ -32,6 +32,7 @@ export interface Despesas {
 export interface Palavra { termo: string; freq: number }
 export interface Receitas {
   id_candidatura: number; publica: number; privada: number; total: number; pct_publica: number | null; mediana_pct_publica_cargo: number | null;
+  fundo_eleitoral: number; fundo_partidario: number; doacoes_pessoas: number; recursos_proprios: number; outros_privados: number;
 }
 
 /** Formato dos JSONs estáticos gerados por pipeline/export_static.py */
