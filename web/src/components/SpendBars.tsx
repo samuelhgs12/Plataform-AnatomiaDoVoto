@@ -28,7 +28,7 @@ export function SpendBars({ d }: { d: Despesas }) {
           </div>
         ))}
       </div>
-      <p className="note muted" style={{ fontSize: 12 }}>Verde = categorias de propaganda. Marca preta = mediana do cargo (considera só quem gastou nessa categoria).</p>
+      <p className="note muted" style={{ fontSize: 14 }}>Verde = categorias de propaganda. Marca preta = mediana do cargo (considera só quem gastou nessa categoria).</p>
     </div>
   );
 }

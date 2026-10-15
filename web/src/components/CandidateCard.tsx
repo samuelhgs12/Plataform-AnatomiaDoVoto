@@ -17,7 +17,7 @@ export function CandidateCard({ c }: { c: CandidaturaItem }) {
       <div style={{ marginTop: 10, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
         <PartyChip sigla={c.partido} />
         <span className={`badge${c.eleito ? " eleito" : ""}`}>{ROTULO_RESULTADO[c.resultado] ?? c.resultado}</span>
-        <span className="muted" style={{ fontSize: 12 }}>{compacto(c.votos)} votos</span>
+        <span className="muted" style={{ fontSize: 14 }}>{compacto(c.votos)} votos</span>
       </div>
     </>
   );

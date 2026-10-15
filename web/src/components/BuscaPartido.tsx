@@ -16,7 +16,7 @@ export function BuscaPartido({ indice, escolhidos, atual }: { indice: EntradaInd
   const [aberto, setAberto] = useState(false);
   const [carregando, iniciar] = useTransition();
 
-  if (escolhidos.length >= MAX_PARTIDOS) return <p className="muted" style={{ fontSize: 12, margin: 0 }}>Máximo de {MAX_PARTIDOS} partidos: remova um para escolher outro.</p>;
+  if (escolhidos.length >= MAX_PARTIDOS) return <p className="muted" style={{ fontSize: 14, margin: 0 }}>Máximo de {MAX_PARTIDOS} partidos: remova um para escolher outro.</p>;
 
   const opcoes = buscarPartido(indice, termo, escolhidos).slice(0, 8);
   const mostrar = aberto && opcoes.length > 0;
@@ -64,7 +64,7 @@ export function BuscaPartido({ indice, escolhidos, atual }: { indice: EntradaInd
           </li>
         ))}
       </ul>
-      {termo.trim() !== "" && !opcoes.length && <p className="muted" role="status" style={{ fontSize: 12, margin: "4px 0 0" }}>Nenhum partido encontrado.</p>}
+      {termo.trim() !== "" && !opcoes.length && <p className="muted" role="status" style={{ fontSize: 14, margin: "4px 0 0" }}>Nenhum partido encontrado.</p>}
     </div>
   );
 }
