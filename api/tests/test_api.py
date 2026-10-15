@@ -73,6 +73,25 @@ def test_busca_casa_inicio_de_palavra_e_ordena_por_relevancia(client):
     assert [x["id_candidato"] for x in r] == [1, 4]       # palavra inteira (MARIA) antes do início de palavra (MARIANA)
 
 
+def test_busca_exige_o_trecho_inteiro_e_na_ordem(client):
+    ids = lambda q: [x["id_candidato"] for x in client.get("/api/busca", params={"q": q}).json()]
+    assert ids("maria da silva") == [1]          # nome de urna igual
+    assert ids("silva santos") == [1]            # trecho do meio do nome civil
+    assert ids("maria silva") == []              # MARIA DA SILVA: palavras soltas não contam
+    assert ids("silva maria") == []              # nem fora de ordem
+    assert ids("mariana sil") == [4]             # a última palavra pode estar incompleta
+    assert ids("joao do com") == [2]
+
+
+def test_busca_informa_nome_de_urna_antigo_que_casou(client):
+    # a pessoa 1 foi MARIA PROFESSORA em 2016 e 2020 e MARIA DA SILVA em 2022: mostra a de 2022 e o nome que casou
+    for q in ("maria professora", "maria prof"):     # independe da palavra usada no pré-filtro
+        r = client.get("/api/busca", params={"q": q}).json()
+        assert [x["id_candidato"] for x in r] == [1]
+        assert r[0]["ultimo_ano"] == 2022 and r[0]["nome_urna"] == "MARIA DA SILVA" and r[0]["nome_urna_casado"] == "MARIA PROFESSORA"
+    assert client.get("/api/busca", params={"q": "maria da silva"}).json()[0]["nome_urna_casado"] is None
+
+
 def test_busca_exige_3_letras_e_nao_aceita_coringa(client):
     assert client.get("/api/busca", params={"q": "ab"}).status_code == 422
     assert client.get("/api/busca", params={"q": "%%%"}).json() == []      # o % digitado não vira coringa

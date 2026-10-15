@@ -28,6 +28,7 @@ class CandidatoBusca(BaseModel):
     partido: str | None
     ultimo_cargo: str
     ultimo_eleito: bool
+    nome_urna_casado: str | None = None   # nome de urna de outra eleição em que a busca casou
 
 
 class CandidaturaItem(BaseModel):

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { agruparFluxo, type LinhaFluxo } from "../src/lib/fluxo";
 import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
 import { contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
@@ -117,5 +118,28 @@ describe("financiamento (pergunta 8)", () => {
     expect(reais(2023700000)).toBe("R$ 2 bilhões");
     expect(reais(120400000)).toBe("R$ 120 milhões");
     expect(reais(20400)).toBe("R$ 20 mil");
+  });
+});
+
+describe("destacarBusca", () => {
+  const marcado = (nome: string, q: string) => destacarBusca(nome, q).filter((t) => t.casou).map((t) => t.texto).join("|");
+
+  it("normaliza como a API", () => {
+    expect(normalizarBusca("  João, do Comércio! ")).toBe("joao do comercio");
+  });
+  it("marca o trecho contínuo ignorando acento e caixa", () => {
+    expect(destacarBusca("JOÃO DO COMÉRCIO", "joao do com")).toEqual([
+      { texto: "JOÃO DO COM", casou: true },
+      { texto: "ÉRCIO", casou: false },
+    ]);
+    expect(marcado("MARIA DA SILVA SANTOS", "silva san")).toBe("SILVA SAN");
+  });
+  it("atravessa pontuação", () => {
+    expect(marcado("DR. LULA PEREIRA", "dr lula")).toBe("DR. LULA");
+  });
+  it("só casa no início de palavra e na ordem", () => {
+    expect(marcado("CELULAR", "lula")).toBe("");
+    expect(marcado("MARIA DA SILVA", "maria silva")).toBe("");
+    expect(destacarBusca("MARIA DA SILVA", "maria silva")).toEqual([{ texto: "MARIA DA SILVA", casou: false }]);
   });
 });
