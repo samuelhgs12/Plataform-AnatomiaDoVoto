@@ -1,5 +1,6 @@
 // Lógica da página "de onde vem o dinheiro das campanhas" (pergunta 8), sem dependência do React: fácil de testar.
 // Os dados vêm de public/data/q8.json, gerado por pipeline/sql/q8.sql.
+import type { CarreiraItem, Receitas } from "./types";
 
 export type Fonte = "fundo_eleitoral" | "fundo_partidario" | "doacoes_pessoas" | "recursos_proprios" | "outros_privados";
 
@@ -251,4 +252,19 @@ export function emCada10(p: number, plural = "candidatos", singular = "candidato
   if (n <= 0) return p > 0 ? `menos de 1 em cada 10 ${plural}` : `nenhum ${singular}`;
   if (n >= 10) return p < 1 ? `quase todos os ${plural}` : `todos os ${plural}`;
   return `${n} em cada 10 ${plural}`;
+}
+
+export interface ResumoCampanha {
+  id: number; ano: number; cargo: string; eleito: boolean;
+  /** null: as receitas não puderam ser carregadas. */
+  total: number | null; publica: number; privada: number; publicoDe100: number;
+}
+
+/** Uma linha por campanha (na ordem recebida) para comparar quanto cada uma recebeu e quanto disso foi dinheiro público. */
+export function resumoCampanhas(campanhas: { c: CarreiraItem; r: Receitas | null }[]): ResumoCampanha[] {
+  return campanhas.map(({ c, r }) => ({
+    id: c.id_candidatura, ano: c.ano, cargo: c.cargo, eleito: c.eleito,
+    total: r ? r.total : null, publica: r?.publica ?? 0, privada: r?.privada ?? 0,
+    publicoDe100: r && r.total > 0 ? deCada100([r.publica, r.privada])[0] : 0,
+  }));
 }
