@@ -34,10 +34,6 @@ export default function Home() {
             <h3>Dinheiro público e sucesso eleitoral</h3>
             <p className="muted">Quem recebe mais dinheiro público para a campanha se elege mais?</p>
           </Link>
-          <Link href="/candidatos" className="card card-link">
-            <h3>Perfil do candidato</h3>
-            <p className="muted">Linha do tempo da carreira e gastos de campanha por categoria.</p>
-          </Link>
         </div>
       </section>
     </>

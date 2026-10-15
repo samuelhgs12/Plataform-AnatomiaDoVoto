@@ -70,10 +70,7 @@ mark { background: color-mix(in srgb, var(--brand) 18%, transparent); color: inh
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
 .cards3 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 a.card-link { display: block; text-decoration: none; position: relative; transition: transform .18s ease, box-shadow .18s ease, border-color .18s; }
-a.card-link::after { content: "→"; position: absolute; right: 22px; top: 22px; color: var(--muted); font-size: 20px; transition: transform .18s, color .18s; }
-a.card-link h3 { padding-right: 28px; }
 a.card-link:hover { border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); box-shadow: var(--shadow-hover); transform: translateY(-2px); }
-a.card-link:hover::after { transform: translateX(3px); color: var(--brand); }
 a.card-link p { margin-bottom: 0; }
 .kicker { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--brand); margin-bottom: 6px; }
 .hero { padding: 48px 0 28px; }
