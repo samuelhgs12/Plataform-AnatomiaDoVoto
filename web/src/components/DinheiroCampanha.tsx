@@ -13,7 +13,6 @@ export function DinheiroCampanha({ opcoes, escolhida, receitas, hrefDe }: {
 }) {
   return (
     <section className="card" aria-labelledby="h-din" id="dinheiro">
-      <div className="kicker">Pergunta 8</div>
       <h2 id="h-din">Dinheiro da campanha e resultado</h2>
       {!escolhida ? (
         <p className="muted">Os dados de quanto cada campanha recebeu só existem a partir de 2018, e esta pessoa não disputou eleições desde então.</p>
@@ -75,7 +74,7 @@ function Conteudo({ c, r }: { c: CarreiraItem; r: Receitas | null }) {
           <b>{pct(r.mediana_pct_publica_cargo, 0)}</b> do dinheiro vindo de fonte pública; esta campanha teve <b>{pct(r.pct_publica, 0)}</b>.
         </p>
       )}
-      <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+      <p className="muted" style={{ fontSize: 15, marginBottom: 0 }}>
         <Link href={panorama}>Ver o panorama de todos os candidatos a {c.cargo.toLowerCase()} em {c.ano} →</Link>
       </p>
     </>

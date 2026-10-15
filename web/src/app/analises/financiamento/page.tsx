@@ -98,7 +98,6 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
 
   return (
     <>
-      <div className="kicker">Pergunta 8</div>
       <h1>Dinheiro público e sucesso eleitoral</h1>
       <p className="manchete" style={{ maxWidth: 760, marginBottom: 6 }}>Quem recebe mais dinheiro público para a campanha se elege mais?</p>
       <p className="muted" style={{ maxWidth: 760 }}>
@@ -217,7 +216,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
           <div className="kpi"><b>{inteiro(soma.candidaturas)}</b><span>candidatos ({inteiro(soma.comReceita)} receberam algum dinheiro)</span></div>
         </div>
         {!cargo && !uf && ano % 4 === 2 && (
-          <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>Inclui as campanhas a presidente, que são nacionais (o dinheiro não é só destes seis estados). Escolha um estado ou cargo para tirá-las.</p>
+          <p className="muted" style={{ fontSize: 14, marginBottom: 0 }}>Inclui as campanhas a presidente, que são nacionais (o dinheiro não é só destes seis estados). Escolha um estado ou cargo para tirá-las.</p>
         )}
       </section>
 
@@ -235,7 +234,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
           parte: s.total > 0 ? s.publico / s.total : null, vazia: "sem eleição", href: href({ ano: String(a) }), atual: a === ano,
           dica: s.total > 0 ? `${a}: ${pct(s.publico / s.total)} público, ${reais(s.total)} no total` : `${a}: sem eleição para esse cargo`,
         }))} />
-        <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>As eleições se alternam: <b>gerais</b> (presidente, governador, senador e deputados) e <b>municipais</b> (prefeito e vereador). Compare geral com geral e municipal com municipal.</p>
+        <p className="muted" style={{ fontSize: 14, marginBottom: 0 }}>As eleições se alternam: <b>gerais</b> (presidente, governador, senador e deputados) e <b>municipais</b> (prefeito e vereador). Compare geral com geral e municipal com municipal.</p>
       </section>
 
       {/* 3. Comparação entre os estados */}
@@ -249,7 +248,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
           <>
             <p className="muted">Campanhas {cargo ? `a ${cargo.toLowerCase()} ` : ""}em {ano}, estado por estado. Clique em um estado para ver a página inteira só dele.</p>
             <div className="chips" style={{ margin: "10px 0" }} aria-label="O que comparar entre os estados">
-              <span className="muted" style={{ fontSize: 13, alignSelf: "center" }}>Ver:</span>
+              <span className="muted" style={{ fontSize: 15, alignSelf: "center" }}>Ver:</span>
               <Link className={`chip${visaoUf === "pct" ? " on" : ""}`} href={href({ vuf: undefined }, "estados")} scroll={false}>Quanto foi público (em %)</Link>
               <Link className={`chip${visaoUf === "valor" ? " on" : ""}`} href={href({ vuf: "valor" }, "estados")} scroll={false}>Quanto recebeu (em R$)</Link>
             </div>
@@ -289,7 +288,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
                 <Legenda itens={LEGENDA_PUB_PRIV} />
               </>
             )}
-            {uf && <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>Você está vendo {NOME_UF[uf] ?? uf}. <Link href={href({ uf: undefined }, "estados")}>Voltar para todos os estados</Link>.</p>}
+            {uf && <p className="muted" style={{ fontSize: 15, marginBottom: 0 }}>Você está vendo {NOME_UF[uf] ?? uf}. <Link href={href({ uf: undefined }, "estados")}>Voltar para todos os estados</Link>.</p>}
           </>
         )}
       </section>
@@ -325,7 +324,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
         <h2 id="h-par">Quanto cada partido recebeu</h2>
         <p className="muted">Soma do que os candidatos de cada partido receberam {alvo(f)} em {ano}.</p>
         <div className="chips" style={{ margin: "10px 0" }} aria-label="Ordenar os partidos">
-          <span className="muted" style={{ fontSize: 13, alignSelf: "center" }}>Ver:</span>
+          <span className="muted" style={{ fontSize: 15, alignSelf: "center" }}>Ver:</span>
           <Link className={`chip${ordem === "valor" ? " on" : ""}`} href={href({ ordem: undefined }, "partidos")} scroll={false}>Quanto recebeu (em R$)</Link>
           <Link className={`chip${ordem === "publico" ? " on" : ""}`} href={href({ ordem: "publico" }, "partidos")} scroll={false}>Quanto foi público (em %)</Link>
         </div>
@@ -357,10 +356,10 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
                 chave: partido, rotulo: partido, valor: s.publico / s.total, classe: "pub", trilhoCheio: true,
                 texto: `${pct(s.publico / s.total, 0)} público`, subtexto: `de ${reais(s.total)} recebidos`,
               }))} />
-            <p className="muted" style={{ fontSize: 12 }}>Partidos que receberam muito pouco (menos de 0,5% do total) ficam de fora desta ordem: com valores pequenos, o percentual engana.</p>
+            <p className="muted" style={{ fontSize: 14 }}>Partidos que receberam muito pouco (menos de 0,5% do total) ficam de fora desta ordem: com valores pequenos, o percentual engana.</p>
           </>
         )}
-        {ordem === "valor" && partidos.length > MAX_PARTIDOS && <p className="muted" style={{ fontSize: 13 }}>Mostrando os {partidosGrafico.length} que mais receberam, de {partidos.length} partidos.</p>}
+        {ordem === "valor" && partidos.length > MAX_PARTIDOS && <p className="muted" style={{ fontSize: 15 }}>Mostrando os {partidosGrafico.length} que mais receberam, de {partidos.length} partidos.</p>}
         {partidos.length > 0 && (
           <details>
             <summary>Ver todos os {partidos.length} partidos em tabela</summary>
