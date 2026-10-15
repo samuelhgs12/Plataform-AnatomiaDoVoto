@@ -2,10 +2,10 @@
 import re
 import unicodedata
 
-# nível do cargo na linha do tempo do perfil: 1 vereador, 2 prefeito, 3 dep. estadual, 4 dep. federal, 5 senador,
-# 6 governador, 7 presidente (vices e suplentes ficam no nível do titular). Difere da escala do q10.sql,
-# que põe governador e senador juntos no nível 5.
-NIVEL_CARGO = {13: 1, 11: 2, 12: 2, 7: 3, 8: 3, 6: 4, 5: 5, 9: 5, 10: 5, 3: 6, 4: 6, 1: 7, 2: 7}
+# nível do cargo na linha do tempo do perfil: 1 vereador, 2 vice-prefeito, 3 prefeito, 4 dep. estadual, 5 dep. federal,
+# 6 senador, 7 governador, 8 presidente (vice-governador, vice-presidente e suplentes ficam no nível do titular).
+# Igual a NIVEL_CARGO em web/src/lib/carreira.ts. Difere da escala do q10.sql, que põe governador e senador juntos no nível 5.
+NIVEL_CARGO = {13: 1, 12: 2, 11: 3, 7: 4, 8: 4, 6: 5, 5: 6, 9: 6, 10: 6, 3: 7, 4: 7, 1: 8, 2: 8}
 
 
 def sem_acento(texto: str) -> str:

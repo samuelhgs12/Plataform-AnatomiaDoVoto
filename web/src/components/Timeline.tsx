@@ -1,54 +1,90 @@
 import type { CarreiraItem } from "@/lib/types";
 import { corPartido, ROTULO_RESULTADO, inteiro } from "@/lib/format";
+import { NIVEIS_CARREIRA, rotulosPartido } from "@/lib/carreira";
+import { caminho, escala } from "@/lib/grafico";
 
-const NIVEIS: [number, string][] = [[7, "Presidente"], [6, "Governador"], [5, "Senador"], [4, "Dep. federal"], [3, "Dep. estadual"], [2, "Prefeito"], [1, "Vereador"]];
-const TOPO = NIVEIS[0][0];
-// nível pelo id_cargo (vices e suplentes no nível do titular). É a mesma escala de NIVEL_CARGO em
-// api/app/routers/util.py, mas calculada aqui para o gráfico não depender de respostas antigas em cache.
-const NIVEL_CARGO: Record<number, number> = { 13: 1, 11: 2, 12: 2, 7: 3, 8: 3, 6: 4, 5: 5, 9: 5, 10: 5, 3: 6, 4: 6, 1: 7, 2: 7 };
+const TOPO = NIVEIS_CARREIRA[0][0];
+const FONTE_PARTIDO = 11;
 
 /**
- * Linha do tempo da carreira (pergunta 10): anos no eixo X, nível do cargo no eixo Y.
- * Ponto cheio = eleito; vazado = não eleito. Para acessibilidade há uma tabela equivalente logo abaixo (<details>).
- * Se quiser interatividade (zoom, tooltips ricos), troque por Observable Plot ou ECharts.
+ * Linha do tempo da carreira: anos no eixo X, nível do cargo no eixo Y. `carreira` já vem de `naLinhaDoTempo`.
+ * Ponto cheio = eleito; vazado = não eleito. O partido de cada eleição fica numa faixa própria, entre o nível mais baixo
+ * e os anos, ligado ao ponto por uma linha tracejada. Para acessibilidade há uma tabela equivalente logo abaixo (<details>).
  */
-export function Timeline({ carreira, nome }: { carreira: CarreiraItem[]; nome: string }) {
-  const W = 760, H = 370, L = 104, R = 20, T = 24, B = 34, pw = W - L - R, ph = H - T - B;
+export function Timeline({ carreira, nome }: { carreira: (CarreiraItem & { nivel: number })[]; nome: string }) {
+  const W = 760, L = 112, R = 20, T = 18, PASSO = 34;         // PASSO: distância entre níveis
   const a0 = 1998, a1 = 2024;
-  const X = (ano: number) => L + ((ano - a0) / (a1 - a0)) * pw;
-  const Y = (nivel: number) => T + ((TOPO - nivel) / (TOPO - 1)) * ph;
-  const pts = [...carreira].sort((a, b) => a.ano - b.ano).map((p) => ({ ...p, nivel: NIVEL_CARGO[p.id_cargo] ?? p.nivel }));
+  const X = escala(a0, a1, L + 18, W - R - 18);
+  const Y = (nivel: number) => T + (TOPO - nivel) * PASSO;
+  const base = Y(1);                                         // linha do nível mais baixo (vereador)
+
+  const pts = carreira.map((p) => ({ ...p, cx: X(p.ano), cy: Y(p.nivel) }));
+  const rotulos = rotulosPartido(pts.map((p) => ({ x: p.cx, partido: p.partido })), FONTE_PARTIDO, { min: L - 8, max: W - 2 });
+  const LINHA_ETIQ = 26, ALT_ETIQ = 19;
+  const topoFaixa = base + 26;
+  const nLinhas = Math.max(1, ...rotulos.map((r) => r.linha + 1));
+  const yAnos = topoFaixa + nLinhas * LINHA_ETIQ + 12;
+  const H = yAnos + 8;
+  const yEtiq = (linha: number) => topoFaixa + linha * LINHA_ETIQ;
+
   const anosEixo = Array.from({ length: (a1 - a0) / 2 + 1 }, (_, i) => a0 + i * 2);
-  const descricao = `Linha do tempo de ${nome}: ${pts.map((p) => `${p.ano} ${p.cargo} (${p.eleito ? "eleito" : "não eleito"})`).join("; ")}.`;
+  const anosComPonto = new Set(pts.map((p) => p.ano));
+  const etiquetaDe = (p: (typeof pts)[number]) => rotulos.find((r) => r.partido === p.partido && r.xPonto === p.cx);
+  const descricao = `Linha do tempo de ${nome}: ${pts.map((p) => `${p.ano} ${p.cargo}${p.partido ? ` pelo ${p.partido}` : ""} (${p.eleito ? "eleito" : "não eleito"})`).join("; ")}.`;
 
   return (
     <figure style={{ margin: 0 }}>
       <div className="chartwrap">
-      <svg className="chart wide" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={descricao}>
-        {NIVEIS.map(([n, rot]) => (
-          <g key={n}>
-            <line className="gr" x1={L} x2={W - R} y1={Y(n)} y2={Y(n)} />
-            <text x={L - 8} y={Y(n) + 3} textAnchor="end" fontSize="10.5">{rot}</text>
-          </g>
-        ))}
-        {anosEixo.map((a) => <text key={a} x={X(a)} y={H - B + 16} textAnchor="middle" fontSize="9.5">{a}</text>)}
-        {pts.length > 1 && <polyline fill="none" stroke="var(--muted)" strokeWidth="1.3" opacity="0.6" points={pts.map((p) => `${X(p.ano)},${Y(p.nivel)}`).join(" ")} />}
-        {pts.map((p) => {
-          const cx = X(p.ano), cy = Y(p.nivel), cor = corPartido(p.partido);
-          return (
+        <svg className="chart wide carreira" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={descricao}>
+          {/* níveis */}
+          {NIVEIS_CARREIRA.map(([n, rot], i) => (
+            <g key={n}>
+              {i % 2 === 0 && <rect className="faixa" x={L} y={Y(n) - PASSO / 2} width={W - R - L} height={PASSO} rx="6" />}
+              <line className="nivel" x1={L} x2={W - R} y1={Y(n)} y2={Y(n)} />
+              <text x={L - 12} y={Y(n) + 4} textAnchor="end" fontSize="12">{rot}</text>
+            </g>
+          ))}
+
+          {/* faixa dos partidos */}
+          <line className="nivel" x1={L} x2={W - R} y1={topoFaixa - 9} y2={topoFaixa - 9} />
+          <text x={L - 12} y={topoFaixa + ALT_ETIQ / 2 + 4} textAnchor="end" fontSize="12" fontWeight="600">Partido</text>
+
+          {/* ligação de cada ponto com a etiqueta do seu partido */}
+          {pts.map((p) => {
+            const e = etiquetaDe(p);
+            return e ? <line key={`l${p.id_candidatura}`} className="guia" x1={p.cx} x2={p.cx} y1={p.cy + 9} y2={yEtiq(e.linha)} /> : null;
+          })}
+
+          {/* trajetória */}
+          {pts.length > 1 && <path className="trajeto" d={caminho(pts.map((p) => ({ x: p.cx, y: p.cy })))} />}
+
+          {pts.map((p) => (
             <g key={p.id_candidatura}>
-              <circle cx={cx} cy={cy} r="6.5" fill={p.eleito ? "var(--ok)" : "var(--panel)"} stroke={p.eleito ? "var(--ok)" : "var(--fg)"} strokeWidth="1.8">
+              {p.eleito && <circle cx={p.cx} cy={p.cy} r="12" className="halo" />}
+              <circle cx={p.cx} cy={p.cy} r="7" className={p.eleito ? "ponto eleito" : "ponto"}>
                 <title>{`${p.ano} · ${p.cargo} · ${p.partido ?? "?"} · ${ROTULO_RESULTADO[p.resultado] ?? p.resultado}${p.votos_1t ? ` · ${inteiro(p.votos_1t)} votos` : ""}`}</title>
               </circle>
-              <text x={cx} y={p.nivel === TOPO ? cy + 20 : cy - 11} textAnchor={cx > W - 70 ? "end" : cx < L + 30 ? "start" : "middle"} fontSize="9" style={{ fill: cor }}>{p.partido}</text>
             </g>
-          );
-        })}
-      </svg>
+          ))}
+
+          {rotulos.map((r) => (
+            <g key={`${r.xPonto}${r.partido}`}>
+              <rect x={r.x - r.largura / 2} y={yEtiq(r.linha)} width={r.largura} height={ALT_ETIQ} rx={ALT_ETIQ / 2} style={{ fill: corPartido(r.partido) }} />
+              <text x={r.x} y={yEtiq(r.linha) + ALT_ETIQ / 2 + 4} textAnchor="middle" fontSize={FONTE_PARTIDO} fontWeight="700" style={{ fill: "#fff" }}>{r.partido}</text>
+            </g>
+          ))}
+
+          {/* anos */}
+          {anosEixo.map((a) => (
+            <text key={a} x={X(a)} y={yAnos} textAnchor="middle" fontSize="11.5" fontWeight={anosComPonto.has(a) ? 700 : 400}
+              style={anosComPonto.has(a) ? { fill: "var(--fg)" } : undefined}>{a}</text>
+          ))}
+        </svg>
       </div>
       <figcaption className="legend">
         <span><i style={{ background: "var(--ok)", borderRadius: "50%" }} />Eleito</span>
-        <span><i style={{ border: "1.8px solid var(--fg)", borderRadius: "50%" }} />Não eleito</span>
+        <span><i style={{ border: "2px solid var(--muted)", borderRadius: "50%" }} />Não eleito</span>
+        <span>Etiqueta: partido pelo qual concorreu</span>
       </figcaption>
       <details>
         <summary>Ver candidaturas em tabela</summary>

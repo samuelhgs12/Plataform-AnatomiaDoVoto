@@ -134,7 +134,7 @@ def test_perfil_carreira_resumo_e_trocas(client):
     assert p["candidato"]["nome_civil"] == "MARIA DA SILVA SANTOS"
     assert [(c["ano"], c["cargo"], c["eleito"], c["partido"]) for c in p["carreira"]] == [
         (2016, "Vereador", True, "PSB"), (2020, "Vereador", True, "PSB"), (2022, "Deputado estadual", False, "PSD")]
-    assert p["carreira"][0]["nivel"] == 1 and p["carreira"][2]["nivel"] == 3
+    assert p["carreira"][0]["nivel"] == 1 and p["carreira"][2]["nivel"] == 4
     assert p["resumo"] == {"eleicoes_disputadas": 3, "vitorias": 2, "partidos": ["PSB", "PSD"], "primeiro_ano": 2016, "ultimo_ano": 2022}
     assert p["trocas"] == [{"ano": 2022, "de": "PSB", "para": "PSD"}]
 

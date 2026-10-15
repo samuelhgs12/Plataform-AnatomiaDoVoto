@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
+import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { agruparFluxo, type LinhaFluxo } from "../src/lib/fluxo";
 import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
-import { contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
+import { resumoCampanhas, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
 
 const fluxo = (o: Partial<LinhaFluxo>): LinhaFluxo => ({ ano_mandato: 2016, cargo_origem: "Vereador", nivel_origem: 1, uf: "MG", genero: "FEMININO", destino: "Reeleito", n: 10, ...o });
 
@@ -141,5 +143,59 @@ describe("destacarBusca", () => {
     expect(marcado("CELULAR", "lula")).toBe("");
     expect(marcado("MARIA DA SILVA", "maria silva")).toBe("");
     expect(destacarBusca("MARIA DA SILVA", "maria silva")).toEqual([{ texto: "MARIA DA SILVA", casou: false }]);
+  });
+});
+
+describe("naLinhaDoTempo", () => {
+  const c = (o: Partial<CarreiraItem>): CarreiraItem => ({
+    id_candidatura: 1, ano: 2020, cargo: "Vereador", id_cargo: 13, nivel: 1, eh_titular: true, uf: "MG", municipio: null, partido: "PT",
+    nome_urna: null, numero_urna: null, tipo_eleicao: "ORDINARIA", resultado: "ELEITO", eleito: true, disputou: true, votos_1t: 0, ...o,
+  });
+
+  it("inclui vice-prefeito entre vereador e prefeito e deixa outros vices de fora", () => {
+    const r = naLinhaDoTempo([
+      c({ id_candidatura: 3, ano: 2024, id_cargo: 11 }),
+      c({ id_candidatura: 2, ano: 2020, id_cargo: 12, eh_titular: false }),
+      c({ id_candidatura: 1, ano: 2016, id_cargo: 13 }),
+      c({ id_candidatura: 4, ano: 2022, id_cargo: 4, eh_titular: false }),
+    ]);
+    expect(r.map((x) => [x.id_candidatura, x.nivel])).toEqual([[1, 1], [2, 2], [3, 3]]);
+  });
+  it("descarta suplementar e quem não disputou", () => {
+    expect(naLinhaDoTempo([c({ tipo_eleicao: "SUPLEMENTAR" }), c({ disputou: false })])).toEqual([]);
+  });
+});
+
+describe("rotulosPartido", () => {
+  it("uma etiqueta por ponto e partido, empilhando as que se sobrepõem", () => {
+    const r = rotulosPartido([{ x: 100, partido: "REPUBLICANOS" }, { x: 140, partido: "PT" }, { x: 140, partido: "PT" }, { x: 300, partido: null }], 10);
+    expect(r.map((e) => [e.partido, e.linha])).toEqual([["REPUBLICANOS", 0], ["PT", 1]]);
+  });
+  it("lado a lado quando há espaço e sem passar dos limites", () => {
+    const r = rotulosPartido([{ x: 0, partido: "PT" }, { x: 200, partido: "PSD" }], 10, { min: 0, max: 210 });
+    expect(r.map((e) => e.linha)).toEqual([0, 0]);
+    expect(r[0].x - r[0].largura / 2).toBe(0);
+    expect(r[1].x + r[1].largura / 2).toBe(210);
+    expect(r[0].xPonto).toBe(0);
+  });
+});
+
+describe("resumoCampanhas", () => {
+  const cand = (o: Partial<CarreiraItem>): CarreiraItem => ({
+    id_candidatura: 1, ano: 2024, cargo: "Vereador", id_cargo: 13, nivel: 1, eh_titular: true, uf: "MG", municipio: null, partido: "PT",
+    nome_urna: null, numero_urna: null, tipo_eleicao: "ORDINARIA", resultado: "ELEITO", eleito: true, disputou: true, votos_1t: 0, ...o,
+  });
+  const rec = (publica: number, privada: number) => ({
+    id_candidatura: 1, publica, privada, total: publica + privada, pct_publica: null, mediana_pct_publica_cargo: null,
+    fundo_eleitoral: publica, fundo_partidario: 0, doacoes_pessoas: privada, recursos_proprios: 0, outros_privados: 0,
+  });
+
+  it("uma linha por campanha, na ordem recebida, com a parte pública de cada R$ 100", () => {
+    const r = resumoCampanhas([
+      { c: cand({ id_candidatura: 2, ano: 2024 }), r: rec(300, 100) },
+      { c: cand({ id_candidatura: 1, ano: 2020, eleito: false }), r: rec(0, 0) },
+      { c: cand({ id_candidatura: 3, ano: 2018 }), r: null },
+    ]);
+    expect(r.map((x) => [x.id, x.total, x.publicoDe100, x.eleito])).toEqual([[2, 400, 75, true], [1, 0, 0, false], [3, null, 0, true]]);
   });
 });
