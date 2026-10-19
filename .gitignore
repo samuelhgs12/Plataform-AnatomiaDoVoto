@@ -46,3 +46,6 @@ graphify-out/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# saída da skill design-taste-frontend (capturas e relatório do inspetor)
+/.taste-skill/

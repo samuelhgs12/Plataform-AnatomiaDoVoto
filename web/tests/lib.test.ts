@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { LinhaLegenda } from "../src/lib/legenda";
+import { conjunto, dinheiroTotal, faixasCor, legendaPorUf, publicoPorUf } from "../src/lib/mapa";
 import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
 import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { agruparFluxo, type LinhaFluxo } from "../src/lib/fluxo";
 import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
-import { resumoCampanhas, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
+import { respostaSucesso, resumoCampanhas, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
 
 const fluxo = (o: Partial<LinhaFluxo>): LinhaFluxo => ({ ano_mandato: 2016, cargo_origem: "Vereador", nivel_origem: 1, uf: "MG", genero: "FEMININO", destino: "Reeleito", n: 10, ...o });
 
@@ -197,5 +199,62 @@ describe("resumoCampanhas", () => {
       { c: cand({ id_candidatura: 3, ano: 2018 }), r: null },
     ]);
     expect(r.map((x) => [x.id, x.total, x.publicoDe100, x.eleito])).toEqual([[2, 400, 75, true], [1, 0, 0, false], [3, null, 0, true]]);
+  });
+});
+
+describe("respostaSucesso", () => {
+  const grupo = (chave: "nada" | "pouco" | "muito", candidaturas: number, eleitos: number) => ({ chave, candidaturas, eleitos, taxa: candidaturas ? eleitos / candidaturas : 0 });
+  it("compara 'muito' com 'nada' e diz quantas vezes mais", () => {
+    const r = respostaSucesso({ nada: grupo("nada", 100, 10), pouco: grupo("pouco", 100, 12), muito: grupo("muito", 100, 30) });
+    expect(r.curta).toBe("Sim.");
+    expect(r.base.chave).toBe("nada");
+    expect(r.vezes).toBeCloseTo(3);
+  });
+  it("sem ninguém em 'nada', compara com 'pouco'; diferença pequena não é 'sim'", () => {
+    const r = respostaSucesso({ nada: grupo("nada", 0, 0), pouco: grupo("pouco", 100, 20), muito: grupo("muito", 100, 22) });
+    expect(r.base.chave).toBe("pouco");
+    expect(r.curta).toBe("Quase não faz diferença.");
+    expect(respostaSucesso({ nada: grupo("nada", 100, 0), pouco: grupo("pouco", 100, 0), muito: grupo("muito", 100, 5) }).vezes).toBeNull();
+  });
+});
+
+describe("mapa", () => {
+  const fo = (o: Partial<LinhaFontes>): LinhaFontes => ({
+    ano: 2022, cargo: "Deputado federal", uf: "MG", partido: "PT", eleito: false, candidaturas: 1, com_receita: 1,
+    fundo_eleitoral: 0, fundo_partidario: 0, doacoes_pessoas: 0, recursos_proprios: 0, outros_privados: 0, ...o,
+  });
+  const le = (o: Partial<LinhaLegenda>): LinhaLegenda => ({ ano: 2022, cargo: "Deputado federal", uf: "MG", numero: 13, partido: "PT", votos_nominais: 90, votos_legenda: 10, eleitos: 0, ...o });
+
+  it("publicoPorUf: parte pública da receita no ano, sem campanhas nacionais", () => {
+    const r = publicoPorUf([
+      fo({ fundo_eleitoral: 75, doacoes_pessoas: 25 }), fo({ uf: "RJ", fundo_partidario: 10, recursos_proprios: 90 }),
+      fo({ uf: "BR", cargo: "Presidente", fundo_eleitoral: 100 }), fo({ ano: 2018, fundo_eleitoral: 999 }),
+    ], 2022);
+    expect(r).toEqual([{ uf: "MG", valor: 0.75, base: 100 }, { uf: "RJ", valor: 0.1, base: 100 }]);
+  });
+
+  it("legendaPorUf: soma partidos do estado e ignora outros anos", () => {
+    const r = legendaPorUf([le({}), le({ partido: "PL", votos_nominais: 70, votos_legenda: 30 }), le({ uf: "AP", votos_legenda: 50, votos_nominais: 50 }), le({ ano: 2018, votos_legenda: 1000 })], 2022);
+    expect(r).toEqual([{ uf: "AP", valor: 0.5, base: 100 }, { uf: "MG", valor: 0.2, base: 200 }]);
+    expect(legendaPorUf([le({ votos_legenda: 0, votos_nominais: 0 })], 2022)).toEqual([]);
+  });
+
+  it("faixasCor: 4 faixas iguais, a mais alta é 1", () => {
+    const { faixa, limites } = faixasCor([0.2, 0.4, 0.6]);
+    expect([0.2, 0.29, 0.31, 0.45, 0.6].map(faixa)).toEqual([4, 4, 3, 2, 1]);
+    expect(limites[0][0]).toBeCloseTo(0.5);
+    expect(limites[0][1]).toBeCloseTo(0.6);
+    expect(faixasCor([0.3, 0.3]).faixa(0.3)).toBe(1);
+  });
+
+  it("conjunto: média ponderada pela base", () => {
+    expect(conjunto([{ uf: "MG", valor: 0.5, base: 300 }, { uf: "AP", valor: 0.1, base: 100 }])).toEqual({ uf: "todos", valor: 0.4, base: 400 });
+    expect(conjunto([])).toBeNull();
+  });
+
+  it("dinheiroTotal: soma todos os anos sem as campanhas nacionais", () => {
+    const r = dinheiroTotal([fo({ fundo_eleitoral: 60, doacoes_pessoas: 40 }), fo({ ano: 2024, uf: "PE", fundo_partidario: 50 }), fo({ uf: "BR", cargo: "Presidente", fundo_eleitoral: 1000 })]);
+    expect(r).toEqual({ total: 150, publico: 110, anos: [2022, 2024] });
+    expect(dinheiroTotal([])).toBeNull();
   });
 });

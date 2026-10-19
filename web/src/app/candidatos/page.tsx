@@ -8,6 +8,8 @@ import { BuscaNome } from "@/components/BuscaNome";
 import { CandidateCard } from "@/components/CandidateCard";
 import { Filters } from "@/components/Filters";
 import { Pagination } from "@/components/Pagination";
+import { Cabecalho } from "@/components/Cabecalho";
+import { FOTOS } from "@/lib/fotos";
 
 export const metadata: Metadata = { title: "Candidatos" };
 
@@ -34,11 +36,10 @@ export default async function Candidatos({ searchParams }: { searchParams: SP })
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <h1>Candidatos</h1>
-        <BuscaNome />
-      </div>
-      <p className="muted">Quem disputou cada eleição: escolha o ano e o cargo e abra o perfil para ver a carreira e os gastos de campanha.</p>
+      <Cabecalho titulo="Candidatos" foto={FOTOS.confirma}>
+        <p className="lead">Quem disputou cada eleição: escolha o ano e o cargo e abra o perfil para ver a carreira e o dinheiro de campanha.</p>
+        <div className="busca-nome"><BuscaNome /></div>
+      </Cabecalho>
       <Filters meta={meta} atual={filtros} partidos={partidos} />
       {faltaUf ? <EscolhaUf meta={meta} params={f} cargo={sel.cargo.nome} ano={sel.ano} /> : <Lista params={f} titulo={[sel.cargo.nome, sel.uf ?? "Brasil", sel.ano, f.partido].filter(Boolean).join(" · ")} />}
     </>
@@ -68,7 +69,7 @@ async function Lista({ params, titulo }: { params: Record<string, string | undef
   const lista = await apiGet<Listagem>(`/candidaturas?${consulta.toString()}`);
   return (
     <>
-      <p className="muted" aria-live="polite"><strong>{titulo}</strong> · {inteiro(lista.total)} candidato(s)</p>
+      <p className="resultado" aria-live="polite"><strong>{titulo}</strong> <span className="muted">· {inteiro(lista.total)} candidato(s)</span></p>
       {lista.itens.length === 0 ? (
         <div className="card"><p className="muted">Nenhum resultado para esses filtros.</p></div>
       ) : (

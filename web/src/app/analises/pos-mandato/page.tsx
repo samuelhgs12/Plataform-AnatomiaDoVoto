@@ -3,6 +3,8 @@ import Link from "next/link";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { agruparFluxo, type LinhaFluxo } from "@/lib/fluxo";
 import { FlowBars } from "@/components/FlowBars";
+import { Cabecalho } from "@/components/Cabecalho";
+import { FOTOS } from "@/lib/fotos";
 
 export const metadata: Metadata = { title: "Depois de um mandato" };
 export const dynamic = "force-dynamic";
@@ -15,10 +17,13 @@ export default async function PosMandato({ searchParams }: { searchParams: SP })
   const dados = await lerEstatico("q10");
   if (!dados?.fluxo) {
     return (
-      <div className="card aviso">
-        <h1>Depois de um mandato</h1>
-        <p>Os dados desta página ainda não foram gerados. Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
-      </div>
+      <>
+        <Cabecalho titulo="O que acontece depois de um mandato" foto={FOTOS.congresso} />
+        <div className="card aviso">
+          <h2>Dados ainda não gerados</h2>
+          <p>Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
+        </div>
+      </>
     );
   }
   const linhas = comoObjetos<LinhaFluxo>(dados.fluxo);
@@ -37,17 +42,22 @@ export default async function PosMandato({ searchParams }: { searchParams: SP })
 
   return (
     <>
-      <h1>O que acontece depois de um mandato</h1>
-      <p className="muted">Para cada eleito, o que ele fez até a eleição seguinte do mesmo tipo (4 anos depois; 8 para senador). Só titulares e eleições ordinárias.</p>
+      <Cabecalho titulo="O que acontece depois de um mandato" pergunta="Reeleição, outro cargo, derrota ou saída?" foto={FOTOS.congresso}>
+        <p className="lead">Para cada eleito, o que ele fez até a eleição seguinte do mesmo tipo (4 anos depois; 8 para senador). Só titulares e eleições ordinárias.</p>
+      </Cabecalho>
+      <nav className="bloco filtros-fin" aria-label="Escolha o que ver">
+        <span className="rotulo">Estado</span>
+        <div className="chips">
+          <Link scroll={false} className={`chip${!uf ? " on" : ""}`} href={href({ uf: undefined })}>Todos</Link>
+          {ufs.map((u) => <Link scroll={false} key={u} className={`chip${uf === u ? " on" : ""}`} href={href({ uf: u })}>{u}</Link>)}
+        </div>
+        <span className="rotulo">Ano do mandato</span>
+        <div className="chips">
+          <Link scroll={false} className={`chip${!ano ? " on" : ""}`} href={href({ ano: undefined })}>Todos</Link>
+          {anos.map((a) => <Link scroll={false} key={a} className={`chip${ano === a ? " on" : ""}`} href={href({ ano: String(a) })}>{a}</Link>)}
+        </div>
+      </nav>
       <div className="card">
-        <div className="chips" style={{ marginBottom: 8 }} aria-label="Filtrar por UF">
-          <Link className={`chip${!uf ? " on" : ""}`} href={href({ uf: undefined })}>Todas as UFs</Link>
-          {ufs.map((u) => <Link key={u} className={`chip${uf === u ? " on" : ""}`} href={href({ uf: u })}>{u}</Link>)}
-        </div>
-        <div className="chips" style={{ marginBottom: 12 }} aria-label="Filtrar por ano do mandato">
-          <Link className={`chip${!ano ? " on" : ""}`} href={href({ ano: undefined })}>Todos os anos</Link>
-          {anos.map((a) => <Link key={a} className={`chip${ano === a ? " on" : ""}`} href={href({ ano: String(a) })}>{a}</Link>)}
-        </div>
         <FlowBars grupos={grupos} />
         <p className="muted" style={{ fontSize: 14 }}>Cargos com menos de 20 mandatos ficam de fora. “Reeleito” exige o mesmo cargo no mesmo município ou estado.</p>
       </div>

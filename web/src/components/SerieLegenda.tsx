@@ -62,8 +62,8 @@ export function SerieLegenda({ series, cortes, eventos, descricao }: { series: S
         ))}
         {[...new Set(eventos.map((e) => e.x))].map((ex) => <line key={ex} className="gr" x1={x(ex)} x2={x(ex)} y1={TOPO} y2={yFaixa - 14} />)}
 
-        <path d={area} fill="var(--o)" fillOpacity={0.35} />
-        <path d={caminho(pontosTodos)} fill="none" stroke="var(--muted)" strokeWidth={2} />
+        <path d={area} fill="var(--o)" fillOpacity={0.35} className="surge" />
+        <path d={caminho(pontosTodos)} fill="none" stroke="var(--muted)" strokeWidth={2} pathLength={1} className="desenha" />
         {todos.pontos.map((p, i) => (
           <g key={p.ano}>
             <circle cx={pontosTodos[i].x} cy={pontosTodos[i].y} r={3.5} fill="var(--muted)"><title>{dica("Todos os partidos", p)}</title></circle>
@@ -80,8 +80,8 @@ export function SerieLegenda({ series, cortes, eventos, descricao }: { series: S
                 const [antes, depois] = cortar(t.map(xy), xc);
                 return (
                   <g key={t[0].ano} fill="none" strokeWidth={2.5}>
-                    {antes.length > 1 && <path d={caminho(antes)} strokeOpacity={CLARO} />}
-                    {depois.length > 1 && <path d={caminho(depois)} />}
+                    {antes.length > 1 && <path d={caminho(antes)} strokeOpacity={CLARO} pathLength={1} className="desenha" />}
+                    {depois.length > 1 && <path d={caminho(depois)} pathLength={1} className="desenha" />}
                   </g>
                 );
               })}
@@ -91,7 +91,7 @@ export function SerieLegenda({ series, cortes, eventos, descricao }: { series: S
               }))}
               {s.pontos.map((p) => {
                 const q = xy(p);
-                return <circle key={p.ano} cx={q.x} cy={q.y} r={4} stroke="var(--panel)" strokeWidth={1.5} fillOpacity={q.x < xc ? CLARO : 1}><title>{dica(s.partido, p)}</title></circle>;
+                return <circle key={p.ano} className="surge" cx={q.x} cy={q.y} r={4} stroke="var(--panel)" strokeWidth={1.5} fillOpacity={q.x < xc ? CLARO : 1}><title>{dica(s.partido, p)}</title></circle>;
               })}
             </g>
           );

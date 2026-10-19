@@ -10,6 +10,8 @@ import { compacto, pct } from "@/lib/format";
 import { BuscaPartido } from "@/components/BuscaPartido";
 import { ComparaCiclos } from "@/components/ComparaCiclos";
 import { SerieLegenda, corSerie } from "@/components/SerieLegenda";
+import { Cabecalho } from "@/components/Cabecalho";
+import { FOTOS } from "@/lib/fotos";
 
 export const metadata: Metadata = { title: "Voto de legenda" };
 export const dynamic = "force-dynamic";
@@ -22,10 +24,13 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
   const dados = await lerEstatico("q5");
   if (!dados?.legenda) {
     return (
-      <div className="card aviso">
-        <h1>Voto de legenda</h1>
-        <p>Os dados desta página ainda não foram gerados. Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
-      </div>
+      <>
+        <Cabecalho titulo="Voto de legenda" foto={FOTOS.itajuba} />
+        <div className="card aviso">
+          <h2>Dados ainda não gerados</h2>
+          <p>Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
+        </div>
+      </>
     );
   }
   const todas = comoObjetos<LinhaLegenda>(dados.legenda);
@@ -52,18 +57,23 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
 
   return (
     <>
-      <h1>Voto de legenda</h1>
-      <p className="muted" style={{ marginTop: 0 }}>Qual é a quantidade e a proporção de votos de legenda recebidos por cada partido? Eleições de 2018 a 2024.</p>
+      <Cabecalho titulo="Voto de legenda" pergunta="Quantos votos cada partido recebeu só na sigla, sem escolher candidato?" foto={FOTOS.itajuba}>
+        <p className="lead">Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2024.</p>
+      </Cabecalho>
 
-      <div className="chips" style={{ margin: "14px 0 16px" }}>
-        <span className="chips" role="group" aria-label="Filtrar por UF">
-          <Link className={`chip${!par.uf ? " on" : ""}`} href={href({ uf: undefined })} scroll={false}>Todas</Link>
+      <nav className="bloco filtros-fin" aria-label="Escolha o que ver">
+        <span className="rotulo">Estado</span>
+        <div className="chips" role="group" aria-label="Filtrar por UF">
+          <Link className={`chip${!par.uf ? " on" : ""}`} href={href({ uf: undefined })} scroll={false}>Todos</Link>
           {ufs.map((u) => <Link key={u} className={`chip${par.uf === u ? " on" : ""}`} href={href({ uf: u })} scroll={false}>{u}</Link>)}
-        </span>
-        <Link className={`chip${par.juntar ? " on" : ""}`} href={href({ juntar: !par.juntar })} scroll={false} aria-current={par.juntar ? "true" : undefined}>
-          {par.juntar ? "✓ " : ""}Juntar partidos que se fundiram
-        </Link>
-      </div>
+        </div>
+        <span className="rotulo">Partidos</span>
+        <div className="chips">
+          <Link className={`chip${par.juntar ? " on" : ""}`} href={href({ juntar: !par.juntar })} scroll={false} aria-current={par.juntar ? "true" : undefined}>
+            {par.juntar ? "✓ " : ""}Juntar partidos que se fundiram
+          </Link>
+        </div>
+      </nav>
 
       <section className="card" aria-labelledby="h-serie">
         <h2 id="h-serie">Série histórica</h2>
@@ -137,7 +147,7 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
         <p className="muted" style={{ fontSize: 14 }}>Em cada célula: proporção e votos de legenda{par.juntar ? ", com os partidos que se fundiram somados ao atual" : ""}.</p>
       </details>
 
-      <p className="muted" style={{ fontSize: 14 }}>
+      <p className="muted nota-fonte">
         Fonte: TSE, dados abertos; banco do projeto BDR. Cargos proporcionais, 1º turno, eleições ordinárias, em AP, ES, MG, PE, RJ e RR.
         Siglas renomeadas aparecem com o nome atual (PRB → REPUBLICANOS, PR → PL, PPS → CIDADANIA, PTC → AGIR, PMN → MOBILIZA).
         Com “Juntar partidos que se fundiram”, os votos dos antigos passam para o atual: DEM e PSL → UNIÃO; PTB, PATRIOTA e PRP → PRD;

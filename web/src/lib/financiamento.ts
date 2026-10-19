@@ -183,6 +183,17 @@ export function sucessoTresGrupos(linhas: LinhaSucesso[], f: Filtros) {
   return { nada: juntar("nada", [0]), pouco: juntar("pouco", [1, 2, 3]), muito: juntar("muito", [4]) };
 }
 
+/**
+ * Resposta curta da pergunta 8: compara quem recebeu muito com quem não recebeu nada (ou, se ninguém ficou sem, com
+ * quem recebeu pouco). "Sim" se a taxa de eleição de "muito" passa 1,2 vez a dos outros; "Não" se fica 1,2 vez abaixo.
+ */
+export function respostaSucesso(g: ReturnType<typeof sucessoTresGrupos>) {
+  const base = g.nada.candidaturas > 0 ? g.nada : g.pouco;
+  const outros = Math.max(g.nada.candidaturas ? g.nada.taxa : 0, g.pouco.taxa);
+  const curta = g.muito.taxa > outros * 1.2 ? "Sim." : g.muito.taxa * 1.2 < outros ? "Não." : "Quase não faz diferença.";
+  return { base, curta, vezes: base.taxa > 0 ? g.muito.taxa / base.taxa : null };
+}
+
 /** Que parte dos candidatos os eleitos eram, e que parte do dinheiro público eles receberam. */
 export function parteDosEleitos(linhas: LinhaFontes[], f: Filtros) {
   let cand = 0, candEleitos = 0, pub = 0, pubEleitos = 0;

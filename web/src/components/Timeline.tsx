@@ -56,10 +56,10 @@ export function Timeline({ carreira, nome }: { carreira: (CarreiraItem & { nivel
           })}
 
           {/* trajetória */}
-          {pts.length > 1 && <path className="trajeto" d={caminho(pts.map((p) => ({ x: p.cx, y: p.cy })))} />}
+          {pts.length > 1 && <path className="trajeto desenha" pathLength={1} d={caminho(pts.map((p) => ({ x: p.cx, y: p.cy })))} />}
 
           {pts.map((p) => (
-            <g key={p.id_candidatura}>
+            <g key={p.id_candidatura} className="surge">
               {p.eleito && <circle cx={p.cx} cy={p.cy} r="12" className="halo" />}
               <circle cx={p.cx} cy={p.cy} r="7" className={p.eleito ? "ponto eleito" : "ponto"}>
                 <title>{`${p.ano} · ${p.cargo} · ${p.partido ?? "?"} · ${ROTULO_RESULTADO[p.resultado] ?? p.resultado}${p.votos_1t ? ` · ${inteiro(p.votos_1t)} votos` : ""}`}</title>

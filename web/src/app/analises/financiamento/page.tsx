@@ -3,13 +3,16 @@ import Link from "next/link";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import {
   contarFaixas, deCada100, descreverMudancas, emCada10, FAIXAS, FONTES, ordenarPartidos, NOME_UF, ordenarCargos,
-  parteDosEleitos, porAno, porPartido, porUf, somar, sucessoTresGrupos, textoDe100, TIPO_ELEICAO,
+  parteDosEleitos, porAno, porPartido, porUf, respostaSucesso, somar, sucessoTresGrupos, textoDe100, TIPO_ELEICAO,
   type Filtros, type LinhaFaixa, type LinhaFontes, type LinhaSucesso,
 } from "@/lib/financiamento";
 import { brl, inteiro, pct, reais } from "@/lib/format";
 import { BarrasH } from "@/components/BarrasH";
 import { Colunas } from "@/components/Colunas";
 import { Donut } from "@/components/Donut";
+import { Cabecalho } from "@/components/Cabecalho";
+import { Rolar } from "@/components/Rolar";
+import { FOTOS } from "@/lib/fotos";
 
 export const metadata: Metadata = { title: "Dinheiro público e sucesso eleitoral" };
 export const dynamic = "force-dynamic";
@@ -36,10 +39,13 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
   const dados = await lerEstatico("q8");
   if (!dados?.fontes) {
     return (
-      <div className="card aviso">
-        <h1>Dinheiro público e sucesso eleitoral</h1>
-        <p>Os dados desta página ainda não foram gerados. Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
-      </div>
+      <>
+        <Cabecalho titulo="Dinheiro público e sucesso eleitoral" foto={FOTOS.urna} />
+        <div className="card aviso">
+          <h2>Dados ainda não gerados</h2>
+          <p>Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
+        </div>
+      </>
     );
   }
   const fontes = comoObjetos<LinhaFontes>(dados.fontes);
@@ -88,9 +94,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
   const faixaMaior = FAIXAS.reduce((a, b) => (fx.porFaixa[b.chave] > fx.porFaixa[a.chave] ? b : a));
   // pergunta 8: três grupos (nada / pouco / muito dinheiro público) e quantos de cada um se elegeram
   const g = sucessoTresGrupos(sucessoLinhas, f);
-  const base = g.nada.candidaturas > 0 ? g.nada : g.pouco;   // com quem comparar "muito"
-  const outros = Math.max(g.nada.candidaturas ? g.nada.taxa : 0, g.pouco.taxa);
-  const respostaCurta = g.muito.taxa > outros * 1.2 ? "Sim." : g.muito.taxa * 1.2 < outros ? "Não." : "Quase não faz diferença.";
+  const { base, curta: respostaCurta } = respostaSucesso(g);
   // topo da régua em 20%, 40%, 60%... para as marcas de 1/4 caírem em números redondos (5%, 10%, 15%...)
   const tetoColunas = Math.min(1, Math.max(0.2, Math.ceil(Math.max(g.nada.taxa, g.pouco.taxa, g.muito.taxa) * 5) / 5));
   const eleitos = parteDosEleitos(fontes, f);
@@ -98,15 +102,14 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
 
   return (
     <>
-      <h1>Dinheiro público e sucesso eleitoral</h1>
-      <p className="manchete" style={{ maxWidth: 760, marginBottom: 6 }}>Quem recebe mais dinheiro público para a campanha se elege mais?</p>
-      <p className="muted" style={{ maxWidth: 760 }}>
-        Dinheiro público de campanha é o que sai dos impostos: o <b>Fundo Eleitoral</b> e o <b>Fundo Partidário</b>, que os partidos
-        dividem entre seus candidatos. Cruzamos quanto cada candidato recebeu com o resultado da eleição. Há dados de 2018 a 2024.
-      </p>
+      <Cabecalho titulo="Dinheiro público e sucesso eleitoral" pergunta="Quem recebe mais dinheiro público para a campanha se elege mais?" foto={FOTOS.urna}>
+        <p className="lead">
+          Dinheiro público de campanha é o que sai dos impostos: o Fundo Eleitoral e o Fundo Partidário, que os partidos
+          dividem entre seus candidatos. Cruzamos quanto cada candidato recebeu com o resultado da eleição, de 2018 a 2024.
+        </p>
+      </Cabecalho>
 
-      <nav className="card filtros-fin" aria-label="Escolha o que ver">
-        <div>
+      <nav className="bloco filtros-fin" aria-label="Escolha o que ver">
           <span className="rotulo">Eleição</span>
           <div className="chips">
             {anos.map((a) => (
@@ -115,27 +118,22 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
               </Link>
             ))}
           </div>
-        </div>
-        <div>
           <span className="rotulo">Cargo</span>
           <div className="chips">
             <Link className={`chip${!cargo ? " on" : ""}`} href={href({ cargo: undefined })}>Todos</Link>
             {cargosDoAno.map((c) => <Link key={c} className={`chip${cargo === c ? " on" : ""}`} href={href({ cargo: c })}>{c}</Link>)}
           </div>
-        </div>
-        <div>
           <span className="rotulo">Estado</span>
           <div className="chips">
             <Link className={`chip${!uf ? " on" : ""}`} href={href({ uf: undefined })}>Todos</Link>
             {ufs.map((u) => <Link key={u} className={`chip${uf === u ? " on" : ""}`} href={href({ uf: u })}>{u}</Link>)}
           </div>
-        </div>
       </nav>
 
       {/* A resposta da pergunta 8, em uma frase e três colunas */}
-      <section id="sucesso" className="card" aria-labelledby="h-suc">
-        <div className="kicker">A resposta</div>
-        <h2 id="h-suc">Quem recebe mais dinheiro público se elege mais?</h2>
+      <div className="quadro">
+      <section id="sucesso" className="bloco s8" aria-labelledby="h-suc">
+        <h2 id="h-suc">A resposta</h2>
         {g.muito.candidaturas === 0 ? <p className="muted">Sem dados para essa combinação.</p> : (
           <>
             <p className="resposta-curta">{respostaCurta}</p>
@@ -158,21 +156,24 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
                 { chave: "muito", rotulo: "Recebeu muito", linhas: ["os 25% que mais receberam", `${inteiro(g.muito.eleitos)} eleitos de ${inteiro(g.muito.candidaturas)}`],
                   parte: g.muito.taxa },
               ]} />
-            {eleitos.publico > 0 && (
-              <div className="kpis">
-                <div className="kpi"><b>{taxa(eleitos.pctCandidatos)}</b><span>dos candidatos se elegeram</span></div>
-                <div className="kpi"><b>{taxa(eleitos.pctPublico)}</b><span>do dinheiro público foi para esses eleitos</span></div>
-              </div>
-            )}
-            <p className="aviso-causa"><b>Atenção:</b> dinheiro público e vitória andam juntos, mas isso não prova que o dinheiro faz ganhar.
-              Os partidos costumam mandar mais dinheiro para quem já tem mais chance, como quem já tem mandato.</p>
           </>
         )}
       </section>
+      <aside className="s4 numeros-lado" aria-label="Os eleitos e o dinheiro público">
+        {eleitos.publico > 0 && (
+          <>
+            <div className="bloco tinta"><p className="figura"><Rolar valor={taxa(eleitos.pctCandidatos)} /></p><p>dos candidatos se elegeram{onde} em {ano}.</p></div>
+            <div className="bloco cinza"><p className="figura"><Rolar valor={taxa(eleitos.pctPublico)} /></p><p>do dinheiro público foi para esses eleitos.</p></div>
+          </>
+        )}
+        <div className="bloco"><p className="aviso-causa"><b>Atenção:</b> dinheiro público e vitória andam juntos, mas isso não prova que o dinheiro faz ganhar.
+          Os partidos costumam mandar mais dinheiro para quem já tem mais chance, como quem já tem mandato.</p></div>
+      </aside>
+      </div>
 
       <div className="secao-contexto">
-        <h2>Contexto: de onde vem o dinheiro das campanhas</h2>
-        <p className="muted">Para entender os números acima: quanto do dinheiro das campanhas é público, como isso mudou e como varia entre estados e partidos.</p>
+        <h2 className="titulo-secao">De onde vem o dinheiro das campanhas</h2>
+        <p className="lead muted">Para entender os números acima: quanto do dinheiro das campanhas é público, como isso mudou e como varia entre estados e partidos.</p>
       </div>
 
       {/* 1. De onde vem o dinheiro, numa pizza */}
@@ -221,7 +222,8 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
       </section>
 
       {/* 2. Evolução */}
-      <section className="card" aria-labelledby="h-evo">
+      <div className="quadro">
+      <section className="bloco s6" aria-labelledby="h-evo">
         <h2 id="h-evo">Como isso mudou de 2018 a 2024</h2>
         <p className="muted">Quanto do dinheiro de cada eleição veio de fonte pública{cargo ? ` (${cargo.toLowerCase()})` : ""}{uf ? ` em ${uf}` : ""}. Quanto mais alta a coluna, mais as campanhas dependeram de dinheiro público. Clique em uma coluna para ver aquele ano.</p>
         {mudancas.length > 0 && (
@@ -238,7 +240,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
       </section>
 
       {/* 3. Comparação entre os estados */}
-      <section className="card" id="estados" aria-labelledby="h-uf">
+      <section className="bloco s6" id="estados" aria-labelledby="h-uf">
         <h2 id="h-uf">Comparar os estados</h2>
         {cargo === "Presidente" ? (
           <p className="muted">A campanha a presidente é nacional: o dinheiro não é separado por estado.</p>
@@ -292,6 +294,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
           </>
         )}
       </section>
+      </div>
 
       {/* 4. Dependência por candidato */}
       <section className="card" id="dependencia" aria-labelledby="h-dep">
