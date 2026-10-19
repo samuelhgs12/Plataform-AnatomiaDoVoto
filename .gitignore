@@ -39,3 +39,10 @@ data/
 graphify-out/
 .graphify_analysis.json
 .claude/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
