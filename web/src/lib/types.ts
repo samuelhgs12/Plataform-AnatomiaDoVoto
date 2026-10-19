@@ -6,6 +6,7 @@ export interface Meta { cargos: Cargo[]; anos: number[]; ufs: string[] }
 export interface CandidatoBusca {
   id_candidato: number; nome_civil: string | null; nome_urna: string | null; uf: string | null;
   ultimo_ano: number; partido: string | null; ultimo_cargo: string; ultimo_eleito: boolean;
+  nome_urna_casado?: string | null;   // nome de urna de outra eleição em que a busca casou
 }
 
 export interface CandidaturaItem {

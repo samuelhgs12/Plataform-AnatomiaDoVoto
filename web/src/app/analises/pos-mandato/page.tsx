@@ -37,7 +37,6 @@ export default async function PosMandato({ searchParams }: { searchParams: SP })
 
   return (
     <>
-      <div className="kicker">Pergunta 10</div>
       <h1>O que acontece depois de um mandato</h1>
       <p className="muted">Para cada eleito, o que ele fez até a eleição seguinte do mesmo tipo (4 anos depois; 8 para senador). Só titulares e eleições ordinárias.</p>
       <div className="card">
@@ -50,7 +49,7 @@ export default async function PosMandato({ searchParams }: { searchParams: SP })
           {anos.map((a) => <Link key={a} className={`chip${ano === a ? " on" : ""}`} href={href({ ano: String(a) })}>{a}</Link>)}
         </div>
         <FlowBars grupos={grupos} />
-        <p className="muted" style={{ fontSize: 12 }}>Cargos com menos de 20 mandatos ficam de fora. “Reeleito” exige o mesmo cargo no mesmo município ou estado.</p>
+        <p className="muted" style={{ fontSize: 14 }}>Cargos com menos de 20 mandatos ficam de fora. “Reeleito” exige o mesmo cargo no mesmo município ou estado.</p>
       </div>
     </>
   );

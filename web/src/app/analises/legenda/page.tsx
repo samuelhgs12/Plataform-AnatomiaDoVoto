@@ -52,7 +52,6 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
 
   return (
     <>
-      <div className="kicker">Pergunta 5</div>
       <h1>Voto de legenda</h1>
       <p className="muted" style={{ marginTop: 0 }}>Qual é a quantidade e a proporção de votos de legenda recebidos por cada partido? Eleições de 2018 a 2024.</p>
 
@@ -89,7 +88,7 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
           <span>◆ mudança no partido</span>
         </div>
         <SerieLegenda series={series} cortes={cortes} eventos={faixaEventos(escolhidos, eventos)} descricao={resumo} />
-        <p className="muted" style={{ fontSize: 12 }}>
+        <p className="muted" style={{ fontSize: 14 }}>
           Proporção de legenda = votos de legenda ÷ (votos de legenda + votos nominais). Faixas cinza = eleições municipais (vereadores); as outras, gerais (deputados).
           Tom mais claro na linha = antes da mudança de nome ou, com “Juntar” ligado, antes da fusão ou incorporação. Passe o cursor sobre um ponto para ver os votos.
         </p>
@@ -109,7 +108,7 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
         )}
         {ORDENS.length > 0 && (
           <div className="chips" role="group" aria-label="Ordenar por" style={{ marginBottom: 4 }}>
-            <span className="muted" style={{ fontSize: 12, alignSelf: "center" }}>Ordenar por</span>
+            <span className="muted" style={{ fontSize: 14, alignSelf: "center" }}>Ordenar por</span>
             {ORDENS.map(([o, rotulo]) => <Link key={o} className={`chip${par.ordem === o ? " on" : ""}`} href={href({ ordem: o })} scroll={false}>{rotulo}</Link>)}
           </div>
         )}
@@ -135,10 +134,10 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
             </tbody>
           </table>
         </div>
-        <p className="muted" style={{ fontSize: 12 }}>Em cada célula: proporção e votos de legenda{par.juntar ? ", com os partidos que se fundiram somados ao atual" : ""}.</p>
+        <p className="muted" style={{ fontSize: 14 }}>Em cada célula: proporção e votos de legenda{par.juntar ? ", com os partidos que se fundiram somados ao atual" : ""}.</p>
       </details>
 
-      <p className="muted" style={{ fontSize: 12 }}>
+      <p className="muted" style={{ fontSize: 14 }}>
         Fonte: TSE, dados abertos; banco do projeto BDR. Cargos proporcionais, 1º turno, eleições ordinárias, em AP, ES, MG, PE, RJ e RR.
         Siglas renomeadas aparecem com o nome atual (PRB → REPUBLICANOS, PR → PL, PPS → CIDADANIA, PTC → AGIR, PMN → MOBILIZA).
         Com “Juntar partidos que se fundiram”, os votos dos antigos passam para o atual: DEM e PSL → UNIÃO; PTB, PATRIOTA e PRP → PRD;

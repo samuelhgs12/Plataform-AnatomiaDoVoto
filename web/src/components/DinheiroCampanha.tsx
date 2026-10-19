@@ -1,34 +1,46 @@
 import Link from "next/link";
 import type { CarreiraItem, Receitas } from "@/lib/types";
-import { deCada100, FONTES, textoDe100 } from "@/lib/financiamento";
+import { deCada100, FONTES, resumoCampanhas, textoDe100 } from "@/lib/financiamento";
 import { pct, reais } from "@/lib/format";
+import { BarrasH } from "./BarrasH";
 import { Donut } from "./Donut";
 
 /**
  * Bloco do perfil "Dinheiro da campanha e resultado" (pergunta 8: recursos públicos × sucesso eleitoral). Só há receitas de 2018 em diante.
- * `opcoes` são as candidaturas com dados possíveis; `hrefDe` monta o link que troca a candidatura escolhida.
+ * `campanhas` são as candidaturas com dados possíveis, da mais recente para a mais antiga, com as receitas de cada uma.
+ * Com mais de uma, a lista compara todas; clicar numa linha (`hrefDe`) mostra o detalhe dela embaixo.
  */
-export function DinheiroCampanha({ opcoes, escolhida, receitas, hrefDe }: {
-  opcoes: CarreiraItem[]; escolhida: CarreiraItem | undefined; receitas: Receitas | null; hrefDe: (id: number) => string;
+export function DinheiroCampanha({ campanhas, escolhida, hrefDe }: {
+  campanhas: { c: CarreiraItem; r: Receitas | null }[]; escolhida: number | undefined; hrefDe: (id: number) => string;
 }) {
+  const atual = campanhas.find((x) => x.c.id_candidatura === escolhida) ?? campanhas[0];
+  const resumo = resumoCampanhas(campanhas);
   return (
     <section className="card" aria-labelledby="h-din" id="dinheiro">
-      <div className="kicker">Pergunta 8</div>
       <h2 id="h-din">Dinheiro da campanha e resultado</h2>
-      {!escolhida ? (
+      {!atual ? (
         <p className="muted">Os dados de quanto cada campanha recebeu só existem a partir de 2018, e esta pessoa não disputou eleições desde então.</p>
       ) : (
         <>
-          {opcoes.length > 1 && (
-            <div className="chips" style={{ margin: "6px 0 12px" }} aria-label="Escolha a campanha">
-              {opcoes.map((o) => (
-                <Link key={o.id_candidatura} className={`chip${o.id_candidatura === escolhida.id_candidatura ? " on" : ""}`} href={hrefDe(o.id_candidatura)} scroll={false}>
-                  {o.ano} · {o.cargo}
-                </Link>
-              ))}
-            </div>
+          {resumo.length > 1 && (
+            <>
+              <p className="muted" style={{ margin: "4px 0 0" }}>
+                {resumo.length} campanhas desde 2018. Clique numa delas para ver de onde veio o dinheiro.
+              </p>
+              <BarrasH compacto titulo="Quanto cada campanha recebeu" linhas={resumo.map((x) => ({
+                chave: String(x.id), rotulo: `${x.ano} · ${x.cargo}`, detalhe: x.eleito ? "eleito" : "não eleito",
+                valor: x.total ?? 0, classe: "pub",
+                pedacos: [{ rotulo: "Dinheiro público", valor: x.publica, classe: "pub" }, { rotulo: "Dinheiro privado", valor: x.privada, classe: "priv" }],
+                texto: x.total === null ? "sem dados" : reais(x.total),
+                subtexto: x.total ? `público: R$ ${x.publicoDe100} de cada R$ 100` : undefined,
+                href: hrefDe(x.id), atual: x.id === atual.c.id_candidatura,
+              }))} />
+              <div className="legend" aria-hidden="true">
+                <span><i className="pub" />Dinheiro público</span><span><i className="priv" />Dinheiro privado</span>
+              </div>
+            </>
           )}
-          <Conteudo c={escolhida} r={receitas} />
+          <Conteudo c={atual.c} r={atual.r} />
         </>
       )}
     </section>
@@ -75,7 +87,7 @@ function Conteudo({ c, r }: { c: CarreiraItem; r: Receitas | null }) {
           <b>{pct(r.mediana_pct_publica_cargo, 0)}</b> do dinheiro vindo de fonte pública; esta campanha teve <b>{pct(r.pct_publica, 0)}</b>.
         </p>
       )}
-      <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>
+      <p className="muted" style={{ fontSize: 15, marginBottom: 0 }}>
         <Link href={panorama}>Ver o panorama de todos os candidatos a {c.cargo.toLowerCase()} em {c.ano} →</Link>
       </p>
     </>

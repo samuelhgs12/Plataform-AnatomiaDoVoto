@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { destacarBusca } from "@/lib/busca";
 import type { CandidatoBusca } from "@/lib/types";
 import { PartyChip } from "./PartyChip";
+
+/** Nome com o trecho buscado em <mark>; mostra por que a pessoa apareceu (casou no nome de urna ou no civil). */
+function Destaque({ nome, busca }: { nome: string; busca: string }) {
+  return <>{destacarBusca(nome, busca).map((t, i) => (t.casou ? <mark key={i}>{t.texto}</mark> : <span key={i}>{t.texto}</span>))}</>;
+}
 
 /** Busca com sugestões. Chama /api/busca (o Next repassa para a API FastAPI). */
 export function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
@@ -34,10 +40,10 @@ export function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
 
   return (
     <div role="search">
-      <label htmlFor="busca" className="muted" style={{ fontSize: 13 }}>Buscar candidato pelo nome</label>
+      <label htmlFor="busca" className="muted" style={{ fontSize: 15 }}>Buscar candidato pelo nome</label>
       <input id="busca" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ex.: Maria da Silva" autoComplete="off" autoFocus={autoFocus}
-        style={{ width: "100%", maxWidth: 520, display: "block", marginTop: 4, fontSize: 16 }} />
-      <div aria-live="polite" className="muted" style={{ fontSize: 12, minHeight: 18, marginTop: 4 }}>
+        style={{ width: "100%", maxWidth: 520, display: "block", marginTop: 4, fontSize: 18 }} />
+      <div aria-live="polite" className="muted" style={{ fontSize: 14, minHeight: 18, marginTop: 4 }}>
         {!curto && estado === "buscando" && "Buscando…"}
         {!curto && estado === "erro" && "Não foi possível buscar agora."}
         {!curto && estado === "parado" && sugestoes.length === 0 && "Nenhum candidato encontrado."}
@@ -48,8 +54,14 @@ export function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
           {sugestoes.map((c) => (
             <li key={c.id_candidato} className="card" style={{ marginBottom: 8, padding: "10px 14px" }}>
               <Link href={`/candidato/${c.id_candidato}`} style={{ textDecoration: "none" }}>
-                <b>{c.nome_civil ?? c.nome_urna}</b>
-                <div className="muted" style={{ fontSize: 12 }}>
+                <b><Destaque nome={c.nome_urna ?? c.nome_civil ?? ""} busca={q} /></b>
+                {c.nome_civil && c.nome_civil !== c.nome_urna && (
+                  <div style={{ fontSize: 15 }}><Destaque nome={c.nome_civil} busca={q} /></div>
+                )}
+                {c.nome_urna_casado && (
+                  <div style={{ fontSize: 15 }}>Já concorreu como <Destaque nome={c.nome_urna_casado} busca={q} /></div>
+                )}
+                <div className="muted" style={{ fontSize: 14 }}>
                   {c.ultimo_cargo} · {c.uf} · {c.ultimo_ano}{c.ultimo_eleito ? " · eleito" : ""} <PartyChip sigla={c.partido} />
                 </div>
               </Link>

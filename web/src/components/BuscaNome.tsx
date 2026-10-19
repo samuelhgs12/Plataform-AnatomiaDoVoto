@@ -14,7 +14,7 @@ export function BuscaNome() {
       {aberta && (
         <section id="painel-busca" className="card" style={{ flexBasis: "100%" }}>
           <SearchBox autoFocus />
-          <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>Procura em todas as eleições de 1998 a 2024, independente dos filtros abaixo.</p>
+          <p className="muted" style={{ fontSize: 14, margin: "4px 0 0" }}>Procura em todas as eleições de 1998 a 2024, independente dos filtros abaixo.</p>
         </section>
       )}
     </>
