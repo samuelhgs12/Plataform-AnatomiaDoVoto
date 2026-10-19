@@ -34,3 +34,8 @@ data/
 .vscode/
 .idea/
 .DS_Store
+
+# Artefatos locais do Graphify e Claude Code
+graphify-out/
+.graphify_analysis.json
+.claude/
