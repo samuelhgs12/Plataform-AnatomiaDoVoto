@@ -4,7 +4,8 @@
 
 - API com busca, listagem, perfil, gastos por categoria (com mediana do cargo), palavras e receitas, 16 testes e teste de privacidade.
 - Front com início, listagem com filtros, perfil (linha do tempo, gastos, palavras, receitas), duas análises agregadas e página "Sobre".
-- Exportação dos agregados das perguntas 5 e 10 para JSON.
+- Exportação dos agregados das perguntas 5, 8 e 10 e do mapa da página inicial para JSON.
+- Página inicial com o mapa da abstenção (estados e municípios, 2008 a 2024) e os indicadores do Censo 2010.
 - CI (testes da API; lint, tipos, testes e build do front), Docker e `.env.example`.
 
 ## Fases (cerca de 6 semanas)
@@ -14,7 +15,7 @@
 | **1. Fundação** (sem. 1–2) | Rodar tudo com os dados reais; conferir os números contra o projeto de carga; ajustar busca e perfil; deploy da API e do site | `api/`, `web/` |
 | **2. Perguntas 9 e 10** (sem. 3–4) | Retenção por turma, trocas de partido, propaganda por cargo; pré-calcular referências (mediana) e trocas com sucessão partidária; nuvem de palavras de verdade | `pipeline/`, `api/`, `web/src/components` |
 | **3. Demais perguntas** (sem. 5–6) | P5 com gráfico e mapa; P1/P2 (custo por voto e percentil no perfil); P8; acessibilidade, desempenho e testes de ponta a ponta | tudo |
-| **Depois** | IBGE (população, escolaridade, faixa etária) cruzado com o eleitorado; mapas municipais | `pipeline/`, `web/` |
+| **Depois** | IBGE (população, escolaridade, faixa etária) cruzado com o eleitorado; outros mapas municipais (legenda) | `pipeline/`, `web/` |
 
 ## Divisão sugerida (4 pessoas)
 

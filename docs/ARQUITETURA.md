@@ -6,7 +6,7 @@
                                ▼
                     ┌───────────────────────┐        ┌───────────────────────────┐
                     │ API FastAPI (api/)    │        │ pipeline/export_static.py │
-                    │ SQL parametrizado     │        │ q5.sql, q10.sql           │
+                    │ SQL parametrizado     │        │ q5, q8, q10, mapa (.sql)  │
                     │ cache em memória      │        │   → web/public/data/*.json│
                     └──────────┬────────────┘        └─────────────┬─────────────┘
                                │ /api/*                            │ arquivos estáticos
