@@ -1,10 +1,14 @@
-// Converte a malha de UFs do IBGE (SVG, qualidade mínima) em caminhos absolutos para src/lib/brasil-uf.ts.
+// Converte a malha de UFs do IBGE (SVG, qualidade mínima) em caminhos absolutos para src/lib/brasil-uf.ts. Com malhas
+// municipais (GeoJSON) também grava, na mesma projeção (o zoom num estado é só uma transformação do mesmo desenho):
+//   public/malhas/municipios.svg   um <path id="m<código IBGE>"> por município, usado com <use href> (o navegador baixa uma vez)
+//   src/lib/brasil-municipios.ts   caixa de cada UF (para o zoom) e centro de cada município
 // Uso (a partir de web/):
 //   curl -o br.svg "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=image/svg%2Bxml&qualidade=minima&intrarregiao=UF"
-//   node scripts/gerar-mapa.mjs br.svg src/lib/brasil-uf.ts
-import { readFileSync, writeFileSync } from "node:fs";
+//   for u in 14 16 26 31 32 33; do curl -o mun_$u.json "https://servicodados.ibge.gov.br/api/v3/malhas/estados/$u?formato=application/vnd.geo%2Bjson&qualidade=intermediaria&intrarregiao=municipio"; done
+//   node scripts/gerar-mapa.mjs br.svg src/lib/brasil-uf.ts mun_*.json
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const [entrada, saida] = process.argv.slice(2);
+const [entrada, saida, ...malhas] = process.argv.slice(2);
 const svg = readFileSync(entrada, "utf-8");
 const UF = {
   11: ["RO", "Rondônia"], 12: ["AC", "Acre"], 13: ["AM", "Amazonas"], 14: ["RR", "Roraima"], 15: ["PA", "Pará"],
@@ -85,3 +89,58 @@ ${saidaUFs.map((e) => "  " + JSON.stringify(e)).join(",\n")},
 `;
 writeFileSync(saida, ts);
 console.log(saidaUFs.length, "UFs;", ts.length, "bytes; altura", altura);
+
+// malhas municipais: mesma projeção, 1 casa decimal e pontos mais próximos que ~1 px (no zoom) descartados
+const d1 = (n) => (n / 10).toString().replace(/^(-?)0\./, "$1."); // décimos inteiros → "1.5", ".5", "-.5"
+// caminho relativo ("M x y l dx dy ... z"): os deltas são diferenças de valores já arredondados, então não acumulam erro
+function relativo(anel) {
+  const pts = anel.map(([x, y]) => [Math.round(x * 10), Math.round(y * 10)]);
+  let d = `M${d1(pts[0][0])} ${d1(pts[0][1])}l`;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = d1(pts[i][0] - pts[i - 1][0]), dy = d1(pts[i][1] - pts[i - 1][1]);
+    if (dx === "0" && dy === "0") continue;
+    d += (i > 1 && !dx.startsWith("-") ? " " : "") + dx + (dy.startsWith("-") ? "" : " ") + dy;
+  }
+  return d + "z";
+}
+const caixas = {}, municipiosTodos = [];
+for (const arq of malhas) {
+  const geo = JSON.parse(readFileSync(arq, "utf-8"));
+  // ilhas oceânicas (Fernando de Noronha) ficam fora do quadro do mapa: saem do desenho e da caixa do zoom
+  geo.features = geo.features.filter((f) => proj(f.geometry.type === "Polygon" ? f.geometry.coordinates[0][0] : f.geometry.coordinates[0][0][0])[0] <= LARGURA);
+  const aneis = (g) => (g.type === "Polygon" ? [g.coordinates] : g.coordinates).flat(1);
+  const xs = geo.features.flatMap((f) => aneis(f.geometry).flat()).map(proj);
+  const caixa = [Math.min(...xs.map((p) => p[0])), Math.min(...xs.map((p) => p[1])), Math.max(...xs.map((p) => p[0])), Math.max(...xs.map((p) => p[1]))].map(r);
+  const tolerancia = Math.max(caixa[2] - caixa[0], caixa[3] - caixa[1]) / 700; // ~1 px com o estado ocupando o mapa
+  const municipios = geo.features.map(({ properties, geometry }) => {
+    const planos = aneis(geometry).map((a) => {
+      const pts = [];
+      for (const p of a.map(proj)) {
+        const ult = pts[pts.length - 1];
+        if (!ult || Math.hypot(p[0] - ult[0], p[1] - ult[1]) >= tolerancia) pts.push(p);
+      }
+      return pts;
+    }).filter((a) => a.length >= 3);
+    const d = planos.map(relativo).join("");
+    const [x, y] = centroide(planos.reduce((m, a) => (Math.abs(area(a)) > Math.abs(area(m)) ? a : m)));
+    return { ibge: properties.codarea, d, x: r(x), y: r(y) };
+  });
+  const uf = UF[Number(municipios[0].ibge.slice(0, 2))][0];
+  caixas[uf] = caixa;
+  municipiosTodos.push(...municipios);
+}
+if (malhas.length) {
+  const sprite = `<svg xmlns="http://www.w3.org/2000/svg"><defs>${municipiosTodos.map((m) => `<path id="m${m.ibge}" d="${m.d}" vector-effect="non-scaling-stroke"/>`).join("")}</defs></svg>`;
+  mkdirSync(new URL("../public/malhas/", import.meta.url), { recursive: true });
+  writeFileSync(new URL("../public/malhas/municipios.svg", import.meta.url), sprite);
+  writeFileSync(new URL("../src/lib/brasil-municipios.ts", import.meta.url), `// Gerado por scripts/gerar-mapa.mjs a partir das malhas municipais do IBGE (qualidade intermediária). Não editar à mão.
+// Mesma projeção de brasil-uf.ts. Os desenhos estão em public/malhas/municipios.svg (id "m" + código IBGE).
+
+/** Caixa [x0, y0, x1, y1] de cada UF, sem ilhas oceânicas: é o que o zoom enquadra. */
+export const CAIXA_UF: Record<string, [number, number, number, number]> = ${JSON.stringify(caixas)};
+
+/** Centro [x, y] do maior polígono de cada município, pelo código IBGE. */
+export const CENTRO_MUNICIPIO: Record<string, [number, number]> = ${JSON.stringify(Object.fromEntries(municipiosTodos.map((m) => [m.ibge, [m.x, m.y]])))};
+`);
+  console.log(municipiosTodos.length, "municípios;", sprite.length, "bytes no SVG");
+}

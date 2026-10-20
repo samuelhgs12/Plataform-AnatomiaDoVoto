@@ -1,0 +1,84 @@
+import type { CSSProperties } from "react";
+import { ESTADOS_MAPA } from "@/lib/brasil-uf";
+import { TELA } from "@/lib/lupa";
+
+export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string }
+export interface MunicipioNoMapa { ibge: string; classe: string; href: string; dica: string; atraso: number }
+
+interface Props {
+  titulo: string;
+  camera: { x: number; y: number; k: number };
+  estados: EstadoNoMapa[];
+  /** UF em zoom: os municípios dela aparecem por cima do estado */
+  uf?: string;
+  municipios: MunicipioNoMapa[];
+  /** município escolhido: contorno por cima dos vizinhos e nome na tela */
+  destaque?: { ibge: string; nome: string; x: number; y: number };
+}
+
+// estados pequenos do litoral: etiqueta deslocada para o mar, senão encosta no vizinho
+const DESLOCAR: Record<string, [number, number]> = { ES: [34, -6], RJ: [26, 22] };
+const desenho = (ibge: string) => `/malhas/municipios.svg#m${ibge}`;
+
+/**
+ * Mapa da abstenção. Uma "câmera" (um <g> com transform) enquadra o Brasil ou o estado escolhido; como o elemento
+ * é o mesmo entre as navegações, o CSS anima o zoom. Por fora dela, a "lupa" é o zoom livre (roda do mouse e
+ * arrasto, em MapaVivo) dentro do estado. Os municípios vêm de um SVG estático (<use>), que o navegador baixa uma
+ * vez: a página só manda a cor de cada um.
+ */
+export function MapaAbstencao({ titulo, camera, estados, uf, municipios, destaque }: Props) {
+  const comDados = new Map(estados.map((e) => [e.uf, e]));
+  const tela = (x: number, y: number) => [camera.x + x * camera.k, camera.y + y * camera.k];
+  const contorno = uf ? ESTADOS_MAPA.find((e) => e.uf === uf) : undefined;
+  return (
+    <svg viewBox={`0 0 ${TELA.larg} ${TELA.alt}`} className="mapa-abst" role="group" aria-label={titulo} data-zoom={uf ? "uf" : "brasil"}>
+      <g className="lupa">
+        <g className="camera" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.k})` }}>
+          <g aria-hidden="true">
+            {ESTADOS_MAPA.filter((e) => !comDados.has(e.uf)).map((e) => <path key={e.uf} d={e.d} className="uf-fora" />)}
+          </g>
+          {ESTADOS_MAPA.filter((e) => comDados.has(e.uf)).map((e) => {
+            const d = comDados.get(e.uf)!;
+            return (
+              <a key={e.uf} href={d.href} data-mapa="" data-dica={d.descricao} aria-label={d.descricao} aria-current={e.uf === uf ? "true" : undefined}
+                className={`uf ${d.classe}${e.uf === uf ? " on" : ""}`}>
+                <path d={e.d} />
+              </a>
+            );
+          })}
+          {uf && (
+            <g className="municipios" key={uf}>
+              {municipios.map((m) => (
+                <a key={m.ibge} href={m.href} data-mapa="" data-dica={m.dica} aria-label={m.dica} tabIndex={-1}
+                  className={`mun ${m.classe}`} style={{ "--atraso": m.atraso } as CSSProperties}>
+                  <use href={desenho(m.ibge)} />
+                </a>
+              ))}
+            </g>
+          )}
+          {contorno && <path className="contorno-uf" d={contorno.d} aria-hidden="true" />}
+          {destaque && <use key={destaque.ibge} className="mun-destaque" href={desenho(destaque.ibge)} aria-hidden="true" />}
+        </g>
+        {/* etiquetas fora da câmera: não crescem com o zoom dela */}
+        <g className="etiquetas-uf" aria-hidden="true">
+          {ESTADOS_MAPA.filter((e) => comDados.has(e.uf)).map((e) => {
+            const [dx, dy] = DESLOCAR[e.uf] ?? [0, 0];
+            const [x, y] = tela(e.x + dx, e.y + dy);
+            const d = comDados.get(e.uf)!;
+            return (
+              <g key={e.uf} className="etiqueta" transform={`translate(${x} ${y})`}>
+                <rect x={-33} y={-13} width={66} height={26} rx={13} />
+                <text x={-15} dy="0.35em" className="etiqueta-sigla">{d.sigla}</text>
+                <text x={13} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
+              </g>
+            );
+          })}
+        </g>
+        {destaque && (() => {
+          const [x, y] = tela(destaque.x, destaque.y);
+          return <text key={destaque.ibge} className="rotulo-mun" x={x} y={y} dy="-0.8em" aria-hidden="true">{destaque.nome}</text>;
+        })()}
+      </g>
+    </svg>
+  );
+}

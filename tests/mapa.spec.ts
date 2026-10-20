@@ -1,26 +1,52 @@
 import { test, expect } from '@playwright/test';
 
-test('mapa da página inicial: escolher estado, indicador e ano', async ({ page }) => {
-  await page.goto('/');
-  const mapa = page.getByRole('group', { name: /por estado/ });
-  await expect(mapa).toBeVisible();
+test('mapa da abstenção: estado, município, indicador e ano', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' }); // o clique no mapa precisa da página hidratada (navegação sem recarregar)
+  await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2012' })).toBeVisible();
+  const mapa = page.getByRole('group', { name: /nos seis estados/ });
   await expect(mapa.getByRole('link')).toHaveCount(6); // só os 6 estados do recorte são clicáveis
 
-  await mapa.getByRole('link', { name: /^Minas Gerais:/ }).click();
-  await expect(page).toHaveURL(/uf=MG/);
-  await expect(page.getByRole('heading', { name: /^Minas Gerais em \d{4}$/ })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Financiamento' })).toHaveAttribute('href', /\/analises\/financiamento\?uf=MG/);
+  await mapa.getByRole('link', { name: /^Pernambuco:/ }).click();
+  await expect(page).toHaveURL(/uf=PE/);
+  await expect(page.getByRole('heading', { name: 'Pernambuco', level: 2 })).toBeVisible();
+  await expect(page.locator('.mapa-abst .mun')).toHaveCount(184); // Fernando de Noronha fica fora do quadro do mapa
 
-  await page.getByRole('group', { name: 'Indicador' }).getByRole('link', { name: 'Votos só no partido' }).click();
-  await expect(page.getByRole('heading', { name: /^Votos só no partido em \d{4}$/ })).toBeVisible();
-  await expect(page).toHaveURL(/uf=MG/); // troca de indicador mantém o estado
+  await page.getByRole('combobox', { name: /^Município/ }).selectOption({ label: 'Recife' });
+  await expect(page).toHaveURL(/mun=\d+/);
+  await expect(page.getByRole('heading', { name: 'Recife', level: 2 })).toBeVisible();
 
+  await page.getByRole('link', { name: /^Renda por pessoa/ }).click();
+  await expect(page.getByRole('heading', { name: 'Abstenção × Renda por pessoa' })).toBeVisible();
+  await expect(page).toHaveURL(/uf=PE.*mun=\d+/); // trocar o indicador mantém estado e município
+
+  // fora de 2008 e 2012 não há comparação com o Censo 2010
   await page.getByRole('group', { name: 'Ano da eleição' }).getByRole('link', { name: '2022' }).click();
-  await expect(page.getByRole('heading', { name: 'Votos só no partido em 2022' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2022' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'E os indicadores sociais?' })).toBeVisible();
+});
+
+test('cruzar abstenção com indicador pinta o mapa em 3 × 3', async ({ page }) => {
+  await page.goto('/?uf=ES&cor=cruzar');
+  await expect(page.locator('.mapa-abst .mun[class*=" b"]').first()).toBeVisible();
+  await expect(page.locator('.mapa-abst .mun[class*=" q"]')).toHaveCount(0);
 });
 
 test('parâmetros inválidos voltam ao padrão', async ({ page }) => {
-  await page.goto('/?indicador=xyz&ano=1900&uf=SP');
-  await expect(page.getByRole('heading', { name: /^Dinheiro público nas campanhas em \d{4}$/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /em \d{4}$/, level: 3 })).toHaveCount(0); // SP fora do recorte: sem painel
+  await page.goto('/?ano=1900&uf=SP&ind=xyz&cor=cruzar');
+  await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2012' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Os seis estados', level: 2 })).toBeVisible(); // SP fora do recorte
+  await expect(page.locator('.mapa-abst .mun')).toHaveCount(0);
+});
+
+test('lupa: a roda aproxima o estado e, no estado inteiro, rola a página', async ({ page }) => {
+  await page.goto('/?uf=RJ', { waitUntil: 'networkidle' });
+  const mapa = page.locator('.mapa-abst');
+  const caixa = (await mapa.boundingBox())!;
+  await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2);
+  await page.mouse.wheel(0, -300);
+  await expect(page.locator('.mapa-abst .lupa')).toHaveAttribute('style', /scale\((?!1\))/);
+  await page.getByRole('button', { name: 'Ver o estado inteiro' }).click();
+  await expect(page.locator('.mapa-abst .lupa')).toHaveAttribute('style', /scale\(1\)/);
+  await page.mouse.wheel(0, 400);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
 });

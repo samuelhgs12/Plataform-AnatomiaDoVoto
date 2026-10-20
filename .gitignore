@@ -49,3 +49,6 @@ graphify-out/
 
 # saída da skill design-taste-frontend (capturas e relatório do inspetor)
 /.taste-skill/
+
+# Downloads do pipeline (dados abertos do TSE)
+pipeline/.cache/
