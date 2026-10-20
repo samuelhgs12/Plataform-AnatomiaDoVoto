@@ -2,6 +2,8 @@
 -- Desenvolvimento Humano) para comparar com as eleições municipais em volta do Censo (2008 e 2012).
 -- Roda no banco v2 (bdr_v2: tem cod_ibge e indicador_municipal). Uso: python export_static.py mapa
 -- Antes dele, export_static.py cria tse_participacao (2008 a 2016, dos dados abertos do TSE).
+-- TODO: provisório (decisão 10 em docs/DECISOES.md). Quando o load_BDR carregar esses anos em participacao_eleitoral,
+-- apagar o UNION ALL com tse_participacao.
 --
 -- Regra da participação: eleição ordinária, 1º turno, governador nos anos gerais e prefeito nos municipais
 -- (as suplementares do mesmo ano ficam de fora). Se mudar os indicadores, mude também web/src/lib/abstencao.ts.

@@ -11,7 +11,7 @@
 | 7 | Sem foto de candidato | Buscar fotos | Não há foto nos dados do TSE carregados |
 | 8 | DuckDB 1.5.6 fixo | Versão livre | O formato do arquivo e o MotherDuck exigem versões compatíveis |
 | 9 | **O mapa é o centro da página inicial**: abstenção por estado e, com zoom, por município, com indicadores ao lado | Página inicial de busca e cartões | Os dados são regionais; o mapa é a porta de entrada para eles |
-| 10 | Abstenção de 2008 a 2016 vem dos dados abertos do TSE (`detalhe_votacao_munzona`), baixada pelo `export_static.py`; de 2018 em diante, do banco | Só os anos do banco | O banco não tem participação antes de 2018, e a comparação com o Censo 2010 precisa de 2008 e 2012 |
+| 10 | **Provisório:** abstenção de 2008 a 2016 vem dos dados abertos do TSE (`detalhe_votacao_munzona`), baixada pelo `export_static.py`; de 2018 em diante, do banco. **Destino:** todos os dados do mapa virão do banco, quando o repositório de carga (`load_BDR`) passar a carregá-los | Só os anos do banco | O banco não tem participação antes de 2018, e a comparação com o Censo 2010 precisa de 2008 e 2012 |
 | 11 | Indicadores do Censo 2010 (Atlas do Desenvolvimento Humano, banco `bdr_v2`) só são comparados com a abstenção de 2008 e 2012 | Comparar com qualquer ano | São as eleições municipais em volta do Censo; nos outros anos o mapa mostra só a abstenção |
 
 ## A decidir pela equipe

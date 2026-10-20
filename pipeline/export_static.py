@@ -32,6 +32,8 @@ COPY_RE = re.compile(r"COPY\s*\((.*)\)\s*TO\s*'[^']*?([A-Za-z0-9_]+)\.csv'\s*\(H
 IGNORAR = {"politicos", "trajetorias"}      # volumosos: a busca por pessoa usa a API
 BANCO_DA_CARGA = RAIZ.parents[1] / "load_BDR" / "dados_bdr" / "bdr_final.duckdb"
 # O banco só tem participação de 2018 em diante; 2008 a 2016 vêm dos dados abertos do TSE (baixados uma vez para .cache/)
+# TODO: provisório (decisão 10 em docs/DECISOES.md). Quando o load_BDR carregar 2008-2016 e os indicadores no banco,
+# apagar ANOS_TSE, URL_TSE, CACHE, carregar_tse e o USE bdr_v2 em main().
 ANOS_TSE = (2008, 2010, 2012, 2014, 2016)
 URL_TSE = "https://cdn.tse.jus.br/estatistica/sead/odsele/detalhe_votacao_munzona/detalhe_votacao_munzona_{ano}.zip"
 CACHE = RAIZ / ".cache"

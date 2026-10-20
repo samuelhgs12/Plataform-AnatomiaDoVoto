@@ -36,4 +36,9 @@
 
 ## TODOs deixados no código
 
-Procure por `TODO`: referências pré-calculadas (`despesas_referencia.sql`, `receitas_referencia.sql`), nuvem de palavras real (`WordList.tsx`), mapa da legenda por município, e-mail de contato em `sobre/page.tsx`.
+**Dados do mapa no banco (depende do `load_BDR`):** a carga precisa trazer a participação eleitoral de 2008 a 2016
+(`participacao_eleitoral`) e os indicadores com o código IBGE (`indicador_municipal`, `municipio.cod_ibge`, hoje só no
+`bdr_v2`) para o banco que a plataforma usa. Feito isso, apagar `carregar_tse` e o `USE bdr_v2` de
+`pipeline/export_static.py` e a parte `tse_participacao` de `pipeline/sql/mapa.sql` (decisão 10 em `DECISOES.md`).
+
+Procure por `TODO`: dados do mapa no banco (`export_static.py`, `mapa.sql`), referências pré-calculadas (`despesas_referencia.sql`, `receitas_referencia.sql`), nuvem de palavras real (`WordList.tsx`), mapa da legenda por município, e-mail de contato em `sobre/page.tsx`.
