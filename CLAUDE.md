@@ -11,9 +11,10 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 ## Como uma análise lê o JSON estático
 
-- `pipeline/export_static.py` roda `pipeline/sql/q5.sql` e `q10.sql`; cada `COPY (...) TO 'x.csv'` vira a chave `x`
-  em `web/public/data/q5.json` / `q10.json`, no formato `{colunas: [...], linhas: [[...]]}` (`TabelaEstatica`).
-  q5 tem `legenda`, `eventos` e `linhagem` (tipos em `src/lib/legenda.ts`).
+- `pipeline/export_static.py` roda `pipeline/sql/q5.sql`, `q8.sql`, `q10.sql` e `mapa.sql` (ou só os que forem passados:
+  `python export_static.py mapa`); cada `COPY (...) TO 'x.csv'` vira a chave `x` em `web/public/data/<consulta>.json`,
+  no formato `{colunas: [...], linhas: [[...]]}` (`TabelaEstatica`). q5 tem `legenda`, `eventos` e `linhagem` (tipos em
+  `src/lib/legenda.ts`); mapa tem `municipios`, `participacao`, `indicadores` e `dicionario` (tipos em `src/lib/abstencao.ts`).
 - Na página (componente de servidor, `async`): `await lerEstatico("q5")` (`src/lib/data.ts`, lê do disco, devolve
   `null` se o arquivo não existe) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
 - Se a tabela faltar, mostre o `card aviso` pedindo para rodar `python export_static.py` (veja `analises/legenda`).
@@ -27,20 +28,20 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 ## Quando usar componente cliente (`"use client"`)
 
-Só com estado/eventos/efeitos do navegador: `Filters` (selects que aplicam na hora com `router.push` +
-`useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`) e `BuscaNome`
-(abre/fecha). Gráficos (`FlowBars`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
+Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (selects que aplicam na hora com
+`router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
+`BuscaNome` (abre/fecha) e `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial). Gráficos
+(`MapaAbstencao`, `Dispersao`, `FlowBars`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
 
-## Classes e tokens de `web/src/app/globals.css` para gráficos
+## Design visual
 
-- Tokens: `--bar`, `--accent` (destaque/propaganda), `--ok`, `--warn`, escala `--w1..--w4` (azuis) e `--l1`, `--l2`
-  (laranjas), `--o` (neutro), `--panel2` (trilho), `--line` (grade), `--fg`/`--muted`, `--on-dark`/`--on-light` (texto
-  sobre cor). Há variantes para tema escuro; use sempre `var(--…)`, nunca cor fixa.
-- Barras empilhadas 100%: `.flow` (grid rótulo | barra, `.nm` + `small`), `.stack`, `.seg` + `.w1..w4/.l1/.l2/.o`, `.legend i`.
-- Barras horizontais com referência: `.spend`, `.trilho`, `.barra` (`.prop`), `.mediana`.
-- SVG: `.chart` (`.wide` + `.chartwrap` para rolar no celular), `svg text`, `svg .gr` (linha de grade).
-- Tabelas: `.tablewrap`, `td.num`/`th.num`. Cor de partido: `corPartido()` / `<PartyChip>`.
-- Acessibilidade: todo gráfico tem `role="img"` + `aria-label` (ou tabela equivalente) e não depende só de cor.
+Em aberto: cores, tipografia e layout das páginas ainda estão sendo definidos. A única decisão fixa é que **o mapa é o
+centro da página inicial** (`docs/DECISOES.md`, decisão 9). Cores sempre como `var(--…)` de `globals.css`, nunca fixas
+no componente.
+
+## Acessibilidade
+
+Todo gráfico tem `role="img"` + `aria-label` (ou tabela equivalente) e não depende só de cor.
 
 ## Testes do web
 
@@ -48,3 +49,4 @@ Só com estado/eventos/efeitos do navegador: `Filters` (selects que aplicam na h
   `web/tests/lib.test.ts` para o resto; um `describe` por função de `src/lib`, com uma fábrica de linha
   (`const l = (o: Partial<Linha>) => ({...padrão, ...o})`) e poucas linhas inventadas.
 - Só lógica pura é testada (sem render de componente). Antes do PR: `npm run lint && npm run typecheck && npm test && npm run build`.
+- Fluxos no navegador: Playwright na raiz (`tests/*.spec.ts`, `npx playwright test`; sobe o `npm run dev` sozinho).

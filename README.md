@@ -1,13 +1,13 @@
 # Anatomia do Voto (BDR / UFPI)
 
-Plataforma web sobre os dados eleitorais do TSE (1998–2024) de AP, ES, MG, PE, RJ e RR: **carreira** de cada político (pergunta 10), **gastos de campanha** por categoria (pergunta 9), votos de legenda (pergunta 5), recursos públicos × sucesso eleitoral (pergunta 8) e mais. O layout do perfil do candidato se inspira no especial "Quem são os candidatos" do G1.
+Plataforma web sobre os dados eleitorais do TSE (1998–2024) de AP, ES, MG, PE, RJ e RR: **carreira** de cada político (pergunta 10), **gastos de campanha** por categoria (pergunta 9), votos de legenda (pergunta 5), recursos públicos × sucesso eleitoral (pergunta 8) e mais. A página inicial é um mapa da abstenção por estado e município, com indicadores do Censo 2010.
 
 Os dados vêm do banco `bdr_final` (DuckDB / MotherDuck), carregado e validado no **repositório de carga**. Este repositório só lê.
 
 ```
 api/        FastAPI (Python): busca, listagem, perfil, gastos, receitas      → docs/API.md
 web/        Next.js 16 (React 19, TypeScript): páginas e gráficos
-pipeline/   gera os JSONs estáticos das análises agregadas (perguntas 5 e 10)
+pipeline/   gera os JSONs estáticos das análises agregadas (perguntas 5, 8 e 10) e do mapa da página inicial
 docs/       arquitetura, API, esboço das telas, decisões, plano de trabalho
 ```
 
@@ -62,8 +62,11 @@ Para conferir a conexão com o banco, abra http://localhost:8000/api/health: dev
 ```bash
 cd pipeline
 pip install -r requirements.txt
-python export_static.py                                  # grava web/public/data/q5.json, q8.json e q10.json
+python export_static.py                                  # grava web/public/data/q5.json, q8.json, q10.json e mapa.json
 ```
+
+O `mapa.json` usa o banco `bdr_v2` (indicadores do Censo e código IBGE) e baixa uma vez, para `pipeline/.cache/`, a
+abstenção de 2008 a 2016 dos dados abertos do TSE. Para gerar só ele: `python export_static.py mapa`.
 
 **3. Site**
 ```bash

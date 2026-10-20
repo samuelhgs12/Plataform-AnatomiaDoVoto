@@ -1,0 +1,146 @@
+// Converte a malha de UFs do IBGE (SVG, qualidade mínima) em caminhos absolutos para src/lib/brasil-uf.ts. Com malhas
+// municipais (GeoJSON) também grava, na mesma projeção (o zoom num estado é só uma transformação do mesmo desenho):
+//   public/malhas/municipios.svg   um <path id="m<código IBGE>"> por município, usado com <use href> (o navegador baixa uma vez)
+//   src/lib/brasil-municipios.ts   caixa de cada UF (para o zoom) e centro de cada município
+// Uso (a partir de web/):
+//   curl -o br.svg "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?formato=image/svg%2Bxml&qualidade=minima&intrarregiao=UF"
+//   for u in 14 16 26 31 32 33; do curl -o mun_$u.json "https://servicodados.ibge.gov.br/api/v3/malhas/estados/$u?formato=application/vnd.geo%2Bjson&qualidade=intermediaria&intrarregiao=municipio"; done
+//   node scripts/gerar-mapa.mjs br.svg src/lib/brasil-uf.ts mun_*.json
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+
+const [entrada, saida, ...malhas] = process.argv.slice(2);
+const svg = readFileSync(entrada, "utf-8");
+const UF = {
+  11: ["RO", "Rondônia"], 12: ["AC", "Acre"], 13: ["AM", "Amazonas"], 14: ["RR", "Roraima"], 15: ["PA", "Pará"],
+  16: ["AP", "Amapá"], 17: ["TO", "Tocantins"], 21: ["MA", "Maranhão"], 22: ["PI", "Piauí"], 23: ["CE", "Ceará"],
+  24: ["RN", "Rio Grande do Norte"], 25: ["PB", "Paraíba"], 26: ["PE", "Pernambuco"], 27: ["AL", "Alagoas"],
+  28: ["SE", "Sergipe"], 29: ["BA", "Bahia"], 31: ["MG", "Minas Gerais"], 32: ["ES", "Espírito Santo"],
+  33: ["RJ", "Rio de Janeiro"], 35: ["SP", "São Paulo"], 41: ["PR", "Paraná"], 42: ["SC", "Santa Catarina"],
+  43: ["RS", "Rio Grande do Sul"], 50: ["MS", "Mato Grosso do Sul"], 51: ["MT", "Mato Grosso"], 52: ["GO", "Goiás"],
+  53: ["DF", "Distrito Federal"],
+};
+
+// lê os anéis (lon, lat) de cada estado
+const estados = [...svg.matchAll(/<path id="(\d+)" d="([^"]+)"/g)].map(([, id, d]) => {
+  const aneis = [];
+  let x = 0, y = 0, anel;
+  for (const [, cmd, args] of d.matchAll(/([MlhvZ])([^MlhvZ]*)/g)) {
+    if (cmd === "Z") continue;
+    const nums = args.split(/[ ,]+/).filter(Boolean).map(Number);
+    if (cmd === "h" || cmd === "v") { // relativo, só um eixo
+      for (const n of nums) { if (cmd === "h") x += n; else y += n; anel.push([x * 1e-4, y * 1e-4]); }
+      continue;
+    }
+    for (let i = 0; i < nums.length; i += 2) {
+      if (cmd === "M" && i === 0) { x = nums[0]; y = nums[1]; anel = []; aneis.push(anel); }
+      else { x += nums[i]; y += nums[i + 1]; }
+      anel.push([x * 1e-4, y * 1e-4]); // grupo tem scale(0.0001,-0.0001): y é a latitude
+    }
+  }
+  return { id: Number(id), aneis };
+});
+
+const todos = estados.flatMap((e) => e.aneis.flat());
+const lonMin = Math.min(...todos.map((p) => p[0])), lonMax = Math.max(...todos.map((p) => p[0]));
+const latMin = Math.min(...todos.map((p) => p[1])), latMax = Math.max(...todos.map((p) => p[1]));
+const k = Math.cos((((latMin + latMax) / 2) * Math.PI) / 180); // equirretangular corrigida no centro
+const LARGURA = 600;
+const escala = LARGURA / ((lonMax - lonMin) * k);
+const proj = ([lon, lat]) => [(lon - lonMin) * k * escala, (latMax - lat) * escala];
+const r = (n) => Math.round(n * 10) / 10;
+
+const area = (a) => a.reduce((s, p, i) => { const q = a[(i + 1) % a.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0) / 2;
+function centroide(a) {
+  const A = area(a);
+  let cx = 0, cy = 0;
+  a.forEach((p, i) => { const q = a[(i + 1) % a.length]; const f = p[0] * q[1] - q[0] * p[1]; cx += (p[0] + q[0]) * f; cy += (p[1] + q[1]) * f; });
+  return [cx / (6 * A), cy / (6 * A)];
+}
+
+const saidaUFs = estados.map(({ id, aneis }) => {
+  const planos = aneis.map((a) => {
+    const pts = [];
+    for (const p of a.map(proj)) { // descarta pontos a menos de 1,2 unidade do anterior
+      const ult = pts[pts.length - 1];
+      if (!ult || Math.hypot(p[0] - ult[0], p[1] - ult[1]) >= 1.2) pts.push(p);
+    }
+    return pts;
+  }).filter((a) => a.length >= 3);
+  const d = planos.map((a) => "M" + a.map((p) => `${Math.round(p[0])} ${Math.round(p[1])}`).join("L") + "Z").join("");
+  const maior = planos.reduce((m, a) => (Math.abs(area(a)) > Math.abs(area(m)) ? a : m));
+  const [x, y] = centroide(maior);
+  const [uf, nome] = UF[id];
+  return { uf, nome, d, x: r(x), y: r(y) };
+});
+
+const altura = r((latMax - latMin) * escala);
+const ts = `// Gerado a partir da malha de UFs do IBGE (API de malhas v3, qualidade mínima). Não editar à mão.
+// Fonte: https://servicodados.ibge.gov.br/api/docs/malhas?versao=3
+// Projeção equirretangular, ${LARGURA} × ${altura} unidades; x/y = centroide do maior polígono (posição do rótulo).
+
+export type EstadoMapa = { uf: string; nome: string; d: string; x: number; y: number };
+
+export const MAPA_LARGURA = ${LARGURA};
+export const MAPA_ALTURA = ${altura};
+
+export const ESTADOS_MAPA: EstadoMapa[] = [
+${saidaUFs.map((e) => "  " + JSON.stringify(e)).join(",\n")},
+];
+`;
+writeFileSync(saida, ts);
+console.log(saidaUFs.length, "UFs;", ts.length, "bytes; altura", altura);
+
+// malhas municipais: mesma projeção, 1 casa decimal e pontos mais próximos que ~1 px (no zoom) descartados
+const d1 = (n) => (n / 10).toString().replace(/^(-?)0\./, "$1."); // décimos inteiros → "1.5", ".5", "-.5"
+// caminho relativo ("M x y l dx dy ... z"): os deltas são diferenças de valores já arredondados, então não acumulam erro
+function relativo(anel) {
+  const pts = anel.map(([x, y]) => [Math.round(x * 10), Math.round(y * 10)]);
+  let d = `M${d1(pts[0][0])} ${d1(pts[0][1])}l`;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = d1(pts[i][0] - pts[i - 1][0]), dy = d1(pts[i][1] - pts[i - 1][1]);
+    if (dx === "0" && dy === "0") continue;
+    d += (i > 1 && !dx.startsWith("-") ? " " : "") + dx + (dy.startsWith("-") ? "" : " ") + dy;
+  }
+  return d + "z";
+}
+const caixas = {}, municipiosTodos = [];
+for (const arq of malhas) {
+  const geo = JSON.parse(readFileSync(arq, "utf-8"));
+  // ilhas oceânicas (Fernando de Noronha) ficam fora do quadro do mapa: saem do desenho e da caixa do zoom
+  geo.features = geo.features.filter((f) => proj(f.geometry.type === "Polygon" ? f.geometry.coordinates[0][0] : f.geometry.coordinates[0][0][0])[0] <= LARGURA);
+  const aneis = (g) => (g.type === "Polygon" ? [g.coordinates] : g.coordinates).flat(1);
+  const xs = geo.features.flatMap((f) => aneis(f.geometry).flat()).map(proj);
+  const caixa = [Math.min(...xs.map((p) => p[0])), Math.min(...xs.map((p) => p[1])), Math.max(...xs.map((p) => p[0])), Math.max(...xs.map((p) => p[1]))].map(r);
+  const tolerancia = Math.max(caixa[2] - caixa[0], caixa[3] - caixa[1]) / 700; // ~1 px com o estado ocupando o mapa
+  const municipios = geo.features.map(({ properties, geometry }) => {
+    const planos = aneis(geometry).map((a) => {
+      const pts = [];
+      for (const p of a.map(proj)) {
+        const ult = pts[pts.length - 1];
+        if (!ult || Math.hypot(p[0] - ult[0], p[1] - ult[1]) >= tolerancia) pts.push(p);
+      }
+      return pts;
+    }).filter((a) => a.length >= 3);
+    const d = planos.map(relativo).join("");
+    const [x, y] = centroide(planos.reduce((m, a) => (Math.abs(area(a)) > Math.abs(area(m)) ? a : m)));
+    return { ibge: properties.codarea, d, x: r(x), y: r(y) };
+  });
+  const uf = UF[Number(municipios[0].ibge.slice(0, 2))][0];
+  caixas[uf] = caixa;
+  municipiosTodos.push(...municipios);
+}
+if (malhas.length) {
+  const sprite = `<svg xmlns="http://www.w3.org/2000/svg"><defs>${municipiosTodos.map((m) => `<path id="m${m.ibge}" d="${m.d}" vector-effect="non-scaling-stroke"/>`).join("")}</defs></svg>`;
+  mkdirSync(new URL("../public/malhas/", import.meta.url), { recursive: true });
+  writeFileSync(new URL("../public/malhas/municipios.svg", import.meta.url), sprite);
+  writeFileSync(new URL("../src/lib/brasil-municipios.ts", import.meta.url), `// Gerado por scripts/gerar-mapa.mjs a partir das malhas municipais do IBGE (qualidade intermediária). Não editar à mão.
+// Mesma projeção de brasil-uf.ts. Os desenhos estão em public/malhas/municipios.svg (id "m" + código IBGE).
+
+/** Caixa [x0, y0, x1, y1] de cada UF, sem ilhas oceânicas: é o que o zoom enquadra. */
+export const CAIXA_UF: Record<string, [number, number, number, number]> = ${JSON.stringify(caixas)};
+
+/** Centro [x, y] do maior polígono de cada município, pelo código IBGE. */
+export const CENTRO_MUNICIPIO: Record<string, [number, number]> = ${JSON.stringify(Object.fromEntries(municipiosTodos.map((m) => [m.ibge, [m.x, m.y]])))};
+`);
+  console.log(municipiosTodos.length, "municípios;", sprite.length, "bytes no SVG");
+}

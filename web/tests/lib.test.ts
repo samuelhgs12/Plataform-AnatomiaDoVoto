@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
+import type { LinhaLegenda } from "../src/lib/legenda";
+import { conjunto, dinheiroTotal, legendaPorUf } from "../src/lib/mapa";
+import {
+  classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
+  rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
+} from "../src/lib/abstencao";
+import { aproximar, arrastar, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
 import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
 import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { agruparFluxo, type LinhaFluxo } from "../src/lib/fluxo";
 import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
-import { resumoCampanhas, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
+import { respostaSucesso, resumoCampanhas, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
 
 const fluxo = (o: Partial<LinhaFluxo>): LinhaFluxo => ({ ano_mandato: 2016, cargo_origem: "Vereador", nivel_origem: 1, uf: "MG", genero: "FEMININO", destino: "Reeleito", n: 10, ...o });
 
@@ -197,5 +204,183 @@ describe("resumoCampanhas", () => {
       { c: cand({ id_candidatura: 3, ano: 2018 }), r: null },
     ]);
     expect(r.map((x) => [x.id, x.total, x.publicoDe100, x.eleito])).toEqual([[2, 400, 75, true], [1, 0, 0, false], [3, null, 0, true]]);
+  });
+});
+
+describe("respostaSucesso", () => {
+  const grupo = (chave: "nada" | "pouco" | "muito", candidaturas: number, eleitos: number) => ({ chave, candidaturas, eleitos, taxa: candidaturas ? eleitos / candidaturas : 0 });
+  it("compara 'muito' com 'nada' e diz quantas vezes mais", () => {
+    const r = respostaSucesso({ nada: grupo("nada", 100, 10), pouco: grupo("pouco", 100, 12), muito: grupo("muito", 100, 30) });
+    expect(r.curta).toBe("Sim.");
+    expect(r.base.chave).toBe("nada");
+    expect(r.vezes).toBeCloseTo(3);
+  });
+  it("sem ninguém em 'nada', compara com 'pouco'; diferença pequena não é 'sim'", () => {
+    const r = respostaSucesso({ nada: grupo("nada", 0, 0), pouco: grupo("pouco", 100, 20), muito: grupo("muito", 100, 22) });
+    expect(r.base.chave).toBe("pouco");
+    expect(r.curta).toBe("Quase não faz diferença.");
+    expect(respostaSucesso({ nada: grupo("nada", 100, 0), pouco: grupo("pouco", 100, 0), muito: grupo("muito", 100, 5) }).vezes).toBeNull();
+  });
+});
+
+describe("mapa", () => {
+  const fo = (o: Partial<LinhaFontes>): LinhaFontes => ({
+    ano: 2022, cargo: "Deputado federal", uf: "MG", partido: "PT", eleito: false, candidaturas: 1, com_receita: 1,
+    fundo_eleitoral: 0, fundo_partidario: 0, doacoes_pessoas: 0, recursos_proprios: 0, outros_privados: 0, ...o,
+  });
+  const le = (o: Partial<LinhaLegenda>): LinhaLegenda => ({ ano: 2022, cargo: "Deputado federal", uf: "MG", numero: 13, partido: "PT", votos_nominais: 90, votos_legenda: 10, eleitos: 0, ...o });
+
+  it("legendaPorUf: soma partidos do estado e ignora outros anos", () => {
+    const r = legendaPorUf([le({}), le({ partido: "PL", votos_nominais: 70, votos_legenda: 30 }), le({ uf: "AP", votos_legenda: 50, votos_nominais: 50 }), le({ ano: 2018, votos_legenda: 1000 })], 2022);
+    expect(r).toEqual([{ uf: "AP", valor: 0.5, base: 100 }, { uf: "MG", valor: 0.2, base: 200 }]);
+    expect(legendaPorUf([le({ votos_legenda: 0, votos_nominais: 0 })], 2022)).toEqual([]);
+  });
+
+  it("conjunto: média ponderada pela base", () => {
+    expect(conjunto([{ uf: "MG", valor: 0.5, base: 300 }, { uf: "AP", valor: 0.1, base: 100 }])).toEqual({ uf: "todos", valor: 0.4, base: 400 });
+    expect(conjunto([])).toBeNull();
+  });
+
+  it("dinheiroTotal: soma todos os anos sem as campanhas nacionais", () => {
+    const r = dinheiroTotal([fo({ fundo_eleitoral: 60, doacoes_pessoas: 40 }), fo({ ano: 2024, uf: "PE", fundo_partidario: 50 }), fo({ uf: "BR", cargo: "Presidente", fundo_eleitoral: 1000 })]);
+    expect(r).toEqual({ total: 150, publico: 110, anos: [2022, 2024] });
+    expect(dinheiroTotal([])).toBeNull();
+  });
+});
+
+const pa = (o: Partial<LinhaParticipacao>): LinhaParticipacao => ({ id_municipio: 1, ano: 2012, aptos: 100, comparecimento: 80, abstencoes: 20, brancos: 2, nulos: 3, ...o });
+
+describe("somarParticipacao", () => {
+  it("taxa do conjunto é abstenções / aptos, não a média das taxas", () => {
+    const t = somarParticipacao([pa({}), pa({ id_municipio: 2, aptos: 900, abstencoes: 90, comparecimento: 810 })]);
+    expect(t.aptos).toBe(1000);
+    expect(t.taxa).toBeCloseTo(0.11);
+    expect(somarParticipacao([]).taxa).toBe(0);
+  });
+});
+
+describe("serieAbstencao", () => {
+  it("uma taxa por ano, só dos municípios pedidos", () => {
+    const linhas = [pa({}), pa({ id_municipio: 2, abstencoes: 50 }), pa({ ano: 2008, abstencoes: 10 })];
+    expect(serieAbstencao(linhas, new Set([1]))).toEqual([{ ano: 2008, taxa: 0.1 }, { ano: 2012, taxa: 0.2 }]);
+    expect(serieAbstencao(linhas, null)[1].taxa).toBeCloseTo(0.35);
+  });
+});
+
+describe("indicadores", () => {
+  const ind = indicadoresPorMunicipio([
+    { id_municipio: 1, indicador: "idhm", valor: 0.8 }, { id_municipio: 1, indicador: "pesotot", valor: 300 },
+    { id_municipio: 2, indicador: "idhm", valor: 0.6 }, { id_municipio: 2, indicador: "pesotot", valor: 100 },
+    { id_municipio: 3, indicador: "pesotot", valor: 500 },
+  ]);
+  it("mediaPonderada pesa pela população e pula quem não tem o dado", () => {
+    expect(mediaPonderada([1, 2, 3], ind, "idhm")).toBeCloseTo(0.75);
+    expect(mediaPonderada([3], ind, "idhm")).toBeNull();
+  });
+  it("formatarIndicador usa a unidade de cada um", () => {
+    expect(formatarIndicador("idhm", 0.7)).toBe("0,700");
+    expect(formatarIndicador("t_analf18m", 12.34)).toBe("12,3%");
+    expect(formatarIndicador("rdpc", 1234.5)).toBe("R$ 1.235");
+    expect(formatarIndicador("espvida", 73.25)).toBe("73,3 anos");
+  });
+});
+
+describe("quantis e classe", () => {
+  it("divide em grupos de mesmo tamanho", () => {
+    const c = quantis([5, 1, 4, 2, 3, 6], 3);
+    expect(c).toEqual([3, 5]);
+    expect([1, 2, 3, 4, 5, 6].map((v) => classe(v, c))).toEqual([0, 0, 1, 1, 2, 2]);
+    expect(quantis([], 5)).toEqual([]);
+  });
+});
+
+describe("correlacao e tendencia", () => {
+  it("reta perfeita dá r = ±1", () => {
+    const p = [1, 2, 3, 4].map((x) => ({ x, y: 10 - 2 * x }));
+    expect(correlacao(p)).toBeCloseTo(-1);
+    expect(tendencia(p)).toEqual({ a: 10, b: -2 });
+  });
+  it("sem variação ou com poucos pontos não há correlação", () => {
+    expect(correlacao([{ x: 1, y: 1 }, { x: 2, y: 2 }])).toBeNull();
+    expect(correlacao([1, 2, 3].map((y) => ({ x: 5, y })))).toBeNull();
+    expect(tendencia([1, 2].map((y) => ({ x: 5, y })))).toBeNull();
+  });
+  it("lerCorrelacao descreve força e sentido", () => {
+    expect(lerCorrelacao(-0.6, "IDHM")).toBe("Relação forte: onde IDHM é maior, a abstenção tende a ser menor");
+    expect(lerCorrelacao(0.2, "Gini")).toMatch(/^Relação fraca: .* maior$/);
+    expect(lerCorrelacao(0.05, "Gini")).toMatch(/^Quase nenhuma/);
+  });
+});
+
+describe("posicao", () => {
+  it("0 no menor, 1 no maior", () => {
+    expect(posicao(1, [1, 2, 3])).toBe(0);
+    expect(posicao(3, [1, 2, 3])).toBe(1);
+    expect(posicao(2, [2])).toBe(0.5);
+  });
+});
+
+describe("nomeProprio", () => {
+  it("capitaliza nomes de municípios", () => {
+    expect(nomeProprio("SÃO JOSÉ DO EGITO")).toBe("São José do Egito");
+    expect(nomeProprio("PALMEIRA D'OESTE")).toBe("Palmeira D'Oeste");
+    expect(nomeProprio("BOM JESUS DOS PERDÕES")).toBe("Bom Jesus dos Perdões");
+    expect(nomeProprio("E")).toBe("E");
+  });
+});
+
+describe("enquadrar", () => {
+  it("centraliza a caixa e a ajusta ao lado mais apertado", () => {
+    expect(enquadrar([0, 0, 100, 50], 400, 400, 0)).toEqual({ x: 0, y: 100, k: 4 });
+    const c = enquadrar([10, 10, 20, 20], 100, 100, 0.25);
+    expect(c.k).toBeCloseTo(100 / 15);
+  });
+});
+
+describe("taxaDe", () => {
+  it("abstenções / aptos; null sem linha ou sem eleitorado", () => {
+    expect(taxaDe(pa({}))).toBe(0.2);
+    expect(taxaDe(undefined)).toBeNull();
+    expect(taxaDe(pa({ aptos: 0 }))).toBeNull();
+  });
+});
+
+describe("rotulosFaixas", () => {
+  it("uma faixa a mais que os cortes, abertas nas pontas", () => {
+    expect(rotulosFaixas([0.1, 0.2], (v) => `${v * 100}%`)).toEqual(["até 10%", "10%–20%", "20% ou mais"]);
+    expect(rotulosFaixas([], String)).toEqual([]);
+  });
+});
+
+describe("corMunicipio", () => {
+  const c = { quintos: [0.1, 0.15, 0.2, 0.25], tercosAbst: [0.12, 0.2], tercosInd: [0.6, 0.7] };
+  it("quinto da abstenção ou terço do indicador × terço da abstenção", () => {
+    expect(corMunicipio(0.22, 0.65, c, false)).toBe("q3");
+    expect(corMunicipio(0.22, 0.65, c, true)).toBe("b12");
+    expect(corMunicipio(0.05, 0.9, c, true)).toBe("b20");
+  });
+  it("sem o dado usado, sem cor", () => {
+    expect(corMunicipio(null, 0.7, c, false)).toBe("sem");
+    expect(corMunicipio(0.2, undefined, c, true)).toBe("sem");
+    expect(corMunicipio(0.2, undefined, c, false)).toBe("q3");   // no corte, já é o quinto de cima
+  });
+});
+
+describe("lupa", () => {
+  it("aproximar mantém parado o ponto do cursor", () => {
+    const p = { x: 200, y: 100 };
+    const l = aproximar(LUPA_INICIAL, 2, p);
+    expect(l.k).toBe(2);
+    expect(p.x * l.k + l.x).toBeCloseTo(p.x);
+    expect(p.y * l.k + l.y).toBeCloseTo(p.y);
+  });
+  it("a escala fica entre 1 e o máximo, e afastar até 1 volta ao início", () => {
+    expect(aproximar(LUPA_INICIAL, 1000, { x: 0, y: 0 }).k).toBe(LUPA_MAX);
+    expect(aproximar(aproximar(LUPA_INICIAL, 3, { x: 300, y: 300 }), 0.01, { x: 0, y: 0 })).toEqual(LUPA_INICIAL);
+  });
+  it("arrastar não deixa a tela sair do desenho", () => {
+    const l = aproximar(LUPA_INICIAL, 2, { x: 0, y: 0 });
+    expect(arrastar(l, 5000, 5000)).toEqual({ k: 2, x: 0, y: 0 });
+    expect(arrastar(l, -5000, -5000)).toEqual({ k: 2, x: -TELA.larg, y: -TELA.alt });
   });
 });

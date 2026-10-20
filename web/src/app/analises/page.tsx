@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Cabecalho } from "@/components/Cabecalho";
+import { FaixasAnalises } from "@/components/FaixasAnalises";
+import { ANALISES } from "@/lib/analises";
+import { FOTOS } from "@/lib/fotos";
 
 export const metadata: Metadata = { title: "Análises" };
 
 export default function Analises() {
   return (
     <>
-      <h1>Análises</h1>
-      <p className="muted">Resultados agregados. Para ver uma pessoa, use a busca ou a listagem de candidatos.</p>
-      <div className="cards3">
-        <Link href="/analises/pos-mandato" className="card card-link"><h3>Depois de um mandato</h3><p className="muted">Reeleição, mudança de cargo, derrota ou saída.</p></Link>
-        <Link href="/analises/legenda" className="card card-link"><h3>Voto de legenda</h3><p className="muted">Série histórica por partido e UF, comparação entre ciclos e mudanças nos partidos (2018–2024).</p></Link>
-        <Link href="/analises/financiamento" className="card card-link"><h3>Dinheiro público e sucesso eleitoral</h3><p className="muted">Quem recebe mais dinheiro público se elege mais? De 2018 a 2024.</p></Link>
-      </div>
+      <Cabecalho titulo="Análises" foto={FOTOS.itajuba}>
+        <p className="lead">Resultados agregados dos seis estados. Para ver uma pessoa, use a busca ou a listagem de candidatos.</p>
+      </Cabecalho>
+      <FaixasAnalises analises={ANALISES} />
+      <p className="muted proximas">Em preparo: retenção por turma de estreia, trocas de partido e propaganda por cargo.</p>
     </>
   );
 }

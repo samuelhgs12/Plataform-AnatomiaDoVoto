@@ -8,6 +8,7 @@ import { PartyChip } from "@/components/PartyChip";
 import { Timeline } from "@/components/Timeline";
 import { DinheiroCampanha } from "@/components/DinheiroCampanha";
 import { naLinhaDoTempo } from "@/lib/carreira";
+import { Rolar } from "@/components/Rolar";
 
 type Props = { params: Promise<{ id: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
 const ANO_RECEITAS = 2018;   // a base só tem prestação de contas (receitas) de 2018 em diante
@@ -38,28 +39,31 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
 
   return (
     <>
-      <p><Link href="/candidatos" className="muted">← Voltar à listagem</Link></p>
-
-      <section className="card" aria-labelledby="h-cab">
-        <div className="cand">
-          <Avatar nome={nome} partido={ultima?.partido ?? null} />
-          <div>
-            <h1 id="h-cab" style={{ marginBottom: 2 }}>{ultima?.nome_urna ?? nome}</h1>
-            <small className="muted">{nome}{candidato.ocupacao ? ` · ${candidato.ocupacao.toLowerCase()}` : ""}</small>
-            <div style={{ marginTop: 6 }}>{ultima && <><PartyChip sigla={ultima.partido} /> <span className="muted">{ultima.cargo} · {ultima.uf} · {ultima.ano}</span></>}</div>
+      <section className="quadro perfil-cab" aria-labelledby="h-cab">
+        <div className="bloco s8 titulo">
+          <Link href="/candidatos" className="voltar">← Voltar à listagem</Link>
+          <div className="cand">
+            <Avatar nome={nome} partido={ultima?.partido ?? null} />
+            <div>
+              <h1 id="h-cab">{ultima?.nome_urna ?? nome}</h1>
+              <p className="lead" style={{ margin: 0 }}>{nome}{candidato.ocupacao ? ` · ${candidato.ocupacao.toLowerCase()}` : ""}</p>
+              <div style={{ marginTop: 8 }}>{ultima && <><PartyChip sigla={ultima.partido} /> <span className="muted">{ultima.cargo} · {ultima.uf} · {ultima.ano}</span></>}</div>
+            </div>
+          </div>
+          {resumo.primeiro_ano && (
+            <p className="muted" style={{ margin: "20px 0 0" }}>
+              Disputou {resumo.eleicoes_disputadas} eleiç{resumo.eleicoes_disputadas === 1 ? "ão" : "ões"} entre {resumo.primeiro_ano} e {resumo.ultimo_ano}
+              {resumo.vitorias ? `, venceu ${resumo.vitorias}` : ", sem vitórias"}; partidos: {resumo.partidos.join(", ") || "—"}.
+            </p>
+          )}
+        </div>
+        <div className="s4 numeros-lado">
+          <div className="bloco tinta"><p className="figura"><Rolar valor={String(resumo.eleicoes_disputadas)} /></p><p>{resumo.eleicoes_disputadas === 1 ? "eleição disputada" : "eleições disputadas"}</p></div>
+          <div className="numeros-par">
+            <div className="bloco cinza"><p className="figura"><Rolar valor={String(resumo.vitorias)} /></p><p>{resumo.vitorias === 1 ? "vitória" : "vitórias"}</p></div>
+            <div className="bloco cinza"><p className="figura"><Rolar valor={String(resumo.partidos.length)} /></p><p>{resumo.partidos.length === 1 ? "partido" : "partidos"}</p></div>
           </div>
         </div>
-        <div className="kpis">
-          <div className="kpi"><b>{resumo.eleicoes_disputadas}</b><span>eleições disputadas</span></div>
-          <div className="kpi"><b>{resumo.vitorias}</b><span>vitórias</span></div>
-          <div className="kpi"><b>{resumo.partidos.length}</b><span>{resumo.partidos.length === 1 ? "partido" : "partidos"}</span></div>
-        </div>
-        {resumo.primeiro_ano && (
-          <p className="muted" style={{ marginBottom: 0 }}>
-            Disputou {resumo.eleicoes_disputadas} eleiç{resumo.eleicoes_disputadas === 1 ? "ão" : "ões"} entre {resumo.primeiro_ano} e {resumo.ultimo_ano}
-            {resumo.vitorias ? `, venceu ${resumo.vitorias}` : ", sem vitórias"}; partidos: {resumo.partidos.join(", ") || "—"}.
-          </p>
-        )}
       </section>
 
       <section className="card" aria-labelledby="h-car">
