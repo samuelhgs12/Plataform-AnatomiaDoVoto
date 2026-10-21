@@ -11,10 +11,13 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 ## Como uma análise lê o JSON estático
 
-- `pipeline/export_static.py` roda `pipeline/sql/q5.sql`, `q8.sql`, `q10.sql` e `mapa.sql` (ou só os que forem passados:
+- `pipeline/export_static.py` roda `pipeline/sql/q5.sql`, `q8.sql`, `q9.sql`, `q10.sql` e `mapa.sql` (ou só os que forem passados:
   `python export_static.py mapa`); cada `COPY (...) TO 'x.csv'` vira a chave `x` em `web/public/data/<consulta>.json`,
   no formato `{colunas: [...], linhas: [[...]]}` (`TabelaEstatica`). q5 tem `legenda`, `eventos` e `linhagem` (tipos em
   `src/lib/legenda.ts`); mapa tem `municipios`, `participacao`, `indicadores` e `dicionario` (tipos em `src/lib/abstencao.ts`).
+- A P9 é por candidatura (centenas de milhares de linhas): `gravar_q9` divide em `web/public/data/q9/indice.json` + um
+  arquivo por eleição e UF (`q9/<ano>-<UF>.json`, presidente em `<ano>-BR.json`), em centavos inteiros, e confere as
+  somas antes de gravar; a página lê `lerEstatico("q9/indice")` e só o recorte escolhido (tipos em `src/lib/propaganda.ts`).
 - Na página (componente de servidor, `async`): `await lerEstatico("q5")` (`src/lib/data.ts`, lê do disco, devolve
   `null` se o arquivo não existe) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
 - Se a tabela faltar, mostre o `card aviso` pedindo para rodar `python export_static.py` (veja `analises/legenda`).
