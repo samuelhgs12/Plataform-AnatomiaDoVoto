@@ -5,24 +5,33 @@ import { ordenarCargos, passa, type Filtros } from "./financiamento";
 
 export interface LinhaCusto {
   ano: number; cargo: string; uf: string; candidatos: number; com_gasto: number; eleitos: number; vagas: number;
-  gasto_total: number; gasto_eleitos: number;
+  /** Gasto de todos que fizeram campanha para o cargo, inclusive quem não chegou a disputar. */
+  gasto_total: number;
+  /** Gasto só de quem disputou (base do gasto por candidato). */
+  gasto_disputou: number;
+  gasto_nao_disputou: number; nao_disputou_com_gasto: number; gasto_eleitos: number;
 }
 
-/** Somas de um cargo e as duas divisões do gasto: por cadeira (÷ vagas) e por candidato (÷ candidatos). */
+/**
+ * Somas de um cargo e as duas divisões do gasto:
+ * porCadeira = gasto de todos que fizeram campanha ÷ vagas; porCandidato = gasto de quem disputou ÷ quem disputou.
+ */
 export interface Custo {
-  ano: number; cargo: string; candidatos: number; eleitos: number; vagas: number; gasto: number; gastoEleitos: number;
+  ano: number; cargo: string; candidatos: number; eleitos: number; vagas: number;
+  gasto: number; gastoDisputou: number; gastoNaoDisputou: number; naoDisputouComGasto: number; gastoEleitos: number;
   porCadeira: number | null; porCandidato: number | null; parteEleitos: number | null; candidatosPorVaga: number | null;
 }
 
 function somar(linhas: LinhaCusto[], ano: number, cargo: string): Custo {
-  let candidatos = 0, eleitos = 0, vagas = 0, gasto = 0, gastoEleitos = 0;
+  let candidatos = 0, eleitos = 0, vagas = 0, gasto = 0, gastoDisputou = 0, gastoNaoDisputou = 0, naoDisputouComGasto = 0, gastoEleitos = 0;
   for (const l of linhas) {
-    candidatos += l.candidatos; eleitos += l.eleitos; vagas += l.vagas; gasto += l.gasto_total; gastoEleitos += l.gasto_eleitos;
+    candidatos += l.candidatos; eleitos += l.eleitos; vagas += l.vagas; gasto += l.gasto_total; gastoDisputou += l.gasto_disputou;
+    gastoNaoDisputou += l.gasto_nao_disputou; naoDisputouComGasto += l.nao_disputou_com_gasto; gastoEleitos += l.gasto_eleitos;
   }
   return {
-    ano, cargo, candidatos, eleitos, vagas, gasto, gastoEleitos,
+    ano, cargo, candidatos, eleitos, vagas, gasto, gastoDisputou, gastoNaoDisputou, naoDisputouComGasto, gastoEleitos,
     porCadeira: vagas > 0 ? gasto / vagas : null,
-    porCandidato: candidatos > 0 ? gasto / candidatos : null,
+    porCandidato: candidatos > 0 ? gastoDisputou / candidatos : null,
     parteEleitos: gasto > 0 ? gastoEleitos / gasto : null,
     candidatosPorVaga: vagas > 0 ? candidatos / vagas : null,
   };
@@ -54,7 +63,7 @@ export function custoPorUf(linhas: LinhaCusto[], ano: number, cargo: string): (C
     .sort((a, b) => (b.porCadeira ?? 0) - (a.porCadeira ?? 0) || a.uf.localeCompare(b.uf));
 }
 
-/** Variação entre dois valores ("subiu 138%"); null se não dá para comparar. */
+/** Variação entre dois valores ("subiu 87%"); null se não dá para comparar. */
 export function variacao(antes: number | null, depois: number | null): number | null {
   return antes && depois !== null ? depois / antes - 1 : null;
 }
@@ -63,4 +72,28 @@ export function variacao(antes: number | null, depois: number | null): number | 
 export function cargoPadrao(cargos: string[], ano: number): string | undefined {
   const preferido = ano % 4 === 2 ? "Deputado federal" : "Prefeito";
   return cargos.includes(preferido) ? preferido : cargos[0];
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Inflação. IPCA anual (dezembro a dezembro), IBGE, em %. Para comparar eleições de anos diferentes, os valores são
+// levados a reais de dezembro de ANO_BASE. Aproximação: o gasto de campanha (agosto a outubro) é tratado como de dezembro
+// do ano da eleição; o erro é pequeno (cerca de 1 ponto) e igual para todos os cargos.
+// ---------------------------------------------------------------------------------------------------------------
+export const IPCA_ANUAL: Record<number, number> = { 2019: 4.31, 2020: 4.52, 2021: 10.06, 2022: 5.79, 2023: 4.62, 2024: 4.83 };
+export const ANO_BASE = 2024;
+
+/** Quanto multiplicar um valor de dezembro de `ano` para levá-lo a reais de dezembro de ANO_BASE. */
+export function fatorInflacao(ano: number): number {
+  let fator = 1;
+  for (let a = ano + 1; a <= ANO_BASE; a++) {
+    const taxa = IPCA_ANUAL[a];
+    if (taxa === undefined) throw new Error(`IPCA de ${a} não cadastrado em IPCA_ANUAL`);
+    fator *= 1 + taxa / 100;
+  }
+  return fator;
+}
+
+/** Valor de `ano` em reais de dezembro de ANO_BASE (null continua null). */
+export function corrigir(valor: number | null, ano: number): number | null {
+  return valor === null ? null : valor * fatorInflacao(ano);
 }

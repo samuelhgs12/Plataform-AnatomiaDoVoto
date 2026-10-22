@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { cargoPadrao, custoDoCargo, custoPorAno, custoPorCargo, custoPorUf, variacao, type LinhaCusto } from "../src/lib/custo";
+import {
+  ANO_BASE, cargoPadrao, corrigir, custoDoCargo, custoPorAno, custoPorCargo, custoPorUf, fatorInflacao, variacao, type LinhaCusto,
+} from "../src/lib/custo";
 
 const l = (o: Partial<LinhaCusto>): LinhaCusto => ({
   ano: 2022, cargo: "Deputado federal", uf: "MG", candidatos: 100, com_gasto: 90, eleitos: 10, vagas: 10,
-  gasto_total: 1_000_000, gasto_eleitos: 400_000, ...o,
+  gasto_total: 1_000_000, gasto_disputou: 1_000_000, gasto_nao_disputou: 0, nao_disputou_com_gasto: 0, gasto_eleitos: 400_000, ...o,
 });
 const linhas = [
-  l({}), l({ uf: "PE", candidatos: 50, eleitos: 5, vagas: 5, gasto_total: 1_000_000, gasto_eleitos: 600_000 }),
-  l({ cargo: "Presidente", uf: "BR", candidatos: 10, eleitos: 1, vagas: 1, gasto_total: 5_000_000, gasto_eleitos: 2_000_000 }),
-  l({ ano: 2018, gasto_total: 500_000 }),
+  l({}), l({ uf: "PE", candidatos: 50, eleitos: 5, vagas: 5, gasto_total: 1_000_000, gasto_disputou: 1_000_000, gasto_eleitos: 600_000 }),
+  l({ cargo: "Presidente", uf: "BR", candidatos: 10, eleitos: 1, vagas: 1, gasto_total: 5_000_000, gasto_disputou: 5_000_000, gasto_eleitos: 2_000_000 }),
+  l({ ano: 2018, gasto_total: 500_000, gasto_disputou: 500_000 }),
 ];
 
 describe("custoDoCargo", () => {
@@ -21,12 +23,19 @@ describe("custoDoCargo", () => {
     expect(c.parteEleitos).toBeCloseTo(0.5);
     expect(c.candidatosPorVaga).toBe(10);
   });
+  it("põe na cadeira o gasto de quem não chegou a disputar, mas não na média por candidato", () => {
+    const c = custoDoCargo([l({ gasto_total: 1_200_000, gasto_disputou: 1_000_000, gasto_nao_disputou: 200_000, nao_disputou_com_gasto: 2 })], { ano: 2022, cargo: "Deputado federal" })!;
+    expect(c.porCadeira).toBe(120_000);
+    expect(c.porCandidato).toBe(10_000);
+    expect(c.gastoNaoDisputou).toBe(200_000);
+    expect(c.naoDisputouComGasto).toBe(2);
+  });
   it("filtra a UF e devolve null sem dados", () => {
     expect(custoDoCargo(linhas, { ano: 2022, cargo: "Deputado federal", uf: "PE" })!.porCadeira).toBe(200_000);
     expect(custoDoCargo(linhas, { ano: 2022, cargo: "Vereador" })).toBeNull();
   });
   it("não divide por zero", () => {
-    const c = custoDoCargo([l({ vagas: 0, candidatos: 0, gasto_total: 0 })], { ano: 2022, cargo: "Deputado federal" })!;
+    const c = custoDoCargo([l({ vagas: 0, candidatos: 0, gasto_total: 0, gasto_disputou: 0 })], { ano: 2022, cargo: "Deputado federal" })!;
     expect(c.porCadeira).toBeNull();
     expect(c.porCandidato).toBeNull();
     expect(c.parteEleitos).toBeNull();
@@ -60,5 +69,23 @@ describe("variacao e cargoPadrao", () => {
     expect(cargoPadrao(["Presidente", "Deputado federal"], 2022)).toBe("Deputado federal");
     expect(cargoPadrao(["Prefeito", "Vereador"], 2024)).toBe("Prefeito");
     expect(cargoPadrao(["Vereador"], 2024)).toBe("Vereador");
+  });
+});
+
+describe("inflação (IPCA)", () => {
+  it("leva valores ao ano-base acumulando o IPCA dos anos seguintes", () => {
+    expect(ANO_BASE).toBe(2024);
+    expect(fatorInflacao(2024)).toBe(1);
+    expect(fatorInflacao(2022)).toBeCloseTo(1.0462 * 1.0483, 6);
+    expect(fatorInflacao(2018)).toBeCloseTo(1.0431 * 1.0452 * 1.1006 * 1.0579 * 1.0462 * 1.0483, 6);
+    expect(corrigir(100, 2022)).toBeCloseTo(109.67, 2);
+    expect(corrigir(null, 2022)).toBeNull();
+  });
+  it("desconta a inflação da variação entre eleições", () => {
+    const real = variacao(corrigir(2_382_378, 2018), corrigir(5_669_010, 2022))!;
+    expect(real).toBeCloseTo(0.874, 2);
+  });
+  it("avisa quando falta o IPCA de um ano", () => {
+    expect(() => fatorInflacao(2017)).toThrow();
   });
 });
