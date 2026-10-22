@@ -9,8 +9,10 @@ interface Props {
   titulo: string;
   camera: { x: number; y: number; k: number };
   estados: EstadoNoMapa[];
-  /** UF em zoom: os municípios dela aparecem por cima do estado */
+  /** UF escolhida: com zoom, os municípios dela aparecem por cima do estado; sem zoom, só o contorno a destaca */
   uf?: string;
+  /** false: a UF escolhida fica no mapa dos seis estados, sem esmaecer os vizinhos (visão de legenda, só por estado) */
+  zoom?: boolean;
   municipios: MunicipioNoMapa[];
   /** município escolhido: contorno por cima dos vizinhos e nome na tela */
   destaque?: { ibge: string; nome: string; x: number; y: number };
@@ -26,12 +28,12 @@ const desenho = (ibge: string) => `/malhas/municipios.svg#m${ibge}`;
  * arrasto, em MapaVivo) dentro do estado. Os municípios vêm de um SVG estático (<use>), que o navegador baixa uma
  * vez: a página só manda a cor de cada um.
  */
-export function MapaAbstencao({ titulo, camera, estados, uf, municipios, destaque }: Props) {
+export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, municipios, destaque }: Props) {
   const comDados = new Map(estados.map((e) => [e.uf, e]));
   const tela = (x: number, y: number) => [camera.x + x * camera.k, camera.y + y * camera.k];
   const contorno = uf ? ESTADOS_MAPA.find((e) => e.uf === uf) : undefined;
   return (
-    <svg viewBox={`0 0 ${TELA.larg} ${TELA.alt}`} className="mapa-abst" role="group" aria-label={titulo} data-zoom={uf ? "uf" : "brasil"}>
+    <svg viewBox={`0 0 ${TELA.larg} ${TELA.alt}`} className="mapa-abst" role="group" aria-label={titulo} data-zoom={uf && zoom ? "uf" : "brasil"}>
       <g className="lupa">
         <g className="camera" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.k})` }}>
           <g aria-hidden="true">
@@ -46,7 +48,7 @@ export function MapaAbstencao({ titulo, camera, estados, uf, municipios, destaqu
               </a>
             );
           })}
-          {uf && (
+          {uf && zoom && (
             <g className="municipios" key={uf}>
               {municipios.map((m) => (
                 <a key={m.ibge} href={m.href} data-mapa="" data-dica={m.dica} aria-label={m.dica} tabIndex={-1}
