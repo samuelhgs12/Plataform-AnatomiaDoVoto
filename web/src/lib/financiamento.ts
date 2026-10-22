@@ -1,5 +1,6 @@
 // Lógica da página "de onde vem o dinheiro das campanhas" (pergunta 8), sem dependência do React: fácil de testar.
 // Os dados vêm de public/data/q8.json, gerado por pipeline/sql/q8.sql.
+import { compararGrupos } from "./estatistica";
 import type { CarreiraItem, Receitas } from "./types";
 
 export type Fonte = "fundo_eleitoral" | "fundo_partidario" | "doacoes_pessoas" | "recursos_proprios" | "outros_privados";
@@ -36,10 +37,10 @@ export interface LinhaSucesso { ano: number; cargo: string; uf: string; faixa: n
 
 export const FAIXAS_PUBLICO = [
   { faixa: 0, rotulo: "Não recebeu dinheiro público", curto: "não receberam nada" },
-  { faixa: 1, rotulo: "Recebeu pouco", detalhe: "os 25% que menos receberam", curto: "receberam pouco" },
+  { faixa: 1, rotulo: "Recebeu pouco", detalhe: "cerca de 1/4, os que menos receberam", curto: "receberam pouco" },
   { faixa: 2, rotulo: "Recebeu abaixo do meio", detalhe: "25% a 50%", curto: "receberam abaixo do meio" },
   { faixa: 3, rotulo: "Recebeu acima do meio", detalhe: "50% a 75%", curto: "receberam acima do meio" },
-  { faixa: 4, rotulo: "Recebeu muito", detalhe: "os 25% que mais receberam", curto: "mais receberam" },
+  { faixa: 4, rotulo: "Recebeu muito", detalhe: "cerca de 1/4, os que mais receberam", curto: "mais receberam" },
 ];
 
 /** `frase` completa "X em cada 10 candidatos ..." na manchete da seção. */
@@ -171,7 +172,7 @@ export function sucessoPorFaixa(linhas: LinhaSucesso[], f: Filtros) {
 
 /**
  * A resposta simples da pergunta 8: três grupos e a parte de cada um que se elegeu.
- * "muito" = os 25% que mais receberam dinheiro público (comparando com o mesmo cargo, ano e estado);
+ * "muito" = cerca de 1/4 de quem recebeu, os que mais receberam dinheiro público (comparando com a mesma disputa);
  * "pouco" = os outros 75% que receberam algo; "nada" = não receberam dinheiro público.
  */
 export function sucessoTresGrupos(linhas: LinhaSucesso[], f: Filtros) {
@@ -188,9 +189,10 @@ export function sucessoTresGrupos(linhas: LinhaSucesso[], f: Filtros) {
  * quem recebeu pouco). "Sim" se a taxa de eleição de "muito" passa 1,2 vez a dos outros; "Não" se fica 1,2 vez abaixo.
  */
 export function respostaSucesso(g: ReturnType<typeof sucessoTresGrupos>) {
+  // a mesma comparação na resposta curta, na frase e no gráfico: "muito" contra quem não recebeu nada (ou, se ninguém
+  // ficou sem, contra quem recebeu pouco), com teste estatístico em vez de um limite fixo
   const base = g.nada.candidaturas > 0 ? g.nada : g.pouco;
-  const outros = Math.max(g.nada.candidaturas ? g.nada.taxa : 0, g.pouco.taxa);
-  const curta = g.muito.taxa > outros * 1.2 ? "Sim." : g.muito.taxa * 1.2 < outros ? "Não." : "Quase não faz diferença.";
+  const { resposta: curta } = compararGrupos(g.muito, base);
   return { base, curta, vezes: base.taxa > 0 ? g.muito.taxa / base.taxa : null };
 }
 
