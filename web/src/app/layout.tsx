@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import localFont from "next/font/local";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Navegacao } from "@/components/Navegacao";
+import { MenuLateral } from "@/components/MenuLateral";
+import { PaletaBusca } from "@/components/PaletaBusca";
 import { Movimento } from "@/components/Movimento";
 import { FOTOS } from "@/lib/fotos";
 import "./globals.css";
@@ -25,10 +25,10 @@ const fonte = localFont({
 });
 
 /**
- * Antes da primeira pintura: aplica o tema salvo (mesma chave do ThemeToggle) e marca html.js, que libera as animações
- * de entrada no CSS. Sem JavaScript, nada fica escondido.
+ * Antes da primeira pintura: aplica o tema salvo (mesma chave do ThemeToggle) e o menu recolhido (mesma chave do
+ * MenuLateral), e marca html.js, que libera as animações de entrada no CSS. Sem JavaScript, nada fica escondido.
  */
-const scriptInicial = `document.documentElement.classList.add("js");try{var t=localStorage.getItem("tema");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+const scriptInicial = `document.documentElement.classList.add("js");try{var t=localStorage.getItem("tema");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;if(localStorage.getItem("menu")==="recolhido")document.documentElement.dataset.menu="recolhido"}catch(e){}`;
 
 // O nome no rodapé, uma letra por tecla (16 colunas; null = espaço entre palavras)
 const TECLAS = [..."ANATOMIA", null, ..."DO", null, ..."VOTO"];
@@ -40,13 +40,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: scriptInicial }} />
       </head>
       <body>
-        <header className="site-header">
-          <nav className="inner" aria-label="Principal">
-            <Link href="/" className="brand">Anatomia&nbsp;<span>do Voto</span></Link>
-            <Navegacao />
-            <ThemeToggle />
-          </nav>
-        </header>
+        <div className="moldura">
+        <MenuLateral />
+        <div className="moldura-conteudo">
         <main className="container">{children}</main>
         <footer className="rodape">
           <div className="inner">
@@ -69,6 +65,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </p>
           </div>
         </footer>
+        </div>
+        </div>
+        <PaletaBusca />
         <Movimento />
       </body>
     </html>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LinhaLegenda } from "../src/lib/legenda";
+import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
 import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos } from "../src/lib/mapa";
 import {
   classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
@@ -403,5 +404,40 @@ describe("lupa", () => {
     const l = aproximar(LUPA_INICIAL, 2, { x: 0, y: 0 });
     expect(arrastar(l, 5000, 5000)).toEqual({ k: 2, x: 0, y: 0 });
     expect(arrastar(l, -5000, -5000)).toEqual({ k: 2, x: -TELA.larg, y: -TELA.alt });
+  });
+});
+
+describe("paleta (busca rápida)", () => {
+  const indice = indicePaleta([[1, "Belo Horizonte", "MG"], [2, "Belém de Maria", "PE"], [3, "Macapá", "AP"]]);
+  const titulos = (busca: string) => filtrarPaleta(indice, busca).map((i) => i.titulo);
+
+  it("indicePaleta: páginas, um estado por UF dos municípios e os municípios com o link do mapa", () => {
+    expect(indice.filter((i) => i.tipo === "estado").map((i) => i.titulo)).toEqual(["Amapá", "Minas Gerais", "Pernambuco"]);
+    expect(indice.find((i) => i.titulo === "Belo Horizonte")).toEqual({ tipo: "municipio", titulo: "Belo Horizonte", detalhe: "Município · MG", href: "/?uf=MG&mun=1#mapa" });
+  });
+
+  it("filtrarPaleta: cada palavra começa uma palavra do título ou do detalhe, sem acento", () => {
+    expect(titulos("bel hor")).toEqual(["Belo Horizonte"]);
+    expect(titulos("macapa")).toEqual(["Macapá"]);
+    expect(titulos("orizonte")).toEqual([]);   // só início de palavra
+    expect(titulos("mg")).toEqual(["Minas Gerais", "Belo Horizonte"]);   // pelo detalhe; estados antes, na ordem dos itens
+    expect(titulos("")).toEqual([]);
+  });
+
+  it("filtrarPaleta: quem começa pelo texto inteiro vem primeiro; limite por grupo", () => {
+    expect(titulos("bel")).toEqual(["Belém de Maria", "Belo Horizonte"]);
+    expect(filtrarPaleta(indice, "legenda").map((i) => i.titulo)).toEqual(["Voto de legenda", "Mapa do voto de legenda"]);
+    expect(filtrarPaleta(indice, "bel", 1).map((i) => i.titulo)).toEqual(["Belém de Maria"]);   // no máximo 1 por grupo
+  });
+
+  it("candidatoNaPaleta: nome de urna e a última candidatura", () => {
+    const c = { id_candidato: 7, nome_civil: "MARIA DA SILVA", nome_urna: "MARIA", uf: "PE", ultimo_ano: 2022, partido: "PT", ultimo_cargo: "Deputado federal", ultimo_eleito: true };
+    expect(candidatoNaPaleta(c)).toEqual({ tipo: "candidato", titulo: "MARIA", detalhe: "Deputado federal · PE · 2022 · PT · eleito", href: "/candidato/7" });
+    expect(candidatoNaPaleta({ ...c, nome_urna: null, partido: null, ultimo_eleito: false }).detalhe).toBe("Deputado federal · PE · 2022");
+  });
+
+  it("agrupar: na ordem dos grupos, sem grupo vazio", () => {
+    const g = agrupar([{ tipo: "candidato", titulo: "X", detalhe: "", href: "/candidato/1" }, ...filtrarPaleta(indice, "bel")]);
+    expect(g.map((x) => x.tipo)).toEqual(["municipio", "candidato"]);
   });
 });
