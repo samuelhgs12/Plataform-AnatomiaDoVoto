@@ -138,7 +138,10 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
           <>
             <p className="resposta-curta">{respostaCurta}</p>
             <p className="manchete pequena">
-              {base.taxa > 0 ? (
+              {base.taxa > 0 && g.muito.taxa < base.taxa ? (
+                <>Quem recebeu muito dinheiro público se elegeu <b>menos</b> do que quem {base === g.nada ? "não recebeu nada" : "recebeu pouco"}:
+                  {" "}<b>{g.muito.taxa === 0 ? 0 : Math.round(g.muito.taxa * 100) || "menos de 1"} em cada 100</b> contra {Math.round(base.taxa * 100)} em cada 100.</>
+              ) : base.taxa > 0 ? (
                 <>Quem recebeu muito dinheiro público se elegeu <b>{vezes(g.muito.taxa / base.taxa)} vezes mais</b> do que quem {base === g.nada ? "não recebeu nada" : "recebeu pouco"}:
                   {" "}<b>{Math.round(g.muito.taxa * 100)} em cada 100</b> contra {Math.round(base.taxa * 100) || "menos de 1"} em cada 100.</>
               ) : (
@@ -146,6 +149,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
                   {" "}Entre os que {base === g.nada ? "não receberam nada" : "receberam pouco"}, quase ninguém.</>
               )}
             </p>
+            {respostaCurta === "Não dá para afirmar." && <p className="escala">Com tão poucos candidatos, essa diferença pode ser acaso.</p>}
             <p className="escala">{cargo ? `Candidatos a ${cargo.toLowerCase()}` : "Todos os candidatos"}{onde} em {ano}. Cada coluna mostra quantos candidatos do grupo se elegeram.</p>
             <Colunas titulo="Parte dos candidatos que se elegeu, por quanto dinheiro público receberam" max={tetoColunas} casas={(p) => (p > 0 && p < 0.01 ? 1 : 0)}
               colunas={[
@@ -153,7 +157,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
                   parte: g.nada.candidaturas ? g.nada.taxa : null, vazia: "ninguém neste grupo", classe: "fx5" },
                 { chave: "pouco", rotulo: "Recebeu pouco", linhas: ["a maioria dos que receberam", `${inteiro(g.pouco.eleitos)} eleitos de ${inteiro(g.pouco.candidaturas)}`],
                   parte: g.pouco.candidaturas ? g.pouco.taxa : null, classe: "fx2" },
-                { chave: "muito", rotulo: "Recebeu muito", linhas: ["os 25% que mais receberam", `${inteiro(g.muito.eleitos)} eleitos de ${inteiro(g.muito.candidaturas)}`],
+                { chave: "muito", rotulo: "Recebeu muito", linhas: ["os que mais receberam na disputa", `${inteiro(g.muito.eleitos)} eleitos de ${inteiro(g.muito.candidaturas)}`],
                   parte: g.muito.taxa },
               ]} />
           </>
@@ -384,10 +388,12 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
         <h2 id="h-met">Como calculamos</h2>
         <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
           <li>Fonte: prestação de contas entregue ao TSE (versão final ou regularização). Só candidatos titulares em eleições ordinárias que de fato disputaram.</li>
-          <li>O dinheiro que um candidato repassou a outro não é contado de novo: senão o mesmo real apareceria duas vezes.</li>
+          <li>Nas somas (de onde vem o dinheiro, estados, partidos), o dinheiro que um candidato repassou a outro não é contado de novo: senão o mesmo real apareceria duas vezes.</li>
+          <li>Já na resposta e na dependência de cada candidato, conta o que cada um recebeu, inclusive por meio de outro candidato: muitos vereadores recebem o dinheiro do Fundo Eleitoral pelo candidato a prefeito.</li>
           <li>“Público” é o que o TSE classifica como Fundo Especial (Fundo Eleitoral) ou Fundo Partidário; todo o resto é privado.</li>
           <li>Sucesso eleitoral = ter sido eleito (inclusive por média ou quociente partidário), conforme o resultado divulgado pelo TSE.</li>
-          <li>“Recebeu muito” são os 25% que mais receberam dinheiro público e “recebeu pouco”, os outros que receberam algo, comparando cada candidato só com os do mesmo cargo, ano e estado (o que é muito para vereador é pouco para governador).</li>
+          <li>Cada candidato é comparado só com os concorrentes da mesma disputa: o município (prefeito e vereador) ou o estado (os demais). “Recebeu muito” é cerca de 1/4 de quem recebeu, os que mais receberam; “recebeu pouco”, os demais que receberam algo. Valores iguais ficam no mesmo grupo, então os grupos têm tamanho aproximado (numa disputa com 2 candidatos, “o que mais recebeu” é metade dela).</li>
+          <li>A resposta “Sim” ou “Não” só aparece quando a diferença entre os grupos é grande demais para ser acaso (teste estatístico, 95% de confiança) e de pelo menos 20%; com poucos candidatos, a página diz que não dá para afirmar.</li>
           <li>Não há dados de receita antes de 2018 na base, por isso não dá para comparar com o tempo em que empresas podiam doar (até 2015).</li>
           <li>Valores em reais da época, sem correção pela inflação.</li>
         </ul>

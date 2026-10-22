@@ -1,21 +1,31 @@
 // Lógica da página "recursos de campanha e sucesso eleitoral" (pergunta 2), sem dependência do React: fácil de testar.
-// Os dados vêm de public/data/q2.json, gerado por pipeline/sql/q2.sql. "Recursos" = o maior valor entre o que o
-// candidato recebeu (inclusive material doado por outros candidatos) e o que gastou.
+// Os dados vêm de public/data/q2.json, gerado por pipeline/sql/q2.sql, em três medidas (coluna "medida"): o gasto, a
+// receita (inclusive material doado por outros candidatos) e "recursos" (o maior dos dois).
 
+import { compararGrupos, responder, zContagem, type Resposta } from "./estatistica";
 import { passa, type Filtros } from "./financiamento";
 
-/** faixa 0 = sem recursos declarados; 1 a 4 = quartos de quem declarou, comparando só com a mesma disputa (4 = os 25% com mais). */
-export interface LinhaGastoFaixa { ano: number; cargo: string; uf: string; tinha_cargo: boolean; faixa: number; candidaturas: number; eleitos: number }
+export type Medida = "recursos" | "gasto" | "receita";
+export const MEDIDAS: { chave: Medida; rotulo: string; explicacao: string }[] = [
+  { chave: "recursos", rotulo: "Recursos (o maior entre receita e gasto)", explicacao: "o maior valor entre o que o candidato recebeu e o que gastou" },
+  { chave: "gasto", rotulo: "Só gasto", explicacao: "o que o candidato gastou (despesas declaradas)" },
+  { chave: "receita", rotulo: "Só receita", explicacao: "o que o candidato recebeu, inclusive material doado por outros candidatos" },
+];
+/** Só as linhas de uma medida. */
+export const daMedida = <T extends { medida: Medida }>(linhas: T[], medida: Medida) => linhas.filter((l) => l.medida === medida);
+
+/** faixa 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou, comparando só com a mesma disputa (4 = os que mais têm). */
+export interface LinhaGastoFaixa { medida: Medida; ano: number; cargo: string; uf: string; tinha_cargo: boolean; faixa: number; candidaturas: number; eleitos: number }
 /** Disputas com poucos candidatos: quantas vezes o que teve mais recursos venceu, e quantas vitórias teria por sorteio. */
-export interface LinhaMaiorGasto { ano: number; cargo: string; uf: string; disputas: number; maior_venceu: number; maior_tinha_cargo: number; chance_sorteio: number }
+export interface LinhaMaiorGasto { medida: Medida; ano: number; cargo: string; uf: string; disputas: number; maior_venceu: number; maior_tinha_cargo: number; chance_sorteio: number; var_sorteio: number }
 /** Correlação (de -1 a 1) entre a posição nos recursos e a posição nos votos dentro da disputa. uf null = todas as UFs. */
-export interface LinhaCorrelacao { ano: number; cargo: string; uf: string | null; n: number; correlacao: number }
+export interface LinhaCorrelacao { medida: Medida; ano: number; cargo: string; uf: string | null; n: number; correlacao: number }
 
 export const GRUPOS_GASTO = [
-  { chave: "nada", faixas: [0], rotulo: "Sem recursos", detalhe: "nada declarado", classe: "fx5" },
-  { chave: "pouco", faixas: [1], rotulo: "Poucos recursos", detalhe: "os 25% com menos", classe: "fx2" },
-  { chave: "medio", faixas: [2, 3], rotulo: "Recursos médios", detalhe: "a metade do meio", classe: "fx2" },
-  { chave: "muito", faixas: [4], rotulo: "Muitos recursos", detalhe: "os 25% com mais", classe: "" },
+  { chave: "nada", faixas: [0], rotulo: "Nada declarado", detalhe: "valor zero na prestação", classe: "fx5" },
+  { chave: "pouco", faixas: [1], rotulo: "Pouco", detalhe: "cerca de 1/4, os que menos têm", classe: "fx2" },
+  { chave: "medio", faixas: [2, 3], rotulo: "Médio", detalhe: "cerca da metade, no meio", classe: "fx2" },
+  { chave: "muito", faixas: [4], rotulo: "Muito", detalhe: "cerca de 1/4, os que mais têm", classe: "" },
 ] as const;
 export type ChaveGrupo = (typeof GRUPOS_GASTO)[number]["chave"];
 
@@ -47,36 +57,38 @@ export function sucessoPorGasto(linhas: LinhaGastoFaixa[], f: Filtros, op: { tin
 export const grupo = (grupos: GrupoGasto[], chave: ChaveGrupo) => grupos.find((g) => g.chave === chave)!;
 
 /**
- * A resposta curta. Compara quem teve muitos recursos com quem teve poucos (os 25% com menos); se esse grupo
- * estiver vazio, com quem não declarou nada.
+ * A resposta curta. Compara quem tem muito com quem tem pouco (cerca de 1/4 de cada ponta); se "pouco" estiver vazio,
+ * com quem não declarou nada. A mesma comparação vale para a frase e para o gráfico; a resposta usa teste estatístico.
  */
-export function respostaGasto(grupos: GrupoGasto[]) {
+export function respostaGasto(grupos: GrupoGasto[]): { muito: GrupoGasto; base: GrupoGasto; curta: Resposta | null; vezes: number | null } {
   const muito = grupo(grupos, "muito"), pouco = grupo(grupos, "pouco"), nada = grupo(grupos, "nada");
   const base = pouco.candidaturas > 0 ? pouco : nada;
-  const curta = muito.candidaturas === 0 || base.candidaturas === 0 ? null
-    : muito.taxa > base.taxa * 1.2 ? "Sim." : muito.taxa * 1.2 < base.taxa ? "Não." : "Quase não faz diferença.";
+  const curta = muito.candidaturas === 0 || base.candidaturas === 0 ? null : compararGrupos(muito, base).resposta;
   return { muito, base, curta, vezes: base.taxa > 0 ? muito.taxa / base.taxa : null };
 }
 
 /** "O que teve mais recursos venceu?": soma das disputas majoritárias que passam no filtro. */
 export function maiorGastador(linhas: LinhaMaiorGasto[], f: Filtros) {
-  let disputas = 0, venceu = 0, tinhaCargo = 0, sorteio = 0;
+  let disputas = 0, venceu = 0, tinhaCargo = 0, sorteio = 0, variancia = 0;
   for (const l of linhas) {
     if (!passa(l, f)) continue;
-    disputas += l.disputas; venceu += l.maior_venceu; tinhaCargo += l.maior_tinha_cargo; sorteio += l.chance_sorteio;
+    disputas += l.disputas; venceu += l.maior_venceu; tinhaCargo += l.maior_tinha_cargo; sorteio += l.chance_sorteio; variancia += l.var_sorteio;
   }
   return {
-    disputas, venceu, tinhaCargo,
+    disputas, venceu, tinhaCargo, sorteio, variancia,
     pct: disputas ? venceu / disputas : 0,
     pctSorteio: disputas ? sorteio / disputas : 0,
     pctTinhaCargo: disputas ? tinhaCargo / disputas : 0,
   };
 }
 
-/** A resposta curta das disputas majoritárias: comparar com o sorteio. */
-export function respostaMaior(m: ReturnType<typeof maiorGastador>): string | null {
+/**
+ * A resposta curta das disputas majoritárias: as vitórias de quem tinha mais, comparadas com as de um sorteio
+ * (teste z da contagem, com a variância do sorteio). Com poucas disputas, "Não dá para afirmar.".
+ */
+export function respostaMaior(m: ReturnType<typeof maiorGastador>): Resposta | null {
   if (m.disputas === 0) return null;
-  return m.pct > m.pctSorteio * 1.2 ? "Sim." : m.pct * 1.2 < m.pctSorteio ? "Não." : "Quase não faz diferença.";
+  return responder(m.pct, m.pctSorteio, zContagem(m.venceu, m.sorteio, m.variancia), m.disputas);
 }
 
 /**
