@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { TabelaEstatica } from "./types";
 
 const BASE = process.env.API_URL ?? "http://localhost:8000";
 
@@ -24,4 +25,10 @@ export async function apiGetOpcional<T>(caminho: string): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+/** Tabelas de uma análise (api/app/analises/<nome>.sql), só as pedidas. Devolve null se a API não responder. */
+export async function lerAnalise(nome: string, tabelas: string[]): Promise<Record<string, TabelaEstatica> | null> {
+  const p = new URLSearchParams(tabelas.map((t) => ["tabela", t]));
+  return apiGetOpcional(`/analises/${nome}?${p}`);
 }

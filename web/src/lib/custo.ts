@@ -1,5 +1,5 @@
 // Lógica da página "quanto custa uma cadeira/mandato?" (pergunta 1), sem dependência do React: fácil de testar.
-// Os dados vêm de public/data/q1.json, gerado por pipeline/sql/q1.sql (somas por ano, cargo e UF; presidente na UF "BR").
+// Os dados vêm de GET /api/analises/q1 (api/app/analises/q1.sql; somas por ano, cargo e UF; presidente na UF "BR").
 
 import { ordenarCargos, passa, type Filtros } from "./financiamento";
 

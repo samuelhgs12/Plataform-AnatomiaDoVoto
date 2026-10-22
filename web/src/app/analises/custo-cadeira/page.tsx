@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { comoObjetos, lerEstatico } from "@/lib/data";
+import { lerAnalise } from "@/lib/api";
+import { comoObjetos } from "@/lib/data";
 import { cargoPadrao, custoPorAno, custoPorCargo, custoPorUf, variacao, type LinhaCusto } from "@/lib/custo";
 import { NOME_UF, TIPO_ELEICAO } from "@/lib/financiamento";
 import { inteiro, pct, reais } from "@/lib/format";
@@ -18,14 +19,14 @@ const umaCasa = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits
 
 export default async function CustoCadeira({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const dados = await lerEstatico("q1");
+  const dados = await lerAnalise("q1", ["custo"]);
   if (!dados?.custo) {
     return (
       <>
         <Cabecalho titulo="Quanto custa uma cadeira" foto={FOTOS.congresso} />
         <div className="card aviso">
-          <h2>Dados ainda não gerados</h2>
-          <p>Na pasta <code>pipeline/</code>, rode <code>python export_static.py q1</code>.</p>
+          <h2>Dados indisponíveis</h2>
+          <p>A API não respondeu. Confira se ela está rodando (na pasta <code>api/</code>, <code>uvicorn app.main:app</code>).</p>
         </div>
       </>
     );

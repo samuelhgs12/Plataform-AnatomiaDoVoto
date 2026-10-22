@@ -1,5 +1,5 @@
 // Lógica da página de votos de legenda (pergunta 5). Tudo aqui é puro: a página só desenha o que sai destas funções.
-// As siglas renomeadas já chegam unificadas pelo SQL (pipeline/sql/q5.sql); fusões chegam separadas e só são
+// As siglas renomeadas já chegam unificadas pelo SQL (api/app/analises/q5.sql); fusões chegam separadas e só são
 // somadas quando o usuário liga "juntar", usando a tabela linhagem.
 import { pct, pctSinal } from "./format";
 

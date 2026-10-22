@@ -8,7 +8,10 @@ Regras:
   * se o MotherDuck falhar, usa o arquivo DuckDB local da carga (DATABASE_LOCAL), quando ele existe.
 """
 import logging
+import re
 import threading
+from datetime import date, datetime
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 
@@ -19,6 +22,8 @@ from .config import get_settings
 
 log = logging.getLogger(__name__)
 QUERIES = Path(__file__).parent / "queries"
+ANALISES = Path(__file__).parent / "analises"
+COPY_RE = re.compile(r"COPY\s*\((.*)\)\s*TO\s*'[^']*?([A-Za-z0-9_]+)\.csv'\s*\(HEADER\)", re.S | re.I)
 _lock = threading.Lock()
 _con: duckdb.DuckDBPyConnection | None = None
 _cache: TTLCache | None = None
@@ -145,3 +150,44 @@ def consultar(nome: str, params: tuple | list = (), cache: bool = True) -> list[
 def um(nome: str, params: tuple | list = ()) -> dict | None:
     linhas = consultar(nome, params)
     return linhas[0] if linhas else None
+
+
+def analises() -> list[str]:
+    """Nomes das análises disponíveis: um arquivo analises/<nome>.sql para cada uma."""
+    return sorted(p.stem for p in ANALISES.glob("*.sql"))
+
+
+def _valor(v):
+    # somas do DuckDB chegam como Decimal e datas como date: o JSON da resposta só aceita número e texto
+    if isinstance(v, Decimal):
+        return float(v)
+    if isinstance(v, (date, datetime)):
+        return v.isoformat()
+    return v
+
+
+def analise(nome: str) -> dict[str, dict]:
+    """Roda analises/<nome>.sql e devolve {tabela: {colunas, linhas}}.
+
+    Os CREATE TEMP preparam a sessão e cada COPY (...) TO '.../x.csv' vira a tabela x. As tabelas temporárias
+    ficam no cursor desta execução e somem quando ele fecha. O resultado fica no cache (os dados são históricos).
+    """
+    chave = ("analise", nome)
+    if chave in _cache_ttl():
+        return _cache_ttl()[chave]
+    texto = re.sub(r"--[^\n]*", "", (ANALISES / f"{nome}.sql").read_text(encoding="utf-8"))
+    saida = {}
+    cur = conexao().cursor()
+    try:
+        for comando in (c.strip() for c in re.split(r";\s*\n", texto) if c.strip()):
+            m = COPY_RE.match(comando)
+            if not m:
+                cur.execute(comando)
+                continue
+            res = cur.execute(m.group(1))
+            saida[m.group(2)] = {"colunas": [d[0] for d in res.description],
+                                 "linhas": [[_valor(v) for v in r] for r in res.fetchall()]}
+    finally:
+        cur.close()
+    _cache_ttl()[chave] = saida
+    return saida

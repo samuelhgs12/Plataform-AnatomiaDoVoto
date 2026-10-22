@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { comoObjetos, lerEstatico } from "@/lib/data";
+import { lerAnalise } from "@/lib/api";
+import { comoObjetos } from "@/lib/data";
 import { agruparFluxo, type LinhaFluxo } from "@/lib/fluxo";
 import { FlowBars } from "@/components/FlowBars";
 import { Cabecalho } from "@/components/Cabecalho";
@@ -14,14 +15,14 @@ const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function PosMandato({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const dados = await lerEstatico("q10");
+  const dados = await lerAnalise("q10", ["fluxo"]);
   if (!dados?.fluxo) {
     return (
       <>
         <Cabecalho titulo="O que acontece depois de um mandato" foto={FOTOS.congresso} />
         <div className="card aviso">
-          <h2>Dados ainda não gerados</h2>
-          <p>Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
+          <h2>Dados indisponíveis</h2>
+          <p>A API não respondeu. Confira se ela está rodando (na pasta <code>api/</code>, <code>uvicorn app.main:app</code>).</p>
         </div>
       </>
     );

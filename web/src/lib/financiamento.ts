@@ -1,5 +1,5 @@
 // Lógica da página "de onde vem o dinheiro das campanhas" (pergunta 8), sem dependência do React: fácil de testar.
-// Os dados vêm de public/data/q8.json, gerado por pipeline/sql/q8.sql.
+// Os dados vêm de GET /api/analises/q8 (api/app/analises/q8.sql).
 import { compararGrupos } from "./estatistica";
 import type { CarreiraItem, Receitas } from "./types";
 

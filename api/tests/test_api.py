@@ -183,6 +183,30 @@ def test_candidatura_inexistente(client):
         assert client.get(f"/api/candidaturas/9999/{rota}").status_code == 404
 
 
+def test_analises_listadas_a_partir_dos_arquivos_sql(client):
+    assert client.get("/api/analises").json() == ["q1", "q10", "q2", "q5", "q8"]
+
+
+def test_analise_devolve_cada_copy_como_tabela(client):
+    r = client.get("/api/analises/q5")
+    assert r.status_code == 200 and set(r.json()) == {"legenda", "eventos", "linhagem"}
+    legenda = r.json()["legenda"]
+    assert "partido" in legenda["colunas"] and len(legenda["linhas"]) > 0
+    assert all(len(l) == len(legenda["colunas"]) for l in legenda["linhas"])
+    assert "max-age" in r.headers["cache-control"]
+
+
+def test_analise_so_as_tabelas_pedidas(client):
+    r = client.get("/api/analises/q10?tabela=fluxo&tabela=mapa")
+    assert r.status_code == 200 and set(r.json()) == {"fluxo", "mapa"}
+    assert "politicos" not in client.get("/api/analises/q10").json()
+
+
+def test_analise_ou_tabela_inexistente(client):
+    assert client.get("/api/analises/q99").status_code == 404
+    assert client.get("/api/analises/q8?tabela=nao_existe").status_code == 404
+
+
 def test_cabecalho_de_cache_nos_dados_historicos(client):
     assert "max-age" in client.get("/api/meta").headers["cache-control"]
     assert "cache-control" not in client.get("/api/health").headers
@@ -191,7 +215,8 @@ def test_cabecalho_de_cache_nos_dados_historicos(client):
 def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
-             "/api/candidaturas/2/despesas", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json"]
+             "/api/candidaturas/2/despesas", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
+             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q10"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]
     for rota in rotas:
         texto = json.dumps(client.get(rota).json(), ensure_ascii=False).lower()

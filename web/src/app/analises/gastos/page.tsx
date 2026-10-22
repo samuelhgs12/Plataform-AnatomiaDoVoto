@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { comoObjetos, lerEstatico } from "@/lib/data";
+import { lerAnalise } from "@/lib/api";
+import { comoObjetos } from "@/lib/data";
 import { NOME_UF, ordenarCargos, TIPO_ELEICAO, type Filtros } from "@/lib/financiamento";
 import {
   correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, maiorGastador, MEDIDAS, respostaGasto, respostaMaior, sucessoPorGasto,
@@ -34,14 +35,14 @@ const ACASO = "Com tão poucos candidatos, essa diferença pode ser acaso.";
 
 export default async function Gastos({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const dados = await lerEstatico("q2");
+  const dados = await lerAnalise("q2", ["faixas", "maior_gasto", "correlacao"]);
   if (!dados?.faixas) {
     return (
       <>
         <Cabecalho titulo="Recursos de campanha e sucesso eleitoral" foto={FOTOS.confirma} />
         <div className="card aviso">
-          <h2>Dados ainda não gerados</h2>
-          <p>Na pasta <code>pipeline/</code>, rode <code>python export_static.py q2</code>.</p>
+          <h2>Dados indisponíveis</h2>
+          <p>A API não respondeu. Confira se ela está rodando (na pasta <code>api/</code>, <code>uvicorn app.main:app</code>).</p>
         </div>
       </>
     );

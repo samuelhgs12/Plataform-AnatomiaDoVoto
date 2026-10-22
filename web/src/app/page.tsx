@@ -8,6 +8,7 @@ import { TELA } from "@/lib/lupa";
 import { MapaVivo } from "@/components/MapaVivo";
 import { Dispersao } from "@/components/Dispersao";
 import { EscolhaMunicipio } from "@/components/EscolhaMunicipio";
+import { lerAnalise } from "@/lib/api";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
 import type { LinhaLegenda } from "@/lib/legenda";
@@ -33,7 +34,7 @@ const umaCasa = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const [q8, q5, dados] = await Promise.all([lerEstatico("q8"), lerEstatico("q5"), lerEstatico("mapa")]);
+  const [q8, q5, dados] = await Promise.all([lerAnalise("q8", ["fontes", "sucesso"]), lerAnalise("q5", ["legenda"]), lerEstatico("mapa")]);
   const fontes = comoObjetos<LinhaFontes>(q8?.fontes);
   const sucesso = comoObjetos<LinhaSucesso>(q8?.sucesso);
   const legenda = comoObjetos<LinhaLegenda>(q5?.legenda);

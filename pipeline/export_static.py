@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Gera os JSONs estáticos das páginas agregadas (perguntas 5, 8 e 10 e o mapa da página inicial) para o front-end.
+"""Gera o JSON estático do mapa da página inicial (web/public/data/mapa.json).
 
-Os dados são históricos: calcule uma vez e sirva como arquivo (CDN), em vez de consultar o banco a cada visita.
+As análises (perguntas 1, 2, 5, 8 e 10) não passam mais por aqui: a API roda api/app/analises/<nome>.sql e serve o resultado
+em GET /api/analises/<nome>. O mapa continua estático só enquanto parte dos dados vem de fora do banco (decisão 10).
 
 Uso (a partir da pasta pipeline/):
   python export_static.py                                    # usa DATABASE e MOTHERDUCK_TOKEN do api/.env
   python export_static.py --banco /caminho/bdr_final.duckdb  # arquivo local
   python export_static.py --banco md:_share/bdr/<codigo>     # MotherDuck (token no .env ou no ambiente)
-  python export_static.py mapa                               # só algumas consultas
 Se o MotherDuck falhar (sem token, fora da organização...), usa o banco local da carga: DATABASE_LOCAL ou, por padrão,
 ../load_BDR/dados_bdr/bdr_final.duckdb (repositórios lado a lado).
-Saída: ../web/public/data/q5.json, q8.json, q10.json e mapa.json, no formato {tabela: {colunas: [...], linhas: [[...]]}}.
+Saída: ../web/public/data/mapa.json, no formato {tabela: {colunas: [...], linhas: [[...]]}}.
 """
 import argparse
 import csv
@@ -29,11 +29,10 @@ import duckdb
 
 RAIZ = Path(__file__).resolve().parent
 COPY_RE = re.compile(r"COPY\s*\((.*)\)\s*TO\s*'[^']*?([A-Za-z0-9_]+)\.csv'\s*\(HEADER\)", re.S | re.I)
-IGNORAR = {"politicos", "trajetorias"}      # volumosos: a busca por pessoa usa a API
 BANCO_DA_CARGA = RAIZ.parents[1] / "load_BDR" / "dados_bdr" / "bdr_final.duckdb"
 # O banco só tem participação de 2018 em diante; 2008 a 2016 vêm dos dados abertos do TSE (baixados uma vez para .cache/)
 # TODO: provisório (decisão 10 em docs/DECISOES.md). Quando o load_BDR carregar 2008-2016 e os indicadores no banco,
-# apagar ANOS_TSE, URL_TSE, CACHE, carregar_tse e o USE bdr_v2 em main().
+# mover mapa.sql para api/app/analises/ e apagar este script (e web/public/data/).
 ANOS_TSE = (2008, 2010, 2012, 2014, 2016)
 URL_TSE = "https://cdn.tse.jus.br/estatistica/sead/odsele/detalhe_votacao_munzona/detalhe_votacao_munzona_{ano}.zip"
 CACHE = RAIZ / ".cache"
@@ -108,7 +107,7 @@ def executar(con, arquivo: Path) -> dict:
         m = COPY_RE.match(c)
         if not m:
             con.execute(c)
-        elif m.group(2) not in IGNORAR:
+        else:
             cur = con.execute(m.group(1))
             saida[m.group(2)] = {"colunas": [d[0] for d in cur.description], "linhas": cur.fetchall()}
     return saida
@@ -157,23 +156,18 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--banco", default=os.environ.get("DATABASE", "md:bdr"))
     p.add_argument("--saida", default=str(RAIZ.parent / "web" / "public" / "data"))
-    p.add_argument("consultas", nargs="*", choices=["q1", "q2", "q5", "q8", "q10", "mapa"], default=["q1", "q2", "q5", "q8", "q10", "mapa"])
     a = p.parse_args()
     con = conectar(a.banco)
     destino = Path(a.saida)
     destino.mkdir(parents=True, exist_ok=True)
-    for q in a.consultas:
-        banco = con.execute("SELECT current_database()").fetchone()[0]
-        if q == "mapa":
-            # código IBGE e indicadores municipais só existem na versão 2 do banco (anexada junto no MotherDuck)
-            if con.execute("SELECT count(*) FROM duckdb_databases() WHERE database_name = 'bdr_v2'").fetchone()[0]:
-                con.execute("USE bdr_v2")
-            carregar_tse(con)
-        dados = executar(con, RAIZ / "sql" / f"{q}.sql")
-        con.execute(f'USE "{banco}"')   # as consultas seguintes voltam ao banco pedido em --banco
-        arq = destino / f"{q}.json"
-        arq.write_text(json.dumps(dados, default=_json, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        print(f"{arq.name}: " + ", ".join(f"{k} ({len(v['linhas']):,})" for k, v in dados.items()) + f"  [{arq.stat().st_size / 1e3:,.0f} KB]")
+    # código IBGE e indicadores municipais só existem na versão 2 do banco (anexada junto no MotherDuck)
+    if con.execute("SELECT count(*) FROM duckdb_databases() WHERE database_name = 'bdr_v2'").fetchone()[0]:
+        con.execute("USE bdr_v2")
+    carregar_tse(con)
+    dados = executar(con, RAIZ / "sql" / "mapa.sql")
+    arq = destino / "mapa.json"
+    arq.write_text(json.dumps(dados, default=_json, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"{arq.name}: " + ", ".join(f"{k} ({len(v['linhas']):,})" for k, v in dados.items()) + f"  [{arq.stat().st_size / 1e3:,.0f} KB]")
 
 
 if __name__ == "__main__":

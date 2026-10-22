@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { comoObjetos, lerEstatico } from "@/lib/data";
+import { lerAnalise } from "@/lib/api";
+import { comoObjetos } from "@/lib/data";
 import {
   contarFaixas, deCada100, descreverMudancas, emCada10, FAIXAS, FONTES, ordenarPartidos, NOME_UF, ordenarCargos,
   parteDosEleitos, porAno, porPartido, porUf, respostaSucesso, somar, sucessoTresGrupos, textoDe100, TIPO_ELEICAO,
@@ -36,14 +37,14 @@ function alvo(f: Filtros): string {
 
 export default async function Financiamento({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const dados = await lerEstatico("q8");
+  const dados = await lerAnalise("q8", ["fontes", "faixas", "sucesso"]);
   if (!dados?.fontes) {
     return (
       <>
         <Cabecalho titulo="Dinheiro público e sucesso eleitoral" foto={FOTOS.urna} />
         <div className="card aviso">
-          <h2>Dados ainda não gerados</h2>
-          <p>Na pasta <code>pipeline/</code>, rode <code>python export_static.py</code>.</p>
+          <h2>Dados indisponíveis</h2>
+          <p>A API não respondeu. Confira se ela está rodando (na pasta <code>api/</code>, <code>uvicorn app.main:app</code>).</p>
         </div>
       </>
     );

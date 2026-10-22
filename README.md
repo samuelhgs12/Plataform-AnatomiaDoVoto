@@ -7,7 +7,7 @@ Os dados vêm do banco `bdr_final` (DuckDB / MotherDuck), carregado e validado n
 ```
 api/        FastAPI (Python): busca, listagem, perfil, gastos, receitas      → docs/API.md
 web/        Next.js 16 (React 19, TypeScript): páginas e gráficos
-pipeline/   gera os JSONs estáticos das análises agregadas (perguntas 5, 8 e 10) e do mapa da página inicial
+pipeline/   gera o JSON estático do mapa da página inicial (as análises agregadas vêm da API)
 docs/       arquitetura, API, esboço das telas, decisões, plano de trabalho
 ```
 
@@ -58,15 +58,18 @@ uvicorn app.main:app --reload                            # http://localhost:8000
 
 Para conferir a conexão com o banco, abra http://localhost:8000/api/health: deve responder `{"status":"ok","db":"ok"}`. Se responder 503, a mensagem diz o motivo (token ausente, share sem acesso etc.).
 
-**2. Análises agregadas** (uma vez, ou quando o banco mudar)
+**2. Mapa da página inicial** (uma vez, ou quando o banco mudar)
+
+As análises (perguntas 1, 2, 5, 8 e 10) vêm da API (`/api/analises/<nome>`) e não precisam de passo nenhum. Só o mapa ainda é
+um arquivo gerado à parte:
 ```bash
 cd pipeline
 pip install -r requirements.txt
-python export_static.py                                  # grava web/public/data/q5.json, q8.json, q10.json e mapa.json
+python export_static.py                                  # grava web/public/data/mapa.json
 ```
 
 O `mapa.json` usa o banco `bdr_v2` (indicadores do Censo e código IBGE) e baixa uma vez, para `pipeline/.cache/`, a
-abstenção de 2008 a 2016 dos dados abertos do TSE. Para gerar só ele: `python export_static.py mapa`.
+abstenção de 2008 a 2016 dos dados abertos do TSE.
 
 **3. Site**
 ```bash
