@@ -11,8 +11,10 @@ import { EscolhaMunicipio } from "@/components/EscolhaMunicipio";
 import { lerAnalise } from "@/lib/api";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
-import type { LinhaLegenda } from "@/lib/legenda";
-import { conjunto, dinheiroTotal, legendaPorUf } from "@/lib/mapa";
+import { CARGOS, anosDe as anosDaLegenda, cicloDoAno, type CargoCiclo, type LinhaLegenda } from "@/lib/legenda";
+import {
+  anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, type Visao,
+} from "@/lib/mapa";
 import {
   ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
   mediaPonderada, nomeProprio, posicao, quantis, rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia,
@@ -31,6 +33,7 @@ type SP = Promise<Record<string, string | string[] | undefined>>;
 const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 const ESTADOS = ["Amapá", "Espírito Santo", "Minas Gerais", "Pernambuco", "Rio de Janeiro", "Roraima"];
 const umaCasa = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+const ROTULO_CARGO: Record<CargoCiclo, string> = { ambos: "Os dois", federal: "Federal", estadual: "Estadual" };
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
@@ -48,21 +51,41 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const ano = anos.includes(Number(um(sp.ano))) ? Number(um(sp.ano)) : anoPadrao;
   const ufs = [...new Set(municipios.map((m) => m.uf))].sort();
   const uf = ufs.find((u) => u === um(sp.uf));
-  const mun = uf ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
+
+  // visão do mapa: abstenção (padrão) ou voto de legenda, que só existe de 2018 em diante e só por estado
+  const anosLeg = anosDaLegenda(legenda);
+  const anoPedido = Number(um(sp.ano));
+  const anoPadraoLeg = anoNaLegenda(anoPadrao, anosLeg);
+  const anoLeg = anosLeg.includes(anoPedido) ? anoPedido : anoNaLegenda(anos.includes(anoPedido) ? anoPedido : anoPadrao, anosLeg);
+  const pediuLegenda = um(sp.ver) === "legenda";
+  const ver: Visao = pediuLegenda && anoLeg !== undefined ? "legenda" : "abstencao";
+  const naLegenda = ver === "legenda";
+  const cargo = CARGOS.find((c) => c === um(sp.cargo)) ?? "ambos";
+  const partido = legenda.some((l) => l.partido === um(sp.p)) ? um(sp.p) : undefined;
+
+  const mun = uf && !naLegenda ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
   const comCenso = ANOS_CENSO.includes(ano);
   const ind: ChaveIndicador = INDICADORES_CENSO.find((i) => i.chave === um(sp.ind))?.chave ?? "idhm";
   const infoInd = INDICADORES_CENSO.find((i) => i.chave === ind)!;
-  const cruzar = comCenso && !!uf && um(sp.cor) === "cruzar";
+  const cruzar = comCenso && !!uf && !naLegenda && um(sp.cor) === "cruzar";
 
-  const params = (nova: { ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null }) => {
-    const n = { ano, uf, mun: mun?.id_municipio, ind, cor: cruzar ? "cruzar" : null, ...nova };
+  type Estado = { ver?: Visao; ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null; p?: string | null; cargo?: CargoCiclo };
+  const params = (nova: Estado) => {
+    const n = { ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind, cor: cruzar ? "cruzar" : null, p: partido, cargo, ...nova };
     if (nova.uf !== undefined && nova.mun === undefined) n.mun = null;   // trocar de estado solta o município
+    const leg = n.ver === "legenda";
     const p = new URLSearchParams();
-    if (n.ano !== anoPadrao) p.set("ano", String(n.ano));
+    if (leg) p.set("ver", "legenda");
+    if (n.ano !== (leg ? anoPadraoLeg : anoPadrao)) p.set("ano", String(n.ano));
     if (n.uf) p.set("uf", n.uf);
-    if (n.uf && n.mun) p.set("mun", String(n.mun));
-    if (n.ind !== "idhm") p.set("ind", n.ind);
-    if (n.cor && n.uf) p.set("cor", n.cor);
+    if (leg) {
+      if (n.p) p.set("p", n.p);
+      if (n.cargo !== "ambos") p.set("cargo", n.cargo);
+    } else {
+      if (n.uf && n.mun) p.set("mun", String(n.mun));
+      if (n.ind !== "idhm") p.set("ind", n.ind);
+      if (n.cor && n.uf) p.set("cor", n.cor);
+    }
     return p;
   };
   const href = (nova: Parameters<typeof params>[0]) => {
@@ -86,7 +109,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const idsUf = uf ? idsDe(uf) : [];
   const corte3Abst = quantis(idsUf.flatMap((id) => taxaDe(doAno.get(id)) ?? []), 3);
   const corte3Ind = quantis(idsUf.flatMap((id) => indicadores.get(id)?.[ind] ?? []), 3);
-  const caixa = uf ? CAIXA_UF[uf] : undefined;
+  const caixa = uf && !naLegenda ? CAIXA_UF[uf] : undefined;   // na legenda, o mapa fica nos seis estados
   const noMapa: MunicipioNoMapa[] = !uf || !caixa ? [] : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
     const t = taxaDe(doAno.get(m.id_municipio));
     const v = indicadores.get(m.id_municipio)?.[ind];
@@ -117,6 +140,36 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const ranking = idsUf.flatMap((id) => { const t = taxaDe(doAno.get(id)); return t == null ? [] : [{ id, t }]; }).sort((a, b) => b.t - a.t);
   const legendaQ = rotulosFaixas(cortes, (v) => pct(v, 0));
 
+  // visão de legenda: a parte dos votos dada só à legenda (de todos ou de um partido), em faixas fixas por estado
+  const linhasLeg = doCargo(legenda, cargo);
+  const geral = anoLeg !== undefined && cicloDoAno(anoLeg) === "geral";
+  const cargoTexto = !geral ? "vereador" : cargo === "ambos" ? "deputado" : `deputado ${cargo}`;
+  const cargoTitulo = !geral ? "Vereadores" : cargo === "ambos" ? "Deputados federais e estaduais" : `Deputados ${cargo === "federal" ? "federais" : "estaduais"}`;
+  const medir = (u?: string, a = anoLeg ?? 0) => medirLegenda(linhasLeg, { ano: a, uf: u, partido });
+  const porUfLeg = ufs.map((u) => ({ uf: u, m: medir(u) }));
+  const cortesLeg = faixasFixas(Math.max(0, ...porUfLeg.map((x) => x.m.valor ?? 0)));
+  const fmtLeg = (v: number) => pct(v, Math.max((cortesLeg[0] ?? 0) < 0.02 ? 1 : 0, casasDosCortes(cortesLeg)));   // "5,8%", "24%"
+  const estadosLeg: EstadoNoMapa[] = porUfLeg.map(({ uf: u, m }) => ({
+    uf: u, classe: m.valor == null ? "sem" : `q${classe(m.valor, cortesLeg)}`, href: href({ uf: u === uf ? null : u }), sigla: u,
+    valor: m.valor == null ? "—" : fmtLeg(m.valor),
+    descricao: m.valor == null ? `${NOME_UF[u] ?? u}: sem votos de legenda${partido ? ` para o partido ${partido}` : ""} em ${anoLeg}`
+      : partido ? `${NOME_UF[u] ?? u}: ${fmtLeg(m.valor)} dos votos de legenda para ${cargoTexto} em ${anoLeg} foram para o partido ${partido}`
+      : `${NOME_UF[u] ?? u}: ${fmtLeg(m.valor)} dos votos para ${cargoTexto} em ${anoLeg} foram só na legenda`,
+  }));
+  const legendaLeg = rotulosFaixas(cortesLeg, fmtLeg).map((t) => t.replace("%–", "–"));   // "1,5–3,0%": cabe embaixo da cor
+  const algumSem = porUfLeg.some((x) => x.m.valor == null);
+  const medidaLeg = medir(uf);
+  const medidaTodos = medir();
+  const serieLeg = anosLeg.map((a) => ({ ano: a, valor: medir(uf, a).valor }));
+  const maiorSerieLeg = Math.max(0, ...serieLeg.map((s) => s.valor ?? 0));
+  const rankingLeg = anoLeg === undefined ? [] : rankingPartidos(linhasLeg, { ano: anoLeg, uf }).slice(0, 8);
+  const partidosDoAno = anoLeg === undefined ? [] : rankingPartidos(linhasLeg, { ano: anoLeg }).map((r) => r.partido);
+  const opcoesPartido = [...new Set([...partidosDoAno, ...(partido ? [partido] : [])])].sort((a, b) => a.localeCompare(b, "pt-BR")).map((x) => [x, x] as [string, string]);
+  const hrefAnalise = `/analises/legenda${(() => { const q = new URLSearchParams(); if (uf) q.set("uf", uf); if (partido) q.set("p", partido); const t = q.toString(); return t ? `?${t}` : ""; })()}`;
+  // trocar de visão mantém o estado; o ano vai para o mais perto que a outra visão tem
+  const hrefAbst = naLegenda ? href({ ver: "abstencao", ano: anos.includes(anoLeg!) ? anoLeg : ano }) : href({});
+  const hrefLeg = naLegenda ? href({}) : href({ ver: "legenda", ano: anoNaLegenda(ano, anosLeg) ?? ano });
+
   // números do mosaico e achados das análises
   const dinheiro = dinheiroTotal(fontes);
   const anoSucesso = Math.max(0, ...sucesso.map((l) => l.ano));
@@ -138,11 +191,30 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         </div>
       ) : (
         <section id="mapa" className="quadro observatorio" aria-labelledby="h-mapa">
-          <MapaVivo className="palco s8" estado={uf}>
+          <MapaVivo className="palco s8" estado={naLegenda ? undefined : uf}>
             <div className="palco-topo">
               <div>
-                <p className="palco-sobre">Abstenção nas eleições · {cruzar ? `cruzada com ${infoInd.rotulo.toLowerCase()} (Censo 2010)` : "1º turno"}</p>
-                <h1 id="h-mapa">Quem não foi votar em {ano}</h1>
+                <nav className="visoes" aria-label="O que o mapa mostra">
+                  <a href={hrefAbst} data-mapa="" aria-current={!naLegenda ? "true" : undefined}>Abstenção</a>
+                  <a href={hrefLeg} data-mapa="" aria-current={naLegenda ? "true" : undefined}>Voto de legenda</a>
+                </nav>
+                {naLegenda ? (
+                  <>
+                    <h1 id="h-mapa">{partido ? `${partido}: voto de legenda em ${anoLeg}` : `Quem votou só no partido em ${anoLeg}`}</h1>
+                    <p className="palco-sobre">{cargoTitulo} · 1º turno</p>
+                    {partido && (
+                      <a className="tirar-partido" href={href({ p: null })} data-mapa="">
+                        Ver todos os partidos
+                        <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg>
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h1 id="h-mapa">Quem não foi votar em {ano}</h1>
+                    <p className="palco-sobre">1º turno{cruzar && ` · cruzada com ${infoInd.rotulo.toLowerCase()} (Censo 2010)`}</p>
+                  </>
+                )}
               </div>
               <nav className="trilha" aria-label="Onde você está no mapa">
                 <a href={href({ uf: null })} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>
@@ -152,16 +224,28 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             </div>
 
             <div className="palco-mapa">
-              <MapaAbstencao
-                titulo={uf ? `Municípios de ${NOME_UF[uf]}: abstenção em ${ano}` : `Abstenção em ${ano} nos seis estados`}
-                camera={camera} estados={estados} uf={uf} municipios={noMapa}
-                destaque={mun && centro ? { ibge: mun.cod_ibge, nome: nomeMun.get(mun.id_municipio)!, x: centro[0], y: centro[1] } : undefined}
-              />
-              {!uf && <p className="palco-dica" aria-hidden="true">Clique num estado para ver os municípios</p>}
+              {naLegenda ? (
+                <MapaAbstencao
+                  titulo={`Voto de legenda${partido ? ` do partido ${partido}` : ""} em ${anoLeg} nos seis estados`}
+                  camera={camera} estados={estadosLeg} uf={uf} zoom={false} municipios={[]}
+                />
+              ) : (
+                <MapaAbstencao
+                  titulo={uf ? `Municípios de ${NOME_UF[uf]}: abstenção em ${ano}` : `Abstenção em ${ano} nos seis estados`}
+                  camera={camera} estados={estados} uf={uf} municipios={noMapa}
+                  destaque={mun && centro ? { ibge: mun.cod_ibge, nome: nomeMun.get(mun.id_municipio)!, x: centro[0], y: centro[1] } : undefined}
+                />
+              )}
+              {!uf && <p className="palco-dica" aria-hidden="true">{naLegenda ? "Clique num estado para ver os números dele" : "Clique num estado para ver os municípios"}</p>}
             </div>
 
             <div className="palco-base">
-              {cruzar ? (
+              {naLegenda ? (
+                <ul className="legenda-q" aria-label={partido ? `Cores: faixas iguais da parte dos votos de legenda que foi para o partido ${partido}` : "Cores: faixas iguais da parte dos votos dada só à legenda"}>
+                  {legendaLeg.map((t, i) => <li key={i}><i className={`q${i}`} />{t}</li>)}
+                  {algumSem && <li className="legenda-sem"><i className="sem" />sem votos</li>}
+                </ul>
+              ) : cruzar ? (
                 <div className="legenda-bi" aria-label={`Cores: abstenção (colunas) e ${infoInd.rotulo} (linhas), em terços dos municípios de ${NOME_UF[uf!]}`}>
                   <div className="bi-grade" aria-hidden="true">{[2, 1, 0].flatMap((i) => [0, 1, 2].map((a) => <i key={`${i}${a}`} className={`b${i}${a}`} />))}</div>
                   <span className="bi-y">{infoInd.rotulo} ↑</span>
@@ -172,6 +256,15 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   {legendaQ.map((t, i) => <li key={i}><i className={`q${i}`} />{t}</li>)}
                 </ul>
               )}
+              {naLegenda ? (
+                <div className="anos" role="group" aria-label="Ano da eleição">
+                  {anosLeg.map((a) => (
+                    <Link key={a} scroll={false} href={href({ ano: a })} className={`ano${a === anoLeg ? " on" : ""}`} aria-current={a === anoLeg ? "true" : undefined}>
+                      {a}<small>{cicloDoAno(a) === "geral" ? "Deputados" : "Vereadores"}</small>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
               <div className="anos" role="group" aria-label="Ano da eleição">
                 {anos.map((a) => (
                   <Link key={a} scroll={false} href={href({ ano: a })} className={`ano${a === ano ? " on" : ""}${ANOS_CENSO.includes(a) ? " censo" : ""}`} aria-current={a === ano ? "true" : undefined}>
@@ -179,10 +272,79 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   </Link>
                 ))}
               </div>
+              )}
             </div>
           </MapaVivo>
 
+          {naLegenda ? (
+          <div className="painel s4" key={`legenda-${uf}`}>
+            <div className="bloco noite painel-cab">
+              <p className="palco-sobre">{uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"}</p>
+              <h2>{uf ? NOME_UF[uf] : "Os seis estados"}</h2>
+              {medidaLeg.valor != null ? (
+                <>
+                  <p className="painel-num"><Rolar valor={pct(medidaLeg.valor, 1)} /></p>
+                  <p>
+                    {partido ? <>dos {compacto(medidaLeg.total)} votos só na legenda para {cargoTexto} em {anoLeg} foram para o partido {partido}</> : <>dos {compacto(medidaLeg.total)} votos para {cargoTexto} em {anoLeg} foram só na legenda, sem escolher candidato</>}
+                    {uf && medidaTodos.valor != null && <> ({medidaLeg.valor >= medidaTodos.valor ? "acima" : "abaixo"} dos seis estados juntos, {pct(medidaTodos.valor, 1)})</>}.
+                  </p>
+                </>
+              ) : <p>{partido ? `O partido ${partido} não teve votos para ${cargoTexto}${uf ? ` em ${NOME_UF[uf]}` : ""} em ${anoLeg}.` : `Sem votos para ${cargoTexto} em ${anoLeg}.`}</p>}
+              {geral && (
+                <div className="chips cargos" role="group" aria-label="Deputados">
+                  {CARGOS.map((c) => (
+                    <a key={c} href={href({ cargo: c })} data-mapa="" className={`chip${c === cargo ? " on" : ""}`} aria-current={c === cargo ? "true" : undefined}>{ROTULO_CARGO[c]}</a>
+                  ))}
+                </div>
+              )}
+              <EscolhaMunicipio nome="p" rotulo="Partido" vazio="Todos os partidos" opcoes={opcoesPartido} atual={partido} params={Object.fromEntries(params({ p: null }))} />
+            </div>
+
+            <div className="bloco noite">
+              <h3>Voto de legenda, eleição a eleição</h3>
+              <ol className="serie-anos" aria-label={`Voto de legenda${partido ? ` do partido ${partido}` : ""} em ${uf ? NOME_UF[uf] : "seis estados"}, por ano`}>
+                {serieLeg.map((s) => (
+                  <li key={s.ano}>
+                    <Link scroll={false} href={href({ ano: s.ano })} className={s.ano === anoLeg ? "on" : undefined} aria-label={`${s.ano}: ${s.valor == null ? "sem votos" : pct(s.valor)}`}>
+                      <span className="serie-valor">{s.valor == null ? "—" : pct(s.valor, 1)}</span>
+                      <span className="serie-barra"><i style={{ "--v": maiorSerieLeg && s.valor ? s.valor / maiorSerieLeg : 0 } as CSSProperties} /></span>
+                      <span className="serie-ano">{String(s.ano).slice(2)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+              <p className="muted pequeno">Anos gerais: deputados{cargo !== "ambos" && ` (só ${cargo})`}; municipais: vereadores. Votos do 1º turno, nas eleições ordinárias.</p>
+            </div>
+
+            {rankingLeg.length > 0 && (
+              <div className="bloco noite">
+                <h3>Partidos com mais voto de legenda</h3>
+                <p className="muted pequeno">Parte de cada partido nos votos só na legenda para {cargoTexto}{uf ? ` em ${NOME_UF[uf]}` : ""} em {anoLeg}. Escolha um para pintar o mapa com ele.</p>
+                <ol className="extremos">
+                  {rankingLeg.map((r) => (
+                    <li key={r.partido}>
+                      <a href={href({ p: r.partido === partido ? null : r.partido })} data-mapa="" className={r.partido === partido ? "on" : undefined} aria-current={r.partido === partido ? "true" : undefined}>
+                        <span>{r.partido}</span><b>{pct(r.valor, 1)}</b>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            <ul className="atalhos">
+              <li><Link href={hrefAnalise}>Análise completa</Link></li>
+              <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
+            </ul>
+          </div>
+          ) : (
           <div className="painel s4" key={`${uf}-${mun?.id_municipio}`}>
+            {pediuLegenda && (
+              <div className="card aviso">
+                <h2>Voto de legenda indisponível</h2>
+                <p>A API não devolveu a análise <code>q5</code>. Confira se ela está rodando (<code>uvicorn app.main:app</code> em <code>api/</code>).</p>
+              </div>
+            )}
             <div className="bloco noite painel-cab">
               <p className="palco-sobre">{mun ? `Município · ${uf}` : uf ? `Estado · ${idsUf.length} municípios` : "AP, ES, MG, PE, RJ e RR"}</p>
               <h2>{nomeUnidade}</h2>
@@ -292,6 +454,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               </ul>
             )}
           </div>
+          )}
         </section>
       )}
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LinhaLegenda } from "../src/lib/legenda";
-import { conjunto, dinheiroTotal, legendaPorUf } from "../src/lib/mapa";
+import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos } from "../src/lib/mapa";
 import {
   classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
@@ -221,6 +221,45 @@ describe("mapa", () => {
   it("conjunto: média ponderada pela base", () => {
     expect(conjunto([{ uf: "MG", valor: 0.5, base: 300 }, { uf: "AP", valor: 0.1, base: 100 }])).toEqual({ uf: "todos", valor: 0.4, base: 400 });
     expect(conjunto([])).toBeNull();
+  });
+
+  it("anoNaLegenda: o mesmo ano ou o mais perto do mesmo tipo de eleição", () => {
+    const anos = [2018, 2020, 2022, 2024];
+    expect(anoNaLegenda(2022, anos)).toBe(2022);
+    expect(anoNaLegenda(2012, anos)).toBe(2020);
+    expect(anoNaLegenda(2010, anos)).toBe(2018);
+    expect(anoNaLegenda(2016, [2018, 2022])).toBe(2018);   // sem municipal: o mais perto
+    expect(anoNaLegenda(2012, [])).toBeUndefined();
+  });
+
+  it("doCargo: recorta só as eleições gerais", () => {
+    const ls = [le({}), le({ cargo: "Deputado estadual" }), le({ ano: 2024, cargo: "Vereador" })];
+    expect(doCargo(ls, "ambos")).toHaveLength(3);
+    expect(doCargo(ls, "estadual").map((l) => l.cargo)).toEqual(["Deputado estadual", "Vereador"]);
+  });
+
+  it("medirLegenda: parte da legenda sobre todos os votos; com partido, a dele sobre os votos de legenda", () => {
+    const ls = [le({}), le({ partido: "PL", votos_nominais: 70, votos_legenda: 30 }), le({ uf: "AP", votos_legenda: 50, votos_nominais: 50 })];
+    expect(medirLegenda(ls, { ano: 2022, uf: "MG" })).toEqual({ valor: 0.2, legenda: 40, total: 200 });
+    expect(medirLegenda(ls, { ano: 2022, uf: "MG", partido: "PL" })).toEqual({ valor: 0.75, legenda: 30, total: 40 });
+    expect(medirLegenda(ls, { ano: 2022 }).total).toBe(300);
+    expect(medirLegenda(ls, { ano: 2022, uf: "AP", partido: "PL" }).valor).toBeNull();   // não disputou: sem dado, não zero
+    expect(medirLegenda(ls, { ano: 2018 }).valor).toBeNull();
+  });
+
+  it("rankingPartidos: maior legenda primeiro, sem quem não teve voto de legenda", () => {
+    const r = rankingPartidos([le({}), le({ partido: "PL", votos_nominais: 70, votos_legenda: 30 }), le({ partido: "NOVO", votos_legenda: 0 })], { ano: 2022 });
+    expect(r).toEqual([{ partido: "PL", legenda: 30, valor: 0.75 }, { partido: "PT", legenda: 10, valor: 0.25 }]);
+  });
+
+  it("faixasFixas e casasDosCortes: passos redondos até o maior valor", () => {
+    expect(faixasFixas(0.14)).toEqual([0.03, 0.06, 0.09, 0.12]);
+    expect(faixasFixas(0.1)).toEqual([0.02, 0.04, 0.06, 0.08]);
+    expect(faixasFixas(0.012)).toEqual([0.0025, 0.005, 0.0075, 0.01]);
+    expect(faixasFixas(0)).toEqual([]);
+    expect(casasDosCortes([0.03, 0.06])).toBe(0);
+    expect(casasDosCortes([0.0025, 0.005])).toBe(2);
+    expect(casasDosCortes([0.025])).toBe(1);
   });
 
   it("dinheiroTotal: soma todos os anos sem as campanhas nacionais", () => {

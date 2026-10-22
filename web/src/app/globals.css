@@ -439,6 +439,17 @@ a.linha:hover { background: var(--panel2); }
 .trilha a { text-decoration: none; transition: color var(--t-hover) ease; }
 .trilha a:hover { color: var(--sobre-noite); }
 .trilha [aria-current] { color: var(--sobre-noite); font-weight: 600; }
+.palco h1 + .palco-sobre { margin-top: 12px; }
+/* o que o mapa pinta: abstenção ou voto de legenda (mesmo desenho da régua de anos) */
+.visoes { display: inline-flex; gap: 3px; padding: 4px; margin-bottom: 18px; border-radius: 8px; background: var(--noite2); }
+.visoes a { padding: 8px 14px; border-radius: 6px; font-size: 15px; font-weight: 600; color: var(--noite-muted); text-decoration: none; transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.visoes a:hover { background: var(--noite3); color: var(--sobre-noite); }
+.visoes a:active { transform: scale(0.97); }
+.visoes a[aria-current] { background: var(--sobre-noite); color: var(--noite); }
+.tirar-partido { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 7px 12px; border-radius: 6px; background: var(--brilho); color: var(--noite); font-size: 14px; font-weight: 600; text-decoration: none; transition: transform var(--t-press) var(--ease-out), filter var(--t-hover) ease; }
+.tirar-partido:hover { filter: brightness(1.08); }
+.tirar-partido:active { transform: scale(0.97); }
+.tirar-partido svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .palco-mapa { position: relative; min-height: 0; }
 .palco-dica { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); margin: 0; font-size: 14px; color: var(--noite-muted); white-space: nowrap; }
 .palco[aria-busy="true"] { cursor: progress; }
@@ -492,7 +503,7 @@ a.linha:hover { background: var(--panel2); }
 
 .palco-base { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding: 0 30px 26px; }
 .legenda-q { list-style: none; display: flex; gap: 2px; padding: 0; margin: 0; font-size: 13px; color: var(--noite-muted); }
-.legenda-q li { display: flex; flex-direction: column; gap: 6px; min-width: 58px; white-space: nowrap; }
+.legenda-q li { display: flex; flex-direction: column; gap: 6px; min-width: 58px; flex-shrink: 0; white-space: nowrap; }
 .legenda-q i { display: block; height: 10px; }
 .legenda-q li:first-child i { border-radius: 3px 0 0 3px; } .legenda-q li:last-child i { border-radius: 0 3px 3px 0; }
 .legenda-q .q0 { background: var(--q0); } .legenda-q .q1 { background: var(--q1); } .legenda-q .q2 { background: var(--q2); }
@@ -568,6 +579,10 @@ a.linha:hover { background: var(--panel2); }
 .extremos li.corte { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--noite-linha); }
 .extremos a { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 6px; text-decoration: none; transition: background-color var(--t-hover) ease; }
 .extremos a:hover { background: var(--noite3); }
+.extremos a.on { background: var(--brilho); color: var(--noite); font-weight: 600; }
+.painel-cab .cargos { margin-top: 18px; }
+.legenda-q .sem { background: var(--noite3); }
+.legenda-q .legenda-sem { margin-left: 12px; }
 .observatorio .atalhos { margin: 0; }
 .observatorio .atalhos a { background: var(--noite2); color: var(--sobre-noite); }
 @keyframes estado-entra { from { opacity: 0; transform: scale(0.6); } }
@@ -701,4 +716,8 @@ a.linha:hover { background: var(--panel2); }
   .colunas { --plot: 160px; gap: 4px; }
   .palco { position: relative; top: 0; height: 72svh; min-height: 480px; }
   .palco-topo, .palco-base { flex-wrap: wrap; }
+  .palco-base { gap: 14px; }
+  .legenda-q { flex-wrap: wrap; row-gap: 10px; }
+  .anos { max-width: 100%; overflow-x: auto; scrollbar-width: none; }   /* nove anos não cabem: a régua rola */
+  .anos .ano { flex-shrink: 0; }
 }
