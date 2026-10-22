@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { comoObjetos, lerEstatico } from "@/lib/data";
-import { ANO_BASE, cargoPadrao, corrigir, custoPorAno, custoPorCargo, custoPorUf, variacao, type LinhaCusto } from "@/lib/custo";
+import { cargoPadrao, custoPorAno, custoPorCargo, custoPorUf, variacao, type LinhaCusto } from "@/lib/custo";
 import { NOME_UF, TIPO_ELEICAO } from "@/lib/financiamento";
 import { inteiro, pct, reais } from "@/lib/format";
 import { BarrasH } from "@/components/BarrasH";
@@ -52,9 +52,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
     return `/analises/custo-cadeira?${p.toString()}#${ancora}`;
   };
   const primeiro = historico[0], ultimo = historico[historico.length - 1];
-  // a comparação entre eleições desconta a inflação (IPCA), em reais de dezembro de ANO_BASE
-  const mudouNominal = historico.length > 1 ? variacao(primeiro.porCadeira, ultimo.porCadeira) : null;
-  const mudou = historico.length > 1 ? variacao(corrigir(primeiro.porCadeira, primeiro.ano), corrigir(ultimo.porCadeira, ultimo.ano)) : null;
+  const mudou = historico.length > 1 ? variacao(primeiro.porCadeira, ultimo.porCadeira) : null;
 
   return (
     <>
@@ -93,7 +91,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
               </p>
               <p className="escala">
                 Custo da cadeira = gasto de todos que fizeram campanha para o cargo ÷ número de vagas. Gasto por candidato = gasto de quem
-                disputou ÷ número de candidatos. Valores de {ano}, sem descontar a inflação. Clique num cargo para vê-lo em destaque.
+                disputou ÷ número de candidatos. Clique num cargo para vê-lo em destaque.
                 {atual.naoDisputouComGasto > 0 && ` O custo da cadeira inclui ${reais(atual.gastoNaoDisputou)} de ${inteiro(atual.naoDisputouComGasto)} ${atual.naoDisputouComGasto === 1 ? "candidato que fez campanha mas não chegou a disputar" : "candidatos que fizeram campanha mas não chegaram a disputar"} (candidatura barrada, renúncia ou substituição).`}
               </p>
             </>
@@ -118,8 +116,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
           {atual?.parteEleitos != null && (
             <div className="bloco cinza"><p className="figura"><Rolar valor={pct(atual.parteEleitos, 0)} /></p><p>do dinheiro foi gasto por quem se elegeu; o resto, por quem perdeu.</p></div>
           )}
-          <div className="bloco"><p className="aviso-causa"><b>Atenção:</b> os valores de cada eleição estão em reais da época; a comparação entre
-            eleições, em “Como mudou”, desconta a inflação.
+          <div className="bloco"><p className="aviso-causa"><b>Atenção:</b> valores como declarados ao TSE em cada eleição.
             {cargo === "Presidente" && " A campanha a presidente é nacional: o gasto não é só destes seis estados."}</p></div>
         </aside>
       </div>
@@ -129,17 +126,16 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
           <h2 id="h-hist">Como mudou: {cargo.toLowerCase()}{uf ? ` em ${NOME_UF[uf] ?? uf}` : ""}</h2>
           {mudou !== null && (
             <p className="manchete pequena">
-              De {primeiro.ano} para {ultimo.ano}, descontada a inflação, o custo de uma cadeira {mudou >= 0 ? "subiu" : "caiu"} <b>{pct(Math.abs(mudou), 0)}</b>:
-              {" "}de {reais(corrigir(primeiro.porCadeira, primeiro.ano) ?? 0)} para {reais(corrigir(ultimo.porCadeira, ultimo.ano) ?? 0)}, em reais de {ANO_BASE}.
-              {mudouNominal !== null && <> Sem descontar a inflação, a {mudouNominal >= 0 ? "alta" : "queda"} seria de {pct(Math.abs(mudouNominal), 0)}.</>}
+              De {primeiro.ano} para {ultimo.ano}, o custo de uma cadeira {mudou >= 0 ? "subiu" : "caiu"} <b>{pct(Math.abs(mudou), 0)}</b>:
+              {" "}de {reais(primeiro.porCadeira ?? 0)} para {reais(ultimo.porCadeira ?? 0)}.
             </p>
           )}
-          <p className="escala">O tamanho da barra é o custo de uma cadeira em cada eleição, corrigido pela inflação (IPCA) para reais de dezembro de {ANO_BASE}.</p>
-          <BarrasH compacto titulo={`Custo de uma cadeira de ${cargo} por eleição, em reais de ${ANO_BASE}`}
+          <p className="escala">O tamanho da barra é o custo de uma cadeira em cada eleição para esse cargo.</p>
+          <BarrasH compacto titulo={`Custo de uma cadeira de ${cargo} por eleição`}
             linhas={historico.map((c) => ({
-              chave: String(c.ano), rotulo: String(c.ano), detalhe: TIPO_ELEICAO(c.ano), valor: corrigir(c.porCadeira, c.ano) ?? 0, classe: "pub",
-              texto: c.porCadeira === null ? "—" : reais(corrigir(c.porCadeira, c.ano)!),
-              subtexto: `valor da época: ${c.porCadeira === null ? "—" : reais(c.porCadeira)}\n${inteiro(c.candidatos)} candidatos, ${inteiro(c.vagas)} vagas`,
+              chave: String(c.ano), rotulo: String(c.ano), detalhe: TIPO_ELEICAO(c.ano), valor: c.porCadeira ?? 0, classe: "pub",
+              texto: c.porCadeira === null ? "—" : reais(c.porCadeira),
+              subtexto: `${c.porCandidato === null ? "" : `${reais(c.porCandidato)} por candidato`}\n${inteiro(c.candidatos)} candidatos, ${inteiro(c.vagas)} vagas`,
               href: href({ ano: String(c.ano) }), atual: c.ano === ano,
             }))} />
         </section>
@@ -170,7 +166,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
           <li>Custo da cadeira = gasto de todos que fizeram campanha para o cargo ÷ número de vagas. Entra também quem gastou mas não chegou a disputar (candidatura barrada, renúncia ou substituição): esse dinheiro também foi gasto na disputa.</li>
           <li>Gasto por candidato (a fórmula do enunciado) = gasto de quem disputou ÷ número de candidatos que disputaram. Só titulares e eleições ordinárias; vagas conforme o TSE.</li>
           <li>Candidato que não entregou a prestação final conta com gasto zero (são poucos: cerca de 1% do valor). Não há dados de despesas antes de 2018 na base.</li>
-          <li>Inflação: os cartões mostram os valores de cada eleição em reais da época. “Como mudou” corrige pelo IPCA anual do IBGE até dezembro de {ANO_BASE}, tratando o gasto como de dezembro do ano da eleição.</li>
+          <li>Valores exatamente como declarados ao TSE em cada eleição, sem nenhum ajuste.</li>
         </ul>
       </section>
     </>

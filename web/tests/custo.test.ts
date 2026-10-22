@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  ANO_BASE, cargoPadrao, corrigir, custoDoCargo, custoPorAno, custoPorCargo, custoPorUf, fatorInflacao, variacao, type LinhaCusto,
-} from "../src/lib/custo";
+import { cargoPadrao, custoDoCargo, custoPorAno, custoPorCargo, custoPorUf, variacao, type LinhaCusto } from "../src/lib/custo";
 
 const l = (o: Partial<LinhaCusto>): LinhaCusto => ({
   ano: 2022, cargo: "Deputado federal", uf: "MG", candidatos: 100, com_gasto: 90, eleitos: 10, vagas: 10,
@@ -69,23 +67,5 @@ describe("variacao e cargoPadrao", () => {
     expect(cargoPadrao(["Presidente", "Deputado federal"], 2022)).toBe("Deputado federal");
     expect(cargoPadrao(["Prefeito", "Vereador"], 2024)).toBe("Prefeito");
     expect(cargoPadrao(["Vereador"], 2024)).toBe("Vereador");
-  });
-});
-
-describe("inflação (IPCA)", () => {
-  it("leva valores ao ano-base acumulando o IPCA dos anos seguintes", () => {
-    expect(ANO_BASE).toBe(2024);
-    expect(fatorInflacao(2024)).toBe(1);
-    expect(fatorInflacao(2022)).toBeCloseTo(1.0462 * 1.0483, 6);
-    expect(fatorInflacao(2018)).toBeCloseTo(1.0431 * 1.0452 * 1.1006 * 1.0579 * 1.0462 * 1.0483, 6);
-    expect(corrigir(100, 2022)).toBeCloseTo(109.67, 2);
-    expect(corrigir(null, 2022)).toBeNull();
-  });
-  it("desconta a inflação da variação entre eleições", () => {
-    const real = variacao(corrigir(2_382_378, 2018), corrigir(5_669_010, 2022))!;
-    expect(real).toBeCloseTo(0.874, 2);
-  });
-  it("avisa quando falta o IPCA de um ano", () => {
-    expect(() => fatorInflacao(2017)).toThrow();
   });
 });

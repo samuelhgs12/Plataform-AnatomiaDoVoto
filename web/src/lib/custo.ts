@@ -63,7 +63,7 @@ export function custoPorUf(linhas: LinhaCusto[], ano: number, cargo: string): (C
     .sort((a, b) => (b.porCadeira ?? 0) - (a.porCadeira ?? 0) || a.uf.localeCompare(b.uf));
 }
 
-/** Variação entre dois valores ("subiu 87%"); null se não dá para comparar. */
+/** Variação entre dois valores ("subiu 138%"); null se não dá para comparar. */
 export function variacao(antes: number | null, depois: number | null): number | null {
   return antes && depois !== null ? depois / antes - 1 : null;
 }
@@ -72,28 +72,4 @@ export function variacao(antes: number | null, depois: number | null): number | 
 export function cargoPadrao(cargos: string[], ano: number): string | undefined {
   const preferido = ano % 4 === 2 ? "Deputado federal" : "Prefeito";
   return cargos.includes(preferido) ? preferido : cargos[0];
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// Inflação. IPCA anual (dezembro a dezembro), IBGE, em %. Para comparar eleições de anos diferentes, os valores são
-// levados a reais de dezembro de ANO_BASE. Aproximação: o gasto de campanha (agosto a outubro) é tratado como de dezembro
-// do ano da eleição; o erro é pequeno (cerca de 1 ponto) e igual para todos os cargos.
-// ---------------------------------------------------------------------------------------------------------------
-export const IPCA_ANUAL: Record<number, number> = { 2019: 4.31, 2020: 4.52, 2021: 10.06, 2022: 5.79, 2023: 4.62, 2024: 4.83 };
-export const ANO_BASE = 2024;
-
-/** Quanto multiplicar um valor de dezembro de `ano` para levá-lo a reais de dezembro de ANO_BASE. */
-export function fatorInflacao(ano: number): number {
-  let fator = 1;
-  for (let a = ano + 1; a <= ANO_BASE; a++) {
-    const taxa = IPCA_ANUAL[a];
-    if (taxa === undefined) throw new Error(`IPCA de ${a} não cadastrado em IPCA_ANUAL`);
-    fator *= 1 + taxa / 100;
-  }
-  return fator;
-}
-
-/** Valor de `ano` em reais de dezembro de ANO_BASE (null continua null). */
-export function corrigir(valor: number | null, ano: number): number | null {
-  return valor === null ? null : valor * fatorInflacao(ano);
 }
