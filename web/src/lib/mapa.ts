@@ -1,7 +1,75 @@
 // Números por estado da página inicial (voto de legenda e dinheiro das campanhas).
 
 import { porUf, type LinhaFontes } from "./financiamento";
-import { proporcao, type LinhaLegenda } from "./legenda";
+import { cicloDoAno, proporcao, type CargoCiclo, type LinhaLegenda } from "./legenda";
+
+/** O que o mapa da página inicial pinta: a abstenção (padrão) ou o voto de legenda. */
+export const VISOES = ["abstencao", "legenda"] as const;
+export type Visao = (typeof VISOES)[number];
+
+/**
+ * Ano da visão de legenda a partir do ano escolhido na abstenção: o mesmo, se houver legenda nele; senão o mais perto
+ * do mesmo tipo de eleição (2012, municipal → 2020; 2010, geral → 2018). Sem anos de legenda, undefined.
+ */
+export function anoNaLegenda(ano: number, anos: number[]): number | undefined {
+  if (anos.includes(ano)) return ano;
+  const mesmoCiclo = anos.filter((a) => cicloDoAno(a) === cicloDoAno(ano));
+  const lista = mesmoCiclo.length ? mesmoCiclo : anos;
+  return lista.reduce<number | undefined>((m, a) => (m === undefined || Math.abs(a - ano) < Math.abs(m - ano) ? a : m), undefined);
+}
+
+/** Recorta o cargo nas eleições gerais (deputado federal, estadual ou os dois); nas municipais só há vereador. */
+export const doCargo = (linhas: LinhaLegenda[], cargo: CargoCiclo) =>
+  cargo === "ambos" ? linhas : linhas.filter((l) => cicloDoAno(l.ano) === "municipal" || l.cargo.toLowerCase().includes(cargo));
+
+/** valor = legenda / total; null sem votos ou, com partido, se ele não disputou ali. */
+export interface MedidaLegenda { valor: number | null; legenda: number; total: number }
+
+/**
+ * Voto de legenda num recorte (ano e, se houver, estado). Sem partido: a parte de todos os votos (nominais + legenda)
+ * dada só à legenda, de qualquer partido. Com partido: a parte dos votos de legenda que foi para ele (a "força" do
+ * partido na legenda); o total passa a ser só os votos de legenda.
+ */
+export function medirLegenda(linhas: LinhaLegenda[], { ano, uf, partido }: { ano: number; uf?: string; partido?: string }): MedidaLegenda {
+  let legenda = 0, total = 0, disputou = !partido;
+  for (const l of linhas) {
+    if (l.ano !== ano || (uf && l.uf !== uf)) continue;
+    total += partido ? l.votos_legenda : l.votos_legenda + l.votos_nominais;
+    if (!partido || l.partido === partido) { legenda += l.votos_legenda; disputou = true; }
+  }
+  return { valor: total > 0 && disputou ? legenda / total : null, legenda, total };
+}
+
+/** Partidos por votos de legenda no recorte, do maior para o menor; valor: a parte de cada um nos votos de legenda. */
+export function rankingPartidos(linhas: LinhaLegenda[], { ano, uf }: { ano: number; uf?: string }): { partido: string; legenda: number; valor: number }[] {
+  const porPartido = new Map<string, number>();
+  let total = 0;
+  for (const l of linhas) {
+    if (l.ano !== ano || (uf && l.uf !== uf)) continue;
+    total += l.votos_legenda;
+    porPartido.set(l.partido, (porPartido.get(l.partido) ?? 0) + l.votos_legenda);
+  }
+  return [...porPartido].filter(([, v]) => v > 0)
+    .map(([partido, legenda]) => ({ partido, legenda, valor: legenda / total }))
+    .sort((a, b) => b.legenda - a.legenda || a.partido.localeCompare(b.partido));
+}
+
+/**
+ * Cortes de n faixas iguais de 0 até o maior valor, com passo "redondo" (1; 1,5; 2; 2,5; 3; 4; 5; 6 ou 8 × 10^k). Com seis estados,
+ * quintos não fazem sentido (um estado e pouco por cor): faixas fixas deixam ver a distância entre eles.
+ */
+export function faixasFixas(maior: number, n = 5): number[] {
+  if (!(maior > 0)) return [];
+  const bruto = maior / n, potencia = 10 ** Math.floor(Math.log10(bruto));
+  const passo = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find((f) => f * potencia >= bruto - 1e-12)! * potencia;
+  return Array.from({ length: n - 1 }, (_, i) => Number(((i + 1) * passo).toPrecision(12)));
+}
+
+/** Casas decimais (em pontos percentuais) para escrever os cortes sem arredondar nenhum: 0,025 → 1 ("2,5%"). */
+export function casasDosCortes(cortes: number[]): number {
+  for (let k = 0; k < 3; k++) if (cortes.every((c) => Math.abs(c * 100 * 10 ** k - Math.round(c * 100 * 10 ** k)) < 1e-6)) return k;
+  return 3;
+}
 
 /** valor: proporção de 0 a 1; base: o denominador (reais ou votos), para o leitor saber o tamanho do que foi medido. */
 export interface ValorUf { uf: string; valor: number; base: number }
