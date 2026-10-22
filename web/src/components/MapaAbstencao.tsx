@@ -32,6 +32,10 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
   const comDados = new Map(estados.map((e) => [e.uf, e]));
   const tela = (x: number, y: number) => [camera.x + x * camera.k, camera.y + y * camera.k];
   const contorno = uf ? ESTADOS_MAPA.find((e) => e.uf === uf) : undefined;
+  // a nova cor varre os estados de oeste para leste (0 = o mais a oeste, 1 = o mais a leste), como os municípios no zoom
+  const xs = ESTADOS_MAPA.filter((e) => comDados.has(e.uf)).map((e) => e.x);
+  const [oeste, leste] = [Math.min(...xs), Math.max(...xs)];
+  const varre = (x: number) => ({ "--varre": leste > oeste ? Math.round(((x - oeste) / (leste - oeste)) * 100) / 100 : 0 }) as CSSProperties;
   return (
     <svg viewBox={`0 0 ${TELA.larg} ${TELA.alt}`} className="mapa-abst" role="group" aria-label={titulo} data-zoom={uf && zoom ? "uf" : "brasil"}>
       <g className="lupa">
@@ -43,7 +47,7 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
             const d = comDados.get(e.uf)!;
             return (
               <a key={e.uf} href={d.href} data-mapa="" data-dica={d.descricao} aria-label={d.descricao} aria-current={e.uf === uf ? "true" : undefined}
-                className={`uf ${d.classe}${e.uf === uf ? " on" : ""}`}>
+                className={`uf ${d.classe}${e.uf === uf ? " on" : ""}`} style={varre(e.x)}>
                 <path d={e.d} />
               </a>
             );
@@ -68,10 +72,11 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
             const [x, y] = tela(e.x + dx, e.y + dy);
             const d = comDados.get(e.uf)!;
             return (
-              <g key={e.uf} className="etiqueta" transform={`translate(${x} ${y})`}>
+              <g key={e.uf} className="etiqueta" transform={`translate(${x} ${y})`} style={varre(e.x)}>
                 <rect x={-33} y={-13} width={66} height={26} rx={13} />
                 <text x={-15} dy="0.35em" className="etiqueta-sigla">{d.sigla}</text>
-                <text x={13} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
+                {/* a chave muda com o valor: o texto novo entra no lugar do antigo em vez de trocar seco */}
+                <text key={d.valor} x={13} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
               </g>
             );
           })}

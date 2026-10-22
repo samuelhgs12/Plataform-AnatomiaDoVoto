@@ -293,7 +293,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               {geral && (
                 <div className="chips cargos" role="group" aria-label="Deputados">
                   {CARGOS.map((c) => (
-                    <a key={c} href={href({ cargo: c })} data-mapa="" className={`chip${c === cargo ? " on" : ""}`} aria-current={c === cargo ? "true" : undefined}>{ROTULO_CARGO[c]}</a>
+                    <Link key={c} scroll={false} href={href({ cargo: c })} className={`chip${c === cargo ? " on" : ""}`} aria-current={c === cargo ? "true" : undefined}>{ROTULO_CARGO[c]}</Link>
                   ))}
                 </div>
               )}
@@ -323,9 +323,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                 <ol className="extremos">
                   {rankingLeg.map((r) => (
                     <li key={r.partido}>
-                      <a href={href({ p: r.partido === partido ? null : r.partido })} data-mapa="" className={r.partido === partido ? "on" : undefined} aria-current={r.partido === partido ? "true" : undefined}>
+                      <Link scroll={false} href={href({ p: r.partido === partido ? null : r.partido })} className={r.partido === partido ? "on" : undefined} aria-current={r.partido === partido ? "true" : undefined}>
                         <span>{r.partido}</span><b>{pct(r.valor, 1)}</b>
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ol>
