@@ -159,6 +159,21 @@ def test_despesas_regras_do_projeto(client):
     assert fisica["publicidade"] is True and fisica["mediana_cargo"] == 3000 and d["n_comparaveis"] == 1
 
 
+def test_propaganda_por_categoria_em_centavos(client):
+    p = client.get("/api/candidaturas/2/propaganda").json()
+    # PARCIAL (500) e transferência (700) ficam de fora; categorias só de propaganda, da maior para a menor
+    assert (p["lancamentos"], p["total_centavos"], p["propaganda_centavos"]) == (3, 550_000, 450_000)
+    assert p["categorias"] == [
+        {"origem": "Publicidade por materiais impressos", "grupo": "propaganda_fisica", "lancamentos": 1, "centavos": 300_000},
+        {"origem": "Publicidade por mídia digital", "grupo": "propaganda_digital", "lancamentos": 1, "centavos": 150_000},
+    ]
+
+
+def test_propaganda_candidatura_sem_despesa(client):
+    p = client.get("/api/candidaturas/1/propaganda").json()
+    assert (p["lancamentos"], p["total_centavos"], p["propaganda_centavos"], p["categorias"]) == (0, 0, 0, [])
+
+
 def test_palavras_sem_palavras_vazias(client):
     termos = {p["termo"]: p["freq"] for p in client.get("/api/candidaturas/2/palavras").json()}
     assert termos["santinhos"] == 1 and termos["impulsionamento"] == 1
@@ -179,7 +194,7 @@ def test_receitas_candidatura_sem_receita(client):
 
 
 def test_candidatura_inexistente(client):
-    for rota in ("despesas", "palavras", "receitas"):
+    for rota in ("despesas", "propaganda", "palavras", "receitas"):
         assert client.get(f"/api/candidaturas/9999/{rota}").status_code == 404
 
 
@@ -215,7 +230,7 @@ def test_cabecalho_de_cache_nos_dados_historicos(client):
 def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
-             "/api/candidaturas/2/despesas", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
+             "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
              "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q10"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]
     for rota in rotas:

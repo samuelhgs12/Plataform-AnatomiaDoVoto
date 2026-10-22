@@ -119,6 +119,22 @@ class Despesas(BaseModel):
     n_comparaveis: int
 
 
+class CategoriaPropaganda(BaseModel):
+    origem: str          # categoria original do TSE (origem_despesa)
+    grupo: str           # propaganda_fisica, propaganda_audiovisual ou propaganda_digital
+    lancamentos: int
+    centavos: int
+
+
+class Propaganda(BaseModel):
+    """Pergunta 9: onde a campanha investiu em propaganda. Valores em centavos inteiros (valor contratado)."""
+    id_candidatura: int
+    lancamentos: int            # despesas consideradas (todas as categorias, sem transferências); 0 = sem dados
+    total_centavos: int
+    propaganda_centavos: int
+    categorias: list[CategoriaPropaganda]
+
+
 class Palavra(BaseModel):
     termo: str
     freq: int

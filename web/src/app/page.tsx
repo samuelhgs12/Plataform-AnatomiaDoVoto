@@ -289,7 +289,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                 <li><Link href={`/candidatos?uf=${uf}`}>Candidatos</Link></li>
                 <li><Link href={`/analises/financiamento?uf=${uf}`}>Financiamento</Link></li>
                 <li><Link href={`/analises/legenda?uf=${uf}`}>Voto de legenda</Link></li>
-                <li><Link href={`/analises/pos-mandato?uf=${uf}`}>Depois do mandato</Link></li>
               </ul>
             )}
           </div>

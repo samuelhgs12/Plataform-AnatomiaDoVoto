@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 
 from .. import db
-from ..schemas import CategoriaGasto, Despesas, Listagem, Palavra, Receitas
+from ..schemas import CategoriaGasto, Despesas, Listagem, Palavra, Propaganda, Receitas
 from .util import contar_palavras
 
 router = APIRouter(tags=["candidaturas"])
@@ -65,6 +65,16 @@ def despesas(id_candidatura: int):
     return Despesas(id_candidatura=id_candidatura, ano=ctx["ano"], cargo=ctx["cargo"], uf=ctx["uf"], total=total,
                     propaganda=propaganda, pct_propaganda=(propaganda / total) if total else 0.0, categorias=itens,
                     n_comparaveis=n)
+
+
+@router.get("/candidaturas/{id_candidatura}/propaganda", response_model=Propaganda)
+def propaganda(id_candidatura: int):
+    """Onde a campanha investiu em propaganda (pergunta 9): totais e propaganda por categoria original do TSE, em centavos."""
+    _contexto(id_candidatura)
+    t = db.um("propaganda_totais", (id_candidatura,)) or {}
+    return Propaganda(id_candidatura=id_candidatura, lancamentos=t.get("lancamentos") or 0,
+                      total_centavos=t.get("total_centavos") or 0, propaganda_centavos=t.get("propaganda_centavos") or 0,
+                      categorias=db.consultar("propaganda_categorias", (id_candidatura,)))
 
 
 @router.get("/candidaturas/{id_candidatura}/palavras", response_model=list[Palavra])

@@ -21,20 +21,23 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 - Exceção provisória: o mapa da página inicial ainda é JSON estático (`pipeline/export_static.py` → `web/public/data/mapa.json`,
   lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`,
   tipos em `src/lib/abstencao.ts`), porque parte dos dados ainda vem do TSE, fora do banco (decisão 10).
+- O que é **por candidatura** não é análise: fica no perfil (`candidato/[id]`), com um endpoint por bloco em
+  `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. P8:
+  `receitas` → `DinheiroCampanha`; P9: `propaganda` (centavos inteiros) → `PropagandaCampanha` (lógica em `src/lib/propaganda.ts`).
 
 ## Como filtros viram searchParams
 
 - `searchParams` é uma `Promise` (Next 16): `const sp = await searchParams`; normalize com `um()` (pega o 1º valor
   de arrays) e **valide contra as opções que existem nos dados** (ex.: `ufs.includes(uf)`), senão ignore o filtro.
 - Análises usam `export const dynamic = "force-dynamic"` e filtros como `<Link className="chip">` (classe `on` no ativo);
-  um helper `href(nova)` mescla o estado atual com a mudança via `URLSearchParams` (veja `analises/pos-mandato`).
+  um helper `href(nova)` mescla o estado atual com a mudança via `URLSearchParams` (veja `analises/legenda`).
 
 ## Quando usar componente cliente (`"use client"`)
 
 Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (selects que aplicam na hora com
 `router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
 `BuscaNome` (abre/fecha) e `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial). Gráficos
-(`MapaAbstencao`, `Dispersao`, `FlowBars`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
+(`MapaAbstencao`, `Dispersao`, `BarrasH`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
 
 ## Design visual
 
