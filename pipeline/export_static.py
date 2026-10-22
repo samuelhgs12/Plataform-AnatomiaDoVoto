@@ -157,7 +157,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--banco", default=os.environ.get("DATABASE", "md:bdr"))
     p.add_argument("--saida", default=str(RAIZ.parent / "web" / "public" / "data"))
-    p.add_argument("consultas", nargs="*", choices=["q5", "q8", "q10", "mapa"], default=["q5", "q8", "q10", "mapa"])
+    p.add_argument("consultas", nargs="*", choices=["q1", "q2", "q5", "q8", "q10", "mapa"], default=["q1", "q2", "q5", "q8", "q10", "mapa"])
     a = p.parse_args()
     con = conectar(a.banco)
     destino = Path(a.saida)
