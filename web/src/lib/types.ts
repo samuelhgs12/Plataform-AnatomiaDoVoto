@@ -36,5 +36,5 @@ export interface Receitas {
   fundo_eleitoral: number; fundo_partidario: number; doacoes_pessoas: number; recursos_proprios: number; outros_privados: number;
 }
 
-/** Formato dos JSONs estáticos gerados por pipeline/export_static.py */
+/** Formato das tabelas de /api/analises/<nome> e do JSON estático do mapa (pipeline/export_static.py) */
 export interface TabelaEstatica { colunas: string[]; linhas: (string | number | boolean | null)[][] }

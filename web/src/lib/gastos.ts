@@ -1,5 +1,5 @@
 // Lógica da página "recursos de campanha e sucesso eleitoral" (pergunta 2), sem dependência do React: fácil de testar.
-// Os dados vêm de public/data/q2.json, gerado por pipeline/sql/q2.sql, em três medidas (coluna "medida"): o gasto, a
+// Os dados vêm de GET /api/analises/q2 (api/app/analises/q2.sql), em três medidas (coluna "medida"): o gasto, a
 // receita (inclusive material doado por outros candidatos) e "recursos" (o maior dos dois).
 
 import { compararGrupos, responder, zContagem, type Resposta } from "./estatistica";

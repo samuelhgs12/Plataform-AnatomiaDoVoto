@@ -1,11 +1,10 @@
 -- Copiado do repositório de carga (consultas/q10_painel.sql). Se a regra mudar lá, atualize aqui.
 -- Pergunta 10 — consultas agregadas para o painel (DuckDB). Roda no banco final (bdr_final.duckdb ou MotherDuck).
--- Uso: python rodar_paineis.py q10        (gera os CSVs em painel_q10/)
+-- Servida pela API em GET /api/analises/q10 (cada COPY ... TO 'x.csv' vira a tabela x da resposta).
+-- A busca individual do painel (politicos.csv e trajetorias.csv) ficou de fora: o perfil do político usa a API.
 --
 -- Mudança em relação à versão anterior: só entram candidaturas de TITULARES (v.eh_titular). Vices e suplentes
 -- vêm sem resultado até 2020 e com resultado em 2022 e 2024, o que deixaria a trajetória diferente por época.
--- Gera 6 CSVs pequenos na pasta ./painel_q10/ (crie a pasta antes):
---     mkdir painel_q10 && duckdb <seu_banco>.duckdb < q10_painel.sql
 --
 -- Correções em relação ao q10_trajetoria.sql:
 --   * só eleições ORDINÁRIAS (suplementares criavam anos ímpares e quebravam a reeleição)
@@ -236,23 +235,3 @@ COPY (
     LEFT JOIN candidato c USING (id_candidato)
     ORDER BY t.id_candidato, t.ano
 ) TO 'painel_q10/exemplos.csv' (HEADER);
-
--------------------------------------------------------------------------------
--- 9. Busca individual do painel: todos os políticos eleitos ao menos uma vez e suas candidaturas
---    (politicos.csv = 1 linha por pessoa; trajetorias.csv = 1 linha por pessoa x ano)
--------------------------------------------------------------------------------
-COPY (
-    SELECT p.id_candidato, c.nome_civil AS nome, p.uf, p.mandatos, p.disputas, p.estreia, p.ultimo_ano
-    FROM pessoa p
-    LEFT JOIN candidato c USING (id_candidato)
-    WHERE p.mandatos >= 1
-    ORDER BY p.mandatos DESC, p.disputas DESC, p.id_candidato
-) TO 'painel_q10/politicos.csv' (HEADER);
-
-COPY (
-    SELECT t.id_candidato, t.ano, t.cargo, t.nivel, t.sigla_partido, t.partido, t.categoria, t.eleito, t.votos_1t
-    FROM traj t
-    JOIN pessoa p USING (id_candidato)
-    WHERE p.mandatos >= 1
-    ORDER BY t.id_candidato, t.ano
-) TO 'painel_q10/trajetorias.csv' (HEADER);

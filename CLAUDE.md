@@ -9,32 +9,35 @@ tem mudanças em relação ao que você conhece — consulte `web/node_modules/n
 calcular proporções e escalas são funções puras em `src/lib/<assunto>.ts`, testadas em `web/tests/`. Páginas e
 componentes recebem os dados prontos e só montam o HTML/SVG.
 
-## Como uma análise lê o JSON estático
+## Como uma análise chega à página
 
-- `pipeline/export_static.py` roda `pipeline/sql/q5.sql`, `q8.sql`, `q9.sql`, `q10.sql` e `mapa.sql` (ou só os que forem passados:
-  `python export_static.py mapa`); cada `COPY (...) TO 'x.csv'` vira a chave `x` em `web/public/data/<consulta>.json`,
-  no formato `{colunas: [...], linhas: [[...]]}` (`TabelaEstatica`). q5 tem `legenda`, `eventos` e `linhagem` (tipos em
-  `src/lib/legenda.ts`); mapa tem `municipios`, `participacao`, `indicadores` e `dicionario` (tipos em `src/lib/abstencao.ts`).
-- A P9 é por candidatura (centenas de milhares de linhas): `gravar_q9` divide em `web/public/data/q9/indice.json` + um
-  arquivo por eleição e UF (`q9/<ano>-<UF>.json`, presidente em `<ano>-BR.json`), em centavos inteiros, e confere as
-  somas antes de gravar; a página lê `lerEstatico("q9/indice")` e só o recorte escolhido (tipos em `src/lib/propaganda.ts`).
-- Na página (componente de servidor, `async`): `await lerEstatico("q5")` (`src/lib/data.ts`, lê do disco, devolve
-  `null` se o arquivo não existe) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
-- Se a tabela faltar, mostre o `card aviso` pedindo para rodar `python export_static.py` (veja `analises/legenda`).
+- Cada `api/app/analises/<nome>.sql` vira `GET /api/analises/<nome>` sozinho (sem registrar nada): os `CREATE TEMP`
+  preparam a sessão e cada `COPY (...) TO 'x.csv'` vira a tabela `x`, no formato `{colunas: [...], linhas: [[...]]}`
+  (`TabelaEstatica`). `?tabela=x` (pode repetir) devolve só as pedidas. q5 tem `legenda`, `eventos` e `linhagem` (tipos
+  em `src/lib/legenda.ts`). O resultado fica no cache da API e do Next (dados históricos).
+- Na página (componente de servidor, `async`): `await lerAnalise("q5", ["legenda"])` (`src/lib/api.ts`, devolve `null`
+  se a API não responder) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
+- Se a tabela faltar, mostre o `card aviso` dizendo que a API não respondeu (veja `analises/legenda`).
+- Exceção provisória: o mapa da página inicial ainda é JSON estático (`pipeline/export_static.py` → `web/public/data/mapa.json`,
+  lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`,
+  tipos em `src/lib/abstencao.ts`), porque parte dos dados ainda vem do TSE, fora do banco (decisão 10).
+- O que é **por candidatura** não é análise: fica no perfil (`candidato/[id]`), com um endpoint por bloco em
+  `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. P8:
+  `receitas` → `DinheiroCampanha`; P9: `propaganda` (centavos inteiros) → `PropagandaCampanha` (lógica em `src/lib/propaganda.ts`).
 
 ## Como filtros viram searchParams
 
 - `searchParams` é uma `Promise` (Next 16): `const sp = await searchParams`; normalize com `um()` (pega o 1º valor
   de arrays) e **valide contra as opções que existem nos dados** (ex.: `ufs.includes(uf)`), senão ignore o filtro.
 - Análises usam `export const dynamic = "force-dynamic"` e filtros como `<Link className="chip">` (classe `on` no ativo);
-  um helper `href(nova)` mescla o estado atual com a mudança via `URLSearchParams` (veja `analises/pos-mandato`).
+  um helper `href(nova)` mescla o estado atual com a mudança via `URLSearchParams` (veja `analises/legenda`).
 
 ## Quando usar componente cliente (`"use client"`)
 
 Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (selects que aplicam na hora com
 `router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
 `BuscaNome` (abre/fecha) e `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial). Gráficos
-(`MapaAbstencao`, `Dispersao`, `FlowBars`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
+(`MapaAbstencao`, `Dispersao`, `BarrasH`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
 
 ## Design visual
 

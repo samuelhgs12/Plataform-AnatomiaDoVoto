@@ -1,6 +1,6 @@
 -- Pergunta 8: recursos públicos x sucesso eleitoral (e, como contexto, de onde vem o dinheiro das campanhas).
 -- Roda no banco final (bdr_final.duckdb ou MotherDuck).
--- Uso: python export_static.py   (grava web/public/data/q8.json)
+-- Servida pela API em GET /api/analises/q8 (cada COPY ... TO 'x.csv' vira a tabela x da resposta)
 --
 -- Regras do projeto: só titulares, eleição ordinária e quem de fato disputou; prestação FINAL ou REGULARIZACAO_OMISSAO.
 -- Receitas só existem de 2018 em diante. Duas medidas, para dois usos:

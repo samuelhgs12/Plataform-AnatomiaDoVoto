@@ -1,5 +1,6 @@
 -- Pergunta 2: existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?
--- Roda no banco final (bdr_final.duckdb ou MotherDuck). Uso: python export_static.py q2   (grava web/public/data/q2.json)
+-- Roda no banco final (bdr_final.duckdb ou MotherDuck). Servida pela API em GET /api/analises/q2 (cada COPY ... TO
+-- 'x.csv' vira a tabela x da resposta)
 --
 -- Três medidas, todas da prestação de contas FINAL ou REGULARIZACAO_OMISSAO (coluna "medida" nas tabelas exportadas):
 --   * gasto:    despesas (vw_despesa_candidatura), sem transferências para outros candidatos ou partidos;

@@ -7,11 +7,13 @@ import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/components/PartyChip";
 import { Timeline } from "@/components/Timeline";
 import { DinheiroCampanha } from "@/components/DinheiroCampanha";
+import { PropagandaCampanha } from "@/components/PropagandaCampanha";
+import type { Propaganda } from "@/lib/propaganda";
 import { naLinhaDoTempo } from "@/lib/carreira";
 import { Rolar } from "@/components/Rolar";
 
 type Props = { params: Promise<{ id: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
-const ANO_RECEITAS = 2018;   // a base só tem prestação de contas (receitas) de 2018 em diante
+const ANO_RECEITAS = 2018;   // a base só tem prestação de contas (receitas e despesas) de 2018 em diante
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -32,10 +34,15 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
   const naLinha = naLinhaDoTempo(carreira);   // disputadas + vice-prefeito
   const ultima = disputadas.at(-1);
   const nome = candidato.nome_civil ?? ultima?.nome_urna ?? "Candidato";
-  // pergunta 8: campanhas com dados de receita, da mais recente para a mais antiga; ?campanha=<id_candidatura> escolhe outra
-  const comReceitas = disputadas.filter((c) => c.ano >= ANO_RECEITAS).reverse();
+  // perguntas 8 e 9: campanhas com prestação de contas, da mais recente para a mais antiga; ?campanha=<id_candidatura>
+  // escolhe outra (a mesma nos dois blocos)
+  const comContas = disputadas.filter((c) => c.ano >= ANO_RECEITAS).reverse();
   const pedida = Number(Array.isArray(sp.campanha) ? sp.campanha[0] : sp.campanha);
-  const campanhas = await Promise.all(comReceitas.map(async (c) => ({ c, r: await apiGetOpcional<Receitas>(`/candidaturas/${c.id_candidatura}/receitas`) })));
+  const contas = await Promise.all(comContas.map(async (c) => ({
+    c,
+    r: await apiGetOpcional<Receitas>(`/candidaturas/${c.id_candidatura}/receitas`),
+    p: await apiGetOpcional<Propaganda>(`/candidaturas/${c.id_candidatura}/propaganda`),
+  })));
 
   return (
     <>
@@ -77,7 +84,8 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
         )}
       </section>
 
-      <DinheiroCampanha campanhas={campanhas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#dinheiro`} />
+      <DinheiroCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#dinheiro`} />
+      <PropagandaCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#propaganda`} />
     </>
   );
 }

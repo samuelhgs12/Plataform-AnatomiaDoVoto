@@ -1,6 +1,6 @@
 -- Pergunta 5 — votos de legenda x partido (DuckDB). Regra copiada de q5_materializada.sql (repositório de carga).
 -- Roda no banco final (bdr_final.duckdb ou MotherDuck), que é SOMENTE LEITURA: só TEMP TABLE e VALUES aqui.
--- Uso: python export_static.py  (cada COPY ... TO 'x.csv' vira a chave x de web/public/data/q5.json)
+-- Servida pela API em GET /api/analises/q5 (cada COPY ... TO 'x.csv' vira a tabela x da resposta)
 --
 -- Regras:
 --   * só cargos proporcionais (onde existe voto de legenda), 1º turno, eleição ordinária, 2018–2024

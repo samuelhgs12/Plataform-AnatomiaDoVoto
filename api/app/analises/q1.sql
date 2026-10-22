@@ -1,5 +1,5 @@
 -- Pergunta 1: quanto custa uma cadeira/mandato? Roda no banco final (bdr_final.duckdb ou MotherDuck).
--- Uso: python export_static.py q1   (grava web/public/data/q1.json)
+-- Servida pela API em GET /api/analises/q1 (cada COPY ... TO 'x.csv' vira a tabela x da resposta)
 --
 -- Gasto = despesas da prestação de contas FINAL ou REGULARIZACAO_OMISSAO, sem transferências para outros candidatos ou
 -- partidos (vw_despesa_candidatura); é o valor contratado, somando os dois turnos. Candidato sem prestação final fica com

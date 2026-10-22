@@ -5,7 +5,7 @@
 | 1 | **Next.js + FastAPI** | SvelteKit, Streamlit | A equipe já tem familiaridade com as duas |
 | 2 | Token do MotherDuck só no servidor | WASM no navegador | Segurança: o token seria visível a todos |
 | 3 | `rewrites` do Next para a API | CORS e `NEXT_PUBLIC_API_URL` | Sem CORS; o endereço da API não fica público |
-| 4 | Análises agregadas como JSON estático (`pipeline/`) | Consultar o banco a cada visita | Dados históricos; mais rápido e barato |
+| 4 | Análises agregadas **servidas pela API**: cada `api/app/analises/<nome>.sql` vira `GET /api/analises/<nome>`, com cache na API e no Next (revista em out/2026; o mapa segue estático pela decisão 10) | JSON estático gerado pelo `export_static.py` (a decisão anterior) | Com o JSON, cada análise nova exigia mudar o script, rodá-lo e versionar o arquivo; os dados são históricos, então o cache evita refazer a consulta |
 | 5 | Identificador público = `id_candidato` interno | Título eleitoral, CPF | Privacidade (LGPD): nunca expor documentos |
 | 6 | SQL em arquivos `.sql` parametrizados | ORM | O time domina SQL; revisão mais fácil |
 | 7 | Sem foto de candidato | Buscar fotos | Não há foto nos dados do TSE carregados |
