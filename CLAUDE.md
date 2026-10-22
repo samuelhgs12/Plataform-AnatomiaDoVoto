@@ -34,7 +34,7 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 ## Quando usar componente cliente (`"use client"`)
 
-Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (selects que aplicam na hora com
+Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (também escolhe o partido na visão de legenda, com `nome="p"`; selects que aplicam na hora com
 `router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
 `BuscaNome` (abre/fecha) e `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial). Gráficos
 (`MapaAbstencao`, `Dispersao`, `BarrasH`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
