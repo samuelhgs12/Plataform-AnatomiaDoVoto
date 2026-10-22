@@ -36,7 +36,7 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (também escolhe o partido na visão de legenda, com `nome="p"`; selects que aplicam na hora com
 `router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
-`BuscaNome` (abre/fecha) e `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial). Gráficos
+`BuscaNome` (abre/fecha), `MenuLateral` (recolhe em trilho com o botão ou a tecla `[`; gaveta no celular; estado em `<html data-menu>`), `PaletaBusca` (Ctrl K: páginas, estados e municípios de `/indice/municipios` filtrados por `src/lib/paleta.ts`, candidatos da `/api/busca`; a caixa nasce do botão por View Transition) e `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial). Gráficos
 (`MapaAbstencao`, `Dispersao`, `BarrasH`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
 
 ## Design visual
