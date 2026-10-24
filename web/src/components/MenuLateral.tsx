@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ANALISES } from "@/lib/analises";
 import { Icone, type NomeIcone } from "./Icone";
+import { Nome, Simbolo } from "./Logotipo";
 import { abrirBusca } from "./PaletaBusca";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -30,7 +31,7 @@ const menuRecolhido = () => document.documentElement.dataset.menu === "recolhido
 const digitando = (el: EventTarget | null) => el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
 /**
- * Menu da lateral. No computador, recolhe para um trilho só de ícones (botão no pé ou a tecla [), e a escolha fica
+ * Menu da lateral. No computador, recolhe para um trilho só de ícones (botão no topo ou a tecla [), e a escolha fica
  * guardada; o nome de cada item aparece ao passar o mouse ou focar. No celular, é uma gaveta aberta pela barra do topo.
  * O estado recolhido fica em <html data-menu>, que o CSS lê: assim o servidor não precisa saber dele.
  */
@@ -60,7 +61,7 @@ export function MenuLateral() {
     <>
       {/* celular: a marca, a busca e o botão da gaveta */}
       <div className="barra-movel">
-        <Link href="/" className="marca"><span className="marca-sinal" aria-hidden="true">AV</span><span>Anatomia do Voto</span></Link>
+        <Link href="/" className="marca" aria-label="Anatomia do Voto, página inicial"><Simbolo /><Nome /></Link>
         <button type="button" className="barra-botao" data-abre-busca="" onClick={(e) => abrirBusca(e.currentTarget)} aria-label="Buscar (Ctrl K)">
           <Icone nome="buscar" />
         </button>
@@ -73,15 +74,26 @@ export function MenuLateral() {
       <aside id="menu-lateral" className="menu" data-aberta={aberta ? "" : undefined} aria-label="Menu">
         <div className="menu-topo">
           <Link href="/" className="marca" aria-label="Anatomia do Voto, página inicial">
-            <span className="marca-sinal" aria-hidden="true">AV</span>
-            <span className="menu-rotulo marca-nome" aria-hidden="true">Anatomia <span>do Voto</span></span>
+            <Simbolo />
+            <Nome className="menu-rotulo" />
           </Link>
+          {/* aberto: no canto direito do topo. Recolhido: escondido sob o símbolo, aparece no hover ou no foco */}
+          <button type="button" className="menu-recolher" onClick={alternar} data-rotulo="Expandir o menu" title={recolhido ? undefined : "Recolher o menu ( [ )"}
+            aria-label={recolhido ? "Expandir o menu" : "Recolher o menu"} aria-expanded={!recolhido} aria-controls="menu-lateral" aria-keyshortcuts="[">
+            <Icone nome="recolher" />
+          </button>
           <button type="button" className="barra-botao menu-fechar" onClick={() => setGaveta({ aberta: false, caminho })} aria-label="Fechar o menu">
             <Icone nome="fechar" />
           </button>
         </div>
 
         <nav aria-label="Principal" className="menu-nav">
+          {/* a busca vem primeiro: é o atalho para qualquer página, estado, município ou candidato */}
+          <button type="button" className="menu-item menu-busca" data-abre-busca="" data-rotulo="Buscar" onClick={(e) => abrirBusca(e.currentTarget)}>
+            <Icone nome="buscar" />
+            <span className="menu-rotulo">Buscar</span>
+            <kbd className="menu-rotulo">Ctrl K</kbd>
+          </button>
           <ul>
             {ITENS.map((it) => {
               const atual = it.ativo(caminho);
@@ -105,21 +117,10 @@ export function MenuLateral() {
               );
             })}
           </ul>
-          <button type="button" className="menu-item menu-busca" data-abre-busca="" data-rotulo="Buscar" onClick={(e) => abrirBusca(e.currentTarget)}>
-            <Icone nome="buscar" />
-            <span className="menu-rotulo">Buscar</span>
-            <kbd className="menu-rotulo">Ctrl K</kbd>
-          </button>
         </nav>
 
         <div className="menu-base">
           <ThemeToggle className="tema menu-item" comRotulo />
-          <button type="button" className="menu-item menu-recolher" onClick={alternar} data-rotulo={recolhido ? "Expandir o menu" : "Recolher o menu"}
-            aria-label={recolhido ? "Expandir o menu" : "Recolher o menu"} aria-expanded={!recolhido} aria-controls="menu-lateral" aria-keyshortcuts="[">
-            <Icone nome="recolher" />
-            <span className="menu-rotulo" aria-hidden="true">Recolher</span>
-            <kbd className="menu-rotulo" aria-hidden="true">[</kbd>
-          </button>
         </div>
       </aside>
     </>

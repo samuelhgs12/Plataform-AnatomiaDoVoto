@@ -1,16 +1,26 @@
 /* =====================================================================================================
    Anatomia do Voto — quadro de blocos inspirado no teclado da urna eletrônica.
-   Fundo branco (papel), blocos um tom abaixo, teclas pretas (--tinta) e um magenta (--accent), tirado da
-   escala do mapa, para a ação. As cores dos gráficos (--w*, --l*, --f*, --pub, --priv, --fx*, --s*, --pp*) seguem validadas para
+   Paleta da identidade (logotipo em components/Logotipo.tsx): marinho institucional, neutros de ardósia levemente
+   azulados e as teclas da urna (branco, corrige laranja, confirma verde). O verde confirma é a ação; o marinho, as
+   teclas, o menu e o palco do mapa. Primeiro as cores-base (--marinho-*, --gelo, --ardosia*, --verde-*, --laranja-*,
+   --amarelo-*), depois os papéis que apontam para elas; o tema escuro remapeia os papéis. As cores dos gráficos (--w*, --l*, --f*, --pub, --priv, --fx*, --s*, --pp*) seguem validadas para
    daltonismo e têm variante no tema escuro.
    ===================================================================================================== */
 :root {
-  --bg: #ffffff; --panel: #f3f3f1; --panel2: #e7e7e3; --line: #d9d9d4; --fg: #121212; --muted: #5c5c58;
-  --accent: #b4235f; --on-accent: #ffffff; --ok: #0e9f6e; --bar: #3557e0; --warn: #c2410c;
-  --brand: #b4235f;
-  --tinta: #141414; --sobre-tinta: #f5f5f2;                     /* teclas pretas da urna */
-  --menu-fundo: #141414; --menu-texto: #f5f5f2;                 /* o menu lateral é uma tecla preta nos dois temas */
-  --corrige: #e2692a; --branco-urna: #fbfbf9;                   /* só no rodapé, como as teclas da urna */
+  /* cores-base da identidade */
+  --marinho-950: #0a1220; --marinho-900: #0f1b2d; --marinho-800: #13294b; --marinho-700: #1d3a63;
+  --gelo: #eef2f8; --ardosia: #5a6475; --ardosia-clara: #a9b4c6;
+  --verde-700: #157f45; --verde-400: #45c27a; --verde-urna: #1f9d55; --verde-urna-claro: #2eaa62;
+  --laranja-urna: #e8792b; --laranja-urna-claro: #f08c3c; --amarelo-400: #f2c230;
+
+  /* papéis */
+  --bg: #ffffff; --panel: #f1f4f8; --panel2: #e4e9f1; --line: #d3dae5; --fg: var(--marinho-900); --muted: #566173;
+  --accent: var(--verde-700); --on-accent: #ffffff; --ok: var(--verde-urna); --bar: #3557e0; --warn: #c2410c;
+  --brand: var(--marinho-800);                                   /* links no texto */
+  --tinta: var(--marinho-800); --sobre-tinta: var(--gelo);       /* teclas da urna, em marinho */
+  --menu-fundo: var(--marinho-800); --menu-texto: var(--gelo);   /* o menu é o marinho da marca; o palco do mapa, o mais fundo */
+  --corrige: var(--laranja-urna); --confirma: var(--verde-urna); --branco-urna: #fbfbf9;
+  --logo-tinta: var(--marinho-800); --logo-fundo: var(--bg); --logo-destaque: var(--verde-700);
   --w1: #2343c4; --w2: #4f7cf0; --w3: #94b4f7; --w4: #d3e0fc; --l1: #e4501b; --l2: #f6a27c; --o: #c3c9d3;
   --on-dark: #fff; --on-light: #0d1b3d;
   --s1: #7c3aed; --s2: #c2410c; --s3: #0e7490;   /* partidos escolhidos nas séries; contraste ≥ 5:1 sobre --panel */
@@ -33,9 +43,11 @@
 /* Tema escuro: segue o sistema, a menos que o usuário escolha um tema (data-theme em <html>, ver ThemeToggle). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d0d0c; --panel: #181817; --panel2: #242422; --line: #31312e; --fg: #f0f0ec; --muted: #a5a59f;
-    --accent: #ff6f9a; --on-accent: #2a0613; --ok: #1fd39a; --bar: #5b8cff; --warn: #ff8a50; --o: #4a5260;
-    --brand: #ff6f9a; --tinta: #f0f0ec; --sobre-tinta: #121212; --branco-urna: #f0f0ec; --menu-fundo: #181817; --menu-texto: #f0f0ec;
+    --bg: var(--marinho-950); --panel: #111d30; --panel2: #1a2940; --line: #263a56; --fg: var(--gelo); --muted: var(--ardosia-clara);
+    --accent: var(--verde-400); --on-accent: #06180d; --ok: var(--verde-urna-claro); --bar: #5b8cff; --warn: #ff8a50; --o: #4a5260;
+    --brand: #9cc0f2; --tinta: var(--gelo); --sobre-tinta: var(--marinho-900); --branco-urna: var(--gelo); --menu-fundo: var(--marinho-800); --menu-texto: var(--gelo);
+    --corrige: var(--laranja-urna-claro); --confirma: var(--verde-urna-claro);
+    --logo-tinta: var(--gelo); --logo-fundo: var(--bg); --logo-destaque: var(--verde-400);
     --s1: #a78bfa; --s2: #fb923c; --s3: #22d3ee;
     --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
     --fx2: #6da7ec; --fx3: #f0a07a;
@@ -44,9 +56,11 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d0d0c; --panel: #181817; --panel2: #242422; --line: #31312e; --fg: #f0f0ec; --muted: #a5a59f;
-  --accent: #ff6f9a; --on-accent: #2a0613; --ok: #1fd39a; --bar: #5b8cff; --warn: #ff8a50; --o: #4a5260;
-  --brand: #ff6f9a; --tinta: #f0f0ec; --sobre-tinta: #121212; --branco-urna: #f0f0ec; --menu-fundo: #181817; --menu-texto: #f0f0ec;
+  --bg: var(--marinho-950); --panel: #111d30; --panel2: #1a2940; --line: #263a56; --fg: var(--gelo); --muted: var(--ardosia-clara);
+  --accent: var(--verde-400); --on-accent: #06180d; --ok: var(--verde-urna-claro); --bar: #5b8cff; --warn: #ff8a50; --o: #4a5260;
+  --brand: #9cc0f2; --tinta: var(--gelo); --sobre-tinta: var(--marinho-900); --branco-urna: var(--gelo); --menu-fundo: var(--marinho-800); --menu-texto: var(--gelo);
+  --corrige: var(--laranja-urna-claro); --confirma: var(--verde-urna-claro);
+  --logo-tinta: var(--gelo); --logo-fundo: var(--bg); --logo-destaque: var(--verde-400);
   --s1: #a78bfa; --s2: #fb923c; --s3: #22d3ee;
   --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
   --fx2: #6da7ec; --fx3: #f0a07a;
@@ -107,6 +121,18 @@ a.card-link:active, a.bloco:active { transform: scale(0.99); }
 .cabeca .pergunta { font-size: var(--t-lead); line-height: 1.3; margin: 0 0 8px; color: var(--muted); }
 .lead { font-size: var(--t-lead); line-height: 1.35; }
 
+/* ---------- Logotipo (components/Logotipo.tsx) ----------
+   O desenho é um só; quem pinta é o lugar onde ele está (--logo-tinta, --logo-fundo, --logo-destaque). */
+.logo-simbolo { flex: none; display: block; width: 40px; height: 40px; }
+.logo-forma { fill: var(--logo-tinta); }
+.logo-sulco { stroke: var(--logo-fundo); }
+.logo-recorte { fill: var(--logo-fundo); }
+.logo-destaque { fill: var(--logo-destaque); }
+.logo-branco { fill: #ffffff; stroke: var(--logo-fundo); stroke-width: 0.5; }
+.logo-corrige { fill: var(--corrige); }
+.logo-confirma { fill: var(--confirma); }
+.logo-nome { display: block; height: 31px; width: auto; flex: none; }
+
 /* ---------- Moldura: o menu lateral e o conteúdo ----------
    O menu é um bloco do quadro (mesmo raio e respiro). Recolhido (<html data-menu="recolhido">, ver MenuLateral), vira
    um trilho de ícones: a coluna encolhe e o conteúdo ocupa o espaço no mesmo movimento, os rótulos se recortam para a
@@ -125,12 +151,19 @@ a.card-link:active, a.bloco:active { transform: scale(0.99); }
   background: var(--menu-fundo); color: var(--menu-texto); overflow: hidden auto; overscroll-behavior: contain; scrollbar-width: none;
 }
 .menu ::selection { background: var(--accent); color: var(--on-accent); }
+.menu { --logo-tinta: var(--menu-texto); --logo-fundo: var(--menu-fundo); --logo-destaque: var(--verde-400); --corrige: var(--laranja-urna-claro); --confirma: var(--verde-urna-claro); }
 .marca { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-.menu .marca { height: 48px; padding: 0 4px; border-radius: 6px; }
-.marca-sinal { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
-.marca-nome { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
-.marca-nome span { font-weight: 400; }
-.menu-topo { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--menu-linha); }
+.menu .marca { height: 52px; padding: 0 2px; border-radius: 6px; min-width: 0; }
+.menu-topo { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--menu-linha); }
+.menu-recolher {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--menu-suave); cursor: pointer;
+  transition: background-color var(--t-hover) ease, color var(--t-hover) ease, opacity 160ms ease, transform var(--t-press) var(--ease-out);
+}
+.menu-recolher .icone { width: 20px; height: 20px; transition: transform 460ms var(--ease-expo); }
+.menu-recolher:hover { background: var(--menu-realce); color: var(--menu-texto); }
+.menu-recolher:active { transform: scale(0.94); }
+.menu-recolher:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .menu-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .menu-nav ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }   /* o rótulo recortado não alarga a coluna */
 
@@ -154,7 +187,6 @@ a.card-link:active, a.bloco:active { transform: scale(0.99); }
 
 .menu-base { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding-top: 10px; border-top: 1px solid var(--menu-linha); }
 .menu .tema { justify-content: flex-start; width: 100%; height: 44px; padding: 0 11px; background: transparent; color: inherit; }
-.menu-recolher .icone { transition: transform 460ms var(--ease-expo); }
 
 /* recolhido (só no computador; no celular o menu é uma gaveta) */
 @media (min-width: 1001px) {
@@ -164,12 +196,16 @@ a.card-link:active, a.bloco:active { transform: scale(0.99); }
   :root[data-menu="recolhido"] .menu-rotulo { clip-path: inset(0 100% 0 0); opacity: 0; transition-duration: 300ms, 140ms; }
   :root[data-menu="recolhido"] .menu-nav .menu-sub { max-height: 0; opacity: 0; padding-block: 0; }
   :root[data-menu="recolhido"] .menu-recolher .icone { transform: scaleX(-1); }
-  :root[data-menu="recolhido"] .menu-item::after {
+  :root[data-menu="recolhido"] .menu-recolher { position: absolute; left: 2px; top: 6px; width: 40px; height: 40px; opacity: 0; background: var(--menu-realce); color: var(--menu-texto); }
+  :root[data-menu="recolhido"] .menu .logo-simbolo { transition: opacity 160ms ease; }
+  :root[data-menu="recolhido"] .menu-topo:is(:hover, :has(:focus-visible)) .menu-recolher { opacity: 1; }
+  :root[data-menu="recolhido"] .menu-topo:is(:hover, :has(:focus-visible)) .logo-simbolo { opacity: 0; }
+  :root[data-menu="recolhido"] :is(.menu-item, .menu-recolher)::after {
     content: attr(data-rotulo); position: absolute; left: calc(100% + 14px); top: 50%; z-index: 40; padding: 6px 10px; border-radius: 6px;
     background: var(--menu-texto); color: var(--menu-fundo); font-size: 14px; font-weight: 600; white-space: nowrap; pointer-events: none;
     opacity: 0; transform: translate(-6px, -50%); transition: opacity 140ms ease, transform 220ms var(--ease-out);
   }
-  :root[data-menu="recolhido"] .menu-item:is(:hover, :focus-visible)::after { opacity: 1; transform: translate(0, -50%); }
+  :root[data-menu="recolhido"] :is(.menu-item, .menu-recolher):is(:hover, :focus-visible)::after { opacity: 1; transform: translate(0, -50%); }
 }
 
 .tema { display: flex; align-items: center; justify-content: center; border: 0; cursor: pointer; font: inherit; }
@@ -404,7 +440,7 @@ a.linha:hover { background: var(--panel2); }
 .teclas-acao a:active { transform: scale(0.98); }
 .teclas-acao .k-branco { background: var(--branco-urna); color: #121212; box-shadow: inset 0 0 0 1px var(--line); }
 .teclas-acao .k-corrige { background: var(--corrige); color: #1d0b02; }
-.teclas-acao .k-confirma { background: var(--accent); color: var(--on-accent); }
+.teclas-acao .k-confirma { background: var(--confirma); color: #04200f; }
 .rodape .creditos { font-size: var(--t-pequeno); color: var(--muted); padding: 16px 4px 0; max-width: 95ch; }
 .rodape .creditos a { color: inherit; }
 
@@ -474,11 +510,17 @@ a.linha:hover { background: var(--panel2); }
    Palco noturno nos dois temas: a escala da abstenção (magma, do violeta ao pêssego: mais claro = mais gente faltou)
    e a grade 3 × 3 do cruzamento (abstenção em rosa, indicador em ciano) foram escolhidas sobre esse fundo. */
 .observatorio {
-  --noite: #0d0c16; --noite2: #16142a; --noite3: #24203d; --noite-linha: #312c52; --sobre-noite: #f4f0e8; --noite-muted: #aaa4c2;
-  --q0: #2d1160; --q1: #721f81; --q2: #b73779; --q3: #f1605d; --q4: #fecf92; --brilho: #fecf92;
+  /* Três degraus de marinho: o palco é o mais fundo (o mapa é o centro), os blocos do painel e os controles ficam acima.
+     A escala é do tipo cividis: sobe em claridade do azul ao amarelo passando por um cinza neutro, sem verde, que é a
+     cor da ação e soaria como "bom". O destaque (ano, unidade e partido escolhidos) é o laranja corrige da urna. */
+  --noite: #0a1322; --noite2: #182b45; --noite3: #22385a; --noite-linha: #2f4a70; --sobre-noite: var(--gelo); --noite-muted: var(--ardosia-clara);
+  --q0: #395995; --q1: #61799b; --q2: #9c9484; --q3: #ccb577; --q4: #f9da50; --brilho: var(--laranja-urna-claro);
   --b00: #2e2b4f; --b01: #7c2f6c; --b02: #e0457b; --b10: #2c5d84; --b11: #775a8f; --b12: #e27798; --b20: #2fb0c8; --b21: #8cb5d2; --b22: #f2d3e4;
   scroll-margin-top: var(--gap); align-items: start; margin-bottom: 120px;
 }
+/* no tema escuro o fundo da página já é marinho fundo: o palco desce mais um degrau para continuar o mais fundo */
+:root[data-theme="dark"] .observatorio { --noite: #050a13; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .observatorio { --noite: #050a13; } }
 .palco {
   position: sticky; top: var(--gap); height: calc(100svh - 2 * var(--gap)); min-height: 620px; border-radius: var(--raio); overflow: clip;
   display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); color: var(--sobre-noite);
@@ -535,7 +577,7 @@ a.linha:hover { background: var(--panel2); }
 .mapa-abst[data-zoom="uf"] .uf:not(.on) { fill: var(--noite3); }   /* vizinhos com dados viram fundo: só o estado em zoom tem cor */
 .mapa-abst[data-zoom="uf"] .uf:not(.on):hover { fill: var(--noite-linha); filter: none; }
 .mapa-abst .q0 { fill: var(--q0); } .mapa-abst .q1 { fill: var(--q1); } .mapa-abst .q2 { fill: var(--q2); }
-.mapa-abst .q3 { fill: var(--q3); } .mapa-abst .q4 { fill: var(--q4); } .mapa-abst .sem { fill: var(--noite3); }
+.mapa-abst .q3 { fill: var(--q3); } .mapa-abst .q4 { fill: var(--q4); } .mapa-abst .sem { fill: var(--noite2); }   /* sem dado: abaixo do 1º degrau */
 .b00 { fill: var(--b00); background: var(--b00); } .b01 { fill: var(--b01); background: var(--b01); } .b02 { fill: var(--b02); background: var(--b02); }
 .b10 { fill: var(--b10); background: var(--b10); } .b11 { fill: var(--b11); background: var(--b11); } .b12 { fill: var(--b12); background: var(--b12); }
 .b20 { fill: var(--b20); background: var(--b20); } .b21 { fill: var(--b21); background: var(--b21); } .b22 { fill: var(--b22); background: var(--b22); }
@@ -597,7 +639,7 @@ a.linha:hover { background: var(--panel2); }
 .ano:hover { background: var(--noite3); color: var(--sobre-noite); }
 .ano:active { transform: scale(0.96); }
 .ano.on { background: var(--sobre-noite); color: var(--noite); }
-.ano.on small { color: var(--q2); }
+.ano.on small { color: color-mix(in srgb, var(--noite) 72%, var(--sobre-noite)); }
 
 /* painel ao lado do mapa */
 .painel { display: grid; gap: var(--gap); }
@@ -666,7 +708,7 @@ a.linha:hover { background: var(--panel2); }
 .extremos a:hover { background: var(--noite3); }
 .extremos a.on { background: var(--brilho); color: var(--noite); font-weight: 600; }
 .painel-cab .cargos { margin-top: 18px; }
-.legenda-q .sem { background: var(--noite3); }
+.legenda-q .sem { background: var(--noite2); }
 .legenda-q .legenda-sem { margin-left: 12px; }
 .observatorio .atalhos { margin: 0; }
 .observatorio .atalhos a { background: var(--noite2); color: var(--sobre-noite); }
@@ -816,7 +858,9 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
   .observatorio { scroll-margin-top: 68px; }
   .moldura { display: block; }
   .barra-movel { position: sticky; top: 0; z-index: 25; display: flex; align-items: center; gap: var(--gap); padding: var(--gap) var(--margem); background: var(--bg); }
-  .barra-movel .marca { margin-right: auto; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; color: var(--fg); }
+  .barra-movel .marca { margin-right: auto; color: var(--logo-tinta); }
+  .barra-movel .logo-simbolo { width: 36px; height: 36px; }
+  .barra-movel .logo-nome { height: 28px; }
   .barra-botao { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--raio); background: var(--panel); color: var(--fg); }
   .barra-botao .icone { width: 22px; height: 22px; }
   .menu {
