@@ -10,6 +10,7 @@ const nextConfig = {
   output: "standalone",
   // Evita que o Next adote um package-lock.json de uma pasta acima (ex.: ~/package-lock.json) como raiz.
   turbopack: { root: dirname(fileURLToPath(import.meta.url)) },
+  experimental: { agentUpgrade: "security" },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${API_URL}/api/:path*` }];
   },
