@@ -615,7 +615,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             ) : (
               <div className="bloco noite censo-aviso s12">
                 <h3>E os indicadores sociais?</h3>
-                <p>Os indicadores do Censo 2010 (renda, escolaridade, IDHM) só são comparados com as eleições municipais em volta dele.</p>
+                <p>Os indicadores do Censo 2010 (renda, escolaridade, IDHM) só são comparados com a eleição de 2010 e com as municipais em volta dela.</p>
                 <div className="chips">{ANOS_CENSO.map((a) => <Link key={a} scroll={false} className="chip" href={href({ ano: a })}>Ver {a}</Link>)}</div>
               </div>
             )}

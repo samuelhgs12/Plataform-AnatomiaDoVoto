@@ -5,8 +5,11 @@ export interface LinhaMunicipio { id_municipio: number; cod_ibge: string; nome: 
 export interface LinhaParticipacao { id_municipio: number; ano: number; aptos: number; comparecimento: number; abstencoes: number; brancos: number; nulos: number }
 export interface LinhaIndicador { id_municipio: number; indicador: string; valor: number }
 
-/** Eleições municipais em volta do Censo 2010: só nelas a abstenção é comparada com os indicadores do Censo. */
-export const ANOS_CENSO = [2008, 2012];
+/**
+ * Eleições comparadas com os indicadores do Censo 2010: a do próprio ano do Censo (geral, governador) e as municipais
+ * em volta dele (prefeito). Nos outros anos o mapa mostra só a abstenção.
+ */
+export const ANOS_CENSO = [2008, 2010, 2012];
 
 export const INDICADORES_CENSO = [
   { chave: "idhm", rotulo: "IDHM", formato: "indice" },

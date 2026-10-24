@@ -22,7 +22,7 @@ test('mapa da abstenção: estado, município, indicador e ano', async ({ page }
   await expect(page.getByRole('heading', { name: 'Abstenção × Renda por pessoa' })).toBeVisible();
   await expect(page).toHaveURL(/uf=PE.*mun=\d+/); // trocar o indicador mantém estado e município
 
-  // fora de 2008 e 2012 não há comparação com o Censo 2010
+  // fora de 2008, 2010 e 2012 não há comparação com o Censo 2010
   await page.getByRole('group', { name: 'Ano da eleição' }).getByRole('link', { name: '2022' }).click();
   await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2022' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'E os indicadores sociais?' })).toBeVisible();
