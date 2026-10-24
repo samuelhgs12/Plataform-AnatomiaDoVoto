@@ -41,9 +41,12 @@ Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (tam
 
 ## Design visual
 
-Em aberto: cores, tipografia e layout das páginas ainda estão sendo definidos. A única decisão fixa é que **o mapa é o
-centro da página inicial** (`docs/DECISOES.md`, decisão 9). Cores sempre como `var(--…)` de `globals.css`, nunca fixas
-no componente.
+Fixo: **o mapa é o centro da página inicial** (decisão 9) e a **paleta e o logotipo** (decisão 12): cores-base da
+identidade no topo de `globals.css` (`--marinho-*`, `--gelo`, `--ardosia*`, `--verde-*`, `--laranja-urna*`, `--amarelo-400`)
+e papéis que apontam para elas (`--bg`, `--panel`, `--fg`, `--muted`, `--accent` = ação em verde, `--tinta` = teclas
+marinho, `--menu-*`, `--noite*`/`--q*` do mapa, `--logo-*`); o tema escuro remapeia os papéis. Cores sempre como
+`var(--…)` de papel, nunca fixas no componente. Logotipo: `Simbolo` e `Nome` de `components/Logotipo.tsx` (favicon em
+`app/icon.svg`). Tipografia e layout seguem em aberto.
 
 ## Acessibilidade
 

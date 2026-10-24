@@ -13,11 +13,11 @@
 | 9 | **O mapa é o centro da página inicial**: abstenção por estado e, com zoom, por município, com indicadores ao lado | Página inicial de busca e cartões | Os dados são regionais; o mapa é a porta de entrada para eles |
 | 10 | **Provisório:** abstenção de 2008 a 2016 vem dos dados abertos do TSE (`detalhe_votacao_munzona`), baixada pelo `export_static.py`; de 2018 em diante, do banco. **Destino:** todos os dados do mapa virão do banco, quando o repositório de carga (`load_BDR`) passar a carregá-los | Só os anos do banco | O banco não tem participação antes de 2018, e a comparação com o Censo 2010 precisa de 2008 e 2012 |
 | 11 | Indicadores do Censo 2010 (Atlas do Desenvolvimento Humano, banco `bdr_v2`) só são comparados com a abstenção de 2008 e 2012 | Comparar com qualquer ano | São as eleições municipais em volta do Censo; nos outros anos o mapa mostra só a abstenção |
+| 12 | **Paleta e logotipo**: marinho (`#13294B`/`#0F1B2D`) com neutros de ardósia e as teclas da urna; ação em verde confirma (`#157F45`, no escuro `#45C27A`) e só nela; destaque do que está escolhido em laranja corrige; marinho em três degraus (menu, painel, palco do mapa como o mais fundo); mapa do azul ao amarelo por um cinza neutro (tipo cividis, sem verde); logotipo da cabeça com a urna (`components/Logotipo.tsx`, nome em contorno da Manrope 800) | Magenta e escala magma (a versão anterior) | Os arquivos da identidade (UrnaAssinatura, Urna) fixaram o marinho e as teclas; verde é neutro entre partidos; cada cor tem um papel só (verde no mapa soaria como "bom"); a escala cividis é legível para daltônicos |
 
 ## A decidir pela equipe
 
-- **Identidade visual**: cores, tipografia e layout das páginas estão em aberto (em iteração na branch `feature/redesign`).
-  Só a decisão 9 está fechada.
+- **Identidade visual**: paleta e logotipo fechados (decisão 12); tipografia e layout das páginas seguem em iteração.
 - Consultar o MotherDuck ao vivo ou embutir um `serving.duckdb` na API (mais rápido, sem cota)?
 - Incluir vereador na listagem (volume grande) ou só pela busca?
 - Slug público: `id` interno ou hash (evita enumerar pessoas por número)?
