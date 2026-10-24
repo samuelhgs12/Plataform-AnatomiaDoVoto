@@ -66,12 +66,16 @@ test('candidato: buscar um deputado, ver o estado em zoom e virar a ficha', asyn
   await expect(page.locator('.mapa-abst')).toHaveAttribute('data-zoom', 'uf');
   await expect(page.locator('.mapa-abst .mun').first()).toBeVisible();
 
-  const virar = page.getByRole('button', { name: 'Ver números' });
-  await virar.click();
-  await expect(page.getByRole('button', { name: 'Voltar à frente' })).toHaveAttribute('aria-pressed', 'true');
+  // o cartão inteiro é o controle: clicar nele vira; pelo teclado, Enter vira e o foco passa para a outra face
+  await page.getByRole('button', { name: /virar para ver os números/ }).click();
   const mais = page.getByRole('link', { name: 'Ver mais detalhes' });
   await expect(mais).toBeVisible();
   await expect(mais).toHaveAttribute('href', '/candidato/9006?campanha=900602');
+  const voltar = page.getByRole('button', { name: /Voltar à frente da ficha/ });
+  await voltar.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: /virar para ver os números/ })).toBeFocused();
+  await expect(mais).toBeHidden();
 });
 
 test('candidato: presidente nos seis estados, zoom num estado e 2º turno', async ({ page }) => {

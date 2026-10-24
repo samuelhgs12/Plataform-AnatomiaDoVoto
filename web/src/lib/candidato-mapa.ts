@@ -155,6 +155,16 @@ export function fraseResumo(linhas: Pick<VotoMunicipio, "id_municipio" | "votos"
   return maior ? `${metade}; a maior proporção foi em ${nomes.get(maior.id) ?? "um município"} (${pct(maior.p, 1)}).` : `${metade}.`;
 }
 
+/**
+ * O nome de urna dividido como no santinho: a última palavra em destaque, o resto numa linha menor acima
+ * ("Otávio" / "Cerejeira"; "Ana da" / "Silva"). Um nome de uma palavra só fica todo em destaque.
+ */
+export function partesDoNome(nome: string): { antes: string; destaque: string } {
+  const p = nome.trim().split(/\s+/).filter(Boolean);
+  const destaque = p.pop() ?? "";
+  return { antes: p.join(" "), destaque };
+}
+
 /** As candidaturas de uma pessoa, da mais recente para a mais antiga, e a padrão (a mais recente). */
 export function candidaturasDe<T extends Pick<CandidaturaMapa, "id_candidato" | "ano" | "id_candidatura">>(todas: T[], id_candidato: number): { padrao: T | undefined; lista: T[] } {
   const lista = todas.filter((c) => c.id_candidato === id_candidato).sort((a, b) => b.ano - a.ano || b.id_candidatura - a.id_candidatura);

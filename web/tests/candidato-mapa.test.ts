@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  abrangencia, buscarCandidato, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseResumo, indiceCandidatos, proporcaoNoMunicipio,
+  abrangencia, buscarCandidato, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseResumo, indiceCandidatos, proporcaoNoMunicipio,
   proporcaoPorUf, resumoCandidatura, rotulosCandidato, turnosDe, type CandidaturaMapa, type VotoMunicipio,
 } from "../src/lib/candidato-mapa";
 
@@ -112,6 +112,14 @@ describe("candidaturasDe", () => {
   });
   it("pessoa sem candidaturas", () => {
     expect(candidaturasDe(todas, 99)).toEqual({ padrao: undefined, lista: [] });
+  });
+});
+
+describe("partesDoNome", () => {
+  it("a última palavra em destaque, o resto acima", () => {
+    expect(partesDoNome("Otávio Cerejeira")).toEqual({ antes: "Otávio", destaque: "Cerejeira" });
+    expect(partesDoNome(" Ana  da Silva ")).toEqual({ antes: "Ana da", destaque: "Silva" });
+    expect(partesDoNome("Fulano")).toEqual({ antes: "", destaque: "Fulano" });
   });
 });
 
