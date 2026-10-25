@@ -316,6 +316,15 @@ def test_eleitos_do_municipio_so_ordinaria(client):
     assert client.get("/api/municipios/2/eleitos").status_code == 422   # o ano é obrigatório
 
 
+def test_candidatos_do_municipio(client):
+    todos = client.get("/api/municipios/2/candidatos?ano=2020&cargo=Prefeito").json()
+    # só a ordinária (a suplementar de 2021 não entra); resultado e prestação de contas vêm junto
+    assert [(c["nome_urna"], c["eleito"], c["resultado"], c["prestou"], c["votos"]) for c in todos] == [("JOÃO DO COMERCIO", True, "ELEITO", True, 11000)]
+    assert client.get("/api/municipios/2/candidatos?ano=2020&cargo=Vereador").json() == []
+    assert "cpf" not in todos[0] and "titulo_eleitoral" not in todos[0]
+    assert client.get("/api/municipios/2/candidatos?ano=2020&cargo=Governador").status_code == 422   # só prefeito e vereador
+
+
 def test_eleitos_do_estado(client):
     eleitos = client.get("/api/estados/rj/eleitos?ano=2022").json()
     assert [(e["cargo"], e["nome_urna"], e["votos"]) for e in eleitos] == [("Deputado federal", "ANA ADVOGADA", 120000)]
@@ -343,7 +352,8 @@ def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
              "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
              "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10",
-             "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022"]
+             "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022",
+             "/api/municipios/2/candidatos?ano=2020&cargo=Prefeito"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]
     for rota in rotas:
         texto = json.dumps(client.get(rota).json(), ensure_ascii=False).lower()

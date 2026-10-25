@@ -2,7 +2,14 @@
 -- Regras do projeto: só titulares, eleição ordinária e quem de fato disputou. Gasto = vw_despesa_candidatura (prestação
 -- FINAL ou REGULARIZACAO_OMISSAO, sem transferências). Recebido = vw_receita_candidatura (mesma prestação, sem repasses
 -- entre candidatos: são somas, e o repasse contaria o mesmo real duas vezes). Dinheiro só existe de 2018 em diante.
+-- Quem não entregou a prestação final entra com zero nas somas (valor desconhecido) e é contado em *_sem_prestacao;
+-- "quem mais gastou venceu?" só vale nas cidades em que todos os candidatos a prefeito entregaram (como na pergunta 2).
 -- Votos: 1º turno. A lista de eleitos de cada lugar vem de /api/municipios/<id>/eleitos e /api/estados/<uf>/eleitos.
+
+CREATE OR REPLACE TEMP TABLE prestou AS
+SELECT id_candidatura FROM despesa_campanha WHERE tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')
+UNION
+SELECT id_candidatura FROM receita_campanha WHERE tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO');
 
 CREATE OR REPLACE TEMP TABLE cand_lugar AS
 SELECT c.id_candidatura, c.id_candidato, c.ano, g.id_cargo, g.nome AS cargo, coalesce(c.uf, 'BR') AS uf, c.id_municipio,
@@ -10,7 +17,8 @@ SELECT c.id_candidatura, c.id_candidato, c.ano, g.id_cargo, g.nome AS cargo, coa
        coalesce(v.votos, 0) AS votos,
        coalesce(d.gasto_total, 0) AS gasto,
        coalesce(r.receita_total, 0) AS receita,
-       coalesce(r.receita_publica, 0) AS receita_publica
+       coalesce(r.receita_publica, 0) AS receita_publica,
+       c.id_candidatura IN (SELECT id_candidatura FROM prestou) AS prestou
 FROM candidatura c
 JOIN eleicao e           ON e.id_eleicao = c.id_eleicao
 JOIN cargo g             ON g.id_cargo = e.id_cargo
@@ -44,11 +52,12 @@ COPY (
         GROUP BY ALL
     ), ver AS (
         SELECT ano, id_municipio, count(*) AS candidatos, count(*) FILTER (WHERE eleito) AS eleitos,
-               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica
+               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
+               count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar WHERE cargo = 'Vereador' GROUP BY ALL
     ), pre AS (
         SELECT ano, id_municipio, count(*) AS candidatos, sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
-               max(gasto) AS maior_gasto
+               max(gasto) AS maior_gasto, count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar WHERE cargo = 'Prefeito' GROUP BY ALL
     ), eleito AS (
         SELECT ano, id_municipio, id_candidato, nome_urna, partido, votos, gasto
@@ -61,12 +70,13 @@ COPY (
     )
     SELECT ver.ano, ver.id_municipio, m.uf,
            ver.candidatos AS vereador_candidatos, ver.eleitos AS vereador_eleitos, coalesce(vag.vagas, 0) AS vereador_vagas,
+           ver.sem_prestacao AS vereador_sem_prestacao, coalesce(pre.sem_prestacao, 0) AS prefeito_sem_prestacao,
            round(ver.gasto, 2) AS vereador_gasto, round(ver.receita, 2) AS vereador_receita, round(ver.publica, 2) AS vereador_publica,
            coalesce(pre.candidatos, 0) AS prefeito_candidatos, round(coalesce(pre.gasto, 0), 2) AS prefeito_gasto,
            round(coalesce(pre.receita, 0), 2) AS prefeito_receita, round(coalesce(pre.publica, 0), 2) AS prefeito_publica,
            eleito.id_candidato AS prefeito_id_candidato, eleito.nome_urna AS prefeito_nome, eleito.partido AS prefeito_partido,
            eleito.votos AS prefeito_votos, round(eleito.gasto, 2) AS prefeito_gasto_eleito,
-           CASE WHEN pre.candidatos > 1 AND pre.maior_gasto > 0 THEN topo.eleito END AS maior_venceu
+           CASE WHEN pre.candidatos > 1 AND pre.maior_gasto > 0 AND pre.sem_prestacao = 0 THEN topo.eleito END AS maior_venceu
     FROM ver
     JOIN municipio m ON m.id_municipio = ver.id_municipio
     LEFT JOIN vag    ON vag.ano = ver.ano AND vag.id_municipio = ver.id_municipio
@@ -78,17 +88,18 @@ COPY (
 
 -------------------------------------------------------------------------------
 -- 3. Por estado e cargo, em todas as eleições (presidente fica na UF "BR"). Para prefeito, quantas disputas tinham
---    mais de um candidato com gasto e em quantas o que mais gastou venceu (P2).
+--    mais de um candidato com gasto (todos com prestação final) e em quantas o que mais gastou venceu (P2).
 -------------------------------------------------------------------------------
 COPY (
     WITH vag AS (
         SELECT ano, id_cargo, coalesce(uf, 'BR') AS uf, sum(qt_vagas) AS vagas FROM vagas GROUP BY ALL
     ), soma AS (
         SELECT ano, id_cargo, cargo, uf, count(*) AS candidatos, count(*) FILTER (WHERE eleito) AS eleitos,
-               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica
+               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
+               count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar GROUP BY ALL
     ), disputas AS (
-        SELECT ano, uf, id_municipio, count(*) AS candidatos, max(gasto) AS maior
+        SELECT ano, uf, id_municipio, count(*) AS candidatos, max(gasto) AS maior, bool_and(prestou) AS todos_prestaram
         FROM cand_lugar WHERE cargo = 'Prefeito' GROUP BY ALL
     ), topo AS (
         SELECT ano, id_municipio, eleito
@@ -97,10 +108,10 @@ COPY (
     ), maior AS (
         SELECT d.ano, d.uf, count(*) AS disputas, count(*) FILTER (WHERE t.eleito) AS venceu
         FROM disputas d JOIN topo t ON t.ano = d.ano AND t.id_municipio = d.id_municipio
-        WHERE d.candidatos > 1 AND d.maior > 0
+        WHERE d.candidatos > 1 AND d.maior > 0 AND d.todos_prestaram
         GROUP BY ALL
     )
-    SELECT s.ano, s.uf, s.cargo, s.candidatos, s.eleitos, coalesce(vag.vagas, 0) AS vagas,
+    SELECT s.ano, s.uf, s.cargo, s.candidatos, s.eleitos, coalesce(vag.vagas, 0) AS vagas, s.sem_prestacao,
            round(s.gasto, 2) AS gasto, round(s.receita, 2) AS receita, round(s.publica, 2) AS receita_publica,
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.disputas, 0) END AS disputas_maior,
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.venceu, 0) END AS maior_venceu

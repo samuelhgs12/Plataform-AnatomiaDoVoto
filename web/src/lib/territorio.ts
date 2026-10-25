@@ -2,6 +2,8 @@
 // Os dados vêm de /api/analises/municipios (tabelas municipios, resumo e estados) e das listas de eleitos de
 // /api/municipios/<id>/eleitos e /api/estados/<uf>/eleitos.
 
+import { nomeProprio, quantis } from "./abstencao";
+
 /** Um município dos seis estados, com o código IBGE que o desenho do mapa usa. */
 export interface LinhaMunicipio { id_municipio: number; uf: string; nome: string; cod_ibge: string }
 
@@ -10,6 +12,8 @@ export interface LinhaResumo {
   ano: number; id_municipio: number; uf: string;
   vereador_candidatos: number; vereador_eleitos: number; vereador_vagas: number;
   vereador_gasto: number; vereador_receita: number; vereador_publica: number;
+  /** Candidatos sem prestação de contas final: entram com zero nas somas (valor desconhecido). */
+  vereador_sem_prestacao: number; prefeito_sem_prestacao: number;
   prefeito_candidatos: number; prefeito_gasto: number; prefeito_receita: number; prefeito_publica: number;
   prefeito_id_candidato: number | null; prefeito_nome: string | null; prefeito_partido: string | null;
   prefeito_votos: number | null; prefeito_gasto_eleito: number | null;
@@ -20,6 +24,7 @@ export interface LinhaResumo {
 export interface LinhaEstado {
   ano: number; uf: string; cargo: string; candidatos: number; eleitos: number; vagas: number;
   gasto: number; receita: number; receita_publica: number; disputas_maior: number | null; maior_venceu: number | null;
+  sem_prestacao: number;
 }
 
 /** Um eleito (resposta de /api/municipios/<id>/eleitos ou /api/estados/<uf>/eleitos). */
@@ -27,6 +32,9 @@ export interface Eleito {
   cargo: string; id_cargo: number; id_candidato: number | null; id_candidatura: number; nome_urna: string | null; partido: string | null;
   votos: number; gasto: number; receita: number; receita_publica: number;
 }
+
+/** Um candidato (eleito ou não) a prefeito ou vereador (resposta de /api/municipios/<id>/candidatos). */
+export interface CandidatoLocal extends Eleito { eleito: boolean; resultado: string; prestou: boolean }
 
 /** O que colore o mapa: uma pergunta de cada vez. */
 export type Indicador = "custo" | "publico" | "maior";
@@ -68,6 +76,9 @@ export function resumoEstado(linhas: LinhaEstado[], ano: number, uf?: string) {
   const disputas = pre.reduce((a, l) => a + (l.disputas_maior ?? 0), 0), venceu = pre.reduce((a, l) => a + (l.maior_venceu ?? 0), 0);
   return {
     vagasVereador: vagas, candidatosVereador: soma(ver, "candidatos"), prefeitos: soma(pre, "eleitos"),
+    candidatosPrefeito: soma(pre, "candidatos"),
+    gastoTotal: gastoVer + soma(pre, "gasto"), receitaTotal: receita, receitaPublica: publica,
+    semPrestacao: [...ver, ...pre].reduce((a, l) => a + (l.sem_prestacao ?? 0), 0),
     custoCadeira: vagas > 0 ? gastoVer / vagas : null,
     partePublica: receita > 0 ? publica / receita : null,
     disputas, venceu, parteMaior: disputas > 0 ? venceu / disputas : null,
@@ -100,3 +111,45 @@ export function anosDisponiveis(estados: LinhaEstado[]): { municipais: number[];
 
 /** Escolhe o ano pedido se ele existir; senão, o mais recente. */
 export const escolherAno = (pedido: number, anos: number[]) => (anos.includes(pedido) ? pedido : anos[anos.length - 1]);
+
+/**
+ * Cortes de cor de custo e dinheiro público iguais para todas as eleições municipais (quintos de todos os municípios,
+ * somando os anos): a mesma cor quer dizer o mesmo valor em 2020 e em 2024. "maior" usa cortes fixos (parte das cidades).
+ */
+export function cortesFixos(resumo: LinhaResumo[], ind: Indicador): number[] {
+  if (ind === "maior") return [0.5, 0.6, 0.7, 0.8];
+  return quantis(resumo.flatMap((r) => valorMunicipio(r, ind) ?? []), 5);
+}
+
+/** Linhas da tabela equivalente ao mapa: as cidades do estado, em ordem alfabética, com os três indicadores do ano. */
+export function tabelaMunicipios(municipios: LinhaMunicipio[], resumo: LinhaResumo[], ano: number, uf: string) {
+  const doAno = new Map(resumo.filter((r) => r.ano === ano).map((r) => [r.id_municipio, r]));
+  return municipios.filter((m) => m.uf === uf)
+    .map((m) => {
+      const r = doAno.get(m.id_municipio);
+      return { id: m.id_municipio, nome: nomeProprio(m.nome), custo: valorMunicipio(r, "custo"), publico: valorMunicipio(r, "publico"), maior: valorMunicipio(r, "maior") };
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+/** O município pedido na URL (só o id basta: o estado vem dele). undefined se não existir ou não for do estado pedido. */
+export function acharMunicipio(municipios: LinhaMunicipio[], id: string | undefined, uf?: string): LinhaMunicipio | undefined {
+  const m = municipios.find((x) => String(x.id_municipio) === id);
+  return m && (!uf || m.uf === uf) ? m : undefined;
+}
+
+/**
+ * A disputa para prefeito numa cidade: os candidatos do mais ao menos votado, a parte dos votos de cada um e quem gastou
+ * mais. `maisGastou` só aparece se todos entregaram a prestação final (senão não se sabe quem gastou mais).
+ */
+export function disputaPrefeito(cands: CandidatoLocal[]) {
+  const total = cands.reduce((a, c) => a + c.votos, 0);
+  const todosPrestaram = cands.length > 0 && cands.every((c) => c.prestou);
+  const topo = todosPrestaram ? [...cands].sort((a, b) => b.gasto - a.gasto || a.id_candidatura - b.id_candidatura)[0] : undefined;
+  return {
+    total, todosPrestaram,
+    candidatos: [...cands].sort((a, b) => b.votos - a.votos || a.id_candidatura - b.id_candidatura).map((c) => ({
+      ...c, parteVotos: total > 0 ? c.votos / total : null, maisGastou: !!topo && topo.gasto > 0 && topo.id_candidatura === c.id_candidatura,
+    })),
+  };
+}

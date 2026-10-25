@@ -231,6 +231,13 @@ class Eleito(BaseModel):
     receita_publica: float
 
 
+class CandidatoLocal(Eleito):
+    """Um candidato (eleito ou não) a prefeito ou vereador num município. Só dados públicos da candidatura."""
+    eleito: bool
+    resultado: str
+    prestou: bool
+
+
 class Saude(BaseModel):
     status: str
     db: str
