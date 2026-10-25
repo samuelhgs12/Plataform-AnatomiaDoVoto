@@ -6,6 +6,7 @@ import { cargoPadrao, custoPorAno, custoPorCargo, custoPorUf, variacao, type Lin
 import { NOME_UF, TIPO_ELEICAO } from "@/lib/financiamento";
 import { inteiro, pct, reais } from "@/lib/format";
 import { BarrasH } from "@/components/BarrasH";
+import { AvisoApi } from "@/components/AvisoApi";
 import { Cabecalho } from "@/components/Cabecalho";
 import { Rolar } from "@/components/Rolar";
 import { FOTOS } from "@/lib/fotos";
@@ -24,10 +25,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
     return (
       <>
         <Cabecalho titulo="Quanto custa uma cadeira" foto={FOTOS.congresso} />
-        <div className="card aviso">
-          <h2>Dados indisponíveis</h2>
-          <p>A API não respondeu. Confira se ela está rodando (na pasta <code>api/</code>, <code>uvicorn app.main:app</code>).</p>
-        </div>
+        <AvisoApi voltar="/analises/custo-cadeira" />
       </>
     );
   }
@@ -94,6 +92,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
                 Custo da cadeira = gasto de todos que fizeram campanha para o cargo ÷ número de vagas. Gasto por candidato = gasto de quem
                 disputou ÷ número de candidatos. Clique num cargo para vê-lo em destaque.
                 {atual.naoDisputouComGasto > 0 && ` O custo da cadeira inclui ${reais(atual.gastoNaoDisputou)} de ${inteiro(atual.naoDisputouComGasto)} ${atual.naoDisputouComGasto === 1 ? "candidato que fez campanha mas não chegou a disputar" : "candidatos que fizeram campanha mas não chegaram a disputar"} (candidatura barrada, renúncia ou substituição).`}
+                {atual.semPrestacao > 0 && ` ${inteiro(atual.semPrestacao)} ${atual.semPrestacao === 1 ? "candidato não entregou" : "candidatos não entregaram"} a prestação de contas final: ${atual.semPrestacao === 1 ? "entra" : "entram"} na conta com gasto zero, mas o valor real não é conhecido.`}
               </p>
             </>
           )}
@@ -131,7 +130,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
               {" "}de {reais(primeiro.porCadeira ?? 0)} para {reais(ultimo.porCadeira ?? 0)}.
             </p>
           )}
-          <p className="escala">O tamanho da barra é o custo de uma cadeira em cada eleição para esse cargo.</p>
+          <p className="escala">O tamanho da barra é o custo de uma cadeira em cada eleição para esse cargo. Valores da época, sem correção pela inflação.</p>
           <BarrasH compacto titulo={`Custo de uma cadeira de ${cargo} por eleição`}
             linhas={historico.map((c) => ({
               chave: String(c.ano), rotulo: String(c.ano), detalhe: TIPO_ELEICAO(c.ano), valor: c.porCadeira ?? 0, classe: "pub",

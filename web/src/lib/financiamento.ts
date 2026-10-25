@@ -32,7 +32,7 @@ export interface LinhaMediana {
   ano: number; cargo: string; uf: string | null; eleito: boolean; candidaturas: number;
   mediana_total: number; mediana_publico: number; mediana_pct_publico: number | null;
 }
-/** Taxa de eleição por faixa de dinheiro público (pergunta 8). faixa 0 = nada; 1–4 = quartos de quem recebeu (no mesmo ano, cargo e UF). */
+/** Taxa de eleição por faixa de dinheiro público (pergunta 8). faixa -1 = sem prestação final; 0 = nada; 1–4 = quartos de quem recebeu (no mesmo ano, cargo e UF). */
 export interface LinhaSucesso { ano: number; cargo: string; uf: string; faixa: number; candidaturas: number; eleitos: number; publico_min: number; publico_max: number }
 
 export const FAIXAS_PUBLICO = [
@@ -155,7 +155,17 @@ export function ordenarPartidos<T extends { partido: string; soma: Soma }>(parti
     .sort((a, b) => b.soma.publico / b.soma.total - a.soma.publico / a.soma.total || b.soma.total - a.soma.total);
 }
 
-/** Taxa de eleição em cada faixa de dinheiro público (sempre as 5 faixas, mesmo vazias). */
+/** Faixa dos candidatos sem prestação de contas final (perguntas 2 e 8): o valor é desconhecido, não zero. */
+export const SEM_PRESTACAO = -1;
+
+/** Quantos candidatos do recorte não entregaram a prestação final e ficaram fora dos grupos. `cargos` limita a esses cargos. */
+export function semPrestacao(linhas: { ano: number; cargo: string; uf: string | null; faixa: number; candidaturas: number }[], f: Filtros, cargos?: string[]): number {
+  let n = 0;
+  for (const l of linhas) if (l.faixa === SEM_PRESTACAO && passa(l, f) && (!cargos || cargos.includes(l.cargo))) n += l.candidaturas;
+  return n;
+}
+
+/** Taxa de eleição em cada faixa de dinheiro público (sempre as 5 faixas, mesmo vazias; quem não prestou contas fica de fora). */
 export function sucessoPorFaixa(linhas: LinhaSucesso[], f: Filtros) {
   const porFaixa = FAIXAS_PUBLICO.map((x) => ({ ...x, candidaturas: 0, eleitos: 0, min: Infinity, max: 0 }));
   for (const l of linhas) {

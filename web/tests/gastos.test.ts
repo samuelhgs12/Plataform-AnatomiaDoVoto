@@ -3,6 +3,7 @@ import {
   correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, grupo, maiorGastador, respostaGasto, respostaMaior, sucessoPorGasto,
   type LinhaCorrelacao, type LinhaGastoFaixa, type LinhaMaiorGasto,
 } from "../src/lib/gastos";
+import { semPrestacao } from "../src/lib/financiamento";
 
 const l = (o: Partial<LinhaGastoFaixa>): LinhaGastoFaixa => ({
   medida: "recursos", ano: 2022, cargo: "Deputado federal", uf: "MG", tinha_cargo: false, faixa: 1, candidaturas: 100, eleitos: 1, ...o,
@@ -22,6 +23,12 @@ describe("sucessoPorGasto", () => {
     expect(grupo(g, "medio").taxa).toBeCloseTo(0.03);
     expect(grupo(g, "muito").candidaturas).toBe(120);
     expect(grupo(g, "muito").taxa).toBeCloseTo(22 / 120);
+  });
+  it("deixa de fora quem não entregou a prestação final (faixa -1), que não é 'nada declarado'", () => {
+    const f = { ano: 2022, uf: "MG", cargo: "Deputado federal" };
+    const g = sucessoPorGasto([...linhas, l({ faixa: -1, candidaturas: 40, eleitos: 0 })], f);
+    expect(g.reduce((a, x) => a + x.candidaturas, 0)).toBe(sucessoPorGasto(linhas, f).reduce((a, x) => a + x.candidaturas, 0));
+    expect(semPrestacao([...linhas, l({ faixa: -1, candidaturas: 40 }), l({ faixa: -1, uf: "PE", candidaturas: 7 })], f)).toBe(40);
   });
   it("separa quem já tinha o cargo", () => {
     const f = { ano: 2022, uf: "MG", cargo: "Deputado federal" };
@@ -54,7 +61,7 @@ describe("respostaGasto", () => {
   it("não responde sem dados e não afirma com poucos candidatos", () => {
     expect(respostaGasto(sucessoPorGasto([], {})).curta).toBeNull();
     const poucos = respostaGasto(sucessoPorGasto([l({ faixa: 1, candidaturas: 4, eleitos: 0 }), l({ faixa: 4, candidaturas: 4, eleitos: 1 })], {}));
-    expect(poucos.curta).toBe("Não dá para afirmar.");
+    expect(poucos.curta).toBe("Sem diferença clara.");
   });
 });
 
@@ -68,11 +75,11 @@ describe("maiorGastador e respostaMaior", () => {
     expect(r.variancia).toBe(35);
     expect(respostaMaior(r)).toBe("Sim.");
   });
-  it("responde 'Não.', 'quase não faz diferença', 'não dá para afirmar' ou nada", () => {
+  it("responde 'Não.', 'sem diferença clara' ou nada", () => {
     expect(respostaMaior(maiorGastador([m({ maior_venceu: 20, chance_sorteio: 50, var_sorteio: 25 })], {}))).toBe("Não.");
-    expect(respostaMaior(maiorGastador([m({ maior_venceu: 50, chance_sorteio: 48, var_sorteio: 25 })], {}))).toBe("Quase não faz diferença.");
+    expect(respostaMaior(maiorGastador([m({ maior_venceu: 50, chance_sorteio: 48, var_sorteio: 25 })], {}))).toBe("Sem diferença clara.");
     // 6 disputas, 0 vitórias contra ~1 esperada: pode ser acaso
-    expect(respostaMaior(maiorGastador([m({ disputas: 6, maior_venceu: 0, chance_sorteio: 0.97, var_sorteio: 0.8 })], {}))).toBe("Não dá para afirmar.");
+    expect(respostaMaior(maiorGastador([m({ disputas: 6, maior_venceu: 0, chance_sorteio: 0.97, var_sorteio: 0.8 })], {}))).toBe("Sem diferença clara.");
     expect(respostaMaior(maiorGastador([], {}))).toBeNull();
   });
   it("reconhece os cargos majoritários", () => {

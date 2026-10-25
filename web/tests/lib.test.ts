@@ -13,7 +13,7 @@ import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { fotoDaBusca, fotoDaPessoa, fotoDoPerfil, urlFoto } from "../src/lib/foto-candidato";
 import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
-import { respostaSucesso, resumoCampanhas, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
+import { respostaSucesso, resumoCampanhas, semPrestacao, SEM_PRESTACAO, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
 
 describe("format", () => {
   it("abrevia números e gera iniciais", () => {
@@ -232,7 +232,7 @@ describe("respostaSucesso", () => {
   it("sem ninguém em 'nada', compara com 'pouco'; diferença pequena não é 'sim'", () => {
     const r = respostaSucesso({ nada: grupo("nada", 0, 0), pouco: grupo("pouco", 100, 20), muito: grupo("muito", 100, 22) });
     expect(r.base.chave).toBe("pouco");
-    expect(r.curta).toBe("Quase não faz diferença.");
+    expect(r.curta).toBe("Sem diferença clara.");
     expect(respostaSucesso({ nada: grupo("nada", 100, 0), pouco: grupo("pouco", 100, 0), muito: grupo("muito", 100, 5) }).vezes).toBeNull();
   });
 });
@@ -604,5 +604,13 @@ describe("escalaDoMaior", () => {
   it("o maior vale 1 e os outros, a fração dele", () => {
     expect(escalaDoMaior([{ valor: 0.26 }, { valor: 0.13 }]).map((x) => x.p)).toEqual([1, 0.5]);
     expect(escalaDoMaior([{ valor: 0 }]).map((x) => x.p)).toEqual([0]);
+
+describe("semPrestacao (pergunta 8)", () => {
+  const su = (o: Partial<LinhaSucesso>): LinhaSucesso => ({ ano: 2022, cargo: "Deputado federal", uf: "MG", faixa: 0, candidaturas: 10, eleitos: 1, publico_min: 0, publico_max: 0, ...o });
+  it("conta só a faixa -1 do recorte e não a põe em nenhum grupo", () => {
+    const linhas = [su({}), su({ faixa: SEM_PRESTACAO, candidaturas: 6 }), su({ faixa: SEM_PRESTACAO, cargo: "Senador", candidaturas: 2 })];
+    expect(semPrestacao(linhas, { ano: 2022 })).toBe(8);
+    expect(semPrestacao(linhas, { ano: 2022 }, ["Senador"])).toBe(2);
+    expect(sucessoPorFaixa(linhas, { ano: 2022 }).reduce((a, g) => a + g.candidaturas, 0)).toBe(10);
   });
 });

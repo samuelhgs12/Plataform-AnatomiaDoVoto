@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compararGrupos, responder, zContagem, zProporcoes } from "../src/lib/estatistica";
+import { compararGrupos, explicacao, responder, zContagem, zProporcoes } from "../src/lib/estatistica";
 
 describe("zProporcoes", () => {
   it("calcula o teste de duas proporções", () => {
@@ -26,15 +26,17 @@ describe("responder e compararGrupos", () => {
     expect(compararGrupos({ eleitos: 300, candidaturas: 1000 }, { eleitos: 100, candidaturas: 1000 }).resposta).toBe("Sim.");
     expect(compararGrupos({ eleitos: 100, candidaturas: 1000 }, { eleitos: 300, candidaturas: 1000 }).resposta).toBe("Não.");
   });
-  it("com poucos casos, não afirma nada", () => {
-    expect(compararGrupos({ eleitos: 3, candidaturas: 6 }, { eleitos: 1, candidaturas: 6 }).resposta).toBe("Não dá para afirmar.");
+  it("sem diferença estatística, não conclui que é igual: 'sem diferença clara'", () => {
+    expect(compararGrupos({ eleitos: 3, candidaturas: 6 }, { eleitos: 1, candidaturas: 6 }).resposta).toBe("Sem diferença clara.");
+    expect(compararGrupos({ eleitos: 1010, candidaturas: 10000 }, { eleitos: 1000, candidaturas: 10000 }).resposta).toBe("Sem diferença clara.");
+    expect(explicacao("Sem diferença clara.")).toMatch(/Não foi possível identificar uma diferença clara/);
   });
-  it("com muitos casos e diferença pequena, diz que quase não faz diferença", () => {
-    expect(compararGrupos({ eleitos: 1010, candidaturas: 10000 }, { eleitos: 1000, candidaturas: 10000 }).resposta).toBe("Quase não faz diferença.");
-    // significativa, mas menos de 20% maior
-    expect(responder(0.11, 0.1, 5, 100000)).toBe("Quase não faz diferença.");
+  it("diferença real, mas menor que 20%: 'diferença pequena'", () => {
+    expect(responder(0.11, 0.1, 5)).toBe("Diferença pequena.");
+    expect(explicacao("Diferença pequena.")).toMatch(/menor que 20%/);
+    expect(explicacao("Sim.")).toBeNull();
   });
-  it("sem teste possível, não afirma", () => {
-    expect(responder(0.5, 0.1, null, 0)).toBe("Não dá para afirmar.");
+  it("sem teste possível, diz que faltam dados", () => {
+    expect(responder(0.5, 0.1, null)).toBe("Sem dados suficientes.");
   });
 });

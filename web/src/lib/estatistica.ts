@@ -1,14 +1,18 @@
 // Testes estatísticos simples para as respostas "Sim / Não" das análises (perguntas 2 e 8), sem dependência do React.
 // Em vez de só olhar se uma taxa é 20% maior que a outra, verificam se a diferença é grande demais para ser acaso
-// (nível de 95%, |z| >= 1,96). Com poucos candidatos ou poucas disputas, a resposta vira "Não dá para afirmar.".
+// (nível de 95%, |z| >= 1,96). Quando o teste não acha diferença, a resposta não afirma que "não faz diferença":
+// diz que não foi possível identificar uma diferença clara naquele recorte (pode ser falta de casos).
 
 export const Z_95 = 1.96;
 /** Diferença mínima, além de significativa, para responder "Sim" ou "Não" (o grupo com mais é ao menos 20% mais eleito). */
 export const RAZAO_MINIMA = 1.2;
-/** Abaixo disto (no menor grupo), uma diferença não significativa é tratada como falta de dados, e não como "igual". */
-export const AMOSTRA_MINIMA = 100;
+export type Resposta = "Sim." | "Não." | "Diferença pequena." | "Sem diferença clara." | "Sem dados suficientes.";
 
-export type Resposta = "Sim." | "Não." | "Quase não faz diferença." | "Não dá para afirmar.";
+/** Frase que acompanha "Sem diferença clara." (ao lado das taxas observadas, que a página sempre mostra). */
+export const EXPLICACAO_SEM_DIFERENCA =
+  "Não foi possível identificar uma diferença clara neste recorte: com estas quantidades, a diferença entre as taxas pode ser acaso.";
+/** Frase que acompanha "Diferença pequena.". */
+export const EXPLICACAO_PEQUENA = "A diferença existe, mas é menor que 20% entre os grupos.";
 
 /**
  * Teste z de duas proporções (com a proporção combinada). Devolve z > 0 quando o grupo 1 tem taxa maior.
@@ -31,19 +35,25 @@ export function zContagem(observado: number, esperado: number, variancia: number
 /**
  * A resposta curta a partir de duas taxas e do teste:
  * - diferença significativa e ao menos 20% maior (ou menor): "Sim." (ou "Não.");
- * - significativa, mas pequena: "Quase não faz diferença.";
- * - não significativa: "Quase não faz diferença." com amostra grande, "Não dá para afirmar." com amostra pequena.
+ * - significativa, mas pequena: "Diferença pequena.";
+ * - não significativa: "Sem diferença clara." (não quer dizer que as taxas sejam iguais);
+ * - sem teste possível (grupo vazio): "Sem dados suficientes.".
  */
-export function responder(taxa1: number, taxa2: number, z: number | null, menorAmostra: number): Resposta {
-  if (z === null) return "Não dá para afirmar.";
-  if (Math.abs(z) < Z_95) return menorAmostra >= AMOSTRA_MINIMA ? "Quase não faz diferença." : "Não dá para afirmar.";
-  if (taxa1 > taxa2) return taxa1 >= taxa2 * RAZAO_MINIMA ? "Sim." : "Quase não faz diferença.";
-  return taxa2 >= taxa1 * RAZAO_MINIMA ? "Não." : "Quase não faz diferença.";
+export function responder(taxa1: number, taxa2: number, z: number | null): Resposta {
+  if (z === null) return "Sem dados suficientes.";
+  if (Math.abs(z) < Z_95) return "Sem diferença clara.";
+  if (taxa1 > taxa2) return taxa1 >= taxa2 * RAZAO_MINIMA ? "Sim." : "Diferença pequena.";
+  return taxa2 >= taxa1 * RAZAO_MINIMA ? "Não." : "Diferença pequena.";
+}
+
+/** A frase explicativa de uma resposta que não é "Sim" nem "Não" (null quando não precisa). */
+export function explicacao(r: Resposta | null): string | null {
+  return r === "Sem diferença clara." ? EXPLICACAO_SEM_DIFERENCA : r === "Diferença pequena." ? EXPLICACAO_PEQUENA : null;
 }
 
 /** Compara a taxa de eleição de dois grupos (o "de cima" e o de comparação). */
 export function compararGrupos(cima: { eleitos: number; candidaturas: number }, base: { eleitos: number; candidaturas: number }): { resposta: Resposta; z: number | null } {
   const z = zProporcoes(cima.eleitos, cima.candidaturas, base.eleitos, base.candidaturas);
   const t1 = cima.candidaturas ? cima.eleitos / cima.candidaturas : 0, t2 = base.candidaturas ? base.eleitos / base.candidaturas : 0;
-  return { resposta: responder(t1, t2, z, Math.min(cima.candidaturas, base.candidaturas)), z };
+  return { resposta: responder(t1, t2, z), z };
 }

@@ -14,7 +14,7 @@ export const MEDIDAS: { chave: Medida; rotulo: string; explicacao: string }[] = 
 /** Só as linhas de uma medida. */
 export const daMedida = <T extends { medida: Medida }>(linhas: T[], medida: Medida) => linhas.filter((l) => l.medida === medida);
 
-/** faixa 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou, comparando só com a mesma disputa (4 = os que mais têm). */
+/** faixa -1 = sem prestação final (fora dos grupos); 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou, comparando só com a mesma disputa (4 = os que mais têm). */
 export interface LinhaGastoFaixa { medida: Medida; ano: number; cargo: string; uf: string; tinha_cargo: boolean; faixa: number; candidaturas: number; eleitos: number }
 /** Disputas com poucos candidatos: quantas vezes o que teve mais recursos venceu, e quantas vitórias teria por sorteio. */
 export interface LinhaMaiorGasto { medida: Medida; ano: number; cargo: string; uf: string; disputas: number; maior_venceu: number; maior_tinha_cargo: number; chance_sorteio: number; var_sorteio: number }
@@ -22,7 +22,7 @@ export interface LinhaMaiorGasto { medida: Medida; ano: number; cargo: string; u
 export interface LinhaCorrelacao { medida: Medida; ano: number; cargo: string; uf: string | null; n: number; correlacao: number }
 
 export const GRUPOS_GASTO = [
-  { chave: "nada", faixas: [0], rotulo: "Nada declarado", detalhe: "valor zero na prestação", classe: "fx5" },
+  { chave: "nada", faixas: [0], rotulo: "Nada declarado", detalhe: "prestou contas com valor zero", classe: "fx5" },
   { chave: "pouco", faixas: [1], rotulo: "Pouco", detalhe: "cerca de 1/4, os que menos têm", classe: "fx2" },
   { chave: "medio", faixas: [2, 3], rotulo: "Médio", detalhe: "cerca da metade, no meio", classe: "fx2" },
   { chave: "muito", faixas: [4], rotulo: "Muito", detalhe: "cerca de 1/4, os que mais têm", classe: "" },
@@ -84,11 +84,11 @@ export function maiorGastador(linhas: LinhaMaiorGasto[], f: Filtros) {
 
 /**
  * A resposta curta das disputas majoritárias: as vitórias de quem tinha mais, comparadas com as de um sorteio
- * (teste z da contagem, com a variância do sorteio). Com poucas disputas, "Não dá para afirmar.".
+ * (teste z da contagem, com a variância do sorteio). Com poucas disputas, em geral "Sem diferença clara.".
  */
 export function respostaMaior(m: ReturnType<typeof maiorGastador>): Resposta | null {
   if (m.disputas === 0) return null;
-  return responder(m.pct, m.pctSorteio, zContagem(m.venceu, m.sorteio, m.variancia), m.disputas);
+  return responder(m.pct, m.pctSorteio, zContagem(m.venceu, m.sorteio, m.variancia));
 }
 
 /**

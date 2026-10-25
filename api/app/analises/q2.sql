@@ -10,8 +10,17 @@
 --   * recursos: o maior dos dois. Muitos candidatos declaram despesas com valor zero (material estimável) e recebem o
 --               material de outro candidato: só com o gasto, dezenas de milhares pareceriam "sem dinheiro".
 -- Só titulares, eleição ordinária e quem de fato disputou; não há receitas nem despesas antes de 2018.
+-- Quem não entregou a prestação final fica na faixa -1 (valor desconhecido, não "zero"): fora dos grupos, das disputas
+-- do item 2 e da correlação; a página só informa quantos são.
 -- Cada candidato é comparado só com os concorrentes da mesma disputa: o município (prefeito e vereador) ou a UF
 -- (deputados, senador e governador; presidente: o país).
+
+-- Quem entregou a prestação de contas final (mesmo "sem movimentação", que vem como um lançamento de valor zero).
+-- Quem não entregou não "gastou zero": o valor é desconhecido.
+CREATE OR REPLACE TEMP TABLE prestou AS
+SELECT id_candidatura FROM despesa_campanha WHERE tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')
+UNION
+SELECT id_candidatura FROM receita_campanha WHERE tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO');
 
 CREATE OR REPLACE TEMP TABLE cand_q2 AS
 SELECT c.id_candidatura, c.id_candidato, c.ano, g.id_cargo, g.nome AS cargo, coalesce(c.uf, 'BR') AS uf,
@@ -19,7 +28,8 @@ SELECT c.id_candidatura, c.id_candidato, c.ano, g.id_cargo, g.nome AS cargo, coa
        rr.eleito,
        coalesce(d.gasto_total, 0) AS gasto,
        coalesce(r.recebido, 0) AS receita,
-       coalesce(v.votos, 0) AS votos
+       coalesce(v.votos, 0) AS votos,
+       c.id_candidatura IN (SELECT id_candidatura FROM prestou) AS prestou
 FROM candidatura c
 JOIN eleicao e           ON e.id_eleicao = c.id_eleicao
 JOIN cargo g             ON g.id_cargo = e.id_cargo
@@ -59,12 +69,13 @@ SELECT x.*,
 FROM cand_q2 x
 CROSS JOIN (VALUES ('recursos'), ('gasto'), ('receita')) m(medida);
 
--- Faixa dentro da disputa: 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou (4 = os que mais têm).
+-- Faixa dentro da disputa: -1 = sem prestação final; 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou (4 = os que mais têm).
 -- percent_rank dá a mesma posição a valores iguais: empates caem sempre no mesmo grupo (resultado estável), por isso os
 -- grupos têm tamanho aproximado; com 2 ou 3 candidatos na disputa, "o que mais tem" pode ser metade dela.
 CREATE OR REPLACE TEMP TABLE faixa_q2 AS
 SELECT *,
-       CASE WHEN valor <= 0 THEN 0
+       CASE WHEN NOT prestou THEN -1
+            WHEN valor <= 0 THEN 0
             ELSE least(4, 1 + floor(4 * percent_rank() OVER (PARTITION BY medida, ano, cargo, disputa, valor > 0 ORDER BY valor)))::INTEGER
        END AS faixa
 FROM medida_q2;
@@ -83,6 +94,7 @@ COPY (
 --    chance_sorteio = vitórias esperadas se a medida não importasse (soma de p = vagas / candidatos de cada disputa);
 --    var_sorteio = soma de p(1 - p), a variância dessa contagem, usada no teste estatístico da página.
 --    Somas em inteiros (milionésimos): o resultado não depende da ordem da soma. Empate: vale o de menor id.
+--    Só disputas em que todos entregaram a prestação final (senão não se sabe quem tinha mais).
 -------------------------------------------------------------------------------
 COPY (
     WITH disputas AS (
@@ -90,7 +102,7 @@ COPY (
         FROM faixa_q2
         WHERE cargo IN ('Prefeito', 'Governador', 'Senador', 'Presidente')
         GROUP BY ALL
-        HAVING count(*) > 1 AND max(valor) > 0
+        HAVING count(*) > 1 AND max(valor) > 0 AND bool_and(prestou)
     ), topo AS (
         SELECT medida, ano, cargo, disputa, eleito, tinha_cargo,
                row_number() OVER (PARTITION BY medida, ano, cargo, disputa ORDER BY valor DESC, id_candidatura) AS pos
@@ -126,6 +138,7 @@ COPY (
                  / count(*) OVER (PARTITION BY medida, ano, cargo, disputa) AS py,
                count(*) OVER (PARTITION BY medida, ano, cargo, disputa) AS na_disputa
         FROM faixa_q2
+        WHERE prestou   -- sem prestação: valor desconhecido, fora dos postos
     ), pos AS (
         SELECT medida, ano, cargo, uf, round(1000000 * px)::HUGEINT AS x, round(1000000 * py)::HUGEINT AS y
         FROM postos WHERE na_disputa > 1
