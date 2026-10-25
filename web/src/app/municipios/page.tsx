@@ -13,7 +13,7 @@ import {
   type Eleito, type Indicador, type LinhaEstado, type LinhaMunicipio, type LinhaResumo,
 } from "@/lib/territorio";
 import { Cabecalho } from "@/components/Cabecalho";
-import { EscolhaMunicipio } from "@/components/EscolhaMunicipio";
+import { EscolhaCidade } from "@/components/EscolhaCidade";
 import { ListaEleitos } from "@/components/ListaEleitos";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "@/components/MapaAbstencao";
 import { MapaVivo } from "@/components/MapaVivo";
@@ -179,7 +179,7 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
                 : valorLugar === null ? "Sem disputas com gasto declarado." : `das ${inteiro(est.disputas)} cidades com disputa para prefeito em ${ano}: o candidato que mais gastou venceu.`)}
             </p>
             {uf && (
-              <EscolhaMunicipio caminho="/municipios"
+              <EscolhaCidade
                 opcoes={municipios.filter((m) => m.uf === uf).map((m) => [m.id_municipio, nomeMun.get(m.id_municipio)!] as [number, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"))}
                 atual={mun?.id_municipio}
                 params={Object.fromEntries(params({ mun: null }))}

@@ -13,8 +13,6 @@ interface Props {
   rotulo?: string;
   /** a opção vazia, que tira o filtro */
   vazio?: string;
-  /** página que a escolha abre (padrão: a inicial, com o mapa) */
-  caminho?: string;
 }
 
 /**
@@ -22,16 +20,16 @@ interface Props {
  * ficam fora da ordem de tabulação, senão seriam 853 paradas em Minas). Na visão de legenda, a mesma lista escolhe o
  * partido (`nome="p"`). Aplica na hora; sem JavaScript, envia o formulário como GET comum.
  */
-export function EscolhaMunicipio({ opcoes, atual, params, nome = "mun", rotulo = "Município", vazio = "O estado inteiro", caminho = "/" }: Props) {
+export function EscolhaMunicipio({ opcoes, atual, params, nome = "mun", rotulo = "Município", vazio = "O estado inteiro" }: Props) {
   const router = useRouter();
   const [carregando, iniciar] = useTransition();
   const ir = (valor: string) => {
     const sp = new URLSearchParams(params);
     if (valor) sp.set(nome, valor);
-    iniciar(() => router.push(`${caminho}?${sp.toString()}#mapa`, { scroll: false }));
+    iniciar(() => router.push(`/?${sp.toString()}#mapa`, { scroll: false }));
   };
   return (
-    <form method="get" action={`${caminho}#mapa`} className="escolha-mun" aria-busy={carregando}>
+    <form method="get" action="/#mapa" className="escolha-mun" aria-busy={carregando}>
       {Object.entries(params).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       <label>
         <span className="rotulo">{rotulo}</span>
