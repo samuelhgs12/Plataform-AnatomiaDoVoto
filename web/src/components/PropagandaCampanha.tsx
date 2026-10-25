@@ -5,7 +5,9 @@ import {
   analisar, composicaoPorTipo, grupo, GRUPOS, nomearPredominantes, parteTexto, reaisCentavos, resumoPropaganda,
   type Analise, type Propaganda,
 } from "@/lib/propaganda";
+import { montarNuvem, textoDetalhes, type Nuvem } from "@/lib/nuvem";
 import { BarrasH } from "./BarrasH";
+import { NuvemPalavras } from "./NuvemPalavras";
 
 const r$ = (centavos: number) => reais(centavos / 100);
 /** Só a primeira letra: "Programas de rádio, TV ou vídeo" → "programas de rádio, TV ou vídeo". */
@@ -71,10 +73,10 @@ function Conteudo({ c, p }: { c: CarreiraItem; p: Propaganda | null }) {
       </p>
     );
   }
-  return <ComPropaganda campanha={campanha} a={a} />;
+  return <ComPropaganda campanha={campanha} a={a} nuvem={montarNuvem(p.termos ?? [])} />;
 }
 
-function ComPropaganda({ campanha, a }: { campanha: string; a: Extract<Analise, { estado: "com_propaganda" }> }) {
+function ComPropaganda({ campanha, a, nuvem }: { campanha: string; a: Extract<Analise, { estado: "com_propaganda" }>; nuvem: Nuvem }) {
   const [maior] = a.predominantes;
   return (
     <>
@@ -93,6 +95,7 @@ function ComPropaganda({ campanha, a }: { campanha: string; a: Extract<Analise, 
         }))} />
       <h3>Por tipo de propaganda</h3>
       <Composicao a={a} />
+      {nuvem.palavras.length > 0 && <OQueFoiComprado nuvem={nuvem} />}
       <details>
         <summary>Ver o detalhamento por categoria, com os valores exatos</summary>
         <div className="tablewrap">
@@ -114,6 +117,46 @@ function ComPropaganda({ campanha, a }: { campanha: string; a: Extract<Analise, 
         a outros candidatos. Propaganda física: {GRUPOS.propaganda_fisica.descricao}; audiovisual: {GRUPOS.propaganda_audiovisual.descricao};
         digital: {GRUPOS.propaganda_digital.descricao}. Gastar mais não diz quantas pessoas a propaganda alcançou nem se ajudou a eleger.
       </p>
+    </>
+  );
+}
+
+/** Nuvem de palavras (o que foi comprado) com a tabela equivalente e o aviso das descrições vagas. */
+function OQueFoiComprado({ nuvem }: { nuvem: Nuvem }) {
+  const vago = nuvem.pelaCategoriaParte;
+  return (
+    <>
+      <h3>O que foi comprado</h3>
+      <p className="escala">
+        Cada palavra é uma peça: os formatos dela contam juntos (adesivo perfurado, de para-choque e praguinha são
+        &ldquo;adesivo&rdquo;). O tamanho é o valor contratado; a cor, o tipo de propaganda; em cinza, gastos que não dizem a peça.
+      </p>
+      <NuvemPalavras nuvem={nuvem} />
+      {(vago > 0 || nuvem.fora > 0) && (
+        <p className="muted nuvem-nota">
+          {vago > 0 && <>{r$(nuvem.pelaCategoriaCentavos)} ({parteTexto(vago)}) tinham descrição vaga, como &ldquo;propaganda e
+            publicidade&rdquo;, e aparecem com o nome da categoria do TSE. </>}
+          {nuvem.fora > 0 && <>Mais {nuvem.fora} {nuvem.fora === 1 ? "peça pequena está" : "peças pequenas estão"} só na tabela.</>}
+        </p>
+      )}
+      <details>
+        <summary>Ver as peças em tabela, com os formatos</summary>
+        <div className="tablewrap">
+          <table>
+            <caption className="sr-only">Peças da nuvem de palavras: o que a campanha comprou em propaganda, com os formatos de cada uma</caption>
+            <thead><tr><th>Peça</th><th>Inclui</th><th>Tipo</th><th className="num">Despesas</th><th className="num">Valor contratado</th><th className="num">% da propaganda</th></tr></thead>
+            <tbody>
+              {nuvem.todos.map((t) => (
+                <tr key={t.termo}>
+                  <td>{t.termo}{t.explicacao && <small className="muted"> {t.explicacao}</small>}</td><td>{textoDetalhes(t, 6) || "—"}</td>
+                  <td>{t.generico ? "Peça não especificada" : grupo(t.grupo).rotulo}</td><td className="num">{inteiro(t.despesas)}</td>
+                  <td className="num">{reaisCentavos(t.centavos)}</td><td className="num">{parteTexto(t.parte)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </>
   );
 }

@@ -169,9 +169,24 @@ def test_propaganda_por_categoria_em_centavos(client):
     ]
 
 
+def test_propaganda_termos_da_nuvem(client):
+    termos = client.get("/api/candidaturas/2/propaganda").json()["termos"]
+    # "santinhos e adesivos" (R$ 3.000) divide o valor entre as duas peças; "impulsionamento ... redes sociais" vira só
+    # "redes" (impulsionamento é genérico). Empate no valor: ordem alfabética. A descrição original não sai.
+    assert [(t["termo"], t["grupo"], t["centavos"], t["despesas"], t["generico"]) for t in termos] == [
+        ("adesivo", "propaganda_fisica", 150_000, 1, False),
+        ("redes", "propaganda_digital", 150_000, 1, False),
+        ("santinho", "propaganda_fisica", 150_000, 1, False),
+    ]
+    assert termos[1]["explicacao"] == "gestão e conteúdo de redes sociais"
+    assert termos[2]["detalhes"] == [{"termo": "santinho", "centavos": 150_000}]
+    assert sum(t["centavos"] for t in termos) == 450_000 and all(t["pela_categoria_centavos"] == 0 for t in termos)
+    assert "descricao" not in json.dumps(termos)
+
+
 def test_propaganda_candidatura_sem_despesa(client):
     p = client.get("/api/candidaturas/1/propaganda").json()
-    assert (p["lancamentos"], p["total_centavos"], p["propaganda_centavos"], p["categorias"]) == (0, 0, 0, [])
+    assert (p["lancamentos"], p["total_centavos"], p["propaganda_centavos"], p["categorias"], p["termos"]) == (0, 0, 0, [], [])
 
 
 def test_palavras_sem_palavras_vazias(client):

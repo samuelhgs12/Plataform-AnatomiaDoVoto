@@ -427,6 +427,12 @@ a.linha:hover { background: var(--panel2); }
 .stack.composicao .seg + .seg { box-shadow: inset 2px 0 0 var(--panel); }   /* separa os tipos, como os pedaços de BarrasH */
 .composicao-tipos { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; margin-bottom: 16px; }
 .combo-largo li small { display: block; color: var(--muted); font-size: 13px; line-height: 1.35; }
+/* nuvem de palavras: o texto do SVG usa a cor do tipo de propaganda (as classes .pp-* acima pintam fundo, aqui pintam letra) */
+.nuvem { margin: 8px 0 4px; }
+.nuvem svg { display: block; width: 100%; max-width: 860px; height: auto; margin: 0 auto; }
+.nuvem text { font-weight: 600; letter-spacing: -0.01em; }
+.nuvem text.pp-fis { fill: var(--pp-fis); } .nuvem text.pp-av { fill: var(--pp-av); } .nuvem text.pp-dig { fill: var(--pp-dig); } .nuvem text.pp-outra { fill: var(--pp-outra); }
+.nuvem-nota { font-size: 15px; margin: 4px 0 8px; }
 
 /* ---------- Rodapé: o nome em teclas ---------- */
 .rodape { margin-top: 120px; padding: 0 var(--margem) var(--margem); }

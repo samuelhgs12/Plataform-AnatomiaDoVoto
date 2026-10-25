@@ -126,6 +126,23 @@ class CategoriaPropaganda(BaseModel):
     centavos: int
 
 
+class DetalheTermo(BaseModel):
+    termo: str                  # formato da peça ("adesivo perfurado", "praguinha"...; "sem detalhe" = veio da categoria)
+    centavos: int
+
+
+class TermoPropaganda(BaseModel):
+    """Uma palavra da nuvem (app/nuvem.py): uma peça de propaganda. A descrição original das despesas não sai da API."""
+    termo: str                  # peça, em uma palavra ("adesivo", "santinho", "Facebook", "anúncios"...)
+    grupo: str                  # tipo de propaganda com mais valor na peça (propaganda_fisica, _audiovisual, _digital)
+    centavos: int               # valor contratado atribuído à peça
+    despesas: int
+    pela_categoria_centavos: int  # parte do valor cuja descrição era vaga: a peça veio da categoria do TSE
+    generico: bool              # não diz qual peça foi comprada ("impressos", "marketing"): cor neutra
+    explicacao: str | None      # o que a palavra cobre, para a dica ("Facebook, Instagram e WhatsApp (Meta)")
+    detalhes: list[DetalheTermo]  # formatos da peça, do maior para o menor valor
+
+
 class Propaganda(BaseModel):
     """Pergunta 9: onde a campanha investiu em propaganda. Valores em centavos inteiros (valor contratado)."""
     id_candidatura: int
@@ -133,6 +150,7 @@ class Propaganda(BaseModel):
     total_centavos: int
     propaganda_centavos: int
     categorias: list[CategoriaPropaganda]
+    termos: list[TermoPropaganda]   # nuvem de palavras: o que foi comprado, do maior para o menor valor
 
 
 class Palavra(BaseModel):

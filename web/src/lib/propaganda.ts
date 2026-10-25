@@ -3,13 +3,17 @@
 // Valores em centavos inteiros: somas e percentuais exatos. Valor = valor CONTRATADO, não o pago.
 
 import { deCada100 } from "./financiamento";
+import type { TermoNuvem } from "./nuvem";
 import type { CarreiraItem } from "./types";
 
 /** Totais da candidatura: despesas consideradas (todas as categorias, sem transferências) e a parte de propaganda. */
 export interface Totais { lancamentos: number; total_centavos: number; propaganda_centavos: number }
 export interface Categoria { origem: string; grupo: string; lancamentos: number; centavos: number }
-/** Resposta de GET /api/candidaturas/<id>/propaganda. */
-export interface Propaganda extends Totais { id_candidatura: number; categorias: Categoria[] }
+/**
+ * Resposta de GET /api/candidaturas/<id>/propaganda. `termos` (nuvem de palavras) falta numa API anterior a ela, e pode
+ * vir incompleto de outra versão: por isso Partial, completado por `normalizarTermo` (src/lib/nuvem.ts).
+ */
+export interface Propaganda extends Totais { id_candidatura: number; categorias: Categoria[]; termos?: Partial<TermoNuvem>[] }
 
 export interface ResumoPropaganda {
   id: number; ano: number; cargo: string; eleito: boolean;
@@ -34,6 +38,8 @@ export const GRUPOS: Record<string, { rotulo: string; descricao: string; classe:
 };
 const GRUPO_DESCONHECIDO = { rotulo: "Outra propaganda", descricao: "categoria sem grupo conhecido", classe: "pp-outra" };
 export const grupo = (g: string) => GRUPOS[g] ?? { ...GRUPO_DESCONHECIDO, rotulo: g };
+/** Classe de cor de uma palavra da nuvem: a do tipo de propaganda, ou neutra se ela não diz qual peça foi comprada. */
+export const classeTermo = (t: { grupo: string; generico: boolean }) => (t.generico ? GRUPO_DESCONHECIDO.classe : grupo(t.grupo).classe);
 
 /** Nome curto de cada categoria original do TSE (DS_ORIGEM_DESPESA). Categoria nova: aparece com o nome original. */
 const ROTULO_ORIGEM: Record<string, string> = {

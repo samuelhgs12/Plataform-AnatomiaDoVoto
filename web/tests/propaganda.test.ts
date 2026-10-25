@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  analisar, composicaoPorTipo, nomearPredominantes, parteTexto, reaisCentavos, resumoPropaganda, rotuloOrigem,
+  analisar, classeTermo, composicaoPorTipo, nomearPredominantes, parteTexto, reaisCentavos, resumoPropaganda, rotuloOrigem,
   type Categoria, type Propaganda, type Totais,
 } from "../src/lib/propaganda";
 import type { CarreiraItem } from "../src/lib/types";
@@ -57,6 +57,14 @@ describe("formatos", () => {
     expect(rotuloOrigem("Despesa com Impulsionamento de Conteúdos")).toBe("Impulsionamento de conteúdo");
     expect(rotuloOrigem("Categoria nova do TSE")).toBe("Categoria nova do TSE");
     expect(nomearPredominantes([{ rotulo: "Adesivos" }, { rotulo: "Carros de som" }, { rotulo: "Programas de rádio, TV ou vídeo" }])).toBe("Adesivos, carros de som e programas de rádio, TV ou vídeo");
+  });
+});
+
+describe("classeTermo", () => {
+  it("cor do tipo de propaganda; neutra para a palavra genérica", () => {
+    expect(classeTermo({ grupo: "propaganda_digital", generico: false })).toBe("pp-dig");
+    expect(classeTermo({ grupo: "propaganda_fisica", generico: true })).toBe("pp-outra");
+    expect(classeTermo({ grupo: "grupo_novo", generico: false })).toBe("pp-outra");
   });
 });
 

@@ -11,8 +11,8 @@ Com a API rodando, a documentação interativa (gerada automaticamente) fica em 
 | GET | `/api/partidos` | `ano`, `cargo` (id, obrigatório), `uf` | siglas com titulares na eleição ordinária (opções do filtro de partido) |
 | GET | `/api/candidatos/{id}` | — | cabeçalho, resumo, carreira completa e trocas de partido |
 | GET | `/api/candidaturas/{id}/despesas` | — | gasto por categoria + mediana do cargo/ano/UF (pergunta 9) |
-| GET | `/api/candidaturas/{id}/propaganda` | — | onde a campanha investiu em propaganda (pergunta 9): despesas consideradas, propaganda e propaganda por categoria original do TSE, em centavos inteiros |
-| GET | `/api/candidaturas/{id}/palavras` | `limite` (≤100) | termos das despesas de propaganda (nuvem de palavras) |
+| GET | `/api/candidaturas/{id}/propaganda` | — | onde a campanha investiu em propaganda (pergunta 9): despesas consideradas, propaganda, propaganda por categoria original do TSE e `termos` da nuvem de palavras (o que foi comprado: dicionário em `app/nuvem.py`, sem a descrição original), em centavos inteiros |
+| GET | `/api/candidaturas/{id}/palavras` | `limite` (≤100) | palavras soltas das despesas de propaganda (versão antiga, sem uso: a nuvem usa `termos` de `/propaganda`) |
 | GET | `/api/candidaturas/{id}/receitas` | — | receita pública × privada, valor por fonte (fundo eleitoral, fundo partidário, doações de pessoas, recursos próprios, outros privados) + mediana (pergunta 8) |
 
 Exemplos:
