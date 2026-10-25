@@ -1,0 +1,189 @@
+// Visão "Candidato" do mapa da página inicial: onde uma candidatura teve votos, município a município.
+// Os tipos têm o formato que a API vai devolver; por enquanto os dados vêm de candidato-mapa.mock.ts.
+
+import { classe, quantis } from "./abstencao";
+import { normalizarBusca } from "./busca";
+import { pct } from "./format";
+
+/** Uma candidatura (pessoa × eleição × cargo), com os números do verso da ficha. */
+export interface CandidaturaMapa {
+  id_candidato: number;
+  id_candidatura: number;
+  ano: number;
+  cargo: string;
+  /** UF da candidatura; "BR" para presidente */
+  uf: string;
+  partido: string;
+  numero: number;
+  nome_urna: string;
+  /** chave de ROTULO_RESULTADO (format.ts): ELEITO, NAO_ELEITO… */
+  resultado: string;
+  /** votos no 1º turno, na abrangência inteira do cargo (para presidente, o país) */
+  votos_total: number;
+  /** despesas contratadas na prestação final (sem transferências), em reais */
+  gasto_total: number;
+  /** mediana do gasto das candidaturas do mesmo cargo, ano e UF */
+  mediana_gasto_cargo: number;
+  /** parte das receitas vinda do Fundo Eleitoral e do Fundo Partidário (0 a 1); null sem receitas */
+  parte_publica: number | null;
+  /** eleições disputadas pela pessoa até esta, contando esta */
+  disputas: number;
+  /** vezes em que foi eleita até esta, contando esta */
+  mandatos: number;
+}
+
+/** Votos da candidatura num município e turno; validos_cargo é o total de votos válidos do cargo ali. */
+export interface VotoMunicipio {
+  id_candidatura: number;
+  id_municipio: number;
+  uf: string;
+  turno: number;
+  votos: number;
+  validos_cargo: number;
+  /** colocação entre os candidatos do cargo naquele município e turno (1 = mais votado) */
+  posicao: number;
+}
+
+/** Cargos que o mapa por município desenha; prefeito e vereador ainda ficam de fora. */
+export const CARGOS_ESTADUAIS = ["Deputado federal", "Deputado estadual", "Senador", "Governador"];
+export const UFS_PROJETO = ["AP", "ES", "MG", "PE", "RJ", "RR"];
+
+/** O que o mapa mostra para o cargo: os municípios da UF, os seis estados (presidente) ou nada (municipais). */
+export function abrangencia(cargo: string): "uf" | "seis" | "fora" {
+  if (cargo === "Presidente") return "seis";
+  return CARGOS_ESTADUAIS.includes(cargo) ? "uf" : "fora";
+}
+
+/** A parte dos votos válidos do cargo que foi para o candidato; null sem votos válidos. */
+export const proporcaoNoMunicipio = (votos: number, validos: number): number | null => (validos > 0 ? votos / validos : null);
+
+/** Abaixo disso o candidato quase não teve votos: a 1ª faixa do mapa, separada dos quintos. */
+export const QUASE_ZERO = 0.005;
+
+/**
+ * Cortes das faixas do mapa (4 cortes, 5 cores, para `classe`). Quintos dos municípios, mas um deputado costuma ter
+ * quase 0% na maior parte do estado: se 1/5 ou mais dos municípios fica abaixo de 0,5%, essa vira a 1ª faixa e os
+ * outros quatro grupos dividem só o resto. Cortes arredondados a 0,1 ponto (o que a legenda escreve é o que vale)
+ * e sem repetição (com muitos valores iguais, sobram menos faixas).
+ */
+export function cortesCandidato(valores: number[]): number[] {
+  const v = valores.filter((x) => Number.isFinite(x));
+  if (!v.length) return [];
+  const baixos = v.filter((x) => x < QUASE_ZERO).length;
+  const brutos = baixos >= v.length / 5 ? [QUASE_ZERO, ...quantis(v.filter((x) => x >= QUASE_ZERO), 4)] : quantis(v, 5);
+  const arred = brutos.map((c) => Math.round(c * 1000) / 1000).filter((c) => c > 0);
+  return [...new Set(arred)].sort((a, b) => a - b);
+}
+
+/** Casas para escrever os cortes: 1 abaixo de 10% ("0,5%", "3,2%"), senão 0 ("24%"). */
+export const fmtCorte = (v: number) => pct(v, v < 0.1 ? 1 : 0);
+
+/** Rótulos da legenda: "menos de 0,5%", "0,5–2,1%", …, "18% ou mais". */
+export function rotulosCandidato(cortes: number[]): string[] {
+  if (!cortes.length) return [];
+  const sem = (s: string) => s.replace("%", "");
+  return [
+    `menos de ${fmtCorte(cortes[0])}`,
+    ...cortes.slice(0, -1).map((c, i) => `${sem(fmtCorte(c))}–${fmtCorte(cortes[i + 1])}`),
+    `${fmtCorte(cortes[cortes.length - 1])} ou mais`,
+  ];
+}
+
+/** Classe CSS da cor no mapa: "c0".."c4" pela faixa; "sem" quando não há votos válidos. */
+export const corCandidato = (p: number | null, cortes: number[]) => (p == null ? "sem" : `c${classe(p, cortes)}`);
+
+/** Linhas de um turno, com a proporção de cada município. */
+export function doTurno(linhas: VotoMunicipio[], turno: number): (VotoMunicipio & { p: number | null })[] {
+  return linhas.filter((l) => l.turno === turno).map((l) => ({ ...l, p: proporcaoNoMunicipio(l.votos, l.validos_cargo) }));
+}
+
+/** Turnos que a candidatura disputou (o 2º só aparece se houver votos nele). */
+export const turnosDe = (linhas: VotoMunicipio[]) => [...new Set(linhas.map((l) => l.turno))].sort((a, b) => a - b);
+
+/** Números do verso da ficha. */
+export interface Resumo {
+  gastoPorVoto: number | null;
+  /** gasto / mediana do cargo; null sem mediana */
+  razaoMediana: number | null;
+  /** "2,3× a mediana do cargo" */
+  textoMediana: string | null;
+  publico: number | null;
+  privado: number | null;
+}
+
+export function resumoCandidatura(c: Pick<CandidaturaMapa, "votos_total" | "gasto_total" | "mediana_gasto_cargo" | "parte_publica">): Resumo {
+  const razao = c.mediana_gasto_cargo > 0 ? c.gasto_total / c.mediana_gasto_cargo : null;
+  const r = razao == null ? null : razao < 10 ? Math.round(razao * 10) / 10 : Math.round(razao);
+  return {
+    gastoPorVoto: c.votos_total > 0 ? c.gasto_total / c.votos_total : null,
+    razaoMediana: razao,
+    textoMediana: r == null ? null : `${r.toLocaleString("pt-BR")}× a mediana do cargo`,
+    publico: c.parte_publica,
+    privado: c.parte_publica == null ? null : 1 - c.parte_publica,
+  };
+}
+
+/** Soma votos e válidos por UF (soma das contagens, não média das porcentagens), na ordem das UFs. */
+export function proporcaoPorUf(linhas: Pick<VotoMunicipio, "uf" | "votos" | "validos_cargo">[]): { uf: string; votos: number; validos: number; valor: number | null }[] {
+  const somas = new Map<string, { votos: number; validos: number }>();
+  for (const l of linhas) {
+    const s = somas.get(l.uf) ?? { votos: 0, validos: 0 };
+    s.votos += l.votos;
+    s.validos += l.validos_cargo;
+    somas.set(l.uf, s);
+  }
+  return [...somas].sort(([a], [b]) => a.localeCompare(b))
+    .map(([uf, s]) => ({ uf, ...s, valor: proporcaoNoMunicipio(s.votos, s.validos) }));
+}
+
+/**
+ * Frase neutra para o mapa e o leitor de tela: em quantos municípios está metade dos votos e onde foi a maior
+ * proporção. `onde`: "de MG" ou "dos seis estados".
+ */
+export function fraseResumo(linhas: Pick<VotoMunicipio, "id_municipio" | "votos" | "validos_cargo">[], nomes: Map<number, string>, onde: string): string {
+  const total = linhas.reduce((s, l) => s + l.votos, 0);
+  const n = linhas.length;
+  if (!total) return `Sem votos registrados nos ${n.toLocaleString("pt-BR")} municípios ${onde}.`;
+  const ordem = [...linhas].sort((a, b) => b.votos - a.votos);
+  let k = 0;
+  for (let soma = 0; soma * 2 < total; k++) soma += ordem[k].votos;
+  const maior = linhas.reduce<{ id: number; p: number } | null>((m, l) => {
+    const p = proporcaoNoMunicipio(l.votos, l.validos_cargo);
+    return p != null && (!m || p > m.p) ? { id: l.id_municipio, p } : m;
+  }, null);
+  const metade = `Metade dos votos veio de ${k.toLocaleString("pt-BR")} ${k === 1 ? "município" : "municípios"} entre os ${n.toLocaleString("pt-BR")} ${onde}`;
+  return maior ? `${metade}; a maior proporção foi em ${nomes.get(maior.id) ?? "um município"} (${pct(maior.p, 1)}).` : `${metade}.`;
+}
+
+/**
+ * O nome de urna dividido como no santinho: a última palavra em destaque, o resto numa linha menor acima
+ * ("Otávio" / "Cerejeira"; "Ana da" / "Silva"). Um nome de uma palavra só fica todo em destaque.
+ */
+export function partesDoNome(nome: string): { antes: string; destaque: string } {
+  const p = nome.trim().split(/\s+/).filter(Boolean);
+  const destaque = p.pop() ?? "";
+  return { antes: p.join(" "), destaque };
+}
+
+/** As candidaturas de uma pessoa, da mais recente para a mais antiga, e a padrão (a mais recente). */
+export function candidaturasDe<T extends Pick<CandidaturaMapa, "id_candidato" | "ano" | "id_candidatura">>(todas: T[], id_candidato: number): { padrao: T | undefined; lista: T[] } {
+  const lista = todas.filter((c) => c.id_candidato === id_candidato).sort((a, b) => b.ano - a.ano || b.id_candidatura - a.id_candidatura);
+  return { padrao: lista[0], lista };
+}
+
+/** Uma entrada por pessoa para a busca, a partir da candidatura mais recente (mesmo formato de /api/busca). */
+export interface EntradaCandidato { id_candidato: number; nome_urna: string; partido: string; uf: string; ultimo_ano: number; ultimo_cargo: string }
+
+export function indiceCandidatos(todas: CandidaturaMapa[]): EntradaCandidato[] {
+  const ids = [...new Set(todas.map((c) => c.id_candidato))];
+  return ids.map((id) => candidaturasDe(todas, id).padrao!)
+    .map((c) => ({ id_candidato: c.id_candidato, nome_urna: c.nome_urna, partido: c.partido, uf: c.uf, ultimo_ano: c.ano, ultimo_cargo: c.cargo }))
+    .sort((a, b) => a.nome_urna.localeCompare(b.nome_urna, "pt-BR"));
+}
+
+/** Candidatos cujo nome tem uma palavra começando pelo termo (sem acento nem maiúsculas), como a /api/busca casa. */
+export function buscarCandidato<T extends { nome_urna: string | null }>(indice: T[], termo: string): T[] {
+  const alvo = normalizarBusca(termo);
+  if (!alvo) return [];
+  return indice.filter((c) => ` ${normalizarBusca(c.nome_urna ?? "")}`.includes(` ${alvo}`));
+}

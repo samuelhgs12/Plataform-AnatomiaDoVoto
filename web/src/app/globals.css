@@ -515,6 +515,15 @@ a.linha:hover { background: var(--panel2); }
      cor da ação e soaria como "bom". O destaque (ano, unidade e partido escolhidos) é o laranja corrige da urna. */
   --noite: #0a1322; --noite2: #182b45; --noite3: #22385a; --noite-linha: #2f4a70; --sobre-noite: var(--gelo); --noite-muted: var(--ardosia-clara);
   --q0: #395995; --q1: #61799b; --q2: #9c9484; --q3: #ccb577; --q4: #f9da50; --brilho: var(--laranja-urna-claro);
+  /* votos de um candidato (visão Candidato): gelo sobre a noite, só a claridade sobe; sem matiz, para não lembrar a
+     escala da abstenção nem cor de partido. O degrau 0 ("quase nenhum voto") fica abaixo do estado vizinho */
+  --c0: #1b2b45; --c1: #34507a; --c2: #6582ad; --c3: #a6bad6; --c4: var(--gelo); --neutro: var(--noite-linha);
+  /* a ficha do candidato: papel claro nos dois temas, tinta marinho; a ação é o verde escuro, que passa no papel */
+  --ficha-papel: var(--branco-urna); --ficha-tinta: var(--marinho-900); --ficha-muted: var(--ardosia);
+  --ficha-casa: color-mix(in srgb, var(--marinho-900) 6%, var(--branco-urna)); --ficha-acao: var(--verde-700); --ficha-sobre-acao: #ffffff;
+  --ficha-campo: var(--marinho-800); --ficha-base: var(--marinho-900); --ficha-sobre-campo: var(--gelo); --ficha-retrato: var(--marinho-700);
+  --ficha-faixa-2: color-mix(in srgb, var(--marinho-700) 72%, var(--gelo));   /* a onda de trás, que aparece como faixa */
+  --ficha-fundo: var(--bg); --ficha-avesso: color-mix(in srgb, var(--marinho-900) 16%, var(--branco-urna));   /* o canto dobrado: o buraco e o avesso do papel */
   --b00: #2e2b4f; --b01: #7c2f6c; --b02: #e0457b; --b10: #2c5d84; --b11: #775a8f; --b12: #e27798; --b20: #2fb0c8; --b21: #8cb5d2; --b22: #f2d3e4;
   scroll-margin-top: var(--gap); align-items: start; margin-bottom: 120px;
 }
@@ -540,9 +549,10 @@ a.linha:hover { background: var(--panel2); }
 .palco h1 + .palco-sobre { margin-top: 12px; }
 /* o que o mapa pinta: abstenção ou voto de legenda (mesmo desenho da régua de anos) */
 /* o destaque é uma peça só (::before), que desliza para a visão escolhida: as duas colunas têm a mesma largura */
-.visoes { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 4px; margin-bottom: 18px; border-radius: 8px; background: var(--noite2); }
-.visoes::before { content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 5.5px); border-radius: 6px; background: var(--sobre-noite); transition: transform 420ms var(--ease-expo); }
-.visoes:has(a:last-child[aria-current])::before { transform: translateX(calc(100% + 3px)); }
+.visoes { position: relative; display: inline-grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 4px; margin-bottom: 18px; border-radius: 8px; background: var(--noite2); }
+.visoes::before { content: ""; position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 14px) / 3); border-radius: 6px; background: var(--sobre-noite); transition: transform 420ms var(--ease-expo); }
+.visoes:has(a:nth-child(2)[aria-current])::before { transform: translateX(calc(100% + 3px)); }
+.visoes:has(a:nth-child(3)[aria-current])::before { transform: translateX(calc(200% + 6px)); }
 .visoes a { position: relative; padding: 8px 14px; border-radius: 6px; text-align: center; font-size: 15px; font-weight: 600; color: var(--noite-muted); text-decoration: none; transition: background-color var(--t-hover) ease, color var(--t-ui) ease, transform var(--t-press) var(--ease-out); }
 .visoes a:not([aria-current]):hover { background: var(--noite3); color: var(--sobre-noite); }
 .visoes a:active { transform: scale(0.97); }
@@ -558,7 +568,10 @@ a.linha:hover { background: var(--panel2); }
   .js .tirar-partido { animation: filtro-entra 460ms var(--ease-expo) both; }
 }
 @keyframes filtro-entra { from { clip-path: inset(0 100% 0 0 round 6px); opacity: 0.4; } to { clip-path: inset(0 0 0 0 round 6px); } }
-.palco-mapa { position: relative; min-height: 0; }
+.palco-mapa { position: relative; min-height: 0; align-self: stretch; }
+/* o SVG ocupa exatamente a faixa entre o topo e a base: não entra no cálculo da altura (senão, com um topo mais alto, ele
+   assume a proporção do viewBox, passa por baixo do título e da legenda e o enquadramento do estado sai do centro) */
+.palco-mapa > .mapa-abst { position: absolute; inset: 0; }
 .palco-dica { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); margin: 0; font-size: 14px; color: var(--noite-muted); white-space: nowrap; }
 .palco[aria-busy="true"] { cursor: progress; }
 .dica-mapa { position: absolute; z-index: 3; pointer-events: none; transform: translate(16px, -50%); padding: 6px 10px; border-radius: 6px; background: var(--sobre-noite); color: var(--noite); font-size: 14px; font-weight: 500; white-space: nowrap; box-shadow: 0 6px 20px rgb(0 0 0 / 0.35); }
@@ -709,6 +722,170 @@ a.linha:hover { background: var(--panel2); }
 .extremos a.on { background: var(--brilho); color: var(--noite); font-weight: 600; }
 .painel-cab .cargos { margin-top: 18px; }
 .legenda-q .sem { background: var(--noite2); }
+
+/* ---------- visão Candidato ---------- */
+.mapa-abst .c0 { fill: var(--c0); } .mapa-abst .c1 { fill: var(--c1); } .mapa-abst .c2 { fill: var(--c2); }
+.mapa-abst .c3 { fill: var(--c3); } .mapa-abst .c4 { fill: var(--c4); } .mapa-abst .neutro { fill: var(--neutro); }
+.legenda-q .c0 { background: var(--c0); box-shadow: inset 0 0 0 1px var(--noite-linha); } .legenda-q .c1 { background: var(--c1); } .legenda-q .c2 { background: var(--c2); }
+.legenda-q .c3 { background: var(--c3); } .legenda-q .c4 { background: var(--c4); }
+.legenda-cand { gap: 3px; }
+.legenda-cand li { min-width: 62px; }
+.legenda-cand li:first-child { min-width: 92px; }
+.visoes a { white-space: nowrap; }
+.trilha [aria-current] { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* município de nome longo não empurra o título */
+.palco.cand .mapa-abst .uf-fora { fill: var(--noite2); }   /* o resto do país desce um degrau: o estado com menos votos ainda se separa dele */
+.selo-prototipo { display: inline-block; margin-left: 8px; padding: 1px 8px; white-space: nowrap; border: 1px dashed var(--brilho); border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--brilho); }
+.palco-aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30ch, 80%); margin: 0; padding: 14px 18px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); font-size: 16px; text-align: center; text-wrap: balance; }
+.palco-escolhas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.palco-escolhas .ano small { text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+.busca-vazia h2 { margin-bottom: 10px; }
+.busca-vazia > p:not(.rotulo) { color: var(--noite-muted); max-width: 40ch; }
+.busca-vazia .rotulo { margin: 22px 0 8px; font-size: 14px; }
+.sugestoes-cand { list-style: none; padding: 0; margin: 0; }
+.sugestoes-cand .chip { flex-direction: column; align-items: flex-start; gap: 0; }
+.bloco.noite .sugestoes-cand .chip small { color: var(--noite-muted); opacity: 1; }
+.busca-cand { max-width: none; }
+.bloco.noite .busca-cand label { color: var(--noite-muted); }
+.busca-cand-campo { position: relative; }
+.busca-cand-campo svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: var(--noite-muted); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
+.busca-cand input { padding-left: 38px; background: var(--noite3); color: var(--sobre-noite); box-shadow: none; caret-color: var(--brilho); }
+.busca-cand input::placeholder { color: var(--noite-muted); }
+.busca-cand input:focus-visible { outline: 2px solid var(--brilho); outline-offset: 2px; }
+.busca-cand.destaque input { font-size: 19px; padding-block: 14px; }
+.busca-cand.destaque .busca-cand-campo svg { width: 20px; height: 20px; }
+.busca-cand ul { background: var(--sobre-noite); color: var(--noite); }
+.busca-cand li[aria-selected="true"] { background: color-mix(in srgb, var(--noite) 10%, var(--sobre-noite)); }
+.busca-cand li small { display: block; margin-top: 2px; font-size: 13px; color: color-mix(in srgb, var(--noite) 70%, var(--sobre-noite)); }
+.busca-cand-status { margin: 4px 0 0; font-size: 14px; color: var(--noite-muted); }
+.busca-cand-status:empty { display: none; }
+.busca-cand-sem-js { display: flex; gap: 6px; margin-top: 8px; }
+.busca-cand-sem-js select { flex: 1; min-width: 0; background: var(--noite3); color: var(--sobre-noite); box-shadow: none; }
+
+/* tabela equivalente ao mapa */
+.tabela-cand summary { color: var(--sobre-noite); }
+.tabela-rola { max-height: 360px; overflow-y: auto; margin-top: 10px; scrollbar-color: var(--noite-linha) transparent; }
+.tabela-cand table { font-size: 14px; font-variant-numeric: tabular-nums; }
+.tabela-cand th, .tabela-cand td { padding: 6px 8px; border-bottom: 1px solid var(--noite-linha); text-align: right; }
+.tabela-cand :is(th, td):first-child { text-align: left; font-weight: 500; }
+.tabela-cand thead th { position: sticky; top: 0; background: var(--noite2); color: var(--noite-muted); font-weight: 500; font-size: 13px; }
+
+/* ficha (frente e verso): o santinho como ficha de consulta. O mesmo cartão para todos: papel e marinho, sem cor de
+   partido fora do chip. As duas faces têm o mesmo tamanho, como um cartão de verdade. Separações por degrau de tom,
+   sem linhas; sombra só quando o cartão sai da mesa (no hover e no giro). */
+.ficha-casca { --virar: 860ms; --virar-curva: cubic-bezier(0.65, 0, 0.25, 1); }
+.ficha { display: grid; gap: var(--gap); }
+.ficha-face { position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: 14px; background: var(--ficha-papel); color: var(--ficha-tinta); }
+.ficha-face p { margin: 0; }
+
+/* tipografia: dois tamanhos fazem o trabalho (o nome, e os números do verso), o resto é texto pequeno */
+
+/* frente: o nome no alto; embaixo, o campo marinho sobe em curva e o retrato 3 × 4 sai dele, como no santinho */
+.ficha-cargo { margin-top: 12px !important; font-size: 15px; font-weight: 500; line-height: 1.35; color: var(--ficha-muted); }
+
+/* frente: como no santinho, uma faixa no alto com o nome (o sobrenome do tamanho da largura do cartão), o retrato
+   grande saindo de trás da onda de baixo e o número pequeno na faixa do pé. Ondas em duas camadas de marinho */
+.ficha-frente { container-type: inline-size; }
+.ficha-faixa { position: relative; z-index: 2; padding: 24px 24px 14px; background: var(--ficha-campo); color: var(--ficha-sobre-campo); }
+.ficha-nome { display: flex; flex-direction: column; margin: 0; padding-right: 64px; }
+.ficha-nome-antes { font-size: 22px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; color: color-mix(in srgb, var(--ficha-sobre-campo) 82%, var(--ficha-campo)); }
+.ficha-nome-destaque { margin: 10px -64px 0 -0.04em; font-size: min(84px, calc((100cqi - 48px) / (var(--letras) * 0.66))); font-weight: 700; line-height: 0.84; letter-spacing: -0.035em; text-transform: uppercase; white-space: nowrap; }
+.ficha-faixa .ficha-cargo { margin-top: 14px !important; font-size: 16px; font-weight: 600; color: color-mix(in srgb, var(--ficha-sobre-campo) 80%, var(--ficha-campo)); }
+.ficha-partido { position: absolute; top: 22px; right: 22px; margin: 0; }
+.ficha-partido .party { font-size: 14px; padding: 3px 9px; }
+.ficha-onda-topo, .ficha-onda-base { position: absolute; left: 0; width: 100%; height: 44px; display: block; }
+.ficha-onda-topo { top: calc(100% - 1px); transform: scaleY(-1); }
+.ficha-onda-base { bottom: calc(100% - 1px); }
+.ficha-onda-topo .onda-frente { fill: var(--ficha-campo); }
+.ficha-onda-base .onda-frente { fill: var(--ficha-base); }
+.onda-tras { fill: var(--ficha-faixa-2); }
+.ficha-meio { position: relative; z-index: 1; flex: 1; min-height: calc(56cqi * 4 / 3 + 6px); container-type: size; }   /* cabe o retrato, que entra 40px na faixa do pé */
+.ficha-retrato { position: absolute; bottom: -40px; left: 50%; display: grid; place-items: center; width: min(74cqw, (100cqh + 40px - 34px) * 0.75); aspect-ratio: 3 / 4;   /* cresce com a altura que o verso deixa */
+  border-radius: 14px 14px 0 0; background: var(--ficha-retrato); transform: translateX(-50%); }
+.ficha-retrato span { font-size: min(22cqw, 17cqh); font-weight: 700; letter-spacing: -0.03em; color: var(--ficha-sobre-campo); }
+.ficha-base { position: relative; z-index: 2; display: grid; gap: 4px; padding: 6px 24px 12px; background: var(--ficha-base); color: var(--ficha-sobre-campo); }
+.ficha-numero { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ficha-base .ficha-fonte { color: color-mix(in srgb, var(--ficha-sobre-campo) 70%, var(--ficha-base)); }
+.ficha-fonte { font-size: 12px; line-height: 1.4; color: var(--ficha-muted); }
+
+/* verso: o número de votos em destaque e a grade de casas (as casas do santinho, aqui com os números) */
+.ficha-verso { gap: 14px; padding: 22px 22px 20px; }
+.ficha-verso-topo { padding-right: 132px; }
+.ficha-verso-nome { font-size: 20px; font-weight: 650; line-height: 1.1; letter-spacing: -0.02em; }
+.ficha-verso-topo .ficha-cargo { margin-top: 4px !important; font-size: 14px; }
+.ficha-votos { font-size: 44px; font-weight: 650; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.ficha-votos-legenda { margin-top: 6px !important; font-size: 14px; line-height: 1.4; color: var(--ficha-muted); }
+.ficha-casas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0; }
+.ficha-casas > div { padding: 9px 12px 10px; border-radius: 8px; background: var(--ficha-casa); }
+.ficha-casas .ficha-largo { grid-column: 1 / -1; }
+.ficha-casas dt { font-size: 13px; line-height: 1.3; color: var(--ficha-muted); }
+.ficha-casas dd { margin: 2px 0 0; font-size: 17px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+.ficha-casas dd small { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--ficha-muted); }
+.ficha-barra { display: flex; height: 8px; margin-top: 8px; border-radius: 4px; overflow: clip; background: var(--priv); }
+.ficha-barra i { display: block; width: calc(var(--v) * 100%); background: var(--pub); box-shadow: 2px 0 0 var(--ficha-casa); }
+.ficha-barra-rotulos { display: flex; justify-content: space-between; margin-top: 7px; font-size: 13px; font-weight: 500; color: var(--ficha-muted); }
+.ficha-barra-rotulos span { display: inline-flex; align-items: center; gap: 6px; }
+.ficha-barra-rotulos i { width: 9px; height: 9px; border-radius: 2px; }
+.ficha-nota { font-size: 13px; line-height: 1.45; color: var(--ficha-muted); text-wrap: pretty; }
+.ficha-mais { position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding: 12px 16px; border-radius: 8px; background: var(--ficha-acao); color: var(--ficha-sobre-acao); font-weight: 600; text-decoration: none; transition: background-color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.ficha-mais svg, .ficha-dica svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ficha-mais svg { transition: transform var(--t-ui) var(--ease-out); }
+.ficha-mais:hover { background: color-mix(in srgb, var(--ficha-acao) 86%, var(--ficha-tinta)); }
+.ficha-mais:hover svg { transform: translateX(3px); }
+.ficha-mais:active { transform: scale(0.98); }
+.ficha-mais:focus-visible { outline: 2px solid var(--ficha-tinta); outline-offset: 2px; }
+
+/* o cartão é o controle: um botão transparente do tamanho da face, por cima do conteúdo (as faixas da frente têm
+   camadas próprias); só o link do verso fica acima dele */
+.ficha-alvo, .ficha-dica, .ficha-canto { display: none; }
+.ficha-alvo { position: absolute; inset: 0; z-index: 4; width: 100%; padding: 0; border: 0; border-radius: inherit; background: transparent; cursor: pointer; box-shadow: none; }
+.ficha-alvo:focus-visible { outline: 3px solid var(--brilho); outline-offset: -3px; }
+.ficha-dica { position: absolute; z-index: 3; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; pointer-events: none; }
+.ficha-frente .ficha-dica { position: static; margin-top: -1px; padding: 5px 24px 20px; background: var(--ficha-base); color: var(--ficha-sobre-campo); }   /* a última linha da faixa do pé */
+.ficha-verso .ficha-dica { top: 24px; right: 22px; color: var(--ficha-muted); }
+.ficha-dica svg { transition: transform 600ms var(--ease-out); }
+/* o canto dobrado: um triângulo de papel do avesso sobre o buraco do canto; levanta quando o cartão é apontado */
+.ficha-canto { position: absolute; right: 0; bottom: 0; z-index: 3; width: var(--canto, 22px); height: var(--canto, 22px); pointer-events: none; transition: width 320ms var(--ease-out), height 320ms var(--ease-out); }
+.ficha-canto::before, .ficha-canto::after { content: ""; position: absolute; inset: 0; }
+.ficha-canto::before { background: var(--ficha-fundo); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.ficha-canto::after { background: var(--ficha-avesso); clip-path: polygon(0 0, 100% 0, 0 100%); }
+.ficha-frente .ficha-canto { --ficha-avesso: var(--ficha-faixa-2); }
+
+.js .ficha-alvo { display: block; }
+.js .ficha-dica { display: inline-flex; }
+.js .ficha-canto { display: block; }
+.js .ficha-casca { transform-style: preserve-3d; transform: perspective(1400px) rotateX(var(--incl-x, 0deg)) rotateY(var(--incl-y, 0deg)); transition: transform 700ms var(--ease-out), scale var(--t-press) var(--ease-out); }
+.js .ficha { grid-template-areas: "face"; transform-style: preserve-3d; transition: transform var(--virar) var(--virar-curva); }
+.js .ficha-face { grid-area: face; backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: box-shadow 400ms var(--ease-out); }
+.js .ficha-frente { transform: translateZ(1px); }   /* as faces separadas em profundidade: com o cartão inclinado, o clique cai na de cima */
+.js .ficha-verso { transform: rotateY(180deg) translateZ(1px); }
+.js .ficha-face[inert] { pointer-events: none; }
+.js .ficha[data-virada] { transform: rotateY(180deg); }
+.js .ficha-casca:has(.ficha-alvo:active) { scale: 0.985; }
+@media (hover: hover) and (pointer: fine) {
+  .js .ficha-casca[data-inclinada] { transition-duration: 160ms, var(--t-press); }
+  .js .ficha-casca[data-inclinada] .ficha-face { box-shadow: 0 26px 44px -28px rgb(0 0 0 / 0.7); }
+  .js .ficha-casca[data-inclinada] .ficha-canto { --canto: 34px; }
+  .js .ficha-casca[data-inclinada] .ficha-dica svg { transform: rotate(-180deg); }
+}
+/* o giro: o cartão sai da mesa, gira e assenta. Os dois nomes de animação se alternam para recomeçar a cada clique */
+.js .ficha[data-tocada] { animation: ficha-levanta-a var(--virar) var(--virar-curva); }
+.js .ficha[data-tocada][data-virada] { animation-name: ficha-levanta-b; }
+.js .ficha[data-tocada] .ficha-face { animation: ficha-sombra-a var(--virar) var(--virar-curva); }
+.js .ficha[data-tocada][data-virada] .ficha-face { animation-name: ficha-sombra-b; }
+@keyframes ficha-levanta-a { 45% { scale: 1.035; translate: 0 -10px; } }
+@keyframes ficha-levanta-b { 45% { scale: 1.035; translate: 0 -10px; } }
+@keyframes ficha-sombra-a { 45% { box-shadow: 0 38px 56px -26px rgb(0 0 0 / 0.6); } }
+@keyframes ficha-sombra-b { 45% { box-shadow: 0 38px 56px -26px rgb(0 0 0 / 0.6); } }
+/* sem movimento: nada gira nem inclina; a face troca num esmaecer curto, que ainda diz que algo mudou */
+@media (prefers-reduced-motion: reduce) {
+  .js .ficha-casca { transform: none; transition: none; }
+  .js .ficha, .js .ficha[data-virada] { transform: none; transition: none; animation: none; }
+  .js .ficha-face, .js .ficha[data-tocada] .ficha-face { transform: none; animation: none; transition: opacity 180ms ease; }
+  .js .ficha-verso, .js .ficha[data-virada] .ficha-frente { opacity: 0; }
+  .js .ficha[data-virada] .ficha-verso { opacity: 1; }
+  .ficha-canto { transition: none; }
+}
 .legenda-q .legenda-sem { margin-left: 12px; }
 .observatorio .atalhos { margin: 0; }
 .observatorio .atalhos a { background: var(--noite2); color: var(--sobre-noite); }
@@ -899,4 +1076,17 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
   .legenda-q { flex-wrap: wrap; row-gap: 10px; }
   .anos { max-width: 100%; overflow-x: auto; scrollbar-width: none; }   /* nove anos não cabem: a régua rola */
   .anos .ano { flex-shrink: 0; }
+  /* visão Candidato no celular: o palco cresce com o título e o mapa ganha altura própria, sem a legenda por cima */
+  .palco.cand { height: auto; min-height: 0; }
+  .palco.cand .palco-mapa { height: min(420px, 62svh); }
+  .palco.cand .lupa-dica { display: none; }
+  .palco.cand .lupa-botoes { grid-auto-flow: column; top: auto; bottom: 16px; right: 16px; transform: none; }   /* no rodapé, fora do estado */
+  .palco.cand:has(.lupa-botoes) .palco-base { padding-bottom: 76px; }
+  .palco-escolhas { justify-content: flex-start; }
+}
+@media (max-width: 600px) {
+  .palco-topo { padding: 20px 16px 0; }
+  .palco-base { padding: 0 16px 20px; }
+  .visoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }   /* colunas iguais: a pílula da aba ativa cai certa */
+  .visoes a { padding: 8px 6px; font-size: 14px; white-space: normal; }
 }
