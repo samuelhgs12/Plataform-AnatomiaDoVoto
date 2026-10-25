@@ -1520,3 +1520,21 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
   .carreira-passo { font-size: 16px; }
   .palco-base { padding: 0 16px 20px; }
 }
+
+/* /municipios: eleitos de uma cidade ou estado no painel (ListaEleitos) e o prefeito eleito */
+.eleitos { display: grid; gap: 10px; margin-top: 12px; }
+.eleitos details { border-top: 1px solid var(--noite2); padding-top: 8px; }
+.eleitos summary { cursor: pointer; font-weight: 600; color: var(--sobre-noite); }
+.eleitos ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.eleito-linha { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 10px; row-gap: 2px; align-items: center; }
+.eleito-linha .avatar { width: 40px; height: 40px; font-size: 14px; grid-row: span 2; align-self: start; }
+.eleito-nome { min-width: 0; line-height: 1.25; }
+.eleito-nome a, .prefeito-nome a { font-weight: 600; color: var(--sobre-noite); text-decoration: none; overflow-wrap: break-word; }
+.eleito-nome small, .eleito-dinheiro small { display: block; font-size: 12px; color: var(--noite-muted); }
+.eleito-dinheiro { grid-column: 2; font-size: 14px; font-variant-numeric: tabular-nums; }
+.eleito-dinheiro small { display: inline; margin-left: 6px; }
+.prefeito { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: start; }
+.prefeito-nome { font-weight: 700; font-size: 18px; margin: 0 0 4px; }
+.prefeito-nome a:hover, .eleito-nome a:hover { text-decoration: underline; }
+.painel-num.longo { font-size: clamp(34px, 2.6vw + 10px, 52px); }
+.avatar.retrato { object-fit: cover; }

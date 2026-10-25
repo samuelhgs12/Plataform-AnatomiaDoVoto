@@ -217,6 +217,20 @@ class Receitas(BaseModel):
     outros_privados: float = 0
 
 
+class Eleito(BaseModel):
+    """Um eleito de um município ou estado (página /municipios). Só dados públicos da candidatura."""
+    cargo: str
+    id_cargo: int
+    id_candidato: int | None
+    id_candidatura: int
+    nome_urna: str | None
+    partido: str | None
+    votos: int
+    gasto: float
+    receita: float
+    receita_publica: float
+
+
 class Saude(BaseModel):
     status: str
     db: str
