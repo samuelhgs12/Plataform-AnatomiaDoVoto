@@ -102,3 +102,21 @@ export function dinheiroTotal(linhas: LinhaFontes[]): { total: number; publico: 
   const somas = anos.flatMap((ano) => porUf(linhas, { ano }));
   return { total: somas.reduce((s, u) => s + u.soma.total, 0), publico: somas.reduce((s, u) => s + u.soma.publico, 0), anos: [anos[0], anos[anos.length - 1]] };
 }
+
+/**
+ * A camada "Comparativos" (abstenção × um indicador do Censo 2010) no ano e recorte do mapa: só existe nos anos
+ * comparados com o Censo; ligada sem um estado aberto, guarda a escolha mas ainda não pinta (o cruzamento é por
+ * município, em terços dentro do estado). `motivo` diz ao leitor por que ela não pinta.
+ */
+export function situacaoComparativo({ ano, anosCenso, uf }: { ano: number; anosCenso: number[]; uf?: string }): { disponivel: boolean; pinta: boolean; motivo: string | null } {
+  if (!anosCenso.includes(ano)) return { disponivel: false, pinta: false, motivo: `O Censo 2010 só é comparado com as eleições de ${anosCenso.join(" e ")}.` };
+  if (!uf) return { disponivel: true, pinta: false, motivo: "Abra um estado no mapa para pintar os municípios com o cruzamento." };
+  return { disponivel: true, pinta: true, motivo: null };
+}
+
+/** O que o mapa está mostrando, em poucas palavras, para o botão do submenu: "Abstenção × IDHM", "Voto de legenda · PT". */
+export function resumoCamadas({ ver, partido, comparativo }: { ver: Visao; partido?: string; comparativo?: string }): string {
+  if (ver === "candidato") return "Votos de um candidato";
+  if (ver === "legenda") return partido ? `Voto de legenda · ${partido}` : "Voto de legenda";
+  return comparativo ? `Abstenção × ${comparativo}` : "Abstenção";
+}

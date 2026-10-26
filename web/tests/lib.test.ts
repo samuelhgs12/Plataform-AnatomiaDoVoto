@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LinhaLegenda } from "../src/lib/legenda";
 import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
-import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos } from "../src/lib/mapa";
+import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
 import {
   classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
@@ -472,5 +472,25 @@ describe("paleta (busca rápida)", () => {
   it("agrupar: na ordem dos grupos, sem grupo vazio", () => {
     const g = agrupar([{ tipo: "candidato", titulo: "X", detalhe: "", href: "/candidato/1" }, ...filtrarPaleta(indice, "bel")]);
     expect(g.map((x) => x.tipo)).toEqual(["municipio", "candidato"]);
+  });
+});
+
+describe("situacaoComparativo", () => {
+  const anosCenso = [2008, 2012];
+  it("fora dos anos do Censo, a camada não existe", () => {
+    expect(situacaoComparativo({ ano: 2022, anosCenso, uf: "PE" })).toEqual({ disponivel: false, pinta: false, motivo: "O Censo 2010 só é comparado com as eleições de 2008 e 2012." });
+  });
+  it("sem estado aberto, guarda a escolha mas não pinta; com estado, pinta", () => {
+    expect(situacaoComparativo({ ano: 2012, anosCenso })).toMatchObject({ disponivel: true, pinta: false });
+    expect(situacaoComparativo({ ano: 2008, anosCenso, uf: "RJ" })).toEqual({ disponivel: true, pinta: true, motivo: null });
+  });
+});
+
+describe("resumoCamadas", () => {
+  it("descreve a visão e a camada ligada", () => {
+    expect(resumoCamadas({ ver: "abstencao" })).toBe("Abstenção");
+    expect(resumoCamadas({ ver: "abstencao", comparativo: "IDHM" })).toBe("Abstenção × IDHM");
+    expect(resumoCamadas({ ver: "legenda", partido: "PSOL" })).toBe("Voto de legenda · PSOL");
+    expect(resumoCamadas({ ver: "candidato", comparativo: "IDHM" })).toBe("Votos de um candidato");
   });
 });
