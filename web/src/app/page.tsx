@@ -18,7 +18,7 @@ import {
   type CargoCiclo, type EventoPartido, type LinhaLegenda,
 } from "@/lib/legenda";
 import {
-  anoNaLegenda, casasDosCortes, doCargo, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
+  anoNaLegenda, casasDosCortes, doCargo, escalaDoMaior, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
 } from "@/lib/mapa";
 import {
   ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, compararComReferencia, composicaoEleitorado, corMunicipio, distribuicao, extremosAbstencao, reguaIndicador, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
@@ -34,6 +34,7 @@ import { MiniMapa } from "@/components/MiniMapa";
 import { CartaoDica } from "@/components/CartaoDica";
 import { FaixaMunicipios } from "@/components/FaixaMunicipios";
 import { ExtremosAbstencao } from "@/components/ExtremosAbstencao";
+import { ComparaReferencia } from "@/components/ComparaReferencia";
 import { IndicadoresCenso, type LinhaIndicadorCenso } from "@/components/IndicadoresCenso";
 import { SerieLegenda } from "@/components/SerieLegenda";
 import { ComparaCiclos } from "@/components/ComparaCiclos";
@@ -474,8 +475,14 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   <p className="painel-num"><Rolar valor={pct(medidaLeg.valor, 1)} /></p>
                   <p>
                     {partido ? <>dos {compacto(medidaLeg.total)} votos só na legenda para {cargoTexto} em {anoLeg} foram para o partido {partido}</> : <>dos {compacto(medidaLeg.total)} votos para {cargoTexto} em {anoLeg} foram só na legenda, sem escolher candidato</>}
-                    {uf && medidaTodos.valor != null && <> ({medidaLeg.valor >= medidaTodos.valor ? "acima" : "abaixo"} dos seis estados juntos, {pct(medidaTodos.valor, 1)})</>}.
+.
                   </p>
+                  {uf && medidaTodos.valor != null && (
+                    <ComparaReferencia
+                      comparacao={compararComReferencia(medidaLeg.valor, medidaTodos.valor)} nome="dos seis estados juntos"
+                      unidade={{ rotulo: NOME_UF[uf], valor: pct(medidaLeg.valor, 1) }} referencia={{ rotulo: "Seis estados juntos", valor: pct(medidaTodos.valor, 1) }}
+                    />
+                  )}
                 </>
               ) : <p>{partido ? `O partido ${partido} não teve votos para ${cargoTexto}${uf ? ` em ${NOME_UF[uf]}` : ""} em ${anoLeg}.` : `Sem votos para ${cargoTexto} em ${anoLeg}.`}</p>}
             </div>
@@ -484,11 +491,12 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               <div className="bloco noite s8">
                 <h3>Partidos com mais voto de legenda</h3>
                 <p className="muted pequeno">Parte de cada partido nos votos só na legenda para {cargoTexto}{uf ? ` em ${NOME_UF[uf]}` : ""} em {anoLeg}. Escolha um para pintar o mapa com ele.</p>
-                <ol className="extremos">
-                  {rankingLeg.map((r) => (
+                <ol className="ranking-leg">
+                  {escalaDoMaior(rankingLeg).map((r, i) => (
                     <li key={r.partido}>
-                      <Link scroll={false} href={href({ p: r.partido === partido ? null : r.partido })} className={r.partido === partido ? "on" : undefined} aria-current={r.partido === partido ? "true" : undefined}>
-                        <span>{r.partido}</span><b>{pct(r.valor, 1)}</b>
+                      <Link scroll={false} href={href({ p: r.partido === partido ? null : r.partido })} className={r.partido === partido ? "on" : undefined}
+                        aria-current={r.partido === partido ? "true" : undefined} style={{ "--p": r.p } as CSSProperties}>
+                        <span className="rl-pos" aria-hidden="true">{i + 1}</span><span className="rl-sigla">{r.partido}</span><b>{pct(r.valor, 1)}</b>
                       </Link>
                     </li>
                   ))}
@@ -532,23 +540,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   <p className="painel-num"><Rolar valor={pct(total.taxa, 1)} /></p>
                   <p>dos {compacto(total.aptos)} eleitores aptos não foram votar em {ano}.</p>
                   {referencia && comparacao && (
-                    <div className="compara">
-                      <p className="compara-chip">
-                        <svg viewBox="0 0 12 12" aria-hidden="true">
-                          <path d={comparacao.sentido === "igual" ? "M2 6h8" : comparacao.sentido === "acima" ? "M6 10V2M2.5 5.5 6 2l3.5 3.5" : "M6 2v8M2.5 6.5 6 10l3.5-3.5"} />
-                        </svg>
-                        {comparacao.sentido === "igual" ? `No mesmo nível ${referencia.nome}`
-                          : `${Math.abs(comparacao.pontos).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pontos percentuais ${comparacao.sentido} ${referencia.nome}`}
-                      </p>
-                      <div className="compara-regua" role="img" aria-label={`${nomeUnidade}: ${pct(total.taxa, 1)} de abstenção; ${referencia.rotulo.toLowerCase()}: ${pct(referencia.t.taxa, 1)}`}>
-                        <i className="compara-taxa" style={{ "--p": comparacao.pTaxa } as CSSProperties} />
-                        <i className="compara-ref" style={{ "--p": comparacao.pRef } as CSSProperties} />
-                      </div>
-                      <ul className="compara-legenda" aria-hidden="true">
-                        <li><i className="compara-taxa" />{nomeUnidade}<b>{pct(total.taxa, 1)}</b></li>
-                        <li><i className="compara-ref" />{referencia.rotulo}<b>{pct(referencia.t.taxa, 1)}</b></li>
-                      </ul>
-                    </div>
+                    <ComparaReferencia
+                      comparacao={comparacao} nome={referencia.nome}
+                      unidade={{ rotulo: nomeUnidade, valor: pct(total.taxa, 1) }} referencia={{ rotulo: referencia.rotulo, valor: pct(referencia.t.taxa, 1) }}
+                    />
                   )}
                   <div className="composicao">
                     <p className="composicao-titulo">Para onde foram os {compacto(total.aptos)} eleitores</p>

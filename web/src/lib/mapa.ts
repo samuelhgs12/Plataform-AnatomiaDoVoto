@@ -40,6 +40,12 @@ export function medirLegenda(linhas: LinhaLegenda[], { ano, uf, partido }: { ano
   return { valor: total > 0 && disputou ? legenda / total : null, legenda, total };
 }
 
+/** Cada item com `p`, a fração do maior valor da lista (o primeiro de um ranking vale 1): o tamanho da barra. */
+export function escalaDoMaior<T extends { valor: number }>(lista: T[]): (T & { p: number })[] {
+  const topo = Math.max(0, ...lista.map((x) => x.valor));
+  return lista.map((x) => ({ ...x, p: topo > 0 ? x.valor / topo : 0 }));
+}
+
 /** Partidos por votos de legenda no recorte, do maior para o menor; valor: a parte de cada um nos votos de legenda. */
 export function rankingPartidos(linhas: LinhaLegenda[], { ano, uf }: { ano: number; uf?: string }): { partido: string; legenda: number; valor: number }[] {
   const porPartido = new Map<string, number>();

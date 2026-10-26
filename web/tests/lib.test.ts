@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LinhaLegenda } from "../src/lib/legenda";
 import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
-import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
+import { anoNaLegenda, casasDosCortes, conjunto, escalaDoMaior, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
 import {
   classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, reguaIndicador, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
@@ -599,5 +599,12 @@ describe("reguaIndicador", () => {
   it("média fora da escala fica presa à ponta; sem dado, sem posição", () => {
     expect(reguaIndicador(null, [1, 2], 3)).toMatchObject({ p: null, pMedia: 1 });
     expect(reguaIndicador(1, [1, 2], null).pMedia).toBeNull();
+  });
+});
+
+describe("escalaDoMaior", () => {
+  it("o maior vale 1 e os outros, a fração dele", () => {
+    expect(escalaDoMaior([{ valor: 0.26 }, { valor: 0.13 }]).map((x) => x.p)).toEqual([1, 0.5]);
+    expect(escalaDoMaior([{ valor: 0 }]).map((x) => x.p)).toEqual([0]);
   });
 });

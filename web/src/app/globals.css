@@ -326,15 +326,26 @@ svg .gr { stroke: var(--line); stroke-dasharray: 2 3; }
 .combo li { padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 15px; }
 .combo li[aria-selected="true"] { background: var(--panel2); }
 
-.pares { display: grid; grid-template-columns: 150px 1fr 90px; gap: 14px; align-items: center; font-size: 15px; }
-.pares .nm { font-weight: 600; line-height: 1.2; }
-.pares .nm small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+/* pares de ciclos: cada partido numa faixa separada por um fio; nome e número numa linha, os dados embaixo; a
+   variação é uma pílula alinhada à direita, onde o olho chega depois das barras */
+.pares { display: grid; grid-template-columns: minmax(8em, 13em) minmax(0, 1fr) auto; align-items: center; font-size: 15px; }
+.pares > [role="row"] > * { align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding-block: 12px; }
+.pares > [role="row"] > :not(:last-child) { padding-right: 18px; }   /* recuo em vez de gap: o fio de cada linha corre inteiro */
+.pares > [role="row"]:nth-child(n+3) > * { border-top: 1px solid var(--line); }
+.pares .nm { gap: 3px; line-height: 1.2; }
+.pares .nm-sigla { display: flex; align-items: baseline; gap: 7px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+.pares .nm-num { font-size: 12.5px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pares .nm small { font-weight: 400; color: var(--muted); font-size: 13px; line-height: 1.3; }
 .par-linha { display: flex; align-items: center; gap: 6px; min-height: 15px; font-size: 14px; line-height: 1.25; font-variant-numeric: tabular-nums; }
 .par-linha .n { white-space: nowrap; }
 .par-linha + .par-linha { margin-top: 3px; }
 .par-barra { height: 11px; border-radius: 2px; min-width: 2px; flex: none; width: calc(var(--f) * (100% - 64px)); }   /* 64px: espaço do número */
-.pares .var { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-.sobe { color: var(--ok); } .desce { color: var(--warn); }
+.pares .var { align-items: flex-end; }
+.pilula { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border-radius: 999px; font-size: 13.5px; font-weight: 650; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pilula svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pilula.sobe { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, transparent); }
+.pilula.desce { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, transparent); }
+.pilula.neutra { padding-inline: 10px; color: var(--muted); background: color-mix(in srgb, var(--muted) 14%, transparent); font-weight: 600; }
 
 /* Pergunta 8: de onde vem o dinheiro. f1–f5: as 5 fontes; pub/priv: público × privado. */
 .f1 { background: var(--f1); } .f2 { background: var(--f2); } .f3 { background: var(--f3); } .f4 { background: var(--f4); } .f5 { background: var(--f5); }
@@ -921,10 +932,24 @@ a.linha:hover { background: var(--panel2); }
 .chip.cruzar { margin-top: 6px; }
 .bloco.noite .chip.on, .bloco.noite a.chip.on:hover { background: var(--brilho); color: var(--noite); }
 
-.extremos { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 2px; }
-.extremos a { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 6px; text-decoration: none; transition: background-color var(--t-hover) ease; }
-.extremos a:hover { background: var(--noite3); }
-.extremos a.on { background: var(--brilho); color: var(--noite); font-weight: 600; }
+/* ranking de partidos na legenda: cada linha é a própria barra (o fundo preenche a fração do primeiro), então a
+   distância entre o 1º e o 2º se vê sem ler os números. O escolhido, que pinta o mapa, fica em laranja */
+.ranking-leg { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
+.ranking-leg a { position: relative; isolation: isolate; display: grid; grid-template-columns: 1.5em minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 7px; overflow: hidden; background: color-mix(in srgb, var(--noite3) 45%, transparent); text-decoration: none; transition: background-color var(--t-hover) ease; }
+.ranking-leg a::before { content: ""; position: absolute; inset: 0 auto 0 0; z-index: -1; width: calc(var(--p) * 100%); background: var(--noite-linha); transition: background-color var(--t-hover) ease; }
+.ranking-leg a:hover { background: var(--noite3); }
+.ranking-leg a:hover::before { background: color-mix(in srgb, var(--noite-linha) 75%, var(--sobre-noite)); }
+.ranking-leg a:focus-visible { outline: 2px solid var(--brilho); outline-offset: 2px; }
+.ranking-leg .rl-pos { font-size: 12.5px; font-weight: 600; color: var(--noite-muted); font-variant-numeric: tabular-nums; }
+.ranking-leg .rl-sigla { font-size: 15px; font-weight: 600; }
+.ranking-leg b { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.ranking-leg li:first-child a { min-height: 48px; }
+.ranking-leg li:first-child .rl-sigla, .ranking-leg li:first-child b { font-size: 17px; }
+.ranking-leg a.on::before { background: color-mix(in srgb, var(--brilho) 60%, var(--noite2)); }
+.ranking-leg a.on .rl-pos { color: var(--sobre-noite); }
+@media (prefers-reduced-motion: no-preference) {
+  .ranking-leg a::before { animation: revela 900ms var(--ease-expo) 150ms both; }
+}
 .painel-cab .cargos { margin-top: 18px; }
 .legenda-q .sem { background: var(--noite2); }
 
@@ -1285,7 +1310,11 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
   .perfil-cab .cand { flex-wrap: wrap; }
   .flow { grid-template-columns: 110px 1fr; }
   .spend { grid-template-columns: 110px 1fr 100px; }
-  .pares { grid-template-columns: 90px 1fr 64px; }
+  /* no celular: nome e pílula na mesma linha, as barras embaixo com a largura toda (dense põe a pílula ao lado do nome) */
+  .pares { grid-template-columns: minmax(0, 1fr) auto; grid-auto-flow: row dense; }
+  .pares > [role="row"] > [role="cell"]:not(.var) { grid-column: 1 / -1; padding: 0 0 14px; border-top: 0; }
+  .pares > [role="row"] > .var { grid-column: 2; }
+  .pares > [role="row"] > .nm { padding-bottom: 8px; }
   .colunas { --plot: 160px; gap: 4px; }
   .palco { height: 80svh; min-height: 540px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; }
   .palco > :not(.submenu) { grid-column: 1; }
