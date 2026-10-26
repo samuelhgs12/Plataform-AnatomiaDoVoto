@@ -191,6 +191,10 @@ a.card-link:active, a.bloco:active { transform: scale(0.99); }
 /* recolhido (só no computador; no celular o menu é uma gaveta) */
 @media (min-width: 1001px) {
   :root[data-menu="recolhido"] .moldura { grid-template-columns: var(--menu-trilho) minmax(0, 1fr); }
+  /* em tela larga o conteúdo (e o rodapé) bate no limite de 1480px e fica centrado na coluna: recolher o menu deixaria
+     um vão onde ele estava. O limite cresce o que o menu liberou, no mesmo movimento da coluna */
+  .moldura .container, .moldura .rodape .inner { transition: max-width 460ms var(--ease-expo); }
+  :root[data-menu="recolhido"] .moldura :is(.container, .rodape .inner) { max-width: calc(1480px + var(--menu-larg) - var(--menu-trilho)); }
   .menu-rotulo { clip-path: inset(0 -1px 0 0); transition: clip-path 380ms var(--ease-expo), opacity 220ms ease; }
   :root[data-menu="recolhido"] .menu { overflow: visible; }   /* o nome ao lado do ícone sai do trilho */
   :root[data-menu="recolhido"] .menu-rotulo { clip-path: inset(0 100% 0 0); opacity: 0; transition-duration: 300ms, 140ms; }
