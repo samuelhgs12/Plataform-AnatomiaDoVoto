@@ -38,7 +38,8 @@ function Camada({ href, on, nome, apoio, icone }: { href: string; on: boolean; n
 
 /**
  * Conteúdo da aba Camadas do submenu: a abstenção é o mapa base e as camadas são grupos em sanfona (<details>, sem
- * JavaScript). Provisório: "Votos por legenda" e "Comparativos" (abstenção × indicadores do Censo 2010). Só desenha:
+ * JavaScript). Provisório: "Votos por legenda" (uma camada só: o grupo é o interruptor) e "Comparativos" (abstenção ×
+ * indicadores do Censo 2010, uma por indicador). Só desenha:
  * os links e as situações chegam prontos da página.
  */
 export function CamadasMapa({ legenda, comparativos }: { legenda: CamadaLegenda; comparativos: CamadaComparativos }) {
@@ -46,9 +47,9 @@ export function CamadasMapa({ legenda, comparativos }: { legenda: CamadaLegenda;
     <div className="camadas">
       <p className="camadas-base">Mapa base: abstenção, município a município. Ligue uma camada por cima dela.</p>
 
-      <details className="camada-grupo" open>
-        <summary><Icone nome="seta" className="camada-grupo-seta" />Votos por legenda</summary>
-        <Camada href={legenda.href} on={legenda.ligada} icone="legenda" nome="Voto só no partido" apoio={`Parte dos votos dada só à legenda, por estado · ${legenda.anos}`} />
+      {/* um clique no nome do grupo já liga a camada: a legenda tem uma camada só, o interruptor é o próprio grupo */}
+      <div className={`camada-grupo camada-grupo-chave${legenda.ligada ? " ligado" : ""}`}>
+        <Camada href={legenda.href} on={legenda.ligada} icone="legenda" nome="Votos por legenda" apoio={`Votos dados só ao partido, por estado · ${legenda.anos}`} />
         {legenda.ligada && (
           <div className="camada-filtros">
             {legenda.cargos.length > 0 && (
@@ -63,7 +64,7 @@ export function CamadasMapa({ legenda, comparativos }: { legenda: CamadaLegenda;
             )}
           </div>
         )}
-      </details>
+      </div>
 
       <details className="camada-grupo" open>
         <summary><Icone nome="seta" className="camada-grupo-seta" />Comparativos</summary>

@@ -567,6 +567,11 @@ a.linha:hover { background: var(--panel2); }
 .submenu:not([open]) > summary:hover .submenu-seta { background: none; }
 
 .submenu-painel { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 8px 8px; }
+/* o navegador põe o conteúdo do <details> numa caixa própria (::details-content), que não seguia a coluna do menu: o
+   painel crescia além do palco e a lista era cortada em vez de rolar. A caixa entra na coluna, e a altura máxima é a
+   reserva onde ela não existe (palco − margens − cabeçalho) */
+.submenu::details-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.submenu-painel { max-height: calc(max(620px, 100svh - 2 * var(--gap)) - 24px - 56px); }
 .submenu-abas { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 4px; border-radius: 9px; background: var(--noite); }
 .submenu-abas a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 8px 10px; border-radius: 6px; font-size: 15px; font-weight: 600; color: var(--noite-muted); text-decoration: none; transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
 .submenu-abas a .icone { width: 18px; height: 18px; }
@@ -605,6 +610,8 @@ a.linha:hover { background: var(--panel2); }
 .camada-grupo-seta { width: 14px; height: 14px; color: var(--noite-muted); transition: transform var(--t-ui) var(--ease-out); }
 .camada-grupo[open] .camada-grupo-seta { transform: rotate(90deg); }
 .camada-grupo > :last-child { margin-bottom: 6px; }
+.camada-grupo-chave { padding-top: 6px; }
+.camada-grupo-chave > .camada .camada-nome { font-weight: 600; }
 .camada-apoio { margin: -4px 12px 6px 34px; font-size: 13px; line-height: 1.4; color: var(--noite-muted); }
 
 .camada { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 12px; margin: 0 6px; padding: 10px 8px; border-radius: 7px; color: var(--sobre-noite); text-decoration: none; transition: background-color var(--t-hover) ease; }
@@ -708,10 +715,13 @@ a.linha:hover { background: var(--panel2); }
 .legenda-q .q0 { background: var(--q0); } .legenda-q .q1 { background: var(--q1); } .legenda-q .q2 { background: var(--q2); }
 .legenda-q .q3 { background: var(--q3); } .legenda-q .q4 { background: var(--q4); }
 .legenda-bi { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; gap: 6px 10px; align-items: center; font-size: 13px; color: var(--noite-muted); }
-.bi-grade { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(3, 18px); gap: 2px; }
-.bi-grade i { height: 18px; border-radius: 2px; }
-.bi-y { grid-column: 1; grid-row: 1; writing-mode: vertical-rl; transform: rotate(180deg); }
-.bi-x { grid-column: 2; grid-row: 2; }
+/* a grade 3 × 3 com os cortes: cada linha diz a faixa do indicador; cada coluna, a da abstenção (terços do estado) */
+.bi-tabela { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: auto repeat(3, minmax(58px, auto)); gap: 2px; align-items: center; }
+.bi-tabela i { height: 16px; border-radius: 2px; }
+.bi-rot-y { padding-right: 8px; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bi-rot-x { padding-top: 4px; font-size: 12px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bi-y { grid-column: 1; grid-row: 1; writing-mode: vertical-rl; transform: rotate(180deg); color: var(--sobre-noite); font-weight: 500; }
+.bi-x { grid-column: 2; grid-row: 2; justify-self: end; color: var(--sobre-noite); font-weight: 500; }
 .anos { display: flex; gap: 3px; padding: 4px; border-radius: 8px; background: var(--noite2); }
 .ano { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 48px; padding: 6px 10px; border-radius: 6px; font-size: 15px; font-weight: 600; line-height: 1.1; color: var(--noite-muted); text-decoration: none; transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
 .ano small { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brilho); margin-top: 3px; }
@@ -817,10 +827,10 @@ a.linha:hover { background: var(--panel2); }
 .minimapa-voltar { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 500; color: var(--noite-muted); transition: color var(--t-hover) ease; }
 .minimapa-voltar .icone { width: 16px; height: 16px; }
 .minimapa:hover .minimapa-voltar { color: var(--brilho); }
-@keyframes minimapa-entra { from { visibility: hidden; clip-path: inset(100% 0 0 0 round var(--raio)); transform: translateY(40px); } to { visibility: visible; clip-path: inset(0 0 0 0 round var(--raio)); transform: none; } }
 @keyframes minimapa-canto { from { opacity: 0; visibility: hidden; transform: translateY(24px) scale(0.86); } to { opacity: 1; visibility: visible; transform: none; } }
 @keyframes minimapa-sai { to { translate: 0 calc(100% + 32px); } }
-@keyframes palco-encolhe { to { transform: scale(0.88); } }
+/* quando o palco sai da tela, o mini-mapa se revela de baixo para cima; o palco só rola */
+@keyframes minimapa-entra { from { visibility: hidden; clip-path: inset(100% 0 0 0 round var(--raio)); transform: translateY(40px); } to { visibility: visible; clip-path: inset(0 0 0 0 round var(--raio)); transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   @keyframes minimapa-entra { from { visibility: hidden; } to { visibility: visible; } }
   @keyframes minimapa-canto { from { opacity: 0; visibility: hidden; } to { opacity: 1; visibility: visible; } }
@@ -841,11 +851,6 @@ a.linha:hover { background: var(--panel2); }
   .minimapa-recorte { font-size: 21px; }
   @supports (animation-timeline: view()) {
     .minimapa { animation: minimapa-entra linear both; animation-timeline: --palco; animation-range: exit 8% exit 75%; }
-  }
-}
-@supports (animation-timeline: view()) {
-  @media (prefers-reduced-motion: no-preference) {
-    .observatorio > .palco { transform-origin: 50% 100%; animation: palco-encolhe linear both; animation-timeline: --palco; animation-range: exit 10% exit 100%; }
   }
 }
 

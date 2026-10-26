@@ -33,6 +33,21 @@ export function SubmenuMapa({ resumo, aba, hrefCandidato, hrefCamadas, children 
     if (escolhido === null && matchMedia(CELULAR).matches && caixa.current) caixa.current.open = false;
   }, []);
 
+  // a roda do mouse sobre o menu rola só o menu (quando a lista não cabe) e nunca a página: no computador o menu é
+  // uma ferramenta ao lado do mapa, e a página não deve fugir enquanto se escolhe uma camada
+  useEffect(() => {
+    const el = caixa.current!;
+    const roda = (e: WheelEvent) => {
+      if (matchMedia(CELULAR).matches || !el.open) return;
+      const lista = el.querySelector<HTMLElement>(".submenu-conteudo");
+      if (e.ctrlKey || (e.target as Element).closest("select")) return;   // zoom da página e listas nativas seguem como sempre
+      e.preventDefault();
+      if (lista) lista.scrollTop += e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+    };
+    el.addEventListener("wheel", roda, { passive: false });
+    return () => el.removeEventListener("wheel", roda);
+  }, []);
+
   return (
     <details ref={caixa} className="submenu" open={aberto} onToggle={(e) => { if (e.currentTarget.open !== aberto) abrir(e.currentTarget.open); }}>
       <summary title={aberto ? "Recolher o menu do mapa" : "Abrir o menu do mapa"}>

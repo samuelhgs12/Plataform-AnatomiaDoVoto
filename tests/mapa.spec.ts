@@ -123,8 +123,8 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
   await submenu.getByRole('link', { name: /^IDHM/ }).click(); // clicar de novo desliga
   await expect(page).not.toHaveURL(/cor=cruzar/);
 
-  // Votos por legenda: ligar troca a visão; o cargo e o partido ficam no próprio grupo
-  await submenu.getByRole('link', { name: /^Voto só no partido/ }).click();
+  // Votos por legenda: um clique no grupo troca a visão; o cargo e o partido aparecem nele
+  await submenu.getByRole('link', { name: /^Votos por legenda/ }).click(); // o próprio grupo liga a camada
   await expect(page).toHaveURL(/ver=legenda/);
   await expect(submenu.getByRole('combobox', { name: 'Partido' })).toBeVisible();
 });
@@ -146,4 +146,25 @@ test('mini-mapa: aparece ao rolar até os números e volta ao mapa', async ({ pa
   await expect(mini.getByRole('link', { name: /Abstenção · RJ · 2012.*Voltar ao mapa/ })).toBeVisible();
   await mini.getByRole('link').click();
   await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(50);
+});
+
+test('menu do mapa: numa tela baixa a lista rola por dentro do menu, não a página', async ({ page }) => {
+  await page.setViewportSize({ width: 1536, height: 730 });
+  await page.goto('/?uf=RJ', { waitUntil: 'networkidle' });
+  const lista = page.locator('.submenu-conteudo');
+  expect(await lista.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true); // a lista não cabe: tem de rolar, não ser cortada
+  const caixa = (await lista.boundingBox())!;
+  await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + 80);
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => lista.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => scrollY)).toBe(0);
+  await expect(page.locator('.submenu').getByRole('link', { name: /^Água encanada/ })).toBeInViewport();
+});
+
+test('legenda do cruzamento 3 × 3 escreve os cortes de cada terço', async ({ page }) => {
+  await page.goto('/?uf=RJ&cor=cruzar');
+  const legenda = page.getByRole('img', { name: /^Cores: abstenção \(colunas: até \d+%/ });
+  await expect(legenda).toBeVisible();
+  await expect(legenda.locator('.bi-rot-x')).toHaveCount(3);
+  await expect(legenda.locator('.bi-rot-y')).toHaveCount(3);
 });

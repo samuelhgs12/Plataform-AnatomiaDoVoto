@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { Fragment, type CSSProperties } from "react";
 import Link from "next/link";
 import { Rolar } from "@/components/Rolar";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "@/components/MapaAbstencao";
@@ -147,6 +147,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const r = correlacao(pontos);
   const ranking = idsUf.flatMap((id) => { const t = taxaDe(doAno.get(id)); return t == null ? [] : [{ id, t }]; }).sort((a, b) => b.t - a.t);
   const legendaQ = rotulosFaixas(cortes, (v) => pct(v, 0));
+  // os cortes de cada terço do cruzamento, escritos na legenda 3 × 3 (o leitor vê o que cada cor quer dizer)
+  const tercosAbst = rotulosFaixas(corte3Abst, (v) => pct(v, 0)).map((t) => t.replace("%–", "–"));
+  const tercosInd = rotulosFaixas(corte3Ind, (v) => formatarIndicador(ind, v));
 
   // visão de legenda: a parte dos votos dada só à legenda (de todos ou de um partido), em faixas fixas por estado
   const linhasLeg = doCargo(legenda, cargo);
@@ -321,9 +324,18 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   {algumSem && <li className="legenda-sem"><i className="sem" />sem votos</li>}
                 </ul>
               ) : cruzar ? (
-                <div className="legenda-bi" aria-label={`Cores: abstenção (colunas) e ${infoInd.rotulo} (linhas), em terços dos municípios de ${NOME_UF[uf!]}`}>
-                  <div className="bi-grade" aria-hidden="true">{[2, 1, 0].flatMap((i) => [0, 1, 2].map((a) => <i key={`${i}${a}`} className={`b${i}${a}`} />))}</div>
+                <div className="legenda-bi" role="img" aria-label={`Cores: abstenção (colunas: ${tercosAbst.join(", ")}) e ${infoInd.rotulo} (linhas: ${tercosInd.join(", ")}), em terços dos municípios de ${NOME_UF[uf!]}`}>
                   <span className="bi-y">{infoInd.rotulo} ↑</span>
+                  <div className="bi-tabela">
+                    {[2, 1, 0].map((i) => (
+                      <Fragment key={i}>
+                        <span className="bi-rot-y">{tercosInd[i]}</span>
+                        {[0, 1, 2].map((a) => <i key={a} className={`b${i}${a}`} />)}
+                      </Fragment>
+                    ))}
+                    <span />
+                    {tercosAbst.map((t) => <span key={t} className="bi-rot-x">{t}</span>)}
+                  </div>
                   <span className="bi-x">Abstenção →</span>
                 </div>
               ) : (

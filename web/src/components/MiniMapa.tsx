@@ -2,10 +2,9 @@ import type { ReactNode } from "react";
 import { Icone } from "./Icone";
 
 /**
- * Mini-mapa no canto da tela enquanto se leem os números embaixo do mapa: a mesma pintura do palco, pequena, com o
- * recorte escrito. Clicar volta ao mapa. Quem o faz aparecer é o CSS, por uma animação ligada à rolagem (o palco sai
- * da tela, o mini-mapa entra); onde o navegador não tem isso, ele não aparece. O mapa dentro dele é só imagem (inert):
- * o único controle é o link que o cobre.
+ * Mini-mapa ao lado dos números embaixo do mapa: a mesma pintura do palco, pequena, com o recorte escrito. Clicar
+ * volta ao mapa. Quando o palco sai da tela, ele se revela de baixo para cima (CSS ligado à rolagem). O mapa dentro
+ * dele é só imagem (inert): o único controle é o link que o cobre.
  */
 export function MiniMapa({ recorte, children }: { recorte: string; children: ReactNode }) {
   return (
