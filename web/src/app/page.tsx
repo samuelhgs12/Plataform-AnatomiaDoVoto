@@ -21,13 +21,14 @@ import {
   anoNaLegenda, casasDosCortes, doCargo, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
 } from "@/lib/mapa";
 import {
-  ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
+  ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
   mediaPonderada, nomeProprio, posicao, quantis, rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia,
   type ChaveIndicador, type LinhaIndicador, type LinhaMunicipio, type LinhaParticipacao,
 } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import { compacto, pct } from "@/lib/format";
+import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { MiniMapa } from "@/components/MiniMapa";
 import { SerieLegenda } from "@/components/SerieLegenda";
@@ -107,16 +108,27 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const idsDe = (u?: string) => municipios.filter((m) => !u || m.uf === u).map((m) => m.id_municipio);
   const totalDe = (ids: number[]) => somarParticipacao(ids.flatMap((id) => doAno.get(id) ?? []));
   const nomeMun = new Map(municipios.map((m) => [m.id_municipio, nomeProprio(m.nome)]));
+  // a régua da dica vai do menor ao maior valor de cada escala, com uma faixa por cor do mapa
+  const extremos = (v: number[]) => [Math.min(...v), Math.max(...v)] as const;
+  const taxasAno = [...doAno.values()].flatMap((l) => taxaDe(l) ?? []);
+  const [minAno, maxAno] = extremos(taxasAno);
+  const QUINTOS = ["q0", "q1", "q2", "q3", "q4"];
 
   const estados: EstadoNoMapa[] = ufs.map((u) => {
     const t = totalDe(idsDe(u));
-    return { uf: u, classe: `q${classe(t.taxa, cortes)}`, href: href({ uf: u === uf ? null : u }), sigla: u, valor: pct(t.taxa, 0), descricao: `${NOME_UF[u] ?? u}: ${pct(t.taxa)} de abstenção em ${ano}` };
+    const ficha: FichaDica = {
+      titulo: NOME_UF[u] ?? u, sub: `${ano} · ${idsDe(u).length} municípios`,
+      medidas: [{ rotulo: "Abstenção", valor: pct(t.taxa), cores: QUINTOS, p: naRegua(t.taxa, cortes, minAno, maxAno) }],
+    };
+    return { uf: u, classe: `q${classe(t.taxa, cortes)}`, href: href({ uf: u === uf ? null : u }), sigla: u, valor: pct(t.taxa, 0), descricao: `${NOME_UF[u] ?? u}: ${pct(t.taxa)} de abstenção em ${ano}`, ficha };
   });
 
   // municípios do estado em zoom; no modo "cruzar", 3 × 3 cores: terço da abstenção × terço do indicador, dentro do estado
   const idsUf = uf ? idsDe(uf) : [];
   const corte3Abst = quantis(idsUf.flatMap((id) => taxaDe(doAno.get(id)) ?? []), 3);
   const corte3Ind = quantis(idsUf.flatMap((id) => indicadores.get(id)?.[ind] ?? []), 3);
+  const [minAbstUf, maxAbstUf] = extremos(idsUf.flatMap((id) => taxaDe(doAno.get(id)) ?? []));
+  const [minIndUf, maxIndUf] = extremos(idsUf.flatMap((id) => indicadores.get(id)?.[ind] ?? []));
   const caixa = uf && !naLegenda ? CAIXA_UF[uf] : undefined;   // na legenda, o mapa fica nos seis estados
   const noMapa: MunicipioNoMapa[] = !uf || !caixa ? [] : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
     const t = taxaDe(doAno.get(m.id_municipio));
@@ -125,7 +137,15 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     const nome = nomeMun.get(m.id_municipio)!;
     const dica = t == null ? `${nome}: sem dado em ${ano}` : `${nome}: ${pct(t)} de abstenção${cruzar && v != null ? ` · ${infoInd.rotulo} ${formatarIndicador(ind, v)}` : ""}`;
     const atraso = (CENTRO_MUNICIPIO[m.cod_ibge][0] - caixa[0]) / (caixa[2] - caixa[0]);   // os municípios surgem de oeste para leste
-    return { ibge: m.cod_ibge, classe: cor, href: href({ mun: m.id_municipio === mun?.id_municipio ? null : m.id_municipio }), dica, atraso: Math.round(atraso * 100) / 100 };
+    // no cruzamento, cada régua é um eixo da legenda 3 × 3 (abstenção na base, indicador na coluna da esquerda)
+    const ficha: FichaDica = t == null ? { titulo: nome, sub: `${NOME_UF[uf]} · sem dado em ${ano}`, medidas: [] } : cruzar && v != null ? {
+      titulo: nome, sub: `${NOME_UF[uf]} · ${ano}`, celula: cor,
+      medidas: [
+        { rotulo: "Abstenção", valor: pct(t), cores: ["b00", "b01", "b02"], p: naRegua(t, corte3Abst, minAbstUf, maxAbstUf) },
+        { rotulo: infoInd.rotulo, valor: formatarIndicador(ind, v), cores: ["b00", "b10", "b20"], p: naRegua(v, corte3Ind, minIndUf, maxIndUf) },
+      ],
+    } : { titulo: nome, sub: `${NOME_UF[uf]} · ${ano}`, medidas: [{ rotulo: "Abstenção", valor: pct(t), cores: QUINTOS, p: naRegua(t, cortes, minAno, maxAno) }] };
+    return { ibge: m.cod_ibge, classe: cor, href: href({ mun: m.id_municipio === mun?.id_municipio ? null : m.id_municipio }), dica, atraso: Math.round(atraso * 100) / 100, ficha };
   });
   const camera = enquadrar(caixa ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA], TELA.larg, TELA.alt, caixa ? 0.06 : 0.02);
   const centro = mun ? CENTRO_MUNICIPIO[mun.cod_ibge] : undefined;
@@ -134,7 +154,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const idsTodos = idsDe();
   const ids = mun ? [mun.id_municipio] : uf ? idsUf : idsTodos;
   const total = totalDe(ids);
-  const referencia = mun ? { nome: `da média de ${NOME_UF[uf!]}`, t: totalDe(idsUf) } : uf ? { nome: "dos seis estados juntos", t: totalDe(idsTodos) } : null;
+  const referencia = mun ? { nome: `da média de ${NOME_UF[uf!]}`, rotulo: `Média de ${NOME_UF[uf!]}`, t: totalDe(idsUf) }
+    : uf ? { nome: "dos seis estados juntos", rotulo: "Seis estados juntos", t: totalDe(idsTodos) } : null;
+  const comparacao = referencia && total.aptos > 0 ? compararComReferencia(total.taxa, referencia.t.taxa) : null;
+  const composicao = composicaoEleitorado(total);
   const nomeUnidade = mun ? nomeMun.get(mun.id_municipio)! : uf ? NOME_UF[uf] : "Os seis estados";
   const serie = serieAbstencao(participacao, new Set(ids));
   const maiorSerie = Math.max(...serie.map((s) => s.taxa));
@@ -429,11 +452,37 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               {total.aptos > 0 ? (
                 <>
                   <p className="painel-num"><Rolar valor={pct(total.taxa, 1)} /></p>
-                  <p>dos {compacto(total.aptos)} eleitores aptos não foram votar em {ano}{referencia && <> ({total.taxa >= referencia.t.taxa ? "acima" : "abaixo"} {referencia.nome}, {pct(referencia.t.taxa, 1)})</>}.</p>
-                  <dl className="painel-mini">
-                    <div><dt>Compareceram</dt><dd>{compacto(total.comparecimento)}</dd></div>
-                    <div><dt>Brancos e nulos</dt><dd>{pct((total.brancos + total.nulos) / Math.max(1, total.comparecimento), 1)}</dd></div>
-                  </dl>
+                  <p>dos {compacto(total.aptos)} eleitores aptos não foram votar em {ano}.</p>
+                  {referencia && comparacao && (
+                    <div className="compara">
+                      <p className="compara-chip">
+                        <svg viewBox="0 0 12 12" aria-hidden="true">
+                          <path d={comparacao.sentido === "igual" ? "M2 6h8" : comparacao.sentido === "acima" ? "M6 10V2M2.5 5.5 6 2l3.5 3.5" : "M6 2v8M2.5 6.5 6 10l3.5-3.5"} />
+                        </svg>
+                        {comparacao.sentido === "igual" ? `No mesmo nível ${referencia.nome}`
+                          : `${Math.abs(comparacao.pontos).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} pontos percentuais ${comparacao.sentido} ${referencia.nome}`}
+                      </p>
+                      <div className="compara-regua" role="img" aria-label={`${nomeUnidade}: ${pct(total.taxa, 1)} de abstenção; ${referencia.rotulo.toLowerCase()}: ${pct(referencia.t.taxa, 1)}`}>
+                        <i className="compara-taxa" style={{ "--p": comparacao.pTaxa } as CSSProperties} />
+                        <i className="compara-ref" style={{ "--p": comparacao.pRef } as CSSProperties} />
+                      </div>
+                      <ul className="compara-legenda" aria-hidden="true">
+                        <li><i className="compara-taxa" />{nomeUnidade}<b>{pct(total.taxa, 1)}</b></li>
+                        <li><i className="compara-ref" />{referencia.rotulo}<b>{pct(referencia.t.taxa, 1)}</b></li>
+                      </ul>
+                    </div>
+                  )}
+                  <div className="composicao">
+                    <p className="composicao-titulo">Para onde foram os {compacto(total.aptos)} eleitores</p>
+                    <div className="composicao-barra" role="img" aria-label={`Dos eleitores aptos: ${composicao.map((c) => `${pct(c.p, 1)} ${c.rotulo.toLowerCase()}`).join(", ")}`}>
+                      {composicao.filter((c) => c.p > 0).map((c) => <i key={c.chave} className={`cp-${c.chave}`} style={{ "--p": c.p } as CSSProperties} />)}
+                    </div>
+                    <ul className="composicao-legenda" aria-hidden="true">
+                      {composicao.map((c) => (
+                        <li key={c.chave}><i className={`cp-${c.chave}`} /><span>{c.rotulo}</span><b>{pct(c.p, 1)}</b><small>{compacto(c.n)}</small></li>
+                      ))}
+                    </ul>
+                  </div>
                 </>
               ) : <p>Sem dado de participação em {ano}.</p>}
               {uf && (

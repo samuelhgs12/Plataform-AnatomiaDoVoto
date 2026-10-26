@@ -43,6 +43,28 @@ export function somarParticipacao(linhas: LinhaParticipacao[]): Total {
   return { ...t, taxa: t.aptos > 0 ? t.abstencoes / t.aptos : 0 };
 }
 
+/** Para onde foi o eleitorado: partes dos aptos que faltaram, votaram branco ou nulo e deram voto válido (somam 1). */
+export function composicaoEleitorado(t: Total): { chave: "faltaram" | "brancos_nulos" | "validos"; rotulo: string; n: number; p: number }[] {
+  const bn = t.brancos + t.nulos;
+  const partes = [
+    { chave: "faltaram" as const, rotulo: "Não foram votar", n: t.abstencoes },
+    { chave: "brancos_nulos" as const, rotulo: "Brancos e nulos", n: bn },
+    { chave: "validos" as const, rotulo: "Votos válidos", n: Math.max(0, t.comparecimento - bn) },
+  ];
+  const soma = partes.reduce((s, x) => s + x.n, 0);
+  return partes.map((x) => ({ ...x, p: soma > 0 ? x.n / soma : 0 }));
+}
+
+/**
+ * A taxa ao lado da referência (a média de cima): diferença em pontos percentuais, o sentido e onde cada uma cai
+ * numa régua de 0 até um pouco além da maior das duas. Diferença abaixo de 0,05 ponto é "igual".
+ */
+export function compararComReferencia(taxa: number, ref: number): { pontos: number; sentido: "acima" | "abaixo" | "igual"; pTaxa: number; pRef: number } {
+  const pontos = (taxa - ref) * 100;
+  const topo = Math.max(taxa, ref, 1e-9) * 1.2;
+  return { pontos, sentido: Math.abs(pontos) < 0.05 ? "igual" : pontos > 0 ? "acima" : "abaixo", pTaxa: taxa / topo, pRef: ref / topo };
+}
+
 /** Taxa de abstenção de uma linha; null se não há linha ou eleitorado. */
 export const taxaDe = (l: { aptos: number; abstencoes: number } | undefined) => (l && l.aptos > 0 ? l.abstencoes / l.aptos : null);
 
