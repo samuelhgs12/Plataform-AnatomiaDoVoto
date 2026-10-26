@@ -3,11 +3,10 @@ import Link from "next/link";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "./MapaAbstencao";
 import { MapaVivo } from "./MapaVivo";
 import { FichaCandidato } from "./FichaCandidato";
-import { BuscaCandidatoMapa } from "./BuscaCandidatoMapa";
 import { classe, enquadrar, nomeProprio, type LinhaMunicipio } from "@/lib/abstencao";
 import {
   abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato,
-  type CandidaturaMapa, type EntradaCandidato, type VotoMunicipio,
+  type CandidaturaMapa, type VotoMunicipio,
 } from "@/lib/candidato-mapa";
 import { faixasFixas } from "@/lib/mapa";
 import { NOME_UF } from "@/lib/financiamento";
@@ -28,10 +27,10 @@ export interface EscolhaCandidato {
 }
 
 interface Props {
-  visoes: ReactNode;
+  /** o menu do mapa (SubmenuMapa), encaixado na lateral do palco */
+  menu: ReactNode;
   escolha: EscolhaCandidato;
   votos: VotoMunicipio[];
-  sugestoes: EntradaCandidato[];
   municipios: LinhaMunicipio[];
   ufs: string[];
 }
@@ -40,10 +39,10 @@ const SEIS = "AP, ES, MG, PE, RJ e RR";
 
 /**
  * Visão "Candidato" do mapa da página inicial: onde a candidatura teve votos, com a
- * ficha ao lado. Cargos estaduais abrem no estado; presidente abre nos seis estados e o clique dá zoom. Só desenha:
+ * ficha e os números embaixo do mapa. Cargos estaduais abrem no estado; presidente abre nos seis estados e o clique dá zoom. Só desenha:
  * as contas são de src/lib/candidato-mapa.ts.
  */
-export function VisaoCandidato({ visoes, escolha, votos, sugestoes, municipios, ufs }: Props) {
+export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props) {
   const { campanha: c, lista, turno, turnos, uf, mun } = escolha;
   const alcance = c ? abrangencia(c.cargo) : "fora";
   const seis = alcance === "seis";
@@ -120,10 +119,10 @@ export function VisaoCandidato({ visoes, escolha, votos, sugestoes, municipios, 
 
   return (
     <>
-      <MapaVivo className="palco cand s8" estado={comMunicipios ? uf : undefined}>
+      <MapaVivo className="palco cand s12" estado={comMunicipios ? uf : undefined}>
+        {menu}
         <div className="palco-topo">
           <div>
-            {visoes}
             {c ? (
               <>
                 <h1 id="h-mapa">Onde {nome} teve votos em {c.ano}</h1>
@@ -186,11 +185,10 @@ export function VisaoCandidato({ visoes, escolha, votos, sugestoes, municipios, 
         </div>
       </MapaVivo>
 
-      <div className="painel s4" key={`cand-${c?.id_candidatura}`}>
-        {c ? (
-          <>
-            <FichaCandidato c={c} noMapa={noMapaT1} onde={seis ? "dos seis estados" : `de ${c.uf}`} />
-
+      {c && (
+        <div className="painel s12" key={`cand-${c.id_candidatura}`}>
+          <div className="s4"><FichaCandidato c={c} noMapa={noMapaT1} onde={seis ? "dos seis estados" : `de ${c.uf}`} /></div>
+          <div className="painel-pilha s8">
             {linhaSel && munSel && (
               <div className="bloco noite painel-cab">
                 <p className="palco-sobre">Município · {munSel.uf} · {turnoTexto}</p>
@@ -230,25 +228,9 @@ export function VisaoCandidato({ visoes, escolha, votos, sugestoes, municipios, 
                 </details>
               </div>
             )}
-
-            <div className="bloco noite">
-              <BuscaCandidatoMapa rotulo="Trocar de candidato" />
-            </div>
-          </>
-        ) : (
-          <div className="bloco noite painel-cab busca-vazia">
-            <h2>Buscar um candidato</h2>
-            <p>O mapa mostra em que municípios a pessoa teve votos e quanto isso pesou entre os votos válidos de cada um.</p>
-            <BuscaCandidatoMapa destaque />
-            {sugestoes.length > 0 && <p className="rotulo">Ou comece por um dos governadores eleitos em {sugestoes[0].ultimo_ano}</p>}
-            <ul className="chips sugestoes-cand">
-              {sugestoes.map((s) => (
-                <li key={s.id_candidato}><Link scroll={false} className="chip" href={`/?ver=candidato&cand=${s.id_candidato}#mapa`}>{nomeProprio(s.nome_urna ?? "")}<small>{s.ultimo_cargo} · {s.uf}</small></Link></li>
-              ))}
-            </ul>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }

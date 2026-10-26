@@ -15,7 +15,8 @@ test('mapa da abstenção: estado, município, indicador e ano', async ({ page }
   await expect(page).toHaveURL(/mun=\d+/);
   await expect(page.getByRole('heading', { name: 'Recife', level: 2 })).toBeVisible();
 
-  await page.getByRole('link', { name: /^Renda por pessoa/ }).click();
+  // o indicador se liga no menu do mapa, encaixado ao lado dele: Camadas › Comparativos
+  await page.locator('.submenu').getByRole('link', { name: /^Renda por pessoa/ }).click();
   await expect(page.getByRole('heading', { name: 'Abstenção × Renda por pessoa' })).toBeVisible();
   await expect(page).toHaveURL(/uf=PE.*mun=\d+/); // trocar o indicador mantém estado e município
 
@@ -102,4 +103,35 @@ test('candidato: presidente nos seis estados, zoom num estado e 2º turno', asyn
 test('candidato: parâmetros inválidos voltam à busca', async ({ page }) => {
   await page.goto('/?ver=candidato&cand=123&campanha=999');
   await expect(page.getByRole('heading', { name: 'Onde cada candidato teve votos' })).toBeVisible();
+});
+
+test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
+  await page.goto('/?uf=RJ', { waitUntil: 'networkidle' });
+  const submenu = page.locator('.submenu');
+  await expect(submenu).toHaveAttribute('open', ''); // no computador, o menu já vem aberto ao lado do mapa
+  await expect(submenu.getByRole('navigation', { name: 'O que o mapa mostra' }).getByRole('link', { name: 'Camadas' })).toHaveAttribute('aria-current', 'true');
+
+  // Comparativos: ligar um indicador pinta o estado em 3 × 3; recolhido, o trilho diz o que está ligado
+  await submenu.getByRole('link', { name: /^IDHM/ }).click();
+  await expect(page).toHaveURL(/cor=cruzar/);
+  await expect(page.locator('.mapa-abst .mun[class*=" b"]').first()).toBeVisible();
+  await submenu.locator(':scope > summary').click();
+  await expect(submenu.locator('.submenu-resumo')).toHaveText('Abstenção × IDHM');
+  await expect(submenu.locator('.submenu-resumo')).toBeVisible();
+  await submenu.locator(':scope > summary').click();
+  await expect(submenu).toHaveAttribute('open', '');
+  await submenu.getByRole('link', { name: /^IDHM/ }).click(); // clicar de novo desliga
+  await expect(page).not.toHaveURL(/cor=cruzar/);
+
+  // Votos por legenda: ligar troca a visão; o cargo e o partido ficam no próprio grupo
+  await submenu.getByRole('link', { name: /^Voto só no partido/ }).click();
+  await expect(page).toHaveURL(/ver=legenda/);
+  await expect(submenu.getByRole('combobox', { name: 'Partido' })).toBeVisible();
+});
+
+test('menu do mapa: fora dos anos do Censo, Comparativos explica e leva a 2008 ou 2012', async ({ page }) => {
+  await page.goto('/?ano=2022', { waitUntil: 'networkidle' });
+  await expect(page.getByText('O Censo 2010 só é comparado com as eleições de 2008 e 2012.')).toBeVisible();
+  await page.locator('.submenu').getByRole('link', { name: 'Ver 2012' }).click();
+  await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2012' })).toBeVisible();
 });

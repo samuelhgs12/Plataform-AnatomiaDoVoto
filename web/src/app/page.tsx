@@ -1,20 +1,21 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { SearchBox } from "@/components/SearchBox";
 import { Rolar } from "@/components/Rolar";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "@/components/MapaAbstencao";
 import { TELA } from "@/lib/lupa";
 import { MapaVivo } from "@/components/MapaVivo";
 import { Dispersao } from "@/components/Dispersao";
 import { EscolhaMunicipio } from "@/components/EscolhaMunicipio";
+import { SubmenuMapa } from "@/components/SubmenuMapa";
+import { CamadasMapa } from "@/components/CamadasMapa";
+import { BuscaCandidatoMapa } from "@/components/BuscaCandidatoMapa";
 import { apiGetOpcional, lerAnalise } from "@/lib/api";
 import type { Listagem } from "@/lib/types";
 import { comoObjetos, lerEstatico } from "@/lib/data";
-import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
+import { NOME_UF } from "@/lib/financiamento";
 import { CARGOS, anosDe as anosDaLegenda, cicloDoAno, type CargoCiclo, type LinhaLegenda } from "@/lib/legenda";
 import {
-  anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, type Visao,
+  anoNaLegenda, casasDosCortes, doCargo, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
 } from "@/lib/mapa";
 import {
   ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
@@ -24,9 +25,6 @@ import {
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import { compacto, pct } from "@/lib/format";
-import { FOTOS } from "@/lib/fotos";
-import { ANALISES } from "@/lib/analises";
-import { FaixasAnalises } from "@/components/FaixasAnalises";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { abrangencia, candidaturasDe, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
 
@@ -34,16 +32,12 @@ export const dynamic = "force-dynamic";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-const ESTADOS = ["Amapá", "Espírito Santo", "Minas Gerais", "Pernambuco", "Rio de Janeiro", "Roraima"];
 const ANO_SUGESTOES = 2022;   // última eleição geral: as sugestões da visão Candidato são os governadores eleitos nela
-const umaCasa = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 const ROTULO_CARGO: Record<CargoCiclo, string> = { ambos: "Os dois", federal: "Federal", estadual: "Estadual" };
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const [q8, q5, dados] = await Promise.all([lerAnalise("q8", ["fontes", "sucesso"]), lerAnalise("q5", ["legenda"]), lerEstatico("mapa")]);
-  const fontes = comoObjetos<LinhaFontes>(q8?.fontes);
-  const sucesso = comoObjetos<LinhaSucesso>(q8?.sucesso);
+  const [q5, dados] = await Promise.all([lerAnalise("q5", ["legenda"]), lerEstatico("mapa")]);
   const legenda = comoObjetos<LinhaLegenda>(q5?.legenda);
   const municipios = comoObjetos<LinhaMunicipio>(dados?.municipios);
   const participacao = comoObjetos<LinhaParticipacao>(dados?.participacao);
@@ -72,11 +66,13 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const comCenso = ANOS_CENSO.includes(ano);
   const ind: ChaveIndicador = INDICADORES_CENSO.find((i) => i.chave === um(sp.ind))?.chave ?? "idhm";
   const infoInd = INDICADORES_CENSO.find((i) => i.chave === ind)!;
-  const cruzar = comCenso && !!uf && !naLegenda && um(sp.cor) === "cruzar";
+  // a camada Comparativos ligada (cor=cruzar) fica na URL mesmo sem estado aberto; só pinta com um estado em zoom
+  const pediuCruzar = um(sp.cor) === "cruzar";
+  const cruzar = comCenso && !!uf && !naLegenda && pediuCruzar;
 
   type Estado = { ver?: Visao; ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null; p?: string | null; cargo?: CargoCiclo };
   const params = (nova: Estado) => {
-    const n = { ver: ver === "candidato" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind, cor: cruzar ? "cruzar" : null, p: partido, cargo, ...nova };
+    const n = { ver: ver === "candidato" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind, cor: pediuCruzar && !naLegenda ? "cruzar" : null, p: partido, cargo, ...nova };
     if (nova.uf !== undefined && nova.mun === undefined) n.mun = null;   // trocar de estado solta o município
     const leg = n.ver === "legenda";
     const p = new URLSearchParams();
@@ -89,7 +85,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     } else {
       if (n.uf && n.mun) p.set("mun", String(n.mun));
       if (n.ind !== "idhm") p.set("ind", n.ind);
-      if (n.cor && n.uf) p.set("cor", n.cor);
+      if (n.cor) p.set("cor", n.cor);
     }
     return p;
   };
@@ -191,26 +187,52 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const sugestoesCand = naCandidato && !campanha
     ? sugestoesDe((await apiGetOpcional<Listagem>(`/candidaturas?cargo=3&ano=${ANO_SUGESTOES}&eleito=true&tamanho=6`))?.itens ?? []) : [];
 
-  const hrefCand = "/?ver=candidato#mapa";   // como as outras abas: <a data-mapa>, que o MapaVivo navega sem recarregar
-  const visoes = (
-    <nav className="visoes" aria-label="O que o mapa mostra">
-      <a href={hrefAbst} data-mapa="" aria-current={ver === "abstencao" ? "true" : undefined}>Abstenção</a>
-      <a href={hrefLeg} data-mapa="" aria-current={ver === "legenda" ? "true" : undefined}>Voto de legenda</a>
-      <a href={hrefCand} data-mapa="" aria-current={ver === "candidato" ? "true" : undefined}>Candidato</a>
-    </nav>
+  const hrefCand = "/?ver=candidato#mapa";   // como as camadas: <a data-mapa>, que o MapaVivo navega sem recarregar
+
+  // submenu do mapa: abas Candidato e Camadas; a abstenção é o mapa base, e as camadas vêm por cima dela
+  const anoBase = naLegenda && anos.includes(anoLeg!) ? anoLeg! : ano;   // o ano da abstenção ao sair da legenda
+  const comparativo = situacaoComparativo({ ano: anoBase, anosCenso: ANOS_CENSO, uf });
+  const comparativoLigado = !naLegenda && pediuCruzar;
+  const camadas = (
+    <CamadasMapa
+      legenda={{
+        ligada: naLegenda, href: naLegenda ? hrefAbst : hrefLeg,
+        anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",
+        cargos: naLegenda && geral ? CARGOS.map((c) => ({ rotulo: ROTULO_CARGO[c], href: href({ cargo: c }), on: c === cargo })) : [],
+        partido: naLegenda ? { opcoes: opcoesPartido, atual: partido, params: Object.fromEntries(params({ p: null })) } : undefined,
+      }}
+      comparativos={{
+        disponivel: comparativo.disponivel, motivo: comparativo.motivo,
+        itens: INDICADORES_CENSO.map((i) => {
+          const on = comparativoLigado && i.chave === ind;
+          return { chave: i.chave, rotulo: i.rotulo, on, href: on ? href({ cor: null }) : href({ ver: "abstencao", ano: anoBase, ind: i.chave, cor: "cruzar" }) };
+        }),
+        anos: ANOS_CENSO.map((a) => ({ ano: a, href: href({ ver: "abstencao", ano: a }) })),
+      }}
+    />
   );
-
-  // números do mosaico e achados das análises
-  const dinheiro = dinheiroTotal(fontes);
-  const anoSucesso = Math.max(0, ...sucesso.map((l) => l.ano));
-  const p8 = anoSucesso ? respostaSucesso(sucessoTresGrupos(sucesso, { ano: anoSucesso })) : null;
-  const anoGeral = Math.max(0, ...legenda.filter((l) => l.ano % 4 === 2).map((l) => l.ano));
-  const p5 = anoGeral ? conjunto(legendaPorUf(legenda, anoGeral)) : null;
-
-  const achados = {
-    "/analises/financiamento": p8?.vezes ? `Em ${anoSucesso}, quem recebeu muito dinheiro público se elegeu ${umaCasa(p8.vezes)} vezes mais do que quem ${p8.base.chave === "nada" ? "não recebeu nada" : "recebeu pouco"}.` : undefined,
-    "/analises/legenda": p5 ? `Em ${anoGeral}, ${pct(p5.valor, 1)} dos votos para deputado foram só no partido, sem escolher candidato.` : undefined,
-  };
+  const submenu = (
+    <SubmenuMapa
+      resumo={resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined })}
+      aba={naCandidato ? "candidato" : "camadas"} hrefCandidato={hrefCand} hrefCamadas={hrefAbst}
+    >
+      {naCandidato ? (
+        <div className="aba-candidato">
+          <BuscaCandidatoMapa />
+          {sugestoesCand.length > 0 && (
+            <>
+              <p className="rotulo">Ou comece por um dos governadores eleitos em {sugestoesCand[0].ultimo_ano}</p>
+              <ul className="sugestoes-cand">
+                {sugestoesCand.map((s) => (
+                  <li key={s.id_candidato}><a href={`/?ver=candidato&cand=${s.id_candidato}#mapa`} data-mapa="">{nomeProprio(s.nome_urna ?? "")}<small>{s.ultimo_cargo} · {s.uf}</small></a></li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      ) : camadas}
+    </SubmenuMapa>
+  );
 
   return (
     <>
@@ -223,14 +245,14 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         <section id="mapa" className="quadro observatorio" aria-labelledby="h-mapa">
           {naCandidato ? (
             <VisaoCandidato
-              visoes={visoes} votos={votosCand} sugestoes={sugestoesCand} municipios={municipios} ufs={ufs}
+              menu={submenu} votos={votosCand} municipios={municipios} ufs={ufs}
               escolha={{ campanha, lista: campanhas, turno: turnoCand, turnos: turnosCand, uf: ufCand, mun: munCand }}
             />
           ) : (<>
-          <MapaVivo className="palco s8" estado={naLegenda ? undefined : uf}>
+          <MapaVivo className="palco s12" estado={naLegenda ? undefined : uf}>
+            {submenu}
             <div className="palco-topo">
               <div>
-                {visoes}
                 {naLegenda ? (
                   <>
                     <h1 id="h-mapa">{partido ? `${partido}: voto de legenda em ${anoLeg}` : `Quem votou só no partido em ${anoLeg}`}</h1>
@@ -310,8 +332,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           </MapaVivo>
 
           {naLegenda ? (
-          <div className="painel s4" key={`legenda-${uf}`}>
-            <div className="bloco noite painel-cab">
+          <div className="painel s12" key={`legenda-${uf}`}>
+            <div className="bloco noite painel-cab s4">
               <p className="palco-sobre">{uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"}</p>
               <h2>{uf ? NOME_UF[uf] : "Os seis estados"}</h2>
               {medidaLeg.valor != null ? (
@@ -323,17 +345,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   </p>
                 </>
               ) : <p>{partido ? `O partido ${partido} não teve votos para ${cargoTexto}${uf ? ` em ${NOME_UF[uf]}` : ""} em ${anoLeg}.` : `Sem votos para ${cargoTexto} em ${anoLeg}.`}</p>}
-              {geral && (
-                <div className="chips cargos" role="group" aria-label="Deputados">
-                  {CARGOS.map((c) => (
-                    <Link key={c} scroll={false} href={href({ cargo: c })} className={`chip${c === cargo ? " on" : ""}`} aria-current={c === cargo ? "true" : undefined}>{ROTULO_CARGO[c]}</Link>
-                  ))}
-                </div>
-              )}
-              <EscolhaMunicipio nome="p" rotulo="Partido" vazio="Todos os partidos" opcoes={opcoesPartido} atual={partido} params={Object.fromEntries(params({ p: null }))} />
             </div>
 
-            <div className="bloco noite">
+            <div className="bloco noite s8">
               <h3>Voto de legenda, eleição a eleição</h3>
               <ol className="serie-anos" aria-label={`Voto de legenda${partido ? ` do partido ${partido}` : ""} em ${uf ? NOME_UF[uf] : "seis estados"}, por ano`}>
                 {serieLeg.map((s) => (
@@ -350,10 +364,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             </div>
 
             {rankingLeg.length > 0 && (
-              <div className="bloco noite">
+              <div className="bloco noite s8">
                 <h3>Partidos com mais voto de legenda</h3>
                 <p className="muted pequeno">Parte de cada partido nos votos só na legenda para {cargoTexto}{uf ? ` em ${NOME_UF[uf]}` : ""} em {anoLeg}. Escolha um para pintar o mapa com ele.</p>
-                <ol className="extremos">
+                <ol className="extremos duas">
                   {rankingLeg.map((r) => (
                     <li key={r.partido}>
                       <Link scroll={false} href={href({ p: r.partido === partido ? null : r.partido })} className={r.partido === partido ? "on" : undefined} aria-current={r.partido === partido ? "true" : undefined}>
@@ -365,20 +379,20 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               </div>
             )}
 
-            <ul className="atalhos">
+            <ul className={`atalhos ${rankingLeg.length > 0 ? "s4" : "s12"}`}>
               <li><Link href={hrefAnalise}>Análise completa</Link></li>
               <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
             </ul>
           </div>
           ) : (
-          <div className="painel s4" key={`${uf}-${mun?.id_municipio}`}>
+          <div className="painel s12" key={`${uf}-${mun?.id_municipio}`}>
             {pediuLegenda && (
-              <div className="card aviso">
+              <div className="card aviso s12">
                 <h2>Voto de legenda indisponível</h2>
                 <p>A API não devolveu a análise <code>q5</code>. Confira se ela está rodando (<code>uvicorn app.main:app</code> em <code>api/</code>).</p>
               </div>
             )}
-            <div className="bloco noite painel-cab">
+            <div className="bloco noite painel-cab s4">
               <p className="palco-sobre">{mun ? `Município · ${uf}` : uf ? `Estado · ${idsUf.length} municípios` : "AP, ES, MG, PE, RJ e RR"}</p>
               <h2>{nomeUnidade}</h2>
               {total.aptos > 0 ? (
@@ -400,7 +414,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               )}
             </div>
 
-            <div className="bloco noite">
+            <div className="bloco noite s8">
               <h3>Abstenção, eleição a eleição</h3>
               <ol className="serie-anos" aria-label={`Abstenção de ${nomeUnidade} por ano`}>
                 {serie.map((s) => (
@@ -418,9 +432,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
 
             {comCenso ? (
               <>
-                <div className="bloco noite">
+                <div className="bloco noite s4">
                   <h3>Censo 2010</h3>
-                  <p className="muted pequeno">{mun ? `O município entre os ${universo.length} de ${NOME_UF[uf!]}` : `Média ponderada pela população; a faixa mostra do menor ao maior município ${uf ? "do estado" : "dos seis estados"}`}. Escolha um indicador para cruzar com a abstenção.</p>
+                  <p className="muted pequeno">{mun ? `O município entre os ${universo.length} de ${NOME_UF[uf!]}` : `Média ponderada pela população; a faixa mostra do menor ao maior município ${uf ? "do estado" : "dos seis estados"}`}. Para pintar o mapa com um deles, ligue-o em Camadas › Comparativos, no menu do mapa.</p>
                   <ul className="indicadores">
                     {INDICADORES_CENSO.map((i) => {
                       const v = valorInd(i.chave);
@@ -428,38 +442,37 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                       const p = v == null ? null : posicao(v, todos);
                       return (
                         <li key={i.chave}>
-                          <Link scroll={false} href={href({ ind: i.chave })} className={i.chave === ind ? "on" : undefined} aria-current={i.chave === ind ? "true" : undefined}>
+                          <div className={`ind${i.chave === ind ? " on" : ""}`}>
                             <span className="ind-nome">{i.rotulo}</span>
                             <b>{v == null ? "—" : formatarIndicador(i.chave, v)}</b>
                             <span className="ind-faixa" aria-hidden="true">{p != null && <i style={{ "--p": p } as CSSProperties} />}</span>
-                          </Link>
+                          </div>
                         </li>
                       );
                     })}
                   </ul>
                 </div>
-                <div className="bloco noite">
-                  <h3>Abstenção × {infoInd.rotulo}</h3>
-                  {pontos.length >= 3 ? (
-                    <>
-                      <p className="r-texto">{r != null && lerCorrelacao(r, /^[A-Z]{2}/.test(infoInd.rotulo) ? infoInd.rotulo : infoInd.rotulo[0].toLowerCase() + infoInd.rotulo.slice(1))}{r != null && <small> (r = {r.toLocaleString("pt-BR", { maximumFractionDigits: 2, minimumFractionDigits: 2 })})</small>}</p>
-                      <Dispersao
-                        pontos={pontos} tendencia={tendencia(pontos)} rotuloX={infoInd.rotulo}
-                        formatoX={(v) => formatarIndicador(ind, v)}
-                        descricao={`Cada ponto é um município ${uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}: ${infoInd.rotulo} em 2010 no eixo horizontal, abstenção em ${ano} no vertical.${r != null ? ` Correlação ${r.toFixed(2)}.` : ""}`}
-                      />
-                      <p className="muted pequeno">Cada ponto é um município {uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}{mun ? "; o círculo grande é o escolhido" : ""}. Correlação não é causa.</p>
-                      {uf && (
-                        <Link scroll={false} className={`chip cruzar${cruzar ? " on" : ""}`} href={href({ cor: cruzar ? null : "cruzar" })} aria-current={cruzar ? "true" : undefined}>
-                          {cruzar ? "Voltar a pintar só a abstenção" : `Pintar o mapa com abstenção × ${infoInd.rotulo}`}
-                        </Link>
-                      )}
-                    </>
-                  ) : <p>Poucos municípios com os dois dados.</p>}
+                <div className="bloco noite s8 bloco-dispersao">
+                  <div>
+                    <h3>Abstenção × {infoInd.rotulo}</h3>
+                    {pontos.length >= 3 ? (
+                      <>
+                        <p className="r-texto">{r != null && lerCorrelacao(r, /^[A-Z]{2}/.test(infoInd.rotulo) ? infoInd.rotulo : infoInd.rotulo[0].toLowerCase() + infoInd.rotulo.slice(1))}{r != null && <small> (r = {r.toLocaleString("pt-BR", { maximumFractionDigits: 2, minimumFractionDigits: 2 })})</small>}</p>
+                        <p className="muted pequeno">Cada ponto é um município {uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}{mun ? "; o círculo grande é o escolhido" : ""}. Correlação não é causa.</p>
+                      </>
+                    ) : <p>Poucos municípios com os dois dados.</p>}
+                  </div>
+                  {pontos.length >= 3 && (
+                    <Dispersao
+                      pontos={pontos} tendencia={tendencia(pontos)} rotuloX={infoInd.rotulo}
+                      formatoX={(v) => formatarIndicador(ind, v)}
+                      descricao={`Cada ponto é um município ${uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}: ${infoInd.rotulo} em 2010 no eixo horizontal, abstenção em ${ano} no vertical.${r != null ? ` Correlação ${r.toFixed(2)}.` : ""}`}
+                    />
+                  )}
                 </div>
               </>
             ) : (
-              <div className="bloco noite censo-aviso">
+              <div className="bloco noite censo-aviso s12">
                 <h3>E os indicadores sociais?</h3>
                 <p>Os indicadores do Censo 2010 (renda, escolaridade, IDHM) só são comparados com as eleições municipais em volta dele.</p>
                 <div className="chips">{ANOS_CENSO.map((a) => <Link key={a} scroll={false} className="chip" href={href({ ano: a })}>Ver {a}</Link>)}</div>
@@ -467,9 +480,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             )}
 
             {uf && !mun && ranking.length > 0 && (
-              <div className="bloco noite">
+              <div className="bloco noite s8">
                 <h3>Onde mais e menos se faltou</h3>
-                <ol className="extremos">
+                <ol className="extremos duas">
                   {[...ranking.slice(0, 4), ...ranking.slice(-4)].map((x, i) => (
                     <li key={x.id} className={i === 4 ? "corte" : undefined}>
                       <Link scroll={false} href={href({ mun: x.id })}><span>{nomeMun.get(x.id)}</span><b>{pct(x.t, 1)}</b></Link>
@@ -480,7 +493,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             )}
 
             {uf && (
-              <ul className="atalhos">
+              <ul className={`atalhos ${!mun && ranking.length > 0 ? "s4" : "s12"}`}>
                 <li><Link href={`/candidatos?uf=${uf}`}>Candidatos</Link></li>
                 <li><Link href={`/analises/financiamento?uf=${uf}`}>Financiamento</Link></li>
                 <li><Link href={`/analises/legenda?uf=${uf}`}>Voto de legenda</Link></li>
@@ -492,64 +505,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         </section>
       )}
 
-      {/* a frase e a busca */}
-      <section className="quadro capa" aria-label="Sobre a plataforma">
-        <div className="bloco s7 declaracao">
-          <p>Quem se candidata, quem paga a campanha e o que acontece depois do mandato, em seis estados, de 1998 a 2024, com os dados abertos do TSE.</p>
-        </div>
-        <div className="bloco s5 tinta busca-capa">
-          <SearchBox />
-        </div>
-      </section>
-
-      {/* letreiro: os seis estados passando */}
-      <div className="letreiro" aria-hidden="true">
-        <div className="letreiro-fita">
-          {[0, 1].map((k) => <span key={k}>{ESTADOS.map((e) => <span key={e}>{e}<i /></span>)}</span>)}
-        </div>
-      </div>
-
-      {dinheiro && (
-        <section className="quadro mosaico" aria-labelledby="h-dinheiro">
-          <h2 id="h-dinheiro" className="s12 titulo-secao">O dinheiro das campanhas</h2>
-          <figure className="bloco foto persiana s8 mosaico-foto">
-            <Image src={FOTOS.interior.src} alt={FOTOS.interior.alt} width={FOTOS.interior.largura} height={FOTOS.interior.altura} sizes="(min-width: 1000px) 66vw, 100vw" />
-          </figure>
-          <div className="s4 mosaico-numeros">
-            <div className="bloco tinta">
-              <p className="figura"><Rolar valor={`R$ ${umaCasa(dinheiro.total / 1e9)} bi`} /></p>
-              <p>arrecadados pelas campanhas dos seis estados de {dinheiro.anos[0]} a {dinheiro.anos[1]}, sem contar as de presidente.</p>
-            </div>
-            <div className="bloco cinza">
-              <p className="figura"><Rolar valor={pct(dinheiro.publico / dinheiro.total, 0)} /></p>
-              <p>desse dinheiro veio do Fundo Eleitoral e do Fundo Partidário, ou seja, de impostos.</p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <section className="quadro analises-home" aria-labelledby="h-perguntas">
-        <div className="bloco s4 perguntas-titulo">
-          <h2 id="h-perguntas">Quatro perguntas aos dados</h2>
-          <p className="muted">Cada análise responde a uma pergunta com gráficos que dá para filtrar por ano, cargo e estado.</p>
-        </div>
-        <FaixasAnalises analises={ANALISES} achados={achados} className="s8" />
-      </section>
-
-      {/* vitrine: o Congresso recortado em blocos, com cinco blocos de cor */}
-      <section className="vitrine" aria-labelledby="h-vitrine" style={{ "--foto": `url(${FOTOS.congresso.src})` } as CSSProperties}>
-        {Array.from({ length: 24 }, (_, i) => {
-          const r = Math.floor(i / 6), c = i % 6;
-          const peca = { "--x": `${(c / 5) * 100}%`, "--y": `${(r / 3) * 100}%` } as CSSProperties;
-          if (i === 0) return <div key={i} className="peca cor tinta"><h2 id="h-vitrine">Seis estados</h2><p>26 anos de eleições</p></div>;
-          if (i === 9) return <div key={i} className="peca cor"><p>7 cargos, de vereador a presidente, com vices e suplentes</p></div>;
-          if (i === 13) return <div key={i} className="peca cor"><p>Mais de meio milhão de políticos seguidos ao longo da carreira</p></div>;
-          if (i === 22) return <div key={i} className="peca cor"><p>14 eleições: 7 gerais e 7 municipais</p></div>;
-          if (i === 17) return <Link key={i} href="/candidatos" className="peca cor acao">Buscar um candidato →</Link>;
-          return <div key={i} className="peca" aria-hidden="true"><span style={peca} /></div>;
-        })}
-        <p className="sr-only">{FOTOS.congresso.alt}</p>
-      </section>
     </>
   );
 }

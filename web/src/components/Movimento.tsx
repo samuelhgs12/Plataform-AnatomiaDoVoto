@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 /** Blocos que se revelam ao entrar na tela (o CSS em globals.css decide como cada um anima). */
-const ALVOS = ".bloco, .card, [data-revelar], .rolar, .vitrine";
+const ALVOS = ".bloco, .card, [data-revelar], .rolar";
 
 /**
  * Marca `data-in` em cada alvo na primeira vez que ele aparece na tela, e `data-movimento` em <html> enquanto roda
