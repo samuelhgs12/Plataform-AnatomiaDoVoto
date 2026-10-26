@@ -169,9 +169,84 @@ def test_propaganda_por_categoria_em_centavos(client):
     ]
 
 
+def test_propaganda_termos_da_nuvem(client):
+    termos = client.get("/api/candidaturas/2/propaganda").json()["termos"]
+    # "santinhos e adesivos" (R$ 3.000) divide o valor entre as duas peças; "impulsionamento ... redes sociais" vira só
+    # "redes" (impulsionamento é genérico). Empate no valor: ordem alfabética. A descrição original não sai.
+    assert [(t["termo"], t["grupo"], t["centavos"], t["despesas"], t["generico"]) for t in termos] == [
+        ("adesivo", "propaganda_fisica", 150_000, 1, False),
+        ("redes", "propaganda_digital", 150_000, 1, False),
+        ("santinho", "propaganda_fisica", 150_000, 1, False),
+    ]
+    assert termos[1]["explicacao"] == "gestão e conteúdo de redes sociais"
+    assert termos[2]["detalhes"] == [{"termo": "santinho", "centavos": 150_000}]
+    assert sum(t["centavos"] for t in termos) == 450_000 and all(t["pela_categoria_centavos"] == 0 for t in termos)
+    assert "descricao" not in json.dumps(termos)
+
+
+def test_propaganda_por_tipo_bate_com_o_total_oficial_de_cada_grupo(client):
+    """Para cada campanha, a soma do por_tipo das peças de um grupo = total das categorias desse grupo, em centavos."""
+    vistas = 0
+    for idc in range(1, 10):
+        r = client.get(f"/api/candidaturas/{idc}/propaganda")
+        if r.status_code == 404:
+            continue
+        p = r.json()
+        oficial, pecas = {}, {}
+        for k in p["categorias"]:
+            oficial[k["grupo"]] = oficial.get(k["grupo"], 0) + k["centavos"]
+        for t in p["termos"]:
+            for x in t["por_tipo"]:
+                pecas[x["grupo"]] = pecas.get(x["grupo"], 0) + x["centavos"]
+        assert pecas == oficial, idc
+        assert sum(oficial.values()) == p["propaganda_centavos"]
+        vistas += bool(oficial)
+    assert vistas >= 2          # as candidaturas 2 e 5 do seed têm propaganda
+
+
+def test_q9_referencia_mediana_da_parcela_de_cada_tipo(client):
+    """Mediana da parcela de cada tipo na propaganda, por cargo + ano + UF (titular, ordinária, que disputou, > 0)."""
+    t = client.get("/api/analises/q9?tabela=referencia").json()["referencia"]
+    assert t["colunas"] == ["ano", "id_cargo", "cargo", "uf", "grupo", "mediana", "campanhas"]
+    linhas = {(r[0], r[1], r[3], r[4]): (round(r[5], 4), r[6]) for r in t["linhas"]}
+    # candidatura 2 (vereador, MG, 2020): física 3000 e digital 1500 (o PARCIAL e a transferência ficam de fora)
+    assert linhas[(2020, 13, "MG", "propaganda_fisica")] == (0.6667, 1)
+    assert linhas[(2020, 13, "MG", "propaganda_digital")] == (0.3333, 1)
+    assert linhas[(2020, 13, "MG", "propaganda_audiovisual")] == (0.0, 1)      # sem nada no tipo: parcela 0
+    # candidatura 5 (prefeito, PE, 2020): digital 4000 e física 1000
+    assert linhas[(2020, 11, "PE", "propaganda_digital")] == (0.8, 1)
+    assert all(ano >= 2018 for ano, *_ in linhas)
+    # "campanhas" é o tamanho do grupo (cargo + ano + UF): o mesmo número nos três tipos do grupo
+    grupos = {}
+    for ano, cargo, uf, grupo in linhas:
+        grupos.setdefault((ano, cargo, uf), {})[grupo] = linhas[(ano, cargo, uf, grupo)][1]
+    assert grupos and all(len(g) == 3 and len(set(g.values())) == 1 for g in grupos.values())
+
+
+def test_q9_parcelas_de_cada_campanha_dos_grupos_pequenos(client):
+    """Parcelas de cada campanha dos grupos com menos de 30 campanhas, para o perfil tirar a própria campanha da típica."""
+    r = client.get("/api/analises/q9?tabela=parcelas")
+    assert r.status_code == 200 and set(r.json()) == {"parcelas"} and "max-age" in r.headers["cache-control"]
+    t = r.json()["parcelas"]
+    assert t["colunas"] == ["id_candidatura", "ano", "id_cargo", "cargo", "uf", "propaganda_fisica", "propaganda_audiovisual", "propaganda_digital"]
+    por_id = {l[0]: l for l in t["linhas"]}
+    # candidatura 2 (vereador, MG, 2020): física 3000 e digital 1500, num grupo de 1 campanha
+    assert [round(x, 4) for x in por_id[2][5:]] == [0.6667, 0.0, 0.3333]
+    assert all(abs(sum(l[5:]) - 1) < 1e-9 for l in t["linhas"])        # as três parcelas somam 1
+    # no banco de teste todo grupo é pequeno: cada linha da referencia é a mediana das parcelas do seu grupo
+    ref = client.get("/api/analises/q9?tabela=referencia").json()["referencia"]["linhas"]
+    col = {"propaganda_fisica": 5, "propaganda_audiovisual": 6, "propaganda_digital": 7}
+    for ano, cargo, _, uf, grupo, mediana, campanhas in ref:
+        do_grupo = sorted(l[col[grupo]] for l in t["linhas"] if (l[1], l[2], l[4]) == (ano, cargo, uf))
+        assert len(do_grupo) == campanhas
+        meio = len(do_grupo) // 2
+        esperado = do_grupo[meio] if len(do_grupo) % 2 else (do_grupo[meio - 1] + do_grupo[meio]) / 2
+        assert abs(esperado - mediana) < 1e-9
+
+
 def test_propaganda_candidatura_sem_despesa(client):
     p = client.get("/api/candidaturas/1/propaganda").json()
-    assert (p["lancamentos"], p["total_centavos"], p["propaganda_centavos"], p["categorias"]) == (0, 0, 0, [])
+    assert (p["lancamentos"], p["total_centavos"], p["propaganda_centavos"], p["categorias"], p["termos"]) == (0, 0, 0, [], [])
 
 
 def test_palavras_sem_palavras_vazias(client):
@@ -199,7 +274,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["q1", "q10", "q2", "q5", "q8"]
+    assert client.get("/api/analises").json() == ["q1", "q10", "q2", "q5", "q8", "q9"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -231,7 +306,7 @@ def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
              "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
-             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q10"]
+             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]
     for rota in rotas:
         texto = json.dumps(client.get(rota).json(), ensure_ascii=False).lower()

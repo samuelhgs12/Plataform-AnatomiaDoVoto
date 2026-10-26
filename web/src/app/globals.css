@@ -418,7 +418,8 @@ a.linha:hover { background: var(--panel2); }
 .filtros-fin .rotulo { margin: 0; }
 
 /* Pergunta 9: onde o candidato investe em propaganda */
-.pp-fis { background: var(--pp-fis); } .pp-av { background: var(--pp-av); } .pp-dig { background: var(--pp-dig); } .pp-outra { background: var(--pp-outra); }
+.pp-fis { background: var(--pp-fis); --cor-pp: var(--pp-fis); } .pp-av { background: var(--pp-av); --cor-pp: var(--pp-av); }
+.pp-dig { background: var(--pp-dig); --cor-pp: var(--pp-dig); } .pp-outra { background: var(--pp-outra); --cor-pp: var(--pp-outra); }
 .resposta-curta.longa { font-size: clamp(40px, 3.6vw, 68px); line-height: 1; letter-spacing: -0.035em; }
 .escolha-url { margin: 0; transition: opacity var(--t-ui) ease; }
 .escolha-url select { width: 100%; max-width: 560px; }
@@ -427,6 +428,86 @@ a.linha:hover { background: var(--panel2); }
 .stack.composicao .seg + .seg { box-shadow: inset 2px 0 0 var(--panel); }   /* separa os tipos, como os pedaços de BarrasH */
 .composicao-tipos { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; margin-bottom: 16px; }
 .combo-largo li small { display: block; color: var(--muted); font-size: 13px; line-height: 1.35; }
+/* nuvem de palavras: o texto do SVG usa a cor do tipo de propaganda (as classes .pp-* acima pintam fundo, aqui pintam letra) */
+.nuvem { margin: 8px 0 4px; }
+.nuvem svg { display: block; width: 100%; max-width: 860px; height: auto; margin: 0 auto; }
+.nuvem text { font-weight: 600; letter-spacing: -0.01em; }
+.nuvem text.pp-fis { fill: var(--pp-fis); } .nuvem text.pp-av { fill: var(--pp-av); } .nuvem text.pp-dig { fill: var(--pp-dig); } .nuvem text.pp-outra { fill: var(--pp-outra); }
+/* resposta (manchete pelas peças e os dois números) com a nuvem ao lado; em ≤1000px a nuvem some (regra no fim do bloco) */
+.pp-resposta.com-nuvem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(var(--gap) * 3); align-items: center; }
+.pp-nuvem .escala { text-align: center; margin: 0; }
+/* as classes .pp-* também levam --cor-pp: aqui elas dão a cor ao texto e às bordas, não ao fundo */
+.pp-numeros, .pp-chave { background: none; }
+.pp-numeros { display: flex; flex-wrap: wrap; gap: 8px 40px; margin: 20px 0 0; }
+.pp-numeros p { margin: 0; }
+.pp-numeros b { display: block; font-size: 38px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; color: var(--cor-pp, var(--fg)); }
+.pp-numeros span { display: block; font-size: var(--t-pequeno); color: var(--muted); }
+.pp-linha { font-size: 15px; color: var(--muted); margin: 12px 0 0; }
+.pp-separador { border: 0; border-top: 1px solid var(--line); margin: calc(var(--gap) * 3) 0 calc(var(--gap) * 2); }
+/* barra única: chaves dos tipos em cima, um segmento por peça, rótulos das peças embaixo; as três faixas têm as mesmas colunas */
+.barra-pp { container: barra-pp / inline-size; margin: 8px 0 12px; }
+.pp-faixa { display: grid; column-gap: 2px; }
+.pp-chaves { align-items: end; margin-bottom: 4px; }
+.pp-chave { min-width: 0; font-size: 13px; line-height: 1.3; white-space: nowrap; color: var(--muted); }
+.pp-chave b { color: var(--fg); font-weight: 600; }
+.pp-chave::after { content: ""; display: block; height: 8px; margin-top: 4px; border: 2px solid var(--cor-pp, var(--pp-outra)); border-bottom: 0; }
+.pp-seg { height: 40px; min-width: 0; }
+.pp-seg:first-child { border-radius: 4px 0 0 4px; }
+div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
+/* régua da típica, abaixo da barra: da borda esquerda até a típica (faixa de 6px), com um traço de 2px no ponto exato */
+.pp-regua { position: relative; height: 12px; margin-top: 4px; }
+.pp-regua i { position: absolute; left: 0; top: 3px; height: 6px; max-width: 100%; background: var(--fg); border-radius: 0 3px 3px 0; }
+.pp-regua i::after { content: ""; position: absolute; right: -1px; top: -3px; bottom: -3px; width: 2px; background: var(--fg); }
+.pp-rotulos { margin-top: 6px; font-size: 13px; line-height: 1.3; white-space: nowrap; color: var(--muted); }
+.pp-rotulos > div { min-width: 0; }
+.pp-rotulos b { color: var(--fg); font-weight: 600; }
+.pp-legenda-marca { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: var(--t-pequeno); color: var(--muted); }
+.pp-legenda-marca i { flex: none; width: 18px; height: 5px; background: var(--fg); border-radius: 0 3px 3px 0; }
+/* tipos cujo nome não coube na chave, numa linha abaixo dos rótulos; sem nenhum, a linha não ocupa espaço */
+.pp-tipos-sem-nome { display: flex; flex-wrap: wrap; gap: 0 16px; font-size: 13px; color: var(--muted); }
+.pp-tipos-sem-nome > span { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
+.pp-tipos-sem-nome > [class*="pp-falta-"] { display: none; }
+.pp-tipos-sem-nome i { width: 10px; height: 10px; border-radius: 2px; }
+.pp-tipos-sem-nome b { color: var(--fg); font-weight: 600; }
+/* texto que só cabe a partir de uma largura da barra (larguraParaRotulo, em src/lib/propaganda.ts): some abaixo dela; o item
+   do mesmo tipo na linha acima (pp-falta-<px>) aparece exatamente nessas larguras */
+@container barra-pp (max-width: 279.98px) { .pp-cabe-280 { display: none; } .pp-tipos-sem-nome > .pp-falta-280 { display: inline-flex; } }
+@container barra-pp (max-width: 319.98px) { .pp-cabe-320 { display: none; } .pp-tipos-sem-nome > .pp-falta-320 { display: inline-flex; } }
+@container barra-pp (max-width: 359.98px) { .pp-cabe-360 { display: none; } .pp-tipos-sem-nome > .pp-falta-360 { display: inline-flex; } }
+@container barra-pp (max-width: 399.98px) { .pp-cabe-400 { display: none; } .pp-tipos-sem-nome > .pp-falta-400 { display: inline-flex; } }
+@container barra-pp (max-width: 439.98px) { .pp-cabe-440 { display: none; } .pp-tipos-sem-nome > .pp-falta-440 { display: inline-flex; } }
+@container barra-pp (max-width: 479.98px) { .pp-cabe-480 { display: none; } .pp-tipos-sem-nome > .pp-falta-480 { display: inline-flex; } }
+@container barra-pp (max-width: 559.98px) { .pp-cabe-560 { display: none; } .pp-tipos-sem-nome > .pp-falta-560 { display: inline-flex; } }
+@container barra-pp (max-width: 639.98px) { .pp-cabe-640 { display: none; } .pp-tipos-sem-nome > .pp-falta-640 { display: inline-flex; } }
+@container barra-pp (max-width: 719.98px) { .pp-cabe-720 { display: none; } .pp-tipos-sem-nome > .pp-falta-720 { display: inline-flex; } }
+@container barra-pp (max-width: 799.98px) { .pp-cabe-800 { display: none; } .pp-tipos-sem-nome > .pp-falta-800 { display: inline-flex; } }
+@container barra-pp (max-width: 899.98px) { .pp-cabe-900 { display: none; } .pp-tipos-sem-nome > .pp-falta-900 { display: inline-flex; } }
+@container barra-pp (max-width: 999.98px) { .pp-cabe-1000 { display: none; } .pp-tipos-sem-nome > .pp-falta-1000 { display: inline-flex; } }
+@container barra-pp (max-width: 1199.98px) { .pp-cabe-1200 { display: none; } .pp-tipos-sem-nome > .pp-falta-1200 { display: inline-flex; } }
+@container barra-pp (max-width: 1399.98px) { .pp-cabe-1400 { display: none; } .pp-tipos-sem-nome > .pp-falta-1400 { display: inline-flex; } }
+@container barra-pp (max-width: 1599.98px) { .pp-cabe-1600 { display: none; } .pp-tipos-sem-nome > .pp-falta-1600 { display: inline-flex; } }
+.pp-nota { font-size: 15px; margin: 12px 0; }
+/* tabelas recolhidas, agrupadas por tipo: cabeçalho do grupo em cor cheia, linhas com a barra mais clara */
+.pp-tabela { width: 100%; }
+.pp-tabela thead th:first-child { width: 44%; }
+.pp-tabela thead th:nth-child(2) { width: 12%; }
+.pp-tabela thead th:nth-child(3) { width: 18%; }
+.pp-tabela tfoot td:last-child { font-weight: 400; }
+.pp-tabela td small { display: block; font-size: 13px; line-height: 1.35; margin-top: 2px; }
+.pp-tabela .pp-grupo th, .pp-tabela .pp-grupo td, .pp-tabela tfoot th, .pp-tabela tfoot td { color: var(--fg); font-weight: 600; font-size: var(--t-corpo); }
+.pp-tabela .pp-grupo th, .pp-tabela .pp-grupo td { padding-top: 18px; }
+.pp-tabela .pp-grupo th i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 8px; }
+.pp-parte { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; white-space: nowrap; }
+.pp-trilho { display: block; width: 96px; height: 10px; }
+.pp-trilho i { display: block; height: 100%; border-radius: 2px; }
+.pp-trilho i.pp-tenue { opacity: 0.5; }
+.pp-sobre p { font-size: 15px; color: var(--muted); max-width: 80ch; }
+@media (max-width: 1000px) {
+  .pp-resposta.com-nuvem { display: block; }
+  .pp-nuvem { display: none; }
+  .pp-numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+  .pp-numeros b { font-size: 27px; }
+}
 
 /* ---------- Rodapé: o nome em teclas ---------- */
 .rodape { margin-top: 120px; padding: 0 var(--margem) var(--margem); }

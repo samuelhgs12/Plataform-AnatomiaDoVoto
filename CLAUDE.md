@@ -23,7 +23,10 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
   tipos em `src/lib/abstencao.ts`), porque parte dos dados ainda vem do TSE, fora do banco (decisão 10).
 - O que é **por candidatura** não é análise: fica no perfil (`candidato/[id]`), com um endpoint por bloco em
   `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. P8:
-  `receitas` → `DinheiroCampanha`; P9: `propaganda` (centavos inteiros) → `PropagandaCampanha` (lógica em `src/lib/propaganda.ts`).
+  `receitas` → `DinheiroCampanha`; P9: `propaganda` (centavos inteiros) → `PropagandaCampanha` (lógica em `src/lib/propaganda.ts`
+  e `src/lib/nuvem.ts`; desenho em `BarraPecas` e `NuvemPalavras`). A comparação com a campanha típica vem da análise q9:
+  o perfil lê `referencia` e, só quando o grupo (cargo + ano + UF) tem menos de 30 campanhas, `parcelas`, para tirar a
+  própria campanha da típica.
 - Visão Candidato do mapa (página inicial, `?ver=candidato&cand=<id_candidato>`): `/api/candidatos/<id>/mapa` (candidaturas
   e números da ficha) e `/api/candidaturas/<id>/votos-municipio` (tabela `votos_candidatura_municipio`, da carga)
   → `VisaoCandidato`; lógica em `src/lib/candidato-mapa.ts`.
@@ -41,7 +44,8 @@ Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (tam
 `router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
 `BuscaNome` (abre/fecha), `MenuLateral` (recolhe em trilho com o botão ou a tecla `[`; gaveta no celular; estado em `<html data-menu>`), `PaletaBusca` (Ctrl K: páginas, estados e municípios de `/indice/municipios` filtrados por `src/lib/paleta.ts`, candidatos da `/api/busca`; a caixa nasce do botão por View Transition) `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial) e `FotoCandidato` (foto de `/api/fotos`;
 se a imagem falhar, volta às iniciais; URLs e escolha da foto em `src/lib/foto-candidato.ts`). Gráficos
-(`MapaAbstencao`, `Dispersao`, `BarrasH`, `SpendBars`) e `PartyChip` são componentes de servidor sem JS.
+(`MapaAbstencao`, `Dispersao`, `BarrasH`, `BarraPecas`, `NuvemPalavras`) e `PartyChip` são componentes de servidor sem JS
+(`SpendBars` e `WordList` também, mas estão sem uso).
 
 ## Design visual
 

@@ -3,8 +3,8 @@
 ## O que o esqueleto já faz
 
 - API com busca, listagem, perfil, gastos por categoria (com mediana do cargo), palavras e receitas, 16 testes e teste de privacidade.
-- Front com início, listagem com filtros, perfil (linha do tempo, gastos, palavras, receitas), duas análises agregadas e página "Sobre".
-- Análises agregadas (perguntas 1, 2, 5, 8 e 10) servidas pela API em `/api/analises/<nome>`; o mapa da página inicial é exportado para JSON.
+- Front com início, listagem com filtros, perfil (linha do tempo, dinheiro da campanha e propaganda, com nuvem de palavras e comparação com a campanha típica), análises agregadas e página "Sobre".
+- Análises agregadas (perguntas 1, 2, 5, 8, 9 e 10) servidas pela API em `/api/analises/<nome>`; a da pergunta 9 (q9) é lida pelo perfil; o mapa da página inicial é exportado para JSON.
 - Página inicial com o mapa da abstenção (estados e municípios, 2008 a 2024) e os indicadores do Censo 2010.
 - CI (testes da API; lint, tipos, testes e build do front), Docker e `.env.example`.
 
@@ -13,7 +13,7 @@
 | Fase | Entrega | Onde mexer |
 |---|---|---|
 | **1. Fundação** (sem. 1–2) | Rodar tudo com os dados reais; conferir os números contra o projeto de carga; ajustar busca e perfil; deploy da API e do site | `api/`, `web/` |
-| **2. Perguntas 9 e 10** (sem. 3–4) | Retenção por turma, trocas de partido, propaganda por cargo; pré-calcular referências (mediana) e trocas com sucessão partidária; nuvem de palavras de verdade | `pipeline/`, `api/`, `web/src/components` |
+| **2. Perguntas 9 e 10** (sem. 3–4) | Retenção por turma, trocas de partido, propaganda por cargo; pré-calcular referências (mediana) e trocas com sucessão partidária; nuvem de palavras de verdade (pergunta 9 feita no perfil: nuvem, barra por peça e típica da q9) | `pipeline/`, `api/`, `web/src/components` |
 | **3. Demais perguntas** (sem. 5–6) | P5 com gráfico e mapa; P1/P2 (custo por voto e percentil no perfil); P8; acessibilidade, desempenho e testes de ponta a ponta | tudo |
 | **Depois** | IBGE (população, escolaridade, faixa etária) cruzado com o eleitorado; outros mapas municipais (legenda) | `pipeline/`, `web/` |
 
@@ -42,4 +42,4 @@
 `tse_participacao`, movê-lo para `api/app/analises/` (a página inicial passa a usar `lerAnalise("mapa", ...)`) e apagar
 `pipeline/export_static.py` e `web/public/data/` (decisão 10 em `DECISOES.md`).
 
-Procure por `TODO`: dados do mapa no banco (`export_static.py`, `mapa.sql`), referências pré-calculadas (`despesas_referencia.sql`, `receitas_referencia.sql`), nuvem de palavras real (`WordList.tsx`), mapa da legenda por município, e-mail de contato em `sobre/page.tsx`.
+Procure por `TODO`: dados do mapa no banco (`export_static.py`, `mapa.sql`), referências pré-calculadas (`despesas_referencia.sql`, `receitas_referencia.sql`), nuvem de palavras real (`WordList.tsx`, já superado: a nuvem do perfil é o `NuvemPalavras`, e o `WordList` ficou sem uso), mapa da legenda por município, e-mail de contato em `sobre/page.tsx`.
