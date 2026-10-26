@@ -2,6 +2,7 @@
 // API (/api/busca) e entram depois, na mesma lista. Tudo aqui é puro: o componente PaletaBusca só desenha.
 import { ANALISES } from "./analises";
 import { normalizarBusca } from "./busca";
+import { fotoDaBusca } from "./foto-candidato";
 import { NOME_UF } from "./financiamento";
 import type { CandidatoBusca } from "./types";
 
@@ -13,6 +14,8 @@ export interface ItemPaleta {
   /** segunda linha: o que é o item ("Análise · Pergunta 5", "Município · MG") */
   detalhe: string;
   href: string;
+  /** miniatura do candidato (/api/fotos); sem ela, o ícone do tipo */
+  foto?: string;
 }
 
 /** Grupos na ordem em que aparecem na lista. */
@@ -77,5 +80,5 @@ export function agrupar(itens: ItemPaleta[]): { tipo: TipoItem; rotulo: string; 
 /** Candidato de /api/busca como item da lista: o nome de urna (ou o civil) e a última candidatura. */
 export function candidatoNaPaleta(c: CandidatoBusca): ItemPaleta {
   const detalhe = [c.ultimo_cargo, c.uf, String(c.ultimo_ano), c.partido, c.ultimo_eleito ? "eleito" : null].filter(Boolean).join(" · ");
-  return { tipo: "candidato", titulo: c.nome_urna ?? c.nome_civil ?? "Sem nome", detalhe, href: `/candidato/${c.id_candidato}` };
+  return { tipo: "candidato", titulo: c.nome_urna ?? c.nome_civil ?? "Sem nome", detalhe, href: `/candidato/${c.id_candidato}`, foto: fotoDaBusca(c) ?? undefined };
 }

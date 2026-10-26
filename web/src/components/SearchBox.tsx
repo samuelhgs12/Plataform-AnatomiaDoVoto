@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { destacarBusca } from "@/lib/busca";
 import type { CandidatoBusca } from "@/lib/types";
+import { fotoDaBusca } from "@/lib/foto-candidato";
+import { Avatar } from "./Avatar";
 import { PartyChip } from "./PartyChip";
 
 /** Nome com o trecho buscado em <mark>; mostra por que a pessoa apareceu (casou no nome de urna ou no civil). */
@@ -53,7 +55,9 @@ export function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
         <ul style={{ listStyle: "none", padding: 0, margin: "6px 0 0", maxWidth: 520 }}>
           {sugestoes.map((c) => (
             <li key={c.id_candidato} className="card" style={{ marginBottom: 8, padding: "10px 14px" }}>
-              <Link href={`/candidato/${c.id_candidato}`} style={{ textDecoration: "none" }}>
+              <Link href={`/candidato/${c.id_candidato}`} className="busca-item" style={{ textDecoration: "none" }}>
+                <Avatar nome={c.nome_urna ?? c.nome_civil} partido={c.partido} foto={fotoDaBusca(c)} />
+                <div>
                 <b><Destaque nome={c.nome_urna ?? c.nome_civil ?? ""} busca={q} /></b>
                 {c.nome_civil && c.nome_civil !== c.nome_urna && (
                   <div style={{ fontSize: 15 }}><Destaque nome={c.nome_civil} busca={q} /></div>
@@ -63,6 +67,7 @@ export function SearchBox({ autoFocus = false }: { autoFocus?: boolean }) {
                 )}
                 <div className="muted" style={{ fontSize: 14 }}>
                   {c.ultimo_cargo} · {c.uf} · {c.ultimo_ano}{c.ultimo_eleito ? " · eleito" : ""} <PartyChip sigla={c.partido} />
+                </div>
                 </div>
               </Link>
             </li>

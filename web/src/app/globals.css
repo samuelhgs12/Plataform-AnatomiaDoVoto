@@ -756,6 +756,8 @@ a.linha:hover { background: var(--panel2); }
 .busca-cand.destaque .busca-cand-campo svg { width: 20px; height: 20px; }
 .busca-cand ul { background: var(--sobre-noite); color: var(--noite); }
 .busca-cand li[aria-selected="true"] { background: color-mix(in srgb, var(--noite) 10%, var(--sobre-noite)); }
+.busca-cand li:has(> .foto-cand) { display: grid; grid-template-columns: 30px 1fr; column-gap: 10px; align-items: center; }
+.busca-cand li > .foto-cand { grid-row: span 2; width: 30px; height: 40px; border-radius: 4px; }
 .busca-cand li small { display: block; margin-top: 2px; font-size: 13px; color: color-mix(in srgb, var(--noite) 70%, var(--sobre-noite)); }
 .busca-cand-status { margin: 4px 0 0; font-size: 14px; color: var(--noite-muted); }
 .busca-cand-status:empty { display: none; }
@@ -802,6 +804,7 @@ a.linha:hover { background: var(--panel2); }
 .ficha-meio { position: relative; z-index: 1; flex: 1; min-height: calc(56cqi * 4 / 3 + 6px); container-type: size; }   /* cabe o retrato, que entra 40px na faixa do pé */
 .ficha-retrato { position: absolute; bottom: -40px; left: 50%; display: grid; place-items: center; width: min(74cqw, (100cqh + 40px - 34px) * 0.75); aspect-ratio: 3 / 4;   /* cresce com a altura que o verso deixa */
   border-radius: 14px 14px 0 0; background: var(--ficha-retrato); transform: translateX(-50%); }
+.ficha-retrato { max-width: 340px; overflow: hidden; }   /* o original tem só 161 × 225: maior que isso fica mole */
 .ficha-retrato span { font-size: min(22cqw, 17cqh); font-weight: 700; letter-spacing: -0.03em; color: var(--ficha-sobre-campo); }
 .ficha-base { position: relative; z-index: 2; display: grid; gap: 4px; padding: 6px 24px 12px; background: var(--ficha-base); color: var(--ficha-sobre-campo); }
 .ficha-numero { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -982,6 +985,12 @@ a.linha:hover { background: var(--panel2); }
 .perfil-cab .titulo { justify-content: space-between; }
 .perfil-cab .cand { gap: 28px; align-items: flex-end; }
 .perfil-cab .avatar { width: 136px; height: 136px; font-size: 46px; }
+/* foto do candidato (FotoCandidato): cobre a caixa sem cortar o rosto; no perfil, em 3 × 4 como o retrato do TSE */
+.avatar { position: relative; overflow: hidden; }
+.foto-cand { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; color: transparent; }
+.perfil-cab .avatar.com-foto { width: 150px; height: 200px; }
+.busca-item { display: flex; gap: 12px; align-items: center; }
+.busca-item .avatar { width: 40px; height: 40px; font-size: 15px; }
 .resultado { font-size: 18px; margin: 28px 4px 12px; }
 .busca-nome { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
 kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); }
@@ -1005,6 +1014,8 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
 .paleta-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
 .paleta-item .icone { flex: none; width: 20px; height: 20px; color: var(--muted); transition: color var(--t-hover) ease; }
 .paleta-item[aria-selected="true"] { background: var(--panel2); }
+.paleta-foto { display: grid; place-items: center; flex: none; width: 24px; height: 32px; }
+.paleta-foto .foto-cand { border-radius: 4px; }
 .paleta-item[aria-selected="true"] .icone { color: var(--accent); }
 .paleta-texto { display: flex; flex-direction: column; min-width: 0; }
 .paleta-titulo, .paleta-detalhe { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

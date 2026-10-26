@@ -7,6 +7,7 @@ import { destacarBusca, normalizarBusca } from "@/lib/busca";
 import { SUGESTOES, agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta, type ItemPaleta, type TipoItem } from "@/lib/paleta";
 import type { CandidatoBusca } from "@/lib/types";
 import { Icone, type NomeIcone } from "./Icone";
+import { FotoCandidato } from "./FotoCandidato";
 
 const ICONE: Record<TipoItem, NomeIcone> = { pagina: "pagina", estado: "estado", municipio: "municipio", candidato: "candidato" };
 const EVENTO = "paleta:abrir";
@@ -181,7 +182,10 @@ export function PaletaBusca() {
                       return (
                         <li key={item.href} id={idOpcao(i)} role="option" aria-selected={i === atual} className="paleta-item"
                           onMouseMove={() => i !== atual && setAtivo(i)} onClick={() => ir(item)}>
-                          <Icone nome={ICONE[item.tipo]} />
+                          {item.foto ? (
+                            // alt vazio: o nome já está no texto da opção, ao lado
+                            <span className="paleta-foto"><FotoCandidato url={item.foto} alt=""><Icone nome={ICONE[item.tipo]} /></FotoCandidato></span>
+                          ) : <Icone nome={ICONE[item.tipo]} />}
                           <span className="paleta-texto">
                             <span className="paleta-titulo"><Realce texto={item.titulo} busca={termo} /></span>
                             <span className="paleta-detalhe">{item.detalhe}</span>

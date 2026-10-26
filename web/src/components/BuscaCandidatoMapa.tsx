@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, useTransition, type KeyboardEvent } from "react";
 import { buscarCandidato, type EntradaCandidato } from "@/lib/candidato-mapa";
 import { nomeProprio } from "@/lib/abstencao";
+import { fotoDaBusca } from "@/lib/foto-candidato";
+import { FotoCandidato } from "./FotoCandidato";
 import { PartyChip } from "./PartyChip";
 
 const hrefCandidato = (id: number) => `/?ver=candidato&cand=${id}#mapa`;
@@ -79,6 +81,8 @@ export function BuscaCandidatoMapa({ indice, rotulo = "Buscar candidato pelo nom
             key={o.id_candidato} id={`${id}-op-${i}`} role="option" aria-selected={i === marcado}
             onMouseDown={(e) => { e.preventDefault(); escolher(o); }} onMouseEnter={() => setAtivo(i)}
           >
+            {/* alt vazio: o nome está logo ao lado, no texto da opção */}
+            <FotoCandidato url={fotoDaBusca(o)} alt="" />
             <b>{nomeProprio(o.nome_urna)}</b>
             <small>{o.ultimo_cargo} · {o.uf === "BR" ? "Brasil" : o.uf} · {o.ultimo_ano} <PartyChip sigla={o.partido} /></small>
           </li>

@@ -2,9 +2,11 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { PartyChip } from "./PartyChip";
 import { VirarFicha } from "./VirarFicha";
+import { FotoCandidato } from "./FotoCandidato";
 import { nomeProprio } from "@/lib/abstencao";
 import { partesDoNome, resumoCandidatura, type CandidaturaMapa } from "@/lib/candidato-mapa";
 import { brlCentavos, iniciais, inteiro, pct, reais, ROTULO_RESULTADO } from "@/lib/format";
+import { urlFoto } from "@/lib/foto-candidato";
 
 /** As ondas do santinho, em duas camadas de tom (a de trás aparece como uma faixa fina acima da da frente). */
 const Onda = ({ className }: { className: string }) => (
@@ -26,15 +28,16 @@ interface Props {
  * Ficha de consulta da candidatura, no molde de um santinho e sem nada de campanha: o mesmo cartão para todos, em
  * papel e marinho, sem cor de partido fora do chip, sem chamada de voto, e o número pequeno, preso ao ano. Do santinho
  * fica a estrutura: o nome grande no alto, o retrato embaixo à direita sobre um campo que sobe em curva e, no verso,
- * uma grade de casas, aqui com os números da candidatura. O retrato tem a proporção 3 × 4 de uma foto (decisão 7: sem
- * foto; ficam as iniciais). O cartão inteiro vira ao clique (VirarFicha).
+ * uma grade de casas, aqui com os números da candidatura. O retrato é a foto do TSE da candidatura (decisão 7), em
+ * 3 × 4; sem ela (ou nos dados fictícios, sem chave), ficam as iniciais. O cartão inteiro vira ao clique (VirarFicha).
  */
 export function FichaCandidato({ c, noMapa, onde }: Props) {
   const nome = nomeProprio(c.nome_urna);
   const r = resumoCandidatura(c);
   const presidente = c.cargo === "Presidente";
   const lugar = presidente ? "Brasil" : c.uf;
-  const fonte = <p className="ficha-fonte">Dados do TSE · projeto acadêmico UFPI · não é fonte oficial</p>;
+  const foto = urlFoto({ ano: c.ano, ue: c.ue, sequencial: c.sequencial }, "ficha");
+  const fonte = <p className="ficha-fonte">Dados{foto ? " e foto" : ""} do TSE{foto ? " (CC BY)" : ""} · projeto acadêmico UFPI · não é fonte oficial</p>;
   const parte = (v: number, t: number) => (t > 0 ? `${pct(v / t, 1)} dos votos válidos` : null);
 
   // o sobrenome ocupa a largura do cartão: o tamanho sai do número de letras (CSS, com unidades do contêiner)
@@ -51,7 +54,9 @@ export function FichaCandidato({ c, noMapa, onde }: Props) {
         <Onda className="ficha-onda-topo" />
       </div>
       <div className="ficha-meio">
-        <div className="ficha-retrato" aria-hidden="true"><span>{iniciais(c.nome_urna)}</span></div>
+        <div className="ficha-retrato">
+          <FotoCandidato url={foto} alt={`Foto de ${nome}`} lazy={false}><span aria-hidden="true">{iniciais(c.nome_urna)}</span></FotoCandidato>
+        </div>
       </div>
       <div className="ficha-base">
         <Onda className="ficha-onda-base" />

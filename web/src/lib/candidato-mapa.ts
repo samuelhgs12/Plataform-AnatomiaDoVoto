@@ -16,6 +16,9 @@ export interface CandidaturaMapa {
   partido: string;
   numero: number;
   nome_urna: string;
+  /** com o ano, a chave da candidatura no TSE e da foto (src/lib/foto-candidato.ts); os dados fictícios não têm */
+  ue?: string;
+  sequencial?: string;
   /** chave de ROTULO_RESULTADO (format.ts): ELEITO, NAO_ELEITO… */
   resultado: string;
   /** votos no 1º turno, na abrangência inteira do cargo (para presidente, o país) */
@@ -172,12 +175,16 @@ export function candidaturasDe<T extends Pick<CandidaturaMapa, "id_candidato" | 
 }
 
 /** Uma entrada por pessoa para a busca, a partir da candidatura mais recente (mesmo formato de /api/busca). */
-export interface EntradaCandidato { id_candidato: number; nome_urna: string; partido: string; uf: string; ultimo_ano: number; ultimo_cargo: string }
+export interface EntradaCandidato {
+  id_candidato: number; nome_urna: string; partido: string; uf: string; ultimo_ano: number; ultimo_cargo: string;
+  ultimo_ue?: string | null; ultimo_sequencial?: string | null;
+}
 
 export function indiceCandidatos(todas: CandidaturaMapa[]): EntradaCandidato[] {
   const ids = [...new Set(todas.map((c) => c.id_candidato))];
   return ids.map((id) => candidaturasDe(todas, id).padrao!)
-    .map((c) => ({ id_candidato: c.id_candidato, nome_urna: c.nome_urna, partido: c.partido, uf: c.uf, ultimo_ano: c.ano, ultimo_cargo: c.cargo }))
+    .map((c) => ({ id_candidato: c.id_candidato, nome_urna: c.nome_urna, partido: c.partido, uf: c.uf, ultimo_ano: c.ano, ultimo_cargo: c.cargo,
+      ...(c.ue && c.sequencial ? { ultimo_ue: c.ue, ultimo_sequencial: c.sequencial } : {}) }))
     .sort((a, b) => a.nome_urna.localeCompare(b.nome_urna, "pt-BR"));
 }
 
