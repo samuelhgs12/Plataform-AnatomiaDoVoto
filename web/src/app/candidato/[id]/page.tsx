@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { apiGet, apiGetOpcional } from "@/lib/api";
+import { apiGet, apiGetOpcional, lerAnalise } from "@/lib/api";
+import { comoObjetos } from "@/lib/data";
 import type { Perfil, Receitas } from "@/lib/types";
 import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/components/PartyChip";
 import { Timeline } from "@/components/Timeline";
 import { DinheiroCampanha } from "@/components/DinheiroCampanha";
 import { PropagandaCampanha } from "@/components/PropagandaCampanha";
-import type { Propaganda } from "@/lib/propaganda";
+import { grupoPequeno, type LinhaParcelas, type LinhaReferencia, type Propaganda } from "@/lib/propaganda";
 import { naLinhaDoTempo } from "@/lib/carreira";
 import { Rolar } from "@/components/Rolar";
 
@@ -38,11 +39,20 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
   // escolhe outra (a mesma nos dois blocos)
   const comContas = disputadas.filter((c) => c.ano >= ANO_RECEITAS).reverse();
   const pedida = Number(Array.isArray(sp.campanha) ? sp.campanha[0] : sp.campanha);
-  const contas = await Promise.all(comContas.map(async (c) => ({
-    c,
-    r: await apiGetOpcional<Receitas>(`/candidaturas/${c.id_candidatura}/receitas`),
-    p: await apiGetOpcional<Propaganda>(`/candidaturas/${c.id_candidatura}/propaganda`),
-  })));
+  const [contas, q9] = await Promise.all([
+    Promise.all(comContas.map(async (c) => ({
+      c,
+      r: await apiGetOpcional<Receitas>(`/candidaturas/${c.id_candidatura}/receitas`),
+      p: await apiGetOpcional<Propaganda>(`/candidaturas/${c.id_candidatura}/propaganda`),
+    }))),
+    // pergunta 9: parcela típica de cada tipo de propaganda por cargo, ano e UF (análise q9; sem ela, sem comparação)
+    comContas.length ? lerAnalise("q9", ["referencia"]) : Promise.resolve(null),
+  ]);
+  const referencias = q9?.referencia ? comoObjetos<LinhaReferencia>(q9.referencia) : null;
+  // tirar a própria campanha da típica só importa nos grupos pequenos: só então busca a tabela "parcelas" da q9
+  const escolhida = comContas.find((c) => c.id_candidatura === pedida) ?? comContas[0];
+  const q9Parcelas = escolhida && grupoPequeno(referencias, escolhida) ? await lerAnalise("q9", ["parcelas"]) : null;
+  const parcelas = q9Parcelas?.parcelas ? comoObjetos<LinhaParcelas>(q9Parcelas.parcelas) : null;
 
   return (
     <>
@@ -85,7 +95,8 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
       </section>
 
       <DinheiroCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#dinheiro`} />
-      <PropagandaCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#propaganda`} />
+      <PropagandaCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#propaganda`}
+        referencias={referencias} parcelas={parcelas} />
     </>
   );
 }

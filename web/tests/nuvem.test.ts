@@ -3,7 +3,8 @@ import { caixaDe, descricaoNuvem, montarNuvem, normalizarTermo, sobrepoe, tamanh
 
 const t = (o: Partial<TermoNuvem>): TermoNuvem => ({
   termo: "santinho", grupo: "propaganda_fisica", centavos: 10_000, despesas: 1, pela_categoria_centavos: 0,
-  generico: false, explicacao: null, detalhes: [], ...o,
+  generico: false, explicacao: null, detalhes: [],
+  por_tipo: [{ grupo: o.grupo ?? "propaganda_fisica", centavos: o.centavos ?? 10_000, despesas: 1 }], ...o,
 });
 const varios = (n: number) => Array.from({ length: n }, (_, i) => t({ termo: `termo ${String(i).padStart(2, "0")}`, centavos: (n - i) * 1_000 }));
 
@@ -67,7 +68,8 @@ describe("normalizarTermo", () => {
     // formato encontrado num cache antigo do Next: sem despesas, generico, explicacao e detalhes
     const antigo = { termo: "santinho", grupo: "propaganda_fisica", centavos: 5_000, lancamentos: 3, parte: 0.5, ressalva: null } as Partial<TermoNuvem>;
     expect(normalizarTermo(antigo)).toEqual({ termo: "santinho", grupo: "propaganda_fisica", centavos: 5_000, despesas: 0,
-      pela_categoria_centavos: 0, generico: false, explicacao: null, detalhes: [] });
+      pela_categoria_centavos: 0, generico: false, explicacao: null, detalhes: [],
+      por_tipo: [{ grupo: "propaganda_fisica", centavos: 5_000, despesas: 0 }] });   // sem por_tipo: a peça inteira no tipo dominante
     const n = montarNuvem([antigo, { termo: "bandeira", centavos: 2_500 }]);
     expect(n.palavras.map((p) => p.termo)).toEqual(["santinho", "bandeira"]);
     expect(textoDetalhes(n.todos[0])).toBe("");
@@ -92,9 +94,12 @@ describe("textoDetalhes", () => {
   const d = (termo: string, centavos: number) => ({ termo, centavos });
   it("formatos da peça com a parte de cada um, os maiores primeiro", () => {
     const adesivo = t({ termo: "adesivo", centavos: 1_000, detalhes: [d("adesivo perfurado", 520), d("praguinha", 230), d("adesivo", 150), d("pragão", 95), d("bóton", 5)] });
-    expect(textoDetalhes(adesivo)).toBe("adesivo perfurado 52%, praguinha 23%, adesivo 15% e mais 2");
-    expect(textoDetalhes(adesivo, 5)).toBe("adesivo perfurado 52%, praguinha 23%, adesivo 15%, pragão 10% e bóton menos de 1%");
-    expect(textoDetalhes(t({ termo: "santinho", centavos: 100, detalhes: [d("santinho", 70), d("colinha", 30)] }))).toBe("santinho 70% e colinha 30%");
+    expect(textoDetalhes(adesivo)).toBe("perfurado 52%, praguinha 23%, adesivo 15% e mais 2");
+    expect(textoDetalhes(adesivo, 5)).toBe("perfurado 52%, praguinha 23%, adesivo 15%, pragão 10%, bóton menos de 1%");
+    expect(textoDetalhes(t({ termo: "santinho", centavos: 100, detalhes: [d("santinho", 70), d("colinha", 30)] }))).toBe("santinho 70%, colinha 30%");
+    expect(textoDetalhes(t({ termo: "adesivo", centavos: 100, detalhes: [d("praguinha", 48), d("adesivo", 41), d("adesivo para-choque", 11)] })))
+      .toBe("praguinha 48%, adesivo 41%, para-choque 11%");
+    expect(textoDetalhes(t({ termo: "faixa", centavos: 100, detalhes: [d("banner", 83), d("faixa e placa", 17)] }))).toBe("banner 83%, faixa e placa 17%");
   });
   it("nada a detalhar com um formato só (mesmo de outro nome) ou sem formatos", () => {
     expect(textoDetalhes(t({ termo: "bandeira", detalhes: [d("bandeira", 10_000)] }))).toBe("");

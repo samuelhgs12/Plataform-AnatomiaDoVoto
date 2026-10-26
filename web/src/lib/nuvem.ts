@@ -6,6 +6,8 @@ import { reais } from "./format";
 
 /** Um formato de uma peça ("adesivo perfurado", "praguinha"; "sem detalhe" = veio da categoria do TSE). */
 export interface DetalheTermo { termo: string; centavos: number }
+/** Valor da peça num tipo de propaganda (grupo da categoria do TSE: propaganda_fisica, _audiovisual, _digital). */
+export interface PorTipo { grupo: string; centavos: number; despesas: number }
 /**
  * Uma palavra da resposta da API: uma peça de propaganda ("adesivo", "santinho", "Facebook"...). Valores em centavos
  * inteiros (valor contratado). `generico`: não diz qual peça foi comprada ("impressos", "marketing"), vai em cor neutra.
@@ -13,6 +15,8 @@ export interface DetalheTermo { termo: string; centavos: number }
 export interface TermoNuvem {
   termo: string; grupo: string; centavos: number; despesas: number; pela_categoria_centavos: number;
   generico: boolean; explicacao: string | null; detalhes: DetalheTermo[];
+  /** Valor da peça em cada tipo; somado por tipo, bate com o total oficial das categorias desse tipo. */
+  por_tipo: PorTipo[];
 }
 export interface Caixa { x: number; y: number; largura: number; altura: number }
 /** `x`/`y` são o centro do termo; `parte` é a fração da propaganda (0 a 1). */
@@ -54,8 +58,17 @@ export function sobrepoe(a: { x: number; y: number; largura: number; altura: num
 export function normalizarTermo(t: Partial<TermoNuvem> | null | undefined): TermoNuvem | null {
   if (!t || typeof t.termo !== "string" || !t.termo || typeof t.centavos !== "number" || !Number.isFinite(t.centavos)) return null;
   const numero = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const grupo = typeof t.grupo === "string" ? t.grupo : "";
+  const despesas = numero(t.despesas);
+  const porTipo = Array.isArray(t.por_tipo)
+    ? t.por_tipo.filter((p) => p && typeof p.grupo === "string" && typeof p.centavos === "number" && Number.isFinite(p.centavos))
+      // sem o número de despesas por tipo (API anterior): com um tipo só, são as da peça; com mais, não se sabe (0)
+      .map((p, _, xs) => ({ grupo: p.grupo, centavos: p.centavos, despesas: Number.isFinite(p.despesas) ? p.despesas : xs.length === 1 ? despesas : 0 }))
+    : [];
   return {
-    termo: t.termo, centavos: t.centavos, grupo: typeof t.grupo === "string" ? t.grupo : "", despesas: numero(t.despesas),
+    termo: t.termo, centavos: t.centavos, grupo, despesas,
+    // API anterior ao por_tipo: a peça inteira no tipo dominante
+    por_tipo: porTipo.length ? porTipo : grupo ? [{ grupo, centavos: t.centavos, despesas }] : [],
     pela_categoria_centavos: numero(t.pela_categoria_centavos), generico: t.generico === true,
     explicacao: typeof t.explicacao === "string" ? t.explicacao : null,
     detalhes: Array.isArray(t.detalhes)
@@ -106,17 +119,19 @@ export function caixaDe(palavras: { x: number; y: number; largura: number; altur
 }
 
 /**
- * Os formatos que a palavra junta, com a parte de cada um no valor dela: "adesivo perfurado 52%, praguinha 23%, adesivo
- * 15% e mais 2". Vazio quando não há o que detalhar (um formato só: "100%" não diz nada que a explicação não diga).
+ * Os formatos que a palavra junta, com a parte de cada um no valor dela, separados por vírgula e sem repetir o nome da
+ * peça: "praguinha 48%, adesivo 41%, para-choque 11%" (e "… e mais 2" além de `quantos`). Vazio quando não há o que
+ * detalhar (um formato só: "100%" não diz nada que a explicação não diga).
  */
-export function textoDetalhes(t: Pick<TermoNuvem, "centavos" | "detalhes">, quantos = 3): string {
+export function textoDetalhes(t: Pick<TermoNuvem, "termo" | "centavos" | "detalhes">, quantos = 3): string {
   const ds = t.detalhes.filter((d) => d.centavos > 0);
   if (ds.length < 2 || t.centavos <= 0) return "";
   const pct = (c: number) => { const p = (c / t.centavos) * 100; return p > 0 && p < 1 ? "menos de 1%" : `${Math.round(p)}%`; };
-  const mostrados = ds.slice(0, quantos).map((d) => `${d.termo} ${pct(d.centavos)}`);
+  // "adesivo para-choque" dentro da peça "adesivo" vira "para-choque": o nome da peça não se repete ("faixa e placa" fica)
+  const nome = (f: string) => (f.startsWith(`${t.termo} `) && !f.startsWith(`${t.termo} e `) ? f.slice(t.termo.length + 1) : f);
+  const mostrados = ds.slice(0, quantos).map((d) => `${nome(d.termo)} ${pct(d.centavos)}`);
   const resto = ds.length - mostrados.length;
-  return resto > 0 ? `${mostrados.join(", ")} e mais ${resto}` : mostrados.length > 1
-    ? `${mostrados.slice(0, -1).join(", ")} e ${mostrados.at(-1)}` : mostrados[0];
+  return `${mostrados.join(", ")}${resto > 0 ? ` e mais ${resto}` : ""}`;
 }
 
 /** Texto para leitor de tela: os termos de maior valor, com o valor de cada um. */

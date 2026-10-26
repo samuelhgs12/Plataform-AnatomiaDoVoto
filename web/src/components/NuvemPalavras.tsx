@@ -1,6 +1,6 @@
 import { reais } from "@/lib/format";
 import { descricaoNuvem, textoDetalhes, type Nuvem } from "@/lib/nuvem";
-import { classeTermo, grupo, parteTexto } from "@/lib/propaganda";
+import { classeTermo, parteTexto, tipoComum } from "@/lib/propaganda";
 
 /**
  * Nuvem de palavras da pergunta 9: o que a campanha comprou em propaganda, uma palavra por peça. Recebe a nuvem já
@@ -20,7 +20,7 @@ export function NuvemPalavras({ nuvem }: { nuvem: Nuvem }) {
               className={classeTermo(p)}>
               <title>
                 {`${p.termo}${p.explicacao ? ` (${p.explicacao})` : ""}: ${reais(p.centavos / 100)}, ${parteTexto(p.parte)} da propaganda`
-                  + `${p.generico ? "" : `, ${grupo(p.grupo).rotulo.toLowerCase()}`}${detalhes ? `. Formatos: ${detalhes}` : ""}`}
+                  + `${p.generico ? "" : `, ${tipoComum(p.grupo).frase}`}${detalhes ? `. Formatos: ${detalhes}` : ""}`}
               </title>
               {p.termo}
             </text>

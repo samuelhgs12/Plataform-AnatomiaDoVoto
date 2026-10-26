@@ -1,25 +1,31 @@
 import type { CarreiraItem } from "@/lib/types";
-import { textoDe100 } from "@/lib/financiamento";
 import { inteiro, reais } from "@/lib/format";
 import {
-  analisar, composicaoPorTipo, grupo, GRUPOS, nomearPredominantes, parteTexto, reaisCentavos, resumoPropaganda,
-  type Analise, type Propaganda,
+  analisar, barraPecas, comparacao, composicaoPorTipo, grupo, linhaNada, manchetePecas, mostrarBarra, mostrarNuvem,
+  nomearPredominantes, numerosDestaque, parteTabela, parteTexto, reaisCentavos, resumoPropaganda, tabelaCategorias, tabelaPecas,
+  NOTA_DESPESA_DUPLA, temDespesaDupla, totalTabela, type Analise, type GrupoTabela, type LinhaParcelas, type LinhaReferencia,
+  type Propaganda, type TotalTabela,
 } from "@/lib/propaganda";
-import { montarNuvem, textoDetalhes, type Nuvem } from "@/lib/nuvem";
+import { montarNuvem, type Nuvem } from "@/lib/nuvem";
 import { BarrasH } from "./BarrasH";
+import { BarraPecas } from "./BarraPecas";
 import { NuvemPalavras } from "./NuvemPalavras";
 
 const r$ = (centavos: number) => reais(centavos / 100);
-/** Só a primeira letra: "Programas de rádio, TV ou vídeo" → "programas de rádio, TV ou vídeo". */
-const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /**
  * Bloco do perfil "Propaganda da campanha" (pergunta 9: onde o candidato investe em propaganda). Só há prestação de contas
  * de 2018 em diante. `campanhas` são as mesmas do bloco de dinheiro (da mais recente para a mais antiga), com a propaganda
- * de cada uma vinda da API; a campanha escolhida (`?campanha=`) é a mesma nos dois blocos.
+ * de cada uma vinda da API; a campanha escolhida (`?campanha=`) é a mesma nos dois blocos. `referencias` (análise q9) é a
+ * parcela típica de cada tipo por cargo, ano e UF; sem ela, a comparação não aparece. `parcelas` (também da q9, só quando o
+ * grupo da campanha escolhida é pequeno) permite tirar a própria campanha da típica.
+ *
+ * Ordem: resposta (manchete pelas peças, os dois números, o que ficou de fora e, às vezes, a comparação em texto; nuvem ao
+ * lado); separador e barra das peças por tipo, com a marca da campanha típica; nota curta; três detalhes recolhidos.
  */
-export function PropagandaCampanha({ campanhas, escolhida, hrefDe }: {
+export function PropagandaCampanha({ campanhas, escolhida, hrefDe, referencias = null, parcelas = null }: {
   campanhas: { c: CarreiraItem; p: Propaganda | null }[]; escolhida: number | undefined; hrefDe: (id: number) => string;
+  referencias?: LinhaReferencia[] | null; parcelas?: LinhaParcelas[] | null;
 }) {
   const atual = campanhas.find((x) => x.c.id_candidatura === escolhida) ?? campanhas[0];
   const resumo = resumoPropaganda(campanhas);
@@ -44,14 +50,16 @@ export function PropagandaCampanha({ campanhas, escolhida, hrefDe }: {
               }))} />
             </>
           )}
-          <Conteudo c={atual.c} p={atual.p} />
+          <Conteudo c={atual.c} p={atual.p} referencias={referencias} parcelas={parcelas} />
         </>
       )}
     </section>
   );
 }
 
-function Conteudo({ c, p }: { c: CarreiraItem; p: Propaganda | null }) {
+function Conteudo({ c, p, referencias, parcelas }: {
+  c: CarreiraItem; p: Propaganda | null; referencias: LinhaReferencia[] | null; parcelas: LinhaParcelas[] | null;
+}) {
   if (!p) return <p className="muted">Não foi possível carregar as despesas agora.</p>;
   const a = analisar(p, p.categorias);
   const campanha = `Na campanha de ${c.ano} a ${c.cargo.toLowerCase()}`;
@@ -73,122 +81,132 @@ function Conteudo({ c, p }: { c: CarreiraItem; p: Propaganda | null }) {
       </p>
     );
   }
-  return <ComPropaganda campanha={campanha} a={a} nuvem={montarNuvem(p.termos ?? [])} />;
+  return <ComPropaganda c={c} a={a} nuvem={montarNuvem(p.termos ?? [])} referencias={referencias} parcelas={parcelas} />;
 }
 
-function ComPropaganda({ campanha, a, nuvem }: { campanha: string; a: Extract<Analise, { estado: "com_propaganda" }>; nuvem: Nuvem }) {
-  const [maior] = a.predominantes;
+function ComPropaganda({ c, a, nuvem, referencias, parcelas }: {
+  c: CarreiraItem; a: Extract<Analise, { estado: "com_propaganda" }>; nuvem: Nuvem; referencias: LinhaReferencia[] | null;
+  parcelas: LinhaParcelas[] | null;
+}) {
+  const tipos = composicaoPorTipo(a);
+  const pecas = nuvem.todos;
+  // sem peças (API anterior à nuvem), a manchete volta a ser a categoria do TSE de maior valor
+  const manchete = manchetePecas(pecas, tipos, a.propagandaCentavos) ?? `${nomearPredominantes(a.predominantes)}.`;
+  const numeros = numerosDestaque(tipos, a.propagandaCentavos, a.totalCentavos);
+  const nada = linhaNada(tipos, a.propagandaCentavos, pecas);
+  const barra = barraPecas(tipos, pecas, a.propagandaCentavos);
+  const comBarra = mostrarBarra(barra);
+  const cmp = comparacao(referencias, c, tipos, comBarra, parcelas);
+  const comNuvem = mostrarNuvem(pecas);
+  const total = totalTabela(a);
+  const porPeca = tabelaPecas(tipos, pecas, a.propagandaCentavos);
   return (
     <>
-      <p className="resposta-curta longa">{nomearPredominantes(a.predominantes)}.</p>
-      <p className="manchete pequena">
-        {campanha}, a propaganda somou <b>{r$(a.propagandaCentavos)}</b>, {parteTexto(a.parteDoTotal)} das despesas da campanha ({r$(a.totalCentavos)}).{" "}
-        {a.predominantes.length > 1
-          ? <>Empate: {a.predominantes.length} categorias receberam <b>{r$(maior.centavos)}</b> cada, o maior valor.</>
-          : <>De cada R$ 100 em propaganda, <b>{maior.de100 > 0 ? `R$ ${maior.de100}` : "menos de R$ 1"} foram para {minuscula(maior.rotulo)}</b>.</>}
-      </p>
-      <p className="escala">O tamanho da barra é o valor contratado em cada categoria; a cor é o tipo de propaganda.</p>
-      <BarrasH titulo="Valor contratado em propaganda, por categoria" compacto
-        linhas={a.categorias.map((k) => ({
-          chave: k.origem, rotulo: k.rotulo, detalhe: grupo(k.grupo).rotulo, valor: k.centavos, classe: grupo(k.grupo).classe,
-          texto: r$(k.centavos), subtexto: textoDe100(k.de100, k.centavos),
-        }))} />
-      <h3>Por tipo de propaganda</h3>
-      <Composicao a={a} />
-      {nuvem.palavras.length > 0 && <OQueFoiComprado nuvem={nuvem} />}
+      <div className={`pp-resposta${comNuvem ? " com-nuvem" : ""}`}>
+        <div>
+          <p className="resposta-curta longa">{manchete}</p>
+          <div className={`pp-numeros ${numeros.grupo ? grupo(numeros.grupo).classe : ""}`}>
+            <p><b>{numeros.total}</b><span>contratados em propaganda</span></p>
+            {numeros.parte && <p><b>{numeros.parte}</b><span>de tudo que a campanha gastou</span></p>}
+          </div>
+          {nada && <p className="pp-linha">{nada}</p>}
+          {cmp.texto && <p className="pp-linha">{cmp.texto}</p>}
+        </div>
+        {comNuvem && (
+          <div className="pp-nuvem">
+            <NuvemPalavras nuvem={nuvem} />
+            <p className="escala">O tamanho da palavra é o valor contratado.</p>
+          </div>
+        )}
+      </div>
+      {comBarra && (
+        <>
+          <hr className="pp-separador" />
+          <BarraPecas barra={barra} marca={cmp.marca} />
+        </>
+      )}
+      <p className="muted pp-nota">Valor contratado declarado ao TSE; não inclui material recebido pronto do partido.</p>
       <details>
-        <summary>Ver o detalhamento por categoria, com os valores exatos</summary>
-        <div className="tablewrap">
-          <table>
-            <caption className="sr-only">Despesas de propaganda contratadas por categoria do TSE</caption>
-            <thead><tr><th>Categoria</th><th>Classificação original no TSE</th><th>Tipo</th><th className="num">Despesas</th><th className="num">Valor contratado</th><th className="num">% da propaganda</th><th className="num">% das despesas</th></tr></thead>
-            <tbody>
-              {a.categorias.map((k) => (
-                <tr key={k.origem}><td>{k.rotulo}</td><td>{k.origem}</td><td>{grupo(k.grupo).rotulo}</td><td className="num">{inteiro(k.lancamentos)}</td><td className="num">{reaisCentavos(k.centavos)}</td><td className="num">{parteTexto(k.parteDaPropaganda)}</td><td className="num">{parteTexto(k.parteDoTotal)}</td></tr>
-              ))}
-              <tr><td><b>Propaganda</b></td><td /><td /><td className="num"><b>{inteiro(a.categorias.reduce((s, k) => s + k.lancamentos, 0))}</b></td><td className="num"><b>{reaisCentavos(a.propagandaCentavos)}</b></td><td className="num"><b>100,0%</b></td><td className="num"><b>{parteTexto(a.parteDoTotal)}</b></td></tr>
-              <tr><td>Todas as despesas consideradas</td><td /><td /><td className="num">{inteiro(a.lancamentos)}</td><td className="num">{reaisCentavos(a.totalCentavos)}</td><td /><td className="num">100,0%</td></tr>
-            </tbody>
-          </table>
+        <summary>Ver o valor de cada peça</summary>
+        <TabelaPorTipo nome="Peça" legenda="Valor contratado de cada peça de propaganda, por tipo"
+          grupos={porPeca} total={total} nota={temDespesaDupla(porPeca) ? NOTA_DESPESA_DUPLA : null} />
+      </details>
+      <details>
+        <summary>Ver como o TSE classificou cada despesa</summary>
+        <p className="muted pp-nota">
+          É a classificação que a própria campanha escolheu ao declarar cada despesa. Os valores por peça podem ser diferentes: um
+          adesivo, por exemplo, pode ter sido declarado como material impresso.
+        </p>
+        <TabelaPorTipo nome="Categoria" legenda="Despesas de propaganda contratadas por categoria do TSE, por tipo"
+          grupos={tabelaCategorias(a, tipos)} total={total} />
+      </details>
+      <details>
+        <summary>Sobre estes valores</summary>
+        <div className="pp-sobre">
+          <p>Os valores são o que foi contratado e declarado ao TSE na prestação de contas final, não necessariamente o que foi pago.
+            Não há correção pela inflação, e as doações a outros candidatos ficam de fora.</p>
+          <p>Impresso e de rua reúne impressos, adesivos, jornais e carros de som; rádio, TV e vídeo reúne programas, vídeos e
+            jingles; internet reúne impulsionamento e páginas. Os tipos e as categorias são oficiais. As peças são estimadas a partir
+            da descrição de cada despesa.</p>
+          <p>Material recebido pronto do partido, como programas de rádio e TV, não entra nesta conta. Gastar mais não diz quantas
+            pessoas a propaganda alcançou nem se ajudou a eleger.</p>
         </div>
       </details>
-      <p className="muted" style={{ fontSize: 15, marginBottom: 0 }}>
-        Valor <b>contratado</b> declarado ao TSE (prestação final), não necessariamente pago, sem correção pela inflação e sem as doações
-        a outros candidatos. Propaganda física: {GRUPOS.propaganda_fisica.descricao}; audiovisual: {GRUPOS.propaganda_audiovisual.descricao};
-        digital: {GRUPOS.propaganda_digital.descricao}. Gastar mais não diz quantas pessoas a propaganda alcançou nem se ajudou a eleger.
-      </p>
     </>
   );
 }
 
-/** Nuvem de palavras (o que foi comprado) com a tabela equivalente e o aviso das descrições vagas. */
-function OQueFoiComprado({ nuvem }: { nuvem: Nuvem }) {
-  const vago = nuvem.pelaCategoriaParte;
+/** Barra da coluna "Parte da propaganda": proporcional, com 2 px de mínimo para o que existe. */
+const Parte = ({ classe, parte }: { classe: string; parte: number }) => (
+  <span className="pp-parte">
+    <span className="pp-trilho" aria-hidden="true"><i className={classe} style={{ width: `max(2px, ${parte * 100}%)` }} /></span>
+    {parteTabela(parte)}
+  </span>
+);
+
+/**
+ * Tabela das peças ou das categorias, agrupada por tipo (um tbody por tipo): no cabeçalho do grupo, o quadradinho da cor, o
+ * nome e os totais do tipo; nas linhas, o nome com o detalhe em texto pequeno, as despesas, o valor e a parte da propaganda.
+ * No fim, a linha "Propaganda" e, abaixo da tabela, a `nota` (se houver) e o total de despesas da campanha (sem ele, nem a
+ * parte nem a frase).
+ */
+function TabelaPorTipo({ nome, legenda, grupos, total, nota = null }: {
+  nome: string; legenda: string; grupos: GrupoTabela[]; total: TotalTabela; nota?: string | null;
+}) {
   return (
     <>
-      <h3>O que foi comprado</h3>
-      <p className="escala">
-        Cada palavra é uma peça: os formatos dela contam juntos (adesivo perfurado, de para-choque e praguinha são
-        &ldquo;adesivo&rdquo;). O tamanho é o valor contratado; a cor, o tipo de propaganda; em cinza, gastos que não dizem a peça.
-      </p>
-      <NuvemPalavras nuvem={nuvem} />
-      {(vago > 0 || nuvem.fora > 0) && (
-        <p className="muted nuvem-nota">
-          {vago > 0 && <>{r$(nuvem.pelaCategoriaCentavos)} ({parteTexto(vago)}) tinham descrição vaga, como &ldquo;propaganda e
-            publicidade&rdquo;, e aparecem com o nome da categoria do TSE. </>}
-          {nuvem.fora > 0 && <>Mais {nuvem.fora} {nuvem.fora === 1 ? "peça pequena está" : "peças pequenas estão"} só na tabela.</>}
-        </p>
-      )}
-      <details>
-        <summary>Ver as peças em tabela, com os formatos</summary>
-        <div className="tablewrap">
-          <table>
-            <caption className="sr-only">Peças da nuvem de palavras: o que a campanha comprou em propaganda, com os formatos de cada uma</caption>
-            <thead><tr><th>Peça</th><th>Inclui</th><th>Tipo</th><th className="num">Despesas</th><th className="num">Valor contratado</th><th className="num">% da propaganda</th></tr></thead>
-            <tbody>
-              {nuvem.todos.map((t) => (
-                <tr key={t.termo}>
-                  <td>{t.termo}{t.explicacao && <small className="muted"> {t.explicacao}</small>}</td><td>{textoDetalhes(t, 6) || "—"}</td>
-                  <td>{t.generico ? "Peça não especificada" : grupo(t.grupo).rotulo}</td><td className="num">{inteiro(t.despesas)}</td>
-                  <td className="num">{reaisCentavos(t.centavos)}</td><td className="num">{parteTexto(t.parte)}</td>
+      <div className="tablewrap">
+        <table className="pp-tabela">
+          <caption className="sr-only">{legenda}</caption>
+          <thead><tr><th>{nome}</th><th className="num">Despesas</th><th className="num">Valor contratado</th><th className="num">Parte da propaganda</th></tr></thead>
+          {grupos.map((g) => (
+            <tbody key={g.grupo}>
+              <tr className="pp-grupo">
+                <th scope="rowgroup"><i className={grupo(g.grupo).classe} aria-hidden="true" />{g.rotulo}</th>
+                <td className="num">{inteiro(g.despesas)}</td>
+                <td className="num">{reaisCentavos(g.centavos)}</td>
+                <td className="num"><Parte classe={grupo(g.grupo).classe} parte={g.parte} /></td>
+              </tr>
+              {g.linhas.map((l) => (
+                <tr key={l.chave}>
+                  <td>{l.nome}{l.generico && <span className="muted"> (não diz a peça)</span>}{l.detalhe && <small className="muted">{l.detalhe}</small>}</td>
+                  <td className="num">{inteiro(l.despesas)}</td>
+                  <td className="num">{reaisCentavos(l.centavos)}</td>
+                  <td className="num"><Parte classe={`${grupo(g.grupo).classe} pp-tenue`} parte={l.parte} /></td>
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
-      </details>
-    </>
-  );
-}
-
-/** Composição da propaganda pelos três tipos: uma barra empilhada e os valores de cada tipo. */
-function Composicao({ a }: { a: Extract<Analise, { estado: "com_propaganda" }> }) {
-  const tipos = composicaoPorTipo(a);
-  const descricao = tipos.map((t) => `${grupo(t.grupo).rotulo}: ${t.centavos > 0 ? textoDe100(t.de100, t.centavos) : "nada"}`).join("; ");
-  return (
-    <>
-      <div className="stack composicao" role="img" aria-label={`De cada R$ 100 contratados em propaganda. ${descricao}.`}>
-        {tipos.filter((t) => t.centavos > 0).map((t) => (
-          <div key={t.grupo} className={`seg ${grupo(t.grupo).classe}`} style={{ width: `${t.parte * 100}%` }}
-            title={`${grupo(t.grupo).rotulo}: ${r$(t.centavos)} (${parteTexto(t.parte)})`} />
-        ))}
+          ))}
+          <tfoot>
+            <tr>
+              <th scope="row">Propaganda</th><td className="num">{inteiro(total.despesas)}</td>
+              <td className="num">{reaisCentavos(total.centavos)}</td><td className="num">{total.parte}</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
-      <ul className="fontes composicao-tipos">
-        {tipos.map((t) => (
-          <li key={t.grupo}>
-            <i className={grupo(t.grupo).classe} aria-hidden="true" />
-            <div>
-              <b>{grupo(t.grupo).rotulo}</b>
-              <span className="valor">
-                {t.centavos > 0
-                  ? <>{r$(t.centavos)} · {textoDe100(t.de100, t.centavos)} · {inteiro(t.lancamentos)} {t.lancamentos === 1 ? "despesa" : "despesas"}</>
-                  : "Nenhuma despesa deste tipo"}
-              </span>
-              <small>{grupo(t.grupo).descricao}</small>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {nota && <p className="muted pp-nota">{nota}</p>}
+      {total.frase && <p className="muted pp-nota">{total.frase}</p>}
     </>
   );
 }
