@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   abrangencia, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoNoMunicipio,
-  proporcaoPorUf, resumoCandidatura, rotulosCandidato, semDadosDeCampanha, sugestoesDe, textoPontos, turnosDe, variacaoTurnos, type CandidaturaMapa, type VotoMunicipio,
+  proporcaoPorUf, resumoCandidatura, rotulosCandidato, semDadosDeCampanha, sugestoesDe, textoPontos, trechosDaCarreira, turnosDe, variacaoTurnos, type CandidaturaMapa, type VotoMunicipio,
 } from "../src/lib/candidato-mapa";
 import type { CandidaturaItem } from "../src/lib/types";
 
@@ -83,6 +83,20 @@ describe("resumoCandidatura", () => {
   });
   it("acima de 10 vezes arredonda para inteiro", () => {
     expect(resumoCandidatura(c({ gasto_total: 123_000, mediana_gasto_cargo: 10_000 })).textoMediana).toBe("12× a mediana do cargo");
+  });
+});
+
+describe("trechosDaCarreira", () => {
+  it("junta anos seguidos no mesmo cargo e UF, sem juntar o que volta depois", () => {
+    const anos = (t: { itens: CandidaturaMapa[] }) => t.itens.map((x) => x.ano);
+    const t = trechosDaCarreira([
+      c({ ano: 2002, cargo: "Deputado estadual" }), c({ ano: 2006, cargo: "Deputado estadual" }), c({ ano: 2016, cargo: "Prefeito" }),
+      c({ ano: 2018, cargo: "Deputado estadual" }), c({ ano: 2022, cargo: "Deputado estadual", uf: "RJ" }),
+    ]);
+    expect(t.map((x) => [x.cargo, x.uf, anos(x)])).toEqual([
+      ["Deputado estadual", "MG", [2002, 2006]], ["Prefeito", "MG", [2016]], ["Deputado estadual", "MG", [2018]], ["Deputado estadual", "RJ", [2022]],
+    ]);
+    expect(trechosDaCarreira([])).toEqual([]);
   });
 });
 

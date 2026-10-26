@@ -215,6 +215,20 @@ export function candidaturasDe<T extends Pick<CandidaturaMapa, "id_candidato" | 
   return { padrao: lista[0], lista };
 }
 
+/**
+ * A linha do tempo das candidaturas em trechos: anos seguidos no mesmo cargo e UF ficam juntos, com o cargo escrito
+ * uma vez só embaixo deles (2002, 2006, 2010, 2014 · Deputado estadual). `cronologica`: da mais antiga para a mais recente.
+ */
+export function trechosDaCarreira<T extends Pick<CandidaturaMapa, "cargo" | "uf">>(cronologica: T[]): { cargo: string; uf: string; itens: T[] }[] {
+  const trechos: { cargo: string; uf: string; itens: T[] }[] = [];
+  for (const c of cronologica) {
+    const ultimo = trechos.at(-1);
+    if (ultimo && ultimo.cargo === c.cargo && ultimo.uf === c.uf) ultimo.itens.push(c);
+    else trechos.push({ cargo: c.cargo, uf: c.uf, itens: [c] });
+  }
+  return trechos;
+}
+
 /** Uma pessoa na busca do mapa e nas sugestões (mesmo formato de /api/busca). */
 export interface EntradaCandidato {
   id_candidato: number; nome_urna: string | null; partido: string | null; uf: string | null; ultimo_ano: number; ultimo_cargo: string;

@@ -7,7 +7,7 @@ import { MiniMapa } from "./MiniMapa";
 import { VariacaoTurnos } from "./VariacaoTurnos";
 import { classe, enquadrar, nomeProprio, type LinhaMunicipio } from "@/lib/abstencao";
 import {
-  abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato, variacaoTurnos,
+  abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato, trechosDaCarreira, variacaoTurnos,
   type CandidaturaMapa, type VotoMunicipio,
 } from "@/lib/candidato-mapa";
 import { fotoDaPessoa } from "@/lib/foto-candidato";
@@ -130,7 +130,8 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   const noMapaT1 = linhas1.reduce((s, l) => ({ votos: s.votos + l.votos, validos: s.validos + l.validos_cargo }), { votos: 0, validos: 0 });
   const cargoMin = c?.cargo.toLowerCase();
   // do 1º ao 2º turno, no recorte do mapa: o estado da candidatura, o estado aberto ou os seis estados (presidente)
-  const cronologica = [...lista].reverse();   // a carreira da esquerda (a mais antiga) para a direita
+  // a carreira da esquerda (a mais antiga) para a direita, com os anos seguidos no mesmo cargo num trecho só
+  const trechos = trechosDaCarreira([...lista].reverse());
   const turnos2 = c && turnos.length > 1 ? variacaoTurnos(seis && uf ? votos.filter((l) => l.uf === uf) : votos) : null;
   const ondeTurnos = seis && !uf ? "nos seis estados" : `em ${NOME_UF[uf ?? c?.uf ?? ""] ?? ""}`;
 
@@ -168,13 +169,23 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
             {lista.length > 1 && (
               <nav className="carreira-trilho" aria-label={`Candidaturas de ${nome}, da mais antiga para a mais recente`}>
                 <ol>
-                  {cronologica.map((x) => {
-                    const on = x.id_candidatura === c?.id_candidatura;
+                  {trechos.map((t) => {
+                    const cargo = `${t.cargo}${t.uf !== c?.uf && t.uf !== "BR" ? ` · ${t.uf}` : ""}`;
                     return (
-                      <li key={x.id_candidatura}>
-                        <Link scroll={false} href={href({ campanha: x.id_candidatura })} className="carreira-passo" aria-current={on ? "true" : undefined}>
-                          <b>{x.ano}</b><span>{x.cargo}{x.uf !== c?.uf && x.uf !== "BR" ? ` · ${x.uf}` : ""}</span>
-                        </Link>
+                      <li key={t.itens[0].id_candidatura} className={`carreira-trecho${t.itens.some((x) => x.id_candidatura === c?.id_candidatura) ? " on" : ""}`}>
+                        <ol className="carreira-anos">
+                          {t.itens.map((x) => {
+                            const on = x.id_candidatura === c?.id_candidatura;
+                            return (
+                              <li key={x.id_candidatura}>
+                                <Link scroll={false} href={href({ campanha: x.id_candidatura })} className="carreira-passo" aria-current={on ? "true" : undefined} aria-label={`${x.ano}, ${cargo}`}>
+                                  {x.ano}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                        <span className="carreira-cargo" aria-hidden="true">{cargo}</span>
                       </li>
                     );
                   })}

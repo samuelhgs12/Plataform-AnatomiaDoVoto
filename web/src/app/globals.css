@@ -1114,25 +1114,27 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
 .palco.cand .mapa-abst .uf-fora { fill: var(--noite2); }   /* o resto do país desce um degrau: o estado com menos votos ainda se separa dele */
 .palco-aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30ch, 80%); margin: 0; padding: 14px 18px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); font-size: 16px; text-align: center; text-wrap: balance; }
 /* as candidaturas da pessoa, embaixo do título: uma linha do tempo da mais antiga (à esquerda) para a mais recente.
-   A caixa que rola é rtl e a lista dentro dela, ltr: quando não cabe (celular), a rolagem começa na ponta da mais
-   recente, a que abre por padrão; quando cabe, a margem automática a encosta à esquerda. O ano é o que se lê; o cargo vem embaixo, em tom baixo. A escolhida
+   Anos seguidos no mesmo cargo formam um trecho, com o cargo escrito uma vez embaixo deles: assim a carreira inteira
+   costuma caber. Quando não cabe (celular), a caixa que rola é rtl e a lista dentro dela, ltr: a rolagem começa na
+   ponta da mais recente, a que abre por padrão. O ano é o que se lê; o cargo vem embaixo, em tom baixo. A escolhida
    tem o ponto e o ano no laranja do destaque */
 .palco-topo > div:first-child { min-width: 0; }
 .carreira-trilho { direction: rtl; margin: 20px 0 0 -4px; padding: 0 4px; overflow-x: auto; scrollbar-width: none; }
-.carreira-trilho ol { direction: ltr; list-style: none; display: flex; width: max-content; margin: 0 auto 0 0; padding: 0; }
+.carreira-trilho ol { direction: ltr; list-style: none; display: flex; margin: 0; padding: 0; }
+.carreira-trilho > ol { width: max-content; margin-right: auto; }
 .carreira-trilho li { flex: none; }
-.carreira-passo { position: relative; display: grid; gap: 3px; padding: 18px 22px 6px 0; color: var(--noite-muted); text-decoration: none; transition: color var(--t-hover) ease; }
-.carreira-passo::before { content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 1px; background: var(--noite-linha); }
-.carreira-trilho li:last-child .carreira-passo::before { right: auto; width: 10px; }
+.carreira-trecho { position: relative; display: grid; justify-items: start; padding: 0 26px 6px 0; }
+.carreira-trecho::before { content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 1px; background: var(--noite-linha); }   /* a linha passa pelos pontos */
+.carreira-trecho:last-child { padding-right: 0; }
+.carreira-anos { gap: 18px; }
+.carreira-cargo { margin-top: 4px; font-size: 12.5px; font-weight: 500; line-height: 1.2; white-space: nowrap; color: var(--noite-muted); transition: color var(--t-hover) ease; }
+.carreira-trecho.on .carreira-cargo { color: var(--sobre-noite); }
+.carreira-passo { position: relative; display: block; padding-top: 18px; font-size: 18px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--sobre-noite) 78%, var(--noite)); text-decoration: none; transition: color var(--t-hover) ease; }
 .carreira-passo::after { content: ""; position: absolute; left: 0; top: 0; width: 11px; height: 11px; border-radius: 50%; background: var(--noite); box-shadow: inset 0 0 0 2px var(--noite-linha); transition: box-shadow var(--t-hover) ease, background-color var(--t-hover) ease, scale var(--t-ui) var(--ease-out); }
-.carreira-passo b { font-size: 18px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--sobre-noite) 78%, var(--noite)); transition: color var(--t-hover) ease; }
-.carreira-passo span { font-size: 12.5px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
 .carreira-passo:hover { color: var(--sobre-noite); }
-.carreira-passo:hover b { color: var(--sobre-noite); }
 .carreira-passo:hover::after { box-shadow: inset 0 0 0 2px var(--sobre-noite); }
 .carreira-passo:focus-visible { outline: 2px solid var(--brilho); outline-offset: 2px; border-radius: 4px; }
-.carreira-passo[aria-current] { color: var(--sobre-noite); }
-.carreira-passo[aria-current] b { color: var(--brilho); }
+.carreira-passo[aria-current] { color: var(--brilho); }
 .carreira-passo[aria-current]::after { background: var(--brilho); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brilho) 22%, transparent); scale: 1.1; }
 .turnos-escolha { margin-left: auto; }
 
@@ -1227,18 +1229,15 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
 .ficha-onda-topo .onda-frente { fill: var(--ficha-campo); }
 .ficha-onda-base .onda-frente { fill: var(--ficha-base); }
 .onda-tras { fill: var(--ficha-faixa-2); }
-/* o retrato: um 3 × 4 com margem de papel e legenda, como foto de documento, pendurado na onda de cima (a onda
+/* o retrato: um 3 × 4 com margem de papel, como foto de documento, pendurado na onda de cima (a onda
    passa por trás dele) e com sombra de verdade. O original do TSE tem 161 × 225: até 230px de largura ainda fica nítido. O
    fundo da foto, que muda de pessoa para pessoa, fica dentro da moldura. Sem foto, a mesma moldura com as iniciais */
 .ficha-meio { position: relative; z-index: 3; flex: 1; display: grid; justify-items: center; align-content: start; padding: 0 24px 58px; }
-.ficha-retrato { width: min(230px, 76cqi); margin: 2px 0 0; padding: 7px 7px 0; border-radius: 5px; background: var(--ficha-papel);
+.ficha-retrato { width: min(230px, 76cqi); margin: 2px 0 0; padding: 7px; border-radius: 5px; background: var(--ficha-papel);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--ficha-tinta) 10%, transparent), 0 2px 4px -1px color-mix(in srgb, var(--ficha-tinta) 22%, transparent), 0 22px 36px -18px color-mix(in srgb, var(--ficha-tinta) 60%, transparent); }
 .ficha-foto { display: grid; place-items: center; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 2px; background: var(--ficha-retrato); }
 .ficha-foto > .foto-cand { display: block; width: 100%; height: 100%; object-fit: cover; }
 .ficha-iniciais { font-size: min(76px, 22cqi); font-weight: 700; letter-spacing: -0.04em; color: var(--ficha-sobre-campo); }
-.ficha-retrato figcaption { padding: 8px 2px 9px; font-size: 11px; font-weight: 600; line-height: 1.2; letter-spacing: 0.06em; text-transform: uppercase; text-align: center; color: var(--ficha-muted); }
-.ficha-retrato .sem-foto, .ficha-retrato:not(:has(.foto-cand)) .com-foto { display: none; }
-.ficha-retrato:not(:has(.foto-cand)) .sem-foto { display: inline; }
 .ficha-base { position: relative; z-index: 2; display: grid; gap: 4px; padding: 6px 24px 12px; background: var(--ficha-base); color: var(--ficha-sobre-campo); }
 .ficha-numero { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ficha-base .ficha-fonte { color: color-mix(in srgb, var(--ficha-sobre-campo) 70%, var(--ficha-base)); }
@@ -1516,5 +1515,8 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
 }
 @media (max-width: 600px) {
   .palco-topo { padding: 20px 16px 0; }
+  .carreira-trecho { padding-right: 16px; }   /* a carreira inteira cabe na largura de um celular com mais frequência */
+  .carreira-anos { gap: 12px; }
+  .carreira-passo { font-size: 16px; }
   .palco-base { padding: 0 16px 20px; }
 }

@@ -61,13 +61,11 @@ export function FichaCandidato({ c, noMapa, onde, foto }: Props) {
         <Onda className="ficha-onda-topo" />
       </div>
       <div className="ficha-meio">
-        <figure className="ficha-retrato">
+        <div className="ficha-retrato">
           <div className="ficha-foto">
             <FotoCandidato url={foto} alt={`Foto de ${nome}`} lazy={false}><span className="ficha-iniciais" aria-hidden="true">{iniciais(c.nome_urna)}</span></FotoCandidato>
           </div>
-          {/* a legenda segue a foto: se ela falhar (404), FotoCandidato mostra as iniciais e o CSS troca o texto */}
-          <figcaption><span className="com-foto">Foto mais recente · TSE</span><span className="sem-foto">Sem foto no TSE</span></figcaption>
-        </figure>
+        </div>
       </div>
       <div className="ficha-base">
         <Onda className="ficha-onda-base" />
