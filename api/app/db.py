@@ -146,6 +146,20 @@ def foto(ano: int, ue: str, sequencial: str, tam: str) -> bytes | None:
     return bytes(r[0]) if r and r[0] is not None else None
 
 
+def foto_da_pessoa(id_candidato: int, tam: str) -> bytes | None:
+    """A foto mais recente que existe da pessoa: a mesma em todas as candidaturas dela (uma pessoa, um retrato)."""
+    chaves = consultar("candidato_fotos_chaves", (id_candidato,))
+    if not chaves:
+        return None
+    cur = conexao_fotos().cursor()
+    try:
+        r = cur.execute(sql("foto_mais_recente"), [tam, [c["ano"] for c in chaves], [c["ue"] for c in chaves],
+                                                     [c["sequencial"] for c in chaves]]).fetchone()
+    finally:
+        cur.close()
+    return bytes(r[0]) if r and r[0] is not None else None
+
+
 def reiniciar() -> None:
     """Fecha a conexão e limpa o cache (usado nos testes)."""
     global _con, _cache, _con_fotos, _falha_fotos

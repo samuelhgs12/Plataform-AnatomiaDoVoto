@@ -29,3 +29,17 @@ def foto(
     if dados is None:
         raise HTTPException(404, "Candidatura sem foto", headers={"Cache-Control": CACHE_SEM_FOTO})
     return Response(content=dados, media_type=_tipo(dados), headers={"Cache-Control": CACHE_FOTO})
+
+
+@router.get("/candidatos/{id_candidato}/foto", response_class=Response,
+            responses={200: {"content": {"image/webp": {}, "image/jpeg": {}}}, 404: {"description": "Sem foto"}})
+def foto_da_pessoa(
+    id_candidato: int,
+    tam: Literal["mini", "ficha"] = Query("mini", description="mini: WebP 120×160 para listas; ficha: original 161×225"),
+):
+    """A foto mais recente da pessoa (TSE, CC BY), usada em todas as candidaturas dela: a busca, a ficha e o perfil
+    mostram sempre o mesmo retrato, qualquer que seja o ano escolhido. Muda só quando a carga traz uma eleição nova."""
+    dados = db.foto_da_pessoa(id_candidato, tam)
+    if dados is None:
+        raise HTTPException(404, "Candidato sem foto", headers={"Cache-Control": CACHE_SEM_FOTO})
+    return Response(content=dados, media_type=_tipo(dados), headers={"Cache-Control": CACHE_SEM_FOTO})

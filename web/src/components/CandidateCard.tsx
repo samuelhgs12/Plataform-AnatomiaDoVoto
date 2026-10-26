@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { CandidaturaItem } from "@/lib/types";
 import { compacto, ROTULO_RESULTADO } from "@/lib/format";
-import { urlFoto } from "@/lib/foto-candidato";
+import { fotoDaPessoa } from "@/lib/foto-candidato";
 import { Avatar } from "./Avatar";
 import { PartyChip } from "./PartyChip";
 
@@ -9,7 +9,7 @@ export function CandidateCard({ c }: { c: CandidaturaItem }) {
   const corpo = (
     <>
       <div className="cand">
-        <Avatar nome={c.nome_urna} partido={c.partido} foto={urlFoto(c, "mini")} />
+        <Avatar nome={c.nome_urna} partido={c.partido} foto={fotoDaPessoa(c)} />
         <div>
           <div className="nome">{c.nome_urna ?? "(sem nome de urna)"}</div>
           <small>{c.numero_urna ? `Nº ${c.numero_urna} · ` : ""}{c.uf} · {c.ano}</small>

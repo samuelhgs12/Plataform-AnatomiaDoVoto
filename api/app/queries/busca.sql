@@ -1,4 +1,5 @@
--- Parâmetros: texto normalizado (palavras separadas por um espaço), padrão LIKE da maior palavra, limite.
+-- Parâmetros: texto normalizado (palavras separadas por um espaço), padrão LIKE da maior palavra, limite e UF (NULL = todas).
+-- Com UF, só quem disputou naquele estado, e a candidatura mostrada é a mais recente nele.
 -- O texto digitado precisa aparecer inteiro e na mesma ordem no nome civil ou no nome de urna, começando no início de
 -- uma palavra ("lula" acha "LULA" e "CLAUDIO LULA", mas não "CELULAR"; "maria silva" acha "MARIA SILVA SANTOS", mas
 -- não "MARIA DA SILVA" nem "SILVA MARIA"). Ordem: nome igual ao digitado, palavras inteiras, início de palavra;
@@ -11,8 +12,9 @@ WITH candidatas AS (
            trim(regexp_replace(strip_accents(lower(coalesce(c.nome_urna, ''))),  '[^a-z0-9]+', ' ', 'g')) AS urna_n
     FROM candidatura c
     JOIN candidato k ON k.id_candidato = c.id_candidato
-    WHERE strip_accents(lower(k.nome_civil)) LIKE $2 ESCAPE '\'
-       OR strip_accents(lower(c.nome_urna))  LIKE $2 ESCAPE '\'
+    WHERE (strip_accents(lower(k.nome_civil)) LIKE $2 ESCAPE '\'
+       OR strip_accents(lower(c.nome_urna))  LIKE $2 ESCAPE '\')
+      AND ($4::VARCHAR IS NULL OR c.uf = $4::VARCHAR)
 ),
 relevancias AS (
     -- urna_n/civil_n com espaço nas pontas: ' maria silva ' contém ' maria silva ' (palavras inteiras) e
@@ -44,6 +46,7 @@ ultima AS (
     JOIN cargo g            ON g.id_cargo = e.id_cargo
     JOIN rotulo_resultado r ON r.id_rotulo = c.id_rotulo_final
     LEFT JOIN partido p     ON p.id_partido = c.id_partido
+    WHERE $4::VARCHAR IS NULL OR c.uf = $4::VARCHAR
     QUALIFY row_number() OVER (PARTITION BY c.id_candidato ORDER BY c.ano DESC, e.id_cargo DESC) = 1
 ),
 votos AS (

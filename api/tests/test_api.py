@@ -92,6 +92,14 @@ def test_busca_informa_nome_de_urna_antigo_que_casou(client):
     assert client.get("/api/busca", params={"q": "maria da silva"}).json()[0]["nome_urna_casado"] is None
 
 
+def test_busca_por_estado(client):
+    ids = lambda **p: [x["id_candidato"] for x in client.get("/api/busca", params={"q": "maria", **p}).json()]
+    assert ids(uf="RJ") == [4]                    # MARIANA disputou no RJ; MARIA, só em MG
+    assert ids(uf="mg") == [1]
+    assert ids(uf="PE") == []
+    assert client.get("/api/busca", params={"q": "maria", "uf": "M1"}).status_code == 422
+
+
 def test_busca_exige_3_letras_e_nao_aceita_coringa(client):
     assert client.get("/api/busca", params={"q": "ab"}).status_code == 422
     assert client.get("/api/busca", params={"q": "%%%"}).json() == []      # o % digitado não vira coringa
@@ -336,6 +344,17 @@ def test_foto_ausente_e_invalida(client):
     assert r.status_code == 404 and r.headers["cache-control"] == "public, max-age=86400"
     assert client.get("/api/fotos/2022/mg/S3").status_code == 422             # ue só em maiúsculas
     assert client.get("/api/fotos/2022/MG/S3?tam=grande").status_code == 422
+
+
+def test_foto_da_pessoa_e_a_mais_recente(client):
+    from tests.conftest import JPEG, WEBP
+
+    r = client.get("/api/candidatos/3/foto")              # Ana: 2018 sem foto, 2022 com a miniatura
+    assert r.status_code == 200 and r.content == WEBP
+    assert client.get("/api/candidatos/1/foto?tam=ficha").content == JPEG   # Maria: a de 2022
+    r = client.get("/api/candidatos/2/foto")              # João: só candidaturas antes de 2018
+    assert r.status_code == 404 and r.headers["cache-control"] == "public, max-age=86400"
+    assert client.get("/api/candidatos/999/foto").status_code == 404
 
 
 def test_fotos_fallback_local_quando_motherduck_falha(monkeypatch, banco, banco_fotos):
