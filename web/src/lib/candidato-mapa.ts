@@ -128,6 +128,45 @@ export function resumoCandidatura(c: Pick<CandidaturaMapa, "votos_total" | "gast
   };
 }
 
+/** Votos e parte dos votos válidos num turno, somados nas linhas dadas. */
+export interface SomaTurno { turno: number; votos: number; validos: number; p: number | null }
+
+/**
+ * Do 1º para o 2º turno, nas linhas dadas (o estado da candidatura, ou os estados do mapa para presidente): a parte
+ * dos válidos em cada turno e a diferença em pontos (0,123 = 12,3 pontos). null sem 2º turno.
+ */
+export function variacaoTurnos(linhas: Pick<VotoMunicipio, "turno" | "votos" | "validos_cargo">[]): { t1: SomaTurno; t2: SomaTurno; pontos: number | null } | null {
+  const soma = (turno: number): SomaTurno => {
+    const doT = linhas.filter((l) => l.turno === turno);
+    const votos = doT.reduce((s, l) => s + l.votos, 0), validos = doT.reduce((s, l) => s + l.validos_cargo, 0);
+    return { turno, votos, validos, p: proporcaoNoMunicipio(votos, validos) };
+  };
+  if (!linhas.some((l) => l.turno === 2)) return null;
+  const t1 = soma(1), t2 = soma(2);
+  return { t1, t2, pontos: t1.p == null || t2.p == null ? null : t2.p - t1.p };
+}
+
+/** "+12,3 pontos", "−4,0 pontos", "0,0 ponto": a diferença entre duas proporções, em pontos percentuais. */
+export function textoPontos(d: number): string {
+  const r = Math.round(d * 1000) / 10;
+  const n = Math.abs(r).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return `${r > 0 ? "+" : r < 0 ? "−" : ""}${n} ${Math.abs(r) < 2 ? "ponto" : "pontos"}`;
+}
+
+/** A partir deste ano o TSE publica a prestação de contas (receitas e despesas) que o verso da ficha usa. */
+export const ANO_PRESTACAO = 2018;
+
+/**
+ * Por que o verso não tem os números de campanha (gasto, comparação, origem do dinheiro); null quando tem algum.
+ * Eleições antigas estão fora do escopo da prestação de contas; nas recentes, a candidatura pode não ter prestado.
+ */
+export function semDadosDeCampanha(c: Pick<CandidaturaMapa, "ano" | "gasto_total" | "parte_publica">): string | null {
+  if (c.gasto_total != null || c.parte_publica != null) return null;
+  return c.ano < ANO_PRESTACAO
+    ? `O TSE só publica a prestação de contas de ${ANO_PRESTACAO} em diante.`
+    : "O TSE não tem a prestação de contas final desta candidatura.";
+}
+
 /** Soma votos e válidos por UF (soma das contagens, não média das porcentagens), na ordem das UFs. */
 export function proporcaoPorUf(linhas: Pick<VotoMunicipio, "uf" | "votos" | "validos_cargo">[]): { uf: string; votos: number; validos: number; valor: number | null }[] {
   const somas = new Map<string, { votos: number; validos: number }>();
@@ -174,6 +213,20 @@ export function partesDoNome(nome: string): { antes: string; destaque: string } 
 export function candidaturasDe<T extends Pick<CandidaturaMapa, "id_candidato" | "ano" | "id_candidatura">>(todas: T[], id_candidato: number): { padrao: T | undefined; lista: T[] } {
   const lista = todas.filter((c) => c.id_candidato === id_candidato).sort((a, b) => b.ano - a.ano || b.id_candidatura - a.id_candidatura);
   return { padrao: lista[0], lista };
+}
+
+/**
+ * A linha do tempo das candidaturas em trechos: anos seguidos no mesmo cargo e UF ficam juntos, com o cargo escrito
+ * uma vez só embaixo deles (2002, 2006, 2010, 2014 · Deputado estadual). `cronologica`: da mais antiga para a mais recente.
+ */
+export function trechosDaCarreira<T extends Pick<CandidaturaMapa, "cargo" | "uf">>(cronologica: T[]): { cargo: string; uf: string; itens: T[] }[] {
+  const trechos: { cargo: string; uf: string; itens: T[] }[] = [];
+  for (const c of cronologica) {
+    const ultimo = trechos.at(-1);
+    if (ultimo && ultimo.cargo === c.cargo && ultimo.uf === c.uf) ultimo.itens.push(c);
+    else trechos.push({ cargo: c.cargo, uf: c.uf, itens: [c] });
+  }
+  return trechos;
 }
 
 /** Uma pessoa na busca do mapa e nas sugestões (mesmo formato de /api/busca). */

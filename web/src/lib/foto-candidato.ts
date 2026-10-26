@@ -18,16 +18,20 @@ export function urlFoto(c: ChaveFoto, tam: TamanhoFoto = "mini"): string | null 
   return `/api/fotos/${c.ano}/${encodeURIComponent(c.ue)}/${encodeURIComponent(c.sequencial)}?tam=${tam}`;
 }
 
-/** Foto de um resultado da /api/busca: a da candidatura mais recente da pessoa. */
-export const fotoDaBusca = (b: { ultimo_ano: number; ultimo_ue?: string | null; ultimo_sequencial?: string | null }, tam: TamanhoFoto = "mini") =>
-  urlFoto({ ano: b.ultimo_ano, ue: b.ultimo_ue, sequencial: b.ultimo_sequencial }, tam);
-
 /**
- * Foto do perfil: a da campanha escolhida (?campanha=), se ela puder ter foto; senão a da candidatura mais recente que
- * possa ter. `carreira` vem em ordem de ano, como a API devolve. O ano diz de quando é o retrato.
+ * Uma pessoa, um retrato: a foto mais recente que existe da pessoa (GET /api/candidatos/{id}/foto), a mesma na busca,
+ * na ficha de qualquer ano e no perfil. `ultimo_ano` é o da candidatura mais recente: antes de 2018 nem pedimos; sem
+ * ele (uma listagem de candidaturas não sabe), pede, e a API responde 404 se não houver.
  */
-export function fotoDoPerfil<T extends ChaveFoto & { id_candidatura: number }>(carreira: T[], escolhida?: number, tam: TamanhoFoto = "ficha"): { url: string; ano: number } | null {
-  const pedida = carreira.find((c) => c.id_candidatura === escolhida && urlFoto(c));
-  const c = pedida ?? carreira.findLast((x) => urlFoto(x));
-  return c ? { url: urlFoto(c, tam)!, ano: c.ano } : null;
+export function fotoDaPessoa(p: { id_candidato?: number | null; ultimo_ano?: number }, tam: TamanhoFoto = "mini"): string | null {
+  if (p.id_candidato == null || (p.ultimo_ano !== undefined && p.ultimo_ano < ANO_PRIMEIRA_FOTO)) return null;
+  return `/api/candidatos/${p.id_candidato}/foto?tam=${tam}`;
+}
+
+/** Foto de um resultado da /api/busca: a da pessoa. */
+export const fotoDaBusca = (b: { id_candidato: number; ultimo_ano: number }, tam: TamanhoFoto = "mini") => fotoDaPessoa(b, tam);
+
+/** Foto do perfil e da ficha: a da pessoa, se alguma candidatura dela puder ter foto. */
+export function fotoDoPerfil(id_candidato: number, carreira: { ano: number }[], tam: TamanhoFoto = "ficha"): string | null {
+  return fotoDaPessoa({ id_candidato, ultimo_ano: Math.max(0, ...carreira.map((c) => c.ano)) }, tam);
 }

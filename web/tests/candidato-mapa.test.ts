@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   abrangencia, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoNoMunicipio,
-  proporcaoPorUf, resumoCandidatura, rotulosCandidato, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio,
+  proporcaoPorUf, resumoCandidatura, rotulosCandidato, semDadosDeCampanha, sugestoesDe, textoPontos, trechosDaCarreira, turnosDe, variacaoTurnos, type CandidaturaMapa, type VotoMunicipio,
 } from "../src/lib/candidato-mapa";
 import type { CandidaturaItem } from "../src/lib/types";
 
@@ -83,6 +83,54 @@ describe("resumoCandidatura", () => {
   });
   it("acima de 10 vezes arredonda para inteiro", () => {
     expect(resumoCandidatura(c({ gasto_total: 123_000, mediana_gasto_cargo: 10_000 })).textoMediana).toBe("12× a mediana do cargo");
+  });
+});
+
+describe("trechosDaCarreira", () => {
+  it("junta anos seguidos no mesmo cargo e UF, sem juntar o que volta depois", () => {
+    const anos = (t: { itens: CandidaturaMapa[] }) => t.itens.map((x) => x.ano);
+    const t = trechosDaCarreira([
+      c({ ano: 2002, cargo: "Deputado estadual" }), c({ ano: 2006, cargo: "Deputado estadual" }), c({ ano: 2016, cargo: "Prefeito" }),
+      c({ ano: 2018, cargo: "Deputado estadual" }), c({ ano: 2022, cargo: "Deputado estadual", uf: "RJ" }),
+    ]);
+    expect(t.map((x) => [x.cargo, x.uf, anos(x)])).toEqual([
+      ["Deputado estadual", "MG", [2002, 2006]], ["Prefeito", "MG", [2016]], ["Deputado estadual", "MG", [2018]], ["Deputado estadual", "RJ", [2022]],
+    ]);
+    expect(trechosDaCarreira([])).toEqual([]);
+  });
+});
+
+describe("variacaoTurnos", () => {
+  it("soma votos e válidos de cada turno e dá a diferença em pontos", () => {
+    const r = variacaoTurnos([
+      v({ turno: 1, votos: 30, validos_cargo: 100 }), v({ id_municipio: 2, turno: 1, votos: 10, validos_cargo: 100 }),
+      v({ turno: 2, votos: 60, validos_cargo: 100 }), v({ id_municipio: 2, turno: 2, votos: 50, validos_cargo: 100 }),
+    ])!;
+    expect(r.t1).toEqual({ turno: 1, votos: 40, validos: 200, p: 0.2 });
+    expect(r.t2.p).toBe(0.55);
+    expect(r.pontos).toBeCloseTo(0.35);
+  });
+  it("sem 2º turno, null; sem válidos num turno, sem diferença", () => {
+    expect(variacaoTurnos([v({ turno: 1 })])).toBeNull();
+    expect(variacaoTurnos([v({ turno: 1 }), v({ turno: 2, validos_cargo: 0 })])!.pontos).toBeNull();
+  });
+});
+
+describe("textoPontos", () => {
+  it("sinal, uma casa e singular abaixo de 2", () => {
+    expect(textoPontos(0.1234)).toBe("+12,3 pontos");
+    expect(textoPontos(-0.04)).toBe("−4,0 pontos");
+    expect(textoPontos(0.012)).toBe("+1,2 ponto");
+    expect(textoPontos(0.00004)).toBe("0,0 ponto");
+  });
+});
+
+describe("semDadosDeCampanha", () => {
+  it("diz o motivo só quando não há gasto nem receitas", () => {
+    expect(semDadosDeCampanha(c({}))).toBeNull();
+    expect(semDadosDeCampanha(c({ gasto_total: null }))).toBeNull();   // ainda há a origem do dinheiro
+    expect(semDadosDeCampanha(c({ ano: 2014, gasto_total: null, parte_publica: null }))).toMatch(/de 2018 em diante/);
+    expect(semDadosDeCampanha(c({ ano: 2022, gasto_total: null, parte_publica: null }))).toMatch(/desta candidatura/);
   });
 });
 

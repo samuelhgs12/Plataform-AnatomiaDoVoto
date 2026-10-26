@@ -12,9 +12,10 @@ const hrefCandidato = (id: number) => `/?ver=candidato&cand=${id}#mapa`;
 
 /**
  * Combobox que escolhe o candidato do mapa (setas, Enter e Esc) e muda ?cand= na URL; o resto da página é renderizado
- * de novo no servidor. As sugestões vêm da /api/busca, como na SearchBox. Sem JavaScript, leva à página de candidatos.
+ * de novo no servidor. As sugestões vêm da /api/busca, como na SearchBox; com `uf` (o estado clicado no mapa), só quem
+ * disputou nele, e o texto já digitado é buscado de novo. Sem JavaScript, leva à página de candidatos.
  */
-export function BuscaCandidatoMapa({ rotulo = "Buscar candidato pelo nome", destaque = false }: { rotulo?: string; destaque?: boolean }) {
+export function BuscaCandidatoMapa({ rotulo = "Buscar candidato pelo nome", destaque = false, uf }: { rotulo?: string; destaque?: boolean; uf?: string }) {
   const router = useRouter();
   const id = useId();
   const [termo, setTermo] = useState("");
@@ -29,12 +30,12 @@ export function BuscaCandidatoMapa({ rotulo = "Buscar candidato pelo nome", dest
     const ctl = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/busca?q=${encodeURIComponent(termo.trim())}`, { signal: ctl.signal });
+        const r = await fetch(`/api/busca?q=${encodeURIComponent(termo.trim())}${uf ? `&uf=${uf}` : ""}`, { signal: ctl.signal });
         if (r.ok) setRemotos(await r.json());
       } catch { /* sem sugestões; a caixa continua usável */ }
     }, 250);
     return () => { clearTimeout(t); ctl.abort(); };
-  }, [termo]);
+  }, [termo, uf]);
 
   const opcoes = (termo.trim().length < 3 ? [] : remotos).slice(0, 8);
   const mostrar = aberto && opcoes.length > 0;
@@ -69,7 +70,7 @@ export function BuscaCandidatoMapa({ rotulo = "Buscar candidato pelo nome", dest
           id={`${id}-campo`} type="text" role="combobox" autoComplete="off" spellCheck={false}
           aria-autocomplete="list" aria-expanded={mostrar} aria-controls={`${id}-lista`}
           aria-activedescendant={mostrar ? `${id}-op-${marcado}` : undefined}
-          placeholder="Ex.: Zema, Raquel Lyra" value={termo}
+          placeholder={uf ? "Nome de urna ou nome civil" : "Ex.: Zema, Raquel Lyra"} value={termo}
           onChange={(e) => { setTermo(e.target.value); setAtivo(0); setAberto(true); }}
           onKeyDown={teclas} onFocus={() => setAberto(true)} onBlur={() => setAberto(false)}
         />
@@ -87,7 +88,7 @@ export function BuscaCandidatoMapa({ rotulo = "Buscar candidato pelo nome", dest
           </li>
         ))}
       </ul>
-      <p className="busca-cand-status" role="status">{termo.trim().length >= 3 && !opcoes.length ? "Nenhum candidato encontrado." : ""}</p>
+      <p className="busca-cand-status" role="status">{termo.trim().length >= 3 && !opcoes.length ? `Nenhum candidato encontrado${uf ? ` em ${uf}` : ""}.` : ""}</p>
       <noscript><p className="busca-cand-sem-js">Sem JavaScript, busque pela <a href="/candidatos">página de candidatos</a>.</p></noscript>
     </div>
   );

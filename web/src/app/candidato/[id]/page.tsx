@@ -40,7 +40,7 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
   // escolhe outra (a mesma nos dois blocos)
   const comContas = disputadas.filter((c) => c.ano >= ANO_RECEITAS).reverse();
   const pedida = Number(Array.isArray(sp.campanha) ? sp.campanha[0] : sp.campanha);
-  const foto = fotoDoPerfil(carreira, pedida);
+  const foto = fotoDoPerfil(Number(id), carreira);
   const [contas, q9] = await Promise.all([
     Promise.all(comContas.map(async (c) => ({
       c,
@@ -62,7 +62,7 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
         <div className="bloco s8 titulo">
           <Link href="/candidatos" className="voltar">← Voltar à listagem</Link>
           <div className="cand">
-            <Avatar nome={nome} partido={ultima?.partido ?? null} foto={foto?.url} lazy={false} />
+            <Avatar nome={nome} partido={ultima?.partido ?? null} foto={foto} lazy={false} />
             <div>
               <h1 id="h-cab">{ultima?.nome_urna ?? nome}</h1>
               <p className="lead" style={{ margin: 0 }}>{nome}{candidato.ocupacao ? ` · ${candidato.ocupacao.toLowerCase()}` : ""}</p>

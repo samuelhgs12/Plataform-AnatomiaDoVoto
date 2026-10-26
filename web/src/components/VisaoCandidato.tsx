@@ -4,11 +4,13 @@ import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "./MapaAb
 import { MapaVivo } from "./MapaVivo";
 import { FichaCandidato } from "./FichaCandidato";
 import { MiniMapa } from "./MiniMapa";
+import { VariacaoTurnos } from "./VariacaoTurnos";
 import { classe, enquadrar, nomeProprio, type LinhaMunicipio } from "@/lib/abstencao";
 import {
-  abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato,
+  abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato, trechosDaCarreira, variacaoTurnos,
   type CandidaturaMapa, type VotoMunicipio,
 } from "@/lib/candidato-mapa";
+import { fotoDaPessoa } from "@/lib/foto-candidato";
 import { faixasFixas } from "@/lib/mapa";
 import { NOME_UF } from "@/lib/financiamento";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
@@ -22,7 +24,7 @@ export interface EscolhaCandidato {
   lista: CandidaturaMapa[];
   turno: number;
   turnos: number[];
-  /** estado em zoom: o da candidatura (cargos estaduais) ou o clicado (presidente) */
+  /** estado em zoom: o da candidatura (cargos estaduais) ou o clicado (presidente, ou sem candidato: filtra a busca) */
   uf?: string;
   mun?: number;
 }
@@ -40,13 +42,15 @@ const SEIS = "AP, ES, MG, PE, RJ e RR";
 
 /**
  * Visão "Candidato" do mapa da página inicial: onde a candidatura teve votos, com a
- * ficha e os números embaixo do mapa. Cargos estaduais abrem no estado; presidente abre nos seis estados e o clique dá zoom. Só desenha:
- * as contas são de src/lib/candidato-mapa.ts.
+ * ficha e os números embaixo do mapa. Cargos estaduais abrem no estado; presidente abre nos seis estados e o clique dá zoom.
+ * Sem candidato, o clique num estado dá zoom nele e o menu passa a buscar só quem disputou ali (a página filtra). Só
+ * desenha: as contas são de src/lib/candidato-mapa.ts.
  */
 export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props) {
   const { campanha: c, lista, turno, turnos, uf, mun } = escolha;
   const alcance = c ? abrangencia(c.cargo) : "fora";
   const seis = alcance === "seis";
+  const comUf = !c || seis;   // o estado vem da URL (?uf=): sem candidato ou com presidente
 
   const href = (nova: { campanha?: number; turno?: number; uf?: string | null; mun?: number | null }) => {
     const p = new URLSearchParams({ ver: "candidato" });
@@ -58,9 +62,9 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
       const t = nova.turno ?? turno;
       if (t !== 1) p.set("turno", String(t));
       const u = nova.uf === undefined ? uf : nova.uf;
-      if (seis && u) p.set("uf", u);
+      if (comUf && u) p.set("uf", u);
       const m = nova.mun === undefined && nova.uf === undefined ? mun : nova.mun;
-      if (m) p.set("mun", String(m));
+      if (c && m) p.set("mun", String(m));
     }
     return `/?${p.toString()}#mapa`;
   };
@@ -77,7 +81,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   const porUf = seis ? proporcaoPorUf(linhas) : [];
   const cortesUf = faixasFixas(Math.max(0, ...porUf.map((u) => u.valor ?? 0)));
   const fmtUf = (v: number) => pct(v, 0);
-  const comMunicipios = !!uf && alcance !== "fora";
+  const comMunicipios = !!uf && (!c || alcance !== "fora");
 
   const estados: EstadoNoMapa[] = ufs.map((u) => {
     const medida = porUf.find((x) => x.uf === u);
@@ -85,19 +89,27 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
       const desc = medida.valor == null ? `${NOME_UF[u]}: sem votos válidos` : `${NOME_UF[u]}: ${pct(medida.valor, 1)} dos votos válidos (${inteiro(medida.votos)} votos)`;
       return { uf: u, classe: medida.valor == null ? "sem" : `c${classe(medida.valor, cortesUf)}`, href: href({ uf: u === uf ? null : u }), sigla: u, valor: medida.valor == null ? "—" : fmtUf(medida.valor), descricao: desc };
     }
-    const desc = c ? (u === c.uf ? NOME_UF[u] : `${NOME_UF[u]}: fora da disputa de ${nome}`) : `${NOME_UF[u]}: escolha um candidato para pintar o mapa`;
-    return { uf: u, classe: "neutro", href: c && u === c.uf ? href({ mun: null }) : href({}), sigla: u, valor: "", descricao: desc };
+    if (!c) {
+      const desc = u === uf ? `${NOME_UF[u]}: voltar aos seis estados` : `${NOME_UF[u]}: ver quem disputou aqui`;
+      return { uf: u, classe: "neutro", href: href({ uf: u === uf ? null : u }), sigla: u, valor: "", descricao: desc };
+    }
+    const desc = u === c.uf ? NOME_UF[u] : `${NOME_UF[u]}: fora da disputa de ${nome}`;
+    return { uf: u, classe: "neutro", href: u === c.uf ? href({ mun: null }) : href({}), sigla: u, valor: "", descricao: desc };
   });
 
   const caixa = comMunicipios ? CAIXA_UF[uf!] : undefined;
-  const noMapa: MunicipioNoMapa[] = !caixa ? [] : naUf.flatMap((l) => {
+  const atrasoDe = (centro: [number, number]) => Math.round(((centro[0] - caixa![0]) / (caixa![2] - caixa![0])) * 100) / 100;
+  // sem candidato, os municípios do estado aparecem sem cor: o zoom mostra onde a busca vai procurar
+  const noMapa: MunicipioNoMapa[] = !caixa ? [] : !c ? municipios.flatMap((m) => {
+    const centro = m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge];
+    return centro ? [{ ibge: m.cod_ibge, classe: "neutro", href: href({}), dica: nomes.get(m.id_municipio)!, atraso: atrasoDe(centro) }] : [];
+  }) : naUf.flatMap((l) => {
     const m = doMun.get(l.id_municipio);
     const centro = m && CENTRO_MUNICIPIO[m.cod_ibge];
     if (!m || !centro) return [];
     const nomeM = nomes.get(l.id_municipio)!;
     const dica = l.p == null ? `${nomeM}: sem votos válidos` : `${nomeM}: ${pct(l.p, 1)} (${inteiro(l.votos)} ${l.votos === 1 ? "voto" : "votos"})`;
-    const atraso = (centro[0] - caixa[0]) / (caixa[2] - caixa[0]);
-    return [{ ibge: m.cod_ibge, classe: corCandidato(l.p, cortes), href: href({ mun: l.id_municipio === mun ? null : l.id_municipio }), dica, atraso: Math.round(atraso * 100) / 100 }];
+    return [{ ibge: m.cod_ibge, classe: corCandidato(l.p, cortes), href: href({ mun: l.id_municipio === mun ? null : l.id_municipio }), dica, atraso: atrasoDe(centro) }];
   });
   const camera = enquadrar(caixa ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA], TELA.larg, TELA.alt, caixa ? 0.1 : 0.02);   // folga maior que na abstenção: o título é mais alto e os botões de zoom ficam à direita
   const munSel = mun ? doMun.get(mun) : undefined;
@@ -117,11 +129,16 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   tabela.sort((a, b) => (b.p ?? -1) - (a.p ?? -1) || a.nome.localeCompare(b.nome, "pt-BR"));
   const noMapaT1 = linhas1.reduce((s, l) => ({ votos: s.votos + l.votos, validos: s.validos + l.validos_cargo }), { votos: 0, validos: 0 });
   const cargoMin = c?.cargo.toLowerCase();
+  // do 1º ao 2º turno, no recorte do mapa: o estado da candidatura, o estado aberto ou os seis estados (presidente)
+  // a carreira da esquerda (a mais antiga) para a direita, com os anos seguidos no mesmo cargo num trecho só
+  const trechos = trechosDaCarreira([...lista].reverse());
+  const turnos2 = c && turnos.length > 1 ? variacaoTurnos(seis && uf ? votos.filter((l) => l.uf === uf) : votos) : null;
+  const ondeTurnos = seis && !uf ? "nos seis estados" : `em ${NOME_UF[uf ?? c?.uf ?? ""] ?? ""}`;
 
   // o mapa do palco, repetido pequeno no mini-mapa que acompanha a rolagem
   const mapa = (
     <MapaAbstencao
-      titulo={c ? `${nome}, ${cargoMin} em ${c.ano}, ${turnoTexto}: votos ${comMunicipios ? `nos municípios de ${NOME_UF[uf!]}` : "nos seis estados"}. ${frase}` : "Os seis estados, à espera de um candidato"}
+      titulo={c ? `${nome}, ${cargoMin} em ${c.ano}, ${turnoTexto}: votos ${comMunicipios ? `nos municípios de ${NOME_UF[uf!]}` : "nos seis estados"}. ${frase}` : uf ? `Municípios de ${NOME_UF[uf]}, à espera de um candidato` : "Os seis estados, à espera de um candidato"}
       camera={camera} estados={estados} uf={comMunicipios ? uf : undefined} municipios={noMapa}
       destaque={munSel && centroSel ? { ibge: munSel.cod_ibge, nome: nomes.get(munSel.id_municipio)!, x: centroSel[0], y: centroSel[1] } : undefined}
     />
@@ -138,17 +155,48 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
                 <h1 id="h-mapa">Onde {nome} teve votos em {c.ano}</h1>
                 <p className="palco-sobre">{sub}</p>
               </>
+            ) : uf ? (
+              <>
+                <h1 id="h-mapa">Quem disputou em {NOME_UF[uf]}</h1>
+                <p className="palco-sobre">A busca do menu agora procura só neste estado. Escolha um nome para pintar os municípios</p>
+              </>
             ) : (
               <>
                 <h1 id="h-mapa">Onde cada candidato teve votos</h1>
-                <p className="palco-sobre">Escolha um nome para pintar o mapa, município a município</p>
+                <p className="palco-sobre">Escolha um nome para pintar o mapa, município a município, ou clique num estado para buscar só nele</p>
               </>
             )}
+            {lista.length > 1 && (
+              <nav className="carreira-trilho" aria-label={`Candidaturas de ${nome}, da mais antiga para a mais recente`}>
+                <ol>
+                  {trechos.map((t) => {
+                    const cargo = `${t.cargo}${t.uf !== c?.uf && t.uf !== "BR" ? ` · ${t.uf}` : ""}`;
+                    return (
+                      <li key={t.itens[0].id_candidatura} className={`carreira-trecho${t.itens.some((x) => x.id_candidatura === c?.id_candidatura) ? " on" : ""}`}>
+                        <ol className="carreira-anos">
+                          {t.itens.map((x) => {
+                            const on = x.id_candidatura === c?.id_candidatura;
+                            return (
+                              <li key={x.id_candidatura}>
+                                <Link scroll={false} href={href({ campanha: x.id_candidatura })} className="carreira-passo" aria-current={on ? "true" : undefined} aria-label={`${x.ano}, ${cargo}`}>
+                                  {x.ano}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ol>
+                        <span className="carreira-cargo" aria-hidden="true">{cargo}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </nav>
+            )}
           </div>
-          {c && alcance !== "fora" && (
+          {((c && alcance !== "fora") || (!c && uf)) && (
             <nav className="trilha" aria-label="Onde você está no mapa">
-              {seis && <a href={href({ uf: null })} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>}
-              {uf && <>{seis && <span aria-hidden="true">/</span>}<a href={href({ mun: null })} data-mapa="" aria-current={!mun ? "true" : undefined}>{NOME_UF[uf]}</a></>}
+              {comUf && <a href={href({ uf: null })} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>}
+              {uf && <>{comUf && <span aria-hidden="true">/</span>}<a href={href({ mun: null })} data-mapa="" aria-current={!mun ? "true" : undefined}>{NOME_UF[uf]}</a></>}
               {munSel && <><span aria-hidden="true">/</span><span aria-current="true">{nomes.get(munSel.id_municipio)}</span></>}
             </nav>
           )}
@@ -158,7 +206,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
           {mapa}
           {c && alcance === "fora" && <p className="palco-aviso">Para este cargo o mapa por município ainda não está disponível.</p>}
           {c && alcance !== "fora" && !votos.length && <p className="palco-aviso">Os votos por município desta candidatura não estão disponíveis agora.</p>}
-          {seis && !uf && <p className="palco-dica" aria-hidden="true">Clique num estado para ver os municípios</p>}
+          {comUf && !uf && <p className="palco-dica" aria-hidden="true">{c ? "Clique num estado para ver os municípios" : "Clique num estado para buscar quem disputou nele"}</p>}
         </div>
 
         <div className="palco-base">
@@ -168,33 +216,26 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
               {algumSem && <li className="legenda-sem"><i className="sem" />sem votos válidos</li>}
             </ul>
           ) : <span />}
-          {(lista.length > 1 || turnos.length > 1) && (
-            <div className="palco-escolhas">
-              {turnos.length > 1 && (
-                <div className="anos" role="group" aria-label="Turno">
-                  {turnos.map((t) => (
-                    <Link key={t} scroll={false} href={href({ turno: t })} className={`ano${t === turno ? " on" : ""}`} aria-current={t === turno ? "true" : undefined}>{t}º turno</Link>
-                  ))}
-                </div>
-              )}
-              {lista.length > 1 && (
-                <div className="anos" role="group" aria-label="Candidatura">
-                  {lista.map((x) => (
-                    <Link key={x.id_candidatura} scroll={false} href={href({ campanha: x.id_candidatura })} className={`ano${x.id_candidatura === c?.id_candidatura ? " on" : ""}`} aria-current={x.id_candidatura === c?.id_candidatura ? "true" : undefined}>
-                      {x.ano}<small>{x.cargo}</small>
-                    </Link>
-                  ))}
-                </div>
-              )}
+          {turnos.length > 1 && (
+            <div className="anos turnos-escolha" role="group" aria-label="Turno mostrado no mapa">
+              {turnos.map((t) => (
+                <Link key={t} scroll={false} href={href({ turno: t })} className={`ano${t === turno ? " on" : ""}`} aria-current={t === turno ? "true" : undefined}>{t}º turno</Link>
+              ))}
             </div>
           )}
         </div>
       </MapaVivo>
 
       {c && (
-        <div className="painel s12" key={`cand-${c.id_candidatura}`}>
-          <div className="s4"><FichaCandidato c={c} noMapa={noMapaT1} onde={seis ? "dos seis estados" : `de ${c.uf}`} /></div>
+        <div className="painel painel-cand s12" key={`cand-${c.id_candidatura}`}>
+          <div className="s4">
+            <FichaCandidato
+              c={c} noMapa={noMapaT1} onde={seis ? "dos seis estados" : `de ${c.uf}`}
+              foto={fotoDaPessoa({ id_candidato: c.id_candidato, ultimo_ano: lista[0]?.ano }, "ficha")}
+            />
+          </div>
           <div className="painel-pilha s8">
+            {turnos2 && <VariacaoTurnos v={turnos2} nome={nome} onde={ondeTurnos} cargo={cargoMin!} />}
             {linhaSel && munSel && (
               <div className="bloco noite painel-cab">
                 <p className="palco-sobre">Município · {munSel.uf} · {turnoTexto}</p>
