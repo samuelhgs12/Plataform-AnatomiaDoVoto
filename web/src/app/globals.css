@@ -599,37 +599,34 @@ a.linha:hover { background: var(--panel2); }
 .aba-candidato .sugestoes-cand a:hover { background: var(--noite3); }
 .aba-candidato .sugestoes-cand small { font-size: 13px; font-weight: 400; color: var(--noite-muted); }
 
-/* camadas: a base dita numa linha, depois os grupos em sanfona */
-.camadas { display: grid; gap: 6px; }
-.camadas-base { margin: 0 6px 6px; font-size: 13px; line-height: 1.45; color: var(--noite-muted); }
-.camada-grupo { border-radius: 9px; background: var(--noite); }
-.camada-grupo > summary { display: flex; align-items: center; gap: 8px; padding: 12px 12px; font-size: 14px; font-weight: 600; color: var(--sobre-noite); list-style: none; cursor: pointer; border-radius: 9px; transition: background-color var(--t-hover) ease; }
-.camada-grupo > summary::-webkit-details-marker { display: none; }
-.camada-grupo > summary:hover { background: color-mix(in srgb, var(--noite3) 50%, var(--noite)); }
-.camada-grupo > summary:focus-visible { outline: 2px solid var(--brilho); outline-offset: -2px; }
-.camada-grupo-seta { width: 14px; height: 14px; color: var(--noite-muted); transition: transform var(--t-ui) var(--ease-out); }
-.camada-grupo[open] .camada-grupo-seta { transform: rotate(90deg); }
-.camada-grupo > :last-child { margin-bottom: 6px; }
-.camada-grupo-chave { padding-top: 6px; }
-.camada-grupo-chave > .camada .camada-nome { font-weight: 600; }
-.camada-apoio { margin: -4px 12px 6px 34px; font-size: 13px; line-height: 1.4; color: var(--noite-muted); }
-
-.camada { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 12px; margin: 0 6px; padding: 10px 8px; border-radius: 7px; color: var(--sobre-noite); text-decoration: none; transition: background-color var(--t-hover) ease; }
-.camada:hover { background: var(--noite2); }
-.camada:focus-visible { outline: 2px solid var(--brilho); outline-offset: -2px; }
-.camada-chave { position: relative; width: 32px; height: 18px; border-radius: 9px; background: var(--noite-linha); transition: background-color var(--t-ui) ease; }
-.camada-chave i { position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--noite-muted); transition: transform var(--t-ui) var(--ease-out), background-color var(--t-ui) ease; }
-.camada[aria-current] .camada-chave { background: var(--brilho); }
-.camada[aria-current] .camada-chave i { background: var(--noite); transform: translateX(14px); }
-.camada-icone { width: 18px; height: 18px; color: var(--noite-muted); }
-.camada[aria-current] .camada-icone { color: var(--sobre-noite); }
-.camada-texto { display: grid; gap: 2px; min-width: 0; }
-.camada-nome { font-size: 15px; font-weight: 500; line-height: 1.3; }
-.camada[aria-current] .camada-nome { font-weight: 600; }
-.camada-texto small { font-size: 12.5px; line-height: 1.35; color: var(--noite-muted); }
-.camada-filtros { display: grid; gap: 12px; margin: 2px 6px 0; padding: 10px 8px 6px 52px; }
-.camada-filtros .escolha-mun { margin-top: 0; }
-.camada-aviso { margin: 4px 14px 8px 34px; font-size: 13px; line-height: 1.45; color: var(--noite-muted); }
+/* camadas: o mapa pinta uma coisa de cada vez. Escolha única em dois níveis: segmentos para o modo (ícone sobre o
+   nome, mais altos que as abas de cima, para não parecerem o mesmo controle), e dentro do modo segmentos menores
+   (cargo) ou uma lista de rádio (indicador). O escolhido é papel claro, como o indicador marcado no painel. */
+.camadas { display: grid; gap: 12px; }
+.segmentos { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; padding: 4px; border-radius: 10px; background: var(--noite); }
+.segmentos a { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 8px; border-radius: 7px; font-size: 14px; font-weight: 600; text-align: center; color: var(--noite-muted); text-decoration: none; transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.segmentos a:hover { background: var(--noite3); color: var(--sobre-noite); }
+.segmentos a:active { transform: scale(0.97); }
+.segmentos a:focus-visible { outline: 2px solid var(--brilho); outline-offset: -2px; }
+.segmentos a[aria-current], .segmentos a[aria-current]:hover { background: var(--sobre-noite); color: var(--noite); }
+.camadas-modos a { flex-direction: column; gap: 5px; min-height: 64px; padding: 10px 6px 9px; font-size: 13.5px; }
+.camadas-modos .icone { width: 20px; height: 20px; }
+.segmentos-pequenos a { min-height: 32px; font-size: 13px; font-weight: 500; }
+.segmentos-pequenos a[aria-current] { font-weight: 600; }
+.camadas-apoio { margin: 0 6px; font-size: 13px; line-height: 1.45; color: var(--noite-muted); }
+.camadas-apoio b { color: var(--sobre-noite); font-weight: 600; }
+.camadas-opcoes { display: grid; gap: 12px; }
+.camadas-opcoes .escolha-mun { margin: 0 2px; }
+.radios { display: grid; gap: 1px; padding: 4px; border-radius: 10px; background: var(--noite); }
+.radios a { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 8px 10px; border-radius: 7px; font-size: 14.5px; font-weight: 500; line-height: 1.3; color: var(--sobre-noite); text-decoration: none; transition: background-color var(--t-hover) ease; }
+.radios a:hover { background: var(--noite2); }
+.radios a:focus-visible { outline: 2px solid var(--brilho); outline-offset: -2px; }
+.radio { flex: none; position: relative; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--noite-muted); transition: border-color var(--t-ui) ease; }
+.radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brilho); transform: scale(0); transition: transform var(--t-ui) var(--ease-out); }
+.radios a[aria-current] { background: var(--noite3); font-weight: 600; }
+.radios a[aria-current] .radio { border-color: var(--brilho); }
+.radios a[aria-current] .radio::after { transform: scale(1); }
+.camada-aviso { margin: 0 6px; font-size: 13px; line-height: 1.45; color: var(--noite-muted); }
 .camada-aviso p { margin: 0 0 8px; }
 .tirar-partido { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 7px 12px; border-radius: 6px; background: var(--brilho); color: var(--noite); font-size: 14px; font-weight: 600; text-decoration: none; transition: transform var(--t-press) var(--ease-out), filter var(--t-hover) ease; }
 .tirar-partido:hover { filter: brightness(1.08); }
@@ -658,6 +655,7 @@ a.linha:hover { background: var(--panel2); }
 .dica-celula { flex: none; display: grid; grid-template-columns: repeat(3, 9px); gap: 2px; padding: 3px; border-radius: 4px; background: var(--noite); }
 .dica-celula i { height: 9px; border-radius: 1.5px; opacity: 0.28; }
 .dica-celula i.on { opacity: 1; box-shadow: 0 0 0 1.5px var(--sobre-noite); }
+.dica-medidas { display: grid; gap: 12px; }
 .dica-medida { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 6px 10px; }
 .dica-rotulo { font-size: 12px; font-weight: 500; color: color-mix(in srgb, var(--noite) 62%, var(--sobre-noite)); }
 .dica-medida b { font-size: 18px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
@@ -765,8 +763,6 @@ a.linha:hover { background: var(--panel2); }
 .painel .atalhos { align-self: end; }
 .bloco-dispersao { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 8px 32px; align-items: start; }
 .bloco-dispersao .dispersao { margin: 0; }
-.extremos.duas { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, auto); grid-auto-flow: column; column-gap: 24px; }
-.extremos.duas li.corte { margin-top: 0; padding-top: 0; border-top: 0; }
 .bloco.noite { background: var(--noite2); color: var(--sobre-noite); }
 /* os gráficos da análise de legenda (SerieLegenda, ComparaCiclos) usam os papéis da página clara; no bloco noturno
    eles apontam para a noite: 2018 em marinho, o ano recente em areia (degrau da escala), alta e queda sem verde */
@@ -802,6 +798,53 @@ a.linha:hover { background: var(--panel2); }
   .compara-regua .compara-taxa, .composicao-barra { animation: revela 900ms var(--ease-expo) 150ms both; }
 }
 @keyframes revela { from { clip-path: inset(0 100% 0 0); } }
+/* ficha fixa do município escolhido: o cartão da dica, no escuro e maior, e a faixa com todos os municípios do estado */
+.ficha-mun { display: grid; gap: 20px; align-content: start; }
+.ficha-mun .dica-titulo { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+.ficha-mun .dica-sub, .ficha-mun .dica-rotulo { color: var(--noite-muted); }
+.ficha-mun .dica-sub { margin-top: 4px; font-size: 13px; }
+.ficha-mun .dica-rotulo { font-size: 13px; }
+.ficha-mun .dica-celula { grid-template-columns: repeat(3, 14px); gap: 3px; padding: 5px; border-radius: 6px; }
+.ficha-mun .dica-celula i { height: 14px; border-radius: 2px; }
+.ficha-mun .dica-medidas { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 28px; }
+.ficha-mun .dica-medida b { font-size: 26px; }
+.ficha-mun .dica-regua { height: 10px; margin-top: 4px; }
+.ficha-mun .dica-regua em { width: 18px; height: 18px; border-color: var(--sobre-noite); background: var(--noite2); box-shadow: 0 0 0 2px var(--noite2); }
+.ficha-mun-faixa { display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--noite-linha); }
+.ficha-mun-faixa > p { margin: 0; font-size: 14px; color: var(--noite-muted); }
+.ficha-mun-faixa > p b { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; color: var(--sobre-noite); font-variant-numeric: tabular-nums; }
+.faixa-mun { margin: 0; display: grid; gap: 6px; }
+.faixa-mun-trilho { position: relative; height: 30px; margin: 0 2px; }
+.faixa-mun-trilho::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--noite3); }
+.faixa-mun-trilho i { position: absolute; top: 8px; bottom: 8px; left: calc(var(--p) * 100%); width: 2px; margin-left: -1px; border-radius: 1px; background: var(--noite-muted); opacity: 0.4; }
+.faixa-mun-trilho b { position: absolute; top: 0; bottom: 0; left: calc(var(--p) * 100%); width: 4px; margin-left: -2px; border-radius: 2px; background: var(--brilho); box-shadow: 0 0 0 2px var(--noite2); }
+.faixa-mun figcaption { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--noite-muted); font-variant-numeric: tabular-nums; }
+
+/* extremos do estado: barras de 0 ao maior valor, na cor do quinto de cada município, e a média como uma linha
+   tracejada que atravessa as duas listas (um traço por linha, que se emendam). O extremo de cada lista vem maior */
+.extremos-vis { display: grid; gap: 18px; margin-top: 6px; }
+.extr-grupo { display: grid; gap: 4px; }
+.extr-titulo { margin: 0 8px 2px; font-size: 13px; font-weight: 600; color: var(--noite-muted); }
+.extr-lista { list-style: none; margin: 0; padding: 0; display: grid; }
+.extr-lista a { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 5px 14px; padding: 7px 8px; border-radius: 6px; text-decoration: none; transition: background-color var(--t-hover) ease; }
+.extr-lista a:hover { background: var(--noite3); }
+.extr-lista a:focus-visible { outline: 2px solid var(--brilho); outline-offset: -2px; }
+.extr-nome { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.extr-trilho { grid-column: 1 / -1; grid-row: 2; position: relative; height: 8px; border-radius: 0 3px 3px 0; background: color-mix(in srgb, var(--noite3) 60%, transparent); }
+.extr-trilho i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p) * 100%); border-radius: 0 3px 3px 0; }
+.extr-trilho em { position: absolute; top: -5px; bottom: -5px; left: calc(var(--p) * 100%); border-left: 1.5px dashed color-mix(in srgb, var(--sobre-noite) 70%, transparent); }
+.extr-trilho .q0 { background: var(--q0); } .extr-trilho .q1 { background: var(--q1); } .extr-trilho .q2 { background: var(--q2); }
+.extr-trilho .q3 { background: var(--q3); } .extr-trilho .q4 { background: var(--q4); }
+.extr-valor { text-align: right; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.extr-lista li:first-child .extr-nome { font-size: 16px; font-weight: 600; }
+.extr-lista li:first-child .extr-trilho { height: 14px; }
+.extr-lista li:first-child .extr-trilho em { top: -4px; bottom: -4px; }
+.extr-lista li:first-child .extr-valor { font-size: 20px; letter-spacing: -0.02em; }
+.extr-media { display: flex; align-items: center; gap: 8px; margin: 0 8px; font-size: 12.5px; color: var(--noite-muted); }
+.extr-media i { height: 14px; border-left: 1.5px dashed color-mix(in srgb, var(--sobre-noite) 70%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .extr-trilho i, .faixa-mun-trilho b { animation: revela 900ms var(--ease-expo) 150ms both; }
+}
 .painel-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 0; }
 .painel-mini dt { font-size: 13px; color: var(--noite-muted); }
 .painel-mini dd { margin: 2px 0 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
@@ -856,7 +899,6 @@ a.linha:hover { background: var(--panel2); }
 .bloco.noite .chip.on, .bloco.noite a.chip.on:hover { background: var(--brilho); color: var(--noite); }
 
 .extremos { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 2px; }
-.extremos li.corte { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--noite-linha); }
 .extremos a { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 6px; text-decoration: none; transition: background-color var(--t-hover) ease; }
 .extremos a:hover { background: var(--noite3); }
 .extremos a.on { background: var(--brilho); color: var(--noite); font-weight: 600; }
@@ -874,8 +916,15 @@ a.linha:hover { background: var(--panel2); }
 .palco-trilho { position: absolute; top: 0; left: 0; width: 1px; height: max(620px, calc(100svh - 2 * var(--gap))); pointer-events: none; visibility: hidden; view-timeline: --palco block; }
 .minimapa { position: relative; overflow: clip; color: var(--sobre-noite); background: var(--noite) radial-gradient(circle, var(--noite-linha) 1px, transparent 1.4px) 0 0 / 20px 20px; transition: box-shadow var(--t-hover) ease; }
 .minimapa-mapa { position: absolute; inset: 0; pointer-events: none; }
-.minimapa .etiquetas-uf, .minimapa .rotulo-mun, .minimapa .mun-destaque { display: none; }
+.minimapa .etiquetas-uf, .minimapa .rotulo-mun, .minimapa .mun-destaque { display: none; }   /* o destaque volta com o foco, abaixo */
 .minimapa .mapa-abst .camera { transition: none; }
+/* o mini-mapa vai ao município escolhido (MiniMapa, foco): a lupa dele centra e amplia, e o contorno do município
+   aparece. É o mesmo elemento entre as navegações, então a troca desliza */
+.minimapa .mapa-abst .lupa { transform: translate(var(--mm-x, 0px), var(--mm-y, 0px)) scale(var(--mm-k, 1)); }
+.minimapa[data-foco] .mun-destaque { display: inline; }
+@media (prefers-reduced-motion: no-preference) {
+  .minimapa .mapa-abst .lupa { transition: transform 900ms var(--ease-in-out); }
+}
 .minimapa-link { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; color: inherit; text-decoration: none; border-radius: inherit; }
 .minimapa-link:focus-visible { outline: 2px solid var(--brilho); outline-offset: -2px; }
 .minimapa-recorte { font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; text-wrap: balance; }
@@ -897,8 +946,7 @@ a.linha:hover { background: var(--panel2); }
   .observatorio > .painel > .s8 { grid-column: span 7; }
   .observatorio .bloco-dispersao { grid-template-columns: minmax(0, 1fr); align-content: start; }
   .observatorio .chart.wide { min-width: 0; }   /* na coluna mais estreita, a série encolhe em vez de rolar de lado */
-  .observatorio .extremos.duas { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; }
-  .observatorio .extremos.duas li.corte { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--noite-linha); }
+  .observatorio > .painel > .painel-cab.alto { grid-row: span 2; }   /* o cabeçalho é mais alto que a série: o bloco de baixo dela sobe ao lado dele */
   .minimapa { grid-column: 1 / span 4; grid-row: 2; position: sticky; top: var(--gap); height: calc(100svh - 2 * var(--gap)); min-height: 480px; border-radius: var(--raio); }
   .minimapa:hover { box-shadow: inset 0 0 0 2px var(--brilho); }
   .minimapa-mapa { inset: 20px 12px 128px; }   /* o mapa fica acima do texto, sem passar por baixo dele */
@@ -1242,7 +1290,6 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
   .minimapa-recorte { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .minimapa-voltar { font-size: 12px; }
   .bloco-dispersao { grid-template-columns: 1fr; }
-  .extremos.duas { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-flow: row; }
   .palco-topo, .palco-base { flex-wrap: wrap; }
   .palco-base { gap: 14px; }
   .legenda-q { flex-wrap: wrap; row-gap: 10px; }

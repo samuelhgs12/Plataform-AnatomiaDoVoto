@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { aproximar, arrastar, LUPA_INICIAL, LUPA_MAX, type Lupa } from "@/lib/lupa";
 import { lerFicha, posicionarDica, type FichaDica } from "@/lib/dica";
+import { CartaoDica } from "./CartaoDica";
 
 const svgDe = (el: HTMLElement | null) => el?.querySelector<SVGSVGElement>("svg.mapa-abst") ?? null;
 
@@ -21,38 +22,6 @@ function desenharLupa(svg: SVGSVGElement | null, l: Lupa, suave: boolean) {
   svg.toggleAttribute("data-lupa-suave", suave);
   g.style.transform = `translate(${l.x}px, ${l.y}px) scale(${l.k})`;
   svg.style.setProperty("--lupa", String(l.k));
-}
-
-/** Cartão da dica: nome e recorte, a casa da legenda 3 × 3 (no cruzamento) e cada medida com a régua das cores do mapa. */
-function CartaoDica({ ficha, texto }: { ficha: FichaDica | null; texto: string }) {
-  if (!ficha) return <>{texto}</>;
-  return (
-    <>
-      <div className="dica-cab">
-        <div>
-          <b className="dica-titulo">{ficha.titulo}</b>
-          <span className="dica-sub">{ficha.sub}</span>
-        </div>
-        {ficha.celula && (
-          <span className="dica-celula">
-            {[2, 1, 0].flatMap((i) => [0, 1, 2].map((a) => <i key={`${i}${a}`} className={`b${i}${a}${ficha.celula === `b${i}${a}` ? " on" : ""}`} />))}
-          </span>
-        )}
-      </div>
-      {ficha.medidas.map((m) => (
-        <div key={m.rotulo} className="dica-medida">
-          <span className="dica-rotulo">{m.rotulo}</span>
-          <b>{m.valor}</b>
-          {m.cores && m.p != null && (
-            <span className="dica-regua">
-              {m.cores.map((c) => <i key={c} className={c} />)}
-              <em style={{ "--p": m.p } as CSSProperties} />
-            </span>
-          )}
-        </div>
-      ))}
-    </>
-  );
 }
 
 /**

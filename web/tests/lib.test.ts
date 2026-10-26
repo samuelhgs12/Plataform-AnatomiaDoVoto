@@ -3,10 +3,10 @@ import type { LinhaLegenda } from "../src/lib/legenda";
 import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
 import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
 import {
-  classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
+  classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
 } from "../src/lib/abstencao";
-import { aproximar, arrastar, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
+import { aproximar, arrastar, centrarLupa, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
 import { lerFicha, naRegua, posicionarDica } from "../src/lib/dica";
 import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
 import type { CarreiraItem } from "../src/lib/types";
@@ -550,5 +550,42 @@ describe("lerFicha", () => {
     expect(lerFicha("Recife: 20%")).toBeNull();
     expect(lerFicha('{"x":1}')).toBeNull();
     expect(lerFicha(null)).toBeNull();
+  });
+});
+
+describe("distribuicao", () => {
+  const v = [{ id: 1, v: 0.1 }, { id: 2, v: 0.3 }, { id: 3, v: 0.2 }];
+  it("escala do menor ao maior, posição e ordem do escolhido", () => {
+    const d = distribuicao(v, 3);
+    expect(d.pontos.map((x) => x.p)).toEqual([0, 1, expect.closeTo(0.5)]);
+    expect(d).toMatchObject({ p: expect.closeTo(0.5), ordem: 2, total: 3 });
+    expect(distribuicao(v, 2).ordem).toBe(1);
+  });
+  it("sem o escolhido, sem posição", () => {
+    expect(distribuicao(v, 9)).toMatchObject({ p: null, ordem: null });
+  });
+});
+
+describe("extremosAbstencao", () => {
+  const l = [0.1, 0.4, 0.2, 0.3, 0.25].map((t, i) => ({ id: i, t }));
+  it("os que mais e os que menos faltaram, com barras de 0 ao maior", () => {
+    const e = extremosAbstencao(l, 2, 0.2);
+    expect(e.mais.map((x) => x.t)).toEqual([0.4, 0.3]);
+    expect(e.menos.map((x) => x.t)).toEqual([0.1, 0.2]);   // do menor para o maior
+    expect(e.mais[0].p).toBe(1);
+    expect(e.pMedia).toBeCloseTo(0.5);
+  });
+  it("com poucos municípios, não repete nenhum", () => {
+    const e = extremosAbstencao(l.slice(0, 3), 4, 0.2);
+    expect(e.mais.map((x) => x.id)).toEqual([1, 2]);
+    expect(e.menos.map((x) => x.id)).toEqual([0]);
+  });
+});
+
+describe("centrarLupa", () => {
+  it("leva o ponto ao centro da tela", () => {
+    const l = centrarLupa({ x: 100, y: 50 }, 3);
+    expect(100 * l.k + l.x).toBe(TELA.larg / 2);
+    expect(50 * l.k + l.y).toBe(TELA.alt / 2);
   });
 });

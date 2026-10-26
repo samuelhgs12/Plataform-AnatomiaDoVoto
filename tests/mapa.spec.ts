@@ -15,8 +15,10 @@ test('mapa da abstenção: estado, município, indicador e ano', async ({ page }
   await expect(page).toHaveURL(/mun=\d+/);
   await expect(page.getByRole('heading', { name: 'Recife', level: 2 })).toBeVisible();
 
-  // o indicador se liga no menu do mapa, encaixado ao lado dele: Camadas › Comparativos
-  await page.locator('.submenu').getByRole('link', { name: /^Renda por pessoa/ }).click();
+  // o indicador se escolhe no menu do mapa, encaixado ao lado dele: Camadas › Comparar
+  await page.locator('.submenu').getByRole('link', { name: 'Comparar' }).click();
+  await expect(page).toHaveURL(/cor=cruzar/);
+  await page.locator('.submenu').getByRole('link', { name: 'Renda por pessoa' }).click();
   await expect(page.getByRole('heading', { name: 'Abstenção × Renda por pessoa' })).toBeVisible();
   await expect(page).toHaveURL(/uf=PE.*mun=\d+/); // trocar o indicador mantém estado e município
 
@@ -111,8 +113,17 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
   await expect(submenu).toHaveAttribute('open', ''); // no computador, o menu já vem aberto ao lado do mapa
   await expect(submenu.getByRole('navigation', { name: 'O que o mapa mostra' }).getByRole('link', { name: 'Camadas' })).toHaveAttribute('aria-current', 'true');
 
-  // Comparativos: ligar um indicador pinta o estado em 3 × 3; recolhido, o trilho diz o que está ligado
-  await submenu.getByRole('link', { name: /^IDHM/ }).click();
+  // o modo é escolha única: Abstenção vem marcada; Comparar mostra os indicadores, também de escolha única
+  const modos = submenu.getByRole('navigation', { name: 'O que pinta o mapa' });
+  await expect(modos.getByRole('link', { name: 'Abstenção' })).toHaveAttribute('aria-current', 'true');
+  await modos.getByRole('link', { name: 'Comparar' }).click();
+  await expect(page).toHaveURL(/cor=cruzar/);
+  const indicadores = submenu.getByRole('navigation', { name: 'Indicador do Censo 2010' });
+  await expect(indicadores.getByRole('link', { name: 'IDHM' })).toHaveAttribute('aria-current', 'true');
+  await indicadores.getByRole('link', { name: 'Pobres' }).click();
+  await expect(page).toHaveURL(/ind=pmpob/);
+  await expect(indicadores.getByRole('link', { name: 'IDHM' })).not.toHaveAttribute('aria-current', 'true');
+  await indicadores.getByRole('link', { name: 'IDHM' }).click();
   await expect(page).toHaveURL(/cor=cruzar/);
   await expect(page.locator('.palco .mapa-abst .mun[class*=" b"]').first()).toBeVisible();
   await submenu.locator(':scope > summary').click();
@@ -120,17 +131,18 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
   await expect(submenu.locator('.submenu-resumo')).toBeVisible();
   await submenu.locator(':scope > summary').click();
   await expect(submenu).toHaveAttribute('open', '');
-  await submenu.getByRole('link', { name: /^IDHM/ }).click(); // clicar de novo desliga
+  await modos.getByRole('link', { name: 'Abstenção' }).click(); // voltar à base é escolher outro modo
   await expect(page).not.toHaveURL(/cor=cruzar/);
 
-  // Votos por legenda: um clique no grupo troca a visão; o cargo e o partido aparecem nele
-  await submenu.getByRole('link', { name: /^Votos por legenda/ }).click(); // o próprio grupo liga a camada
+  // Legenda: o modo troca a visão; o partido aparece nele
+  await modos.getByRole('link', { name: 'Legenda' }).click();
   await expect(page).toHaveURL(/ver=legenda/);
   await expect(submenu.getByRole('combobox', { name: 'Partido' })).toBeVisible();
 });
 
 test('menu do mapa: fora dos anos do Censo, Comparativos explica e leva a 2008 ou 2012', async ({ page }) => {
   await page.goto('/?ano=2022', { waitUntil: 'networkidle' });
+  await page.locator('.submenu').getByRole('link', { name: 'Comparar' }).click();
   await expect(page.getByText('O Censo 2010 só é comparado com as eleições de 2008 e 2012.')).toBeVisible();
   await page.locator('.submenu').getByRole('link', { name: 'Ver 2012' }).click();
   await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2012' })).toBeVisible();
@@ -149,8 +161,8 @@ test('mini-mapa: aparece ao rolar até os números e volta ao mapa', async ({ pa
 });
 
 test('menu do mapa: numa tela baixa a lista rola por dentro do menu, não a página', async ({ page }) => {
-  await page.setViewportSize({ width: 1536, height: 730 });
-  await page.goto('/?uf=RJ', { waitUntil: 'networkidle' });
+  await page.setViewportSize({ width: 1536, height: 640 });
+  await page.goto('/?uf=RJ&cor=cruzar', { waitUntil: 'networkidle' });
   const lista = page.locator('.submenu-conteudo');
   expect(await lista.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true); // a lista não cabe: tem de rolar, não ser cortada
   const caixa = (await lista.boundingBox())!;
@@ -167,4 +179,15 @@ test('legenda do cruzamento 3 × 3 escreve os cortes de cada terço', async ({ p
   await expect(legenda).toBeVisible();
   await expect(legenda.locator('.bi-rot-x')).toHaveCount(3);
   await expect(legenda.locator('.bi-rot-y')).toHaveCount(3);
+});
+
+test('painel: ficha fixa do município e mini-mapa indo até ele', async ({ page }) => {
+  await page.goto('/?uf=RJ&cor=cruzar', { waitUntil: 'networkidle' });
+  await expect(page.getByRole('group', { name: /com mais e menos abstenção/ }).getByRole('link')).toHaveCount(8);
+  await page.getByRole('combobox', { name: /^Município/ }).selectOption({ label: 'Petrópolis' });
+  await expect(page).toHaveURL(/mun=\d+/);
+  const ficha = page.locator('.ficha-mun');
+  await expect(ficha.getByRole('heading', { name: 'Petrópolis', level: 3 })).toBeVisible();
+  await expect(ficha.getByRole('img', { name: /maior abstenção entre os \d+ municípios de Rio de Janeiro/ })).toBeVisible();
+  await expect(page.locator('.minimapa')).toHaveAttribute('data-foco', '');
 });

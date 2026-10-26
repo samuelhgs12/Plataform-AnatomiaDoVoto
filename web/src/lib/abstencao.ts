@@ -148,6 +148,31 @@ export function lerCorrelacao(r: number, indicador: string): string {
   return `Relação ${forca}: onde ${indicador} é maior, a abstenção tende a ser ${r > 0 ? "maior" : "menor"}`;
 }
 
+/**
+ * Onde um município fica entre os do recorte: cada um numa escala de 0 (o menor valor) a 1 (o maior), a posição do
+ * escolhido e a ordem dele (1 = o maior valor). Sem o escolhido nos valores, p e ordem são null.
+ */
+export function distribuicao(valores: { id: number; v: number }[], id: number): { pontos: { id: number; p: number }[]; p: number | null; ordem: number | null; total: number } {
+  const vs = valores.map((x) => x.v);
+  const [min, max] = [Math.min(...vs), Math.max(...vs)];
+  const escala = (v: number) => (max > min ? (v - min) / (max - min) : 0.5);
+  const pontos = valores.map((x) => ({ id: x.id, p: escala(x.v) }));
+  const alvo = valores.find((x) => x.id === id);
+  return { pontos, p: alvo ? escala(alvo.v) : null, ordem: alvo ? 1 + vs.filter((v) => v > alvo.v).length : null, total: valores.length };
+}
+
+/**
+ * Os `n` municípios que mais e os `n` que menos faltaram (sem repetir quando há poucos), cada um com a barra de 0 ao
+ * maior valor (p) e a posição da média na mesma régua. "menos" vem do menor para o maior.
+ */
+export function extremosAbstencao(lista: { id: number; t: number }[], n: number, media: number): { mais: { id: number; t: number; p: number }[]; menos: { id: number; t: number; p: number }[]; pMedia: number } {
+  const desc = [...lista].sort((a, b) => b.t - a.t);
+  const topo = Math.max(desc[0]?.t ?? 0, media, 1e-9);
+  const k = Math.min(n, Math.ceil(desc.length / 2));
+  const comP = (x: { id: number; t: number }) => ({ ...x, p: x.t / topo });
+  return { mais: desc.slice(0, k).map(comP), menos: desc.slice(k).reverse().slice(0, n).map(comP), pMedia: media / topo };
+}
+
 /** Posição de 0 a 1 do valor entre os valores (0 = o menor, 1 = o maior). */
 export function posicao(v: number, valores: number[]): number {
   if (valores.length < 2) return 0.5;

@@ -2,7 +2,7 @@ import { Fragment, type CSSProperties } from "react";
 import Link from "next/link";
 import { Rolar } from "@/components/Rolar";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "@/components/MapaAbstencao";
-import { TELA } from "@/lib/lupa";
+import { centrarLupa, TELA } from "@/lib/lupa";
 import { MapaVivo } from "@/components/MapaVivo";
 import { Dispersao } from "@/components/Dispersao";
 import { EscolhaMunicipio } from "@/components/EscolhaMunicipio";
@@ -21,7 +21,7 @@ import {
   anoNaLegenda, casasDosCortes, doCargo, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
 } from "@/lib/mapa";
 import {
-  ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
+  ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, compararComReferencia, composicaoEleitorado, corMunicipio, distribuicao, extremosAbstencao, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
   mediaPonderada, nomeProprio, posicao, quantis, rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia,
   type ChaveIndicador, type LinhaIndicador, type LinhaMunicipio, type LinhaParticipacao,
 } from "@/lib/abstencao";
@@ -31,6 +31,9 @@ import { compacto, pct } from "@/lib/format";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { MiniMapa } from "@/components/MiniMapa";
+import { CartaoDica } from "@/components/CartaoDica";
+import { FaixaMunicipios } from "@/components/FaixaMunicipios";
+import { ExtremosAbstencao } from "@/components/ExtremosAbstencao";
 import { SerieLegenda } from "@/components/SerieLegenda";
 import { ComparaCiclos } from "@/components/ComparaCiclos";
 import { abrangencia, candidaturasDe, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
@@ -169,6 +172,12 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   });
   const r = correlacao(pontos);
   const ranking = idsUf.flatMap((id) => { const t = taxaDe(doAno.get(id)); return t == null ? [] : [{ id, t }]; }).sort((a, b) => b.t - a.t);
+  // ficha fixa do município escolhido: o mesmo cartão da dica do mapa, e a faixa com todos os municípios do estado
+  const fichaMun = mun ? noMapa.find((m) => m.ibge === mun.cod_ibge)?.ficha : undefined;
+  const faixa = mun ? distribuicao(ranking.map((x) => ({ id: x.id, v: x.t })), mun.id_municipio) : null;
+  // os extremos do estado em barras, na cor do quinto de cada um, cortadas pela média do estado
+  const extr = uf && !mun ? extremosAbstencao(ranking, 4, total.taxa) : null;
+  const linhaExtremo = (x: { id: number; t: number; p: number }) => ({ id: x.id, nome: nomeMun.get(x.id)!, valor: pct(x.t, 1), p: x.p, classe: `q${classe(x.t, cortes)}`, href: href({ mun: x.id }) });
   const legendaQ = rotulosFaixas(cortes, (v) => pct(v, 0));
   // os cortes de cada terço do cruzamento, escritos na legenda 3 × 3 (o leitor vê o que cada cor quer dizer)
   const tercosAbst = rotulosFaixas(corte3Abst, (v) => pct(v, 0)).map((t) => t.replace("%–", "–"));
@@ -236,8 +245,13 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const comparativoLigado = !naLegenda && pediuCruzar;
   const camadas = (
     <CamadasMapa
+      modo={naLegenda ? "legenda" : comparativoLigado ? "comparar" : "abstencao"}
+      hrefs={{
+        abstencao: href({ ver: "abstencao", ano: anoBase, cor: null }),
+        legenda: hrefLeg,
+        comparar: href({ ver: "abstencao", ano: anoBase, cor: "cruzar" }),
+      }}
       legenda={{
-        ligada: naLegenda, href: naLegenda ? hrefAbst : hrefLeg,
         anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",
         cargos: naLegenda && geral ? CARGOS.map((c) => ({ rotulo: ROTULO_CARGO[c], href: href({ cargo: c }), on: c === cargo })) : [],
         partido: naLegenda ? { opcoes: opcoesPartido, atual: partido, params: Object.fromEntries(params({ p: null })) } : undefined,
@@ -246,7 +260,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         disponivel: comparativo.disponivel, motivo: comparativo.motivo,
         itens: INDICADORES_CENSO.map((i) => {
           const on = comparativoLigado && i.chave === ind;
-          return { chave: i.chave, rotulo: i.rotulo, on, href: on ? href({ cor: null }) : href({ ver: "abstencao", ano: anoBase, ind: i.chave, cor: "cruzar" }) };
+          return { chave: i.chave, rotulo: i.rotulo, on, href: href({ ver: "abstencao", ano: anoBase, ind: i.chave, cor: "cruzar" }) };
         }),
         anos: ANOS_CENSO.map((a) => ({ ano: a, href: href({ ver: "abstencao", ano: a }) })),
       }}
@@ -288,6 +302,55 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       destaque={mun && centro ? { ibge: mun.cod_ibge, nome: nomeMun.get(mun.id_municipio)!, x: centro[0], y: centro[1] } : undefined}
     />
   );
+  // o mini-mapa vai ao município escolhido: centro dele na tela do mapa, ampliado 3 ×
+  const focoMini = mun && centro && caixa ? centrarLupa({ x: camera.x + centro[0] * camera.k, y: camera.y + centro[1] * camera.k }, 3) : undefined;
+
+  const blocoDispersao = (
+    <div className="bloco noite s8 bloco-dispersao">
+      <div>
+        <h3>Abstenção × {infoInd.rotulo}</h3>
+        {pontos.length >= 3 ? (
+          <>
+            <p className="r-texto">{r != null && lerCorrelacao(r, /^[A-Z]{2}/.test(infoInd.rotulo) ? infoInd.rotulo : infoInd.rotulo[0].toLowerCase() + infoInd.rotulo.slice(1))}{r != null && <small> (r = {r.toLocaleString("pt-BR", { maximumFractionDigits: 2, minimumFractionDigits: 2 })})</small>}</p>
+            <p className="muted pequeno">Cada ponto é um município {uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}{mun ? "; o círculo grande é o escolhido" : ""}. Correlação não é causa.</p>
+          </>
+        ) : <p>Poucos municípios com os dois dados.</p>}
+      </div>
+      {pontos.length >= 3 && (
+        <Dispersao
+          pontos={pontos} tendencia={tendencia(pontos)} rotuloX={infoInd.rotulo}
+          formatoX={(v) => formatarIndicador(ind, v)}
+          descricao={`Cada ponto é um município ${uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}: ${infoInd.rotulo} em 2010 no eixo horizontal, abstenção em ${ano} no vertical.${r != null ? ` Correlação ${r.toFixed(2)}.` : ""}`}
+        />
+      )}
+    </div>
+  );
+  const blocoExtremos = extr && extr.mais.length > 0 ? (
+    <div className="bloco noite s8">
+      <h3>Onde mais e menos se faltou</h3>
+      <p className="muted pequeno">Abstenção em {ano} nos municípios de {NOME_UF[uf!]}; as barras vão de zero ao maior valor, na cor de cada um no mapa. Clique para ver o município.</p>
+      <ExtremosAbstencao
+        mais={extr.mais.map(linhaExtremo)} menos={extr.menos.map(linhaExtremo)}
+        media={{ p: extr.pMedia, rotulo: `Média de ${NOME_UF[uf!]}, ${pct(total.taxa, 1)}` }}
+        descricao={`Municípios de ${NOME_UF[uf!]} com mais e menos abstenção em ${ano}`}
+      />
+    </div>
+  ) : null;
+  const blocoFicha = mun && fichaMun ? (
+    <div className="bloco noite s8 ficha-mun">
+      <CartaoDica ficha={fichaMun} texto="" titulo="h3" />
+      {faixa?.p != null && faixa.ordem != null && (
+        <div className="ficha-mun-faixa">
+          <p><b>{faixa.ordem}º</b> maior abstenção entre os {faixa.total} municípios de {NOME_UF[uf!]}</p>
+          <FaixaMunicipios
+            pontos={faixa.pontos} p={faixa.p}
+            pontas={[`menor ${pct(ranking[ranking.length - 1].t, 1)}`, `maior ${pct(ranking[0].t, 1)}`]}
+            descricao={`${nomeUnidade} tem a ${faixa.ordem}ª maior abstenção entre os ${faixa.total} municípios de ${NOME_UF[uf!]} em ${ano}`}
+          />
+        </div>
+      )}
+    </div>
+  ) : null;
   const recorte = `${resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined })} · ${naLegenda ? (uf ?? "seis estados") : mun ? nomeMun.get(mun.id_municipio) : uf ?? "seis estados"} · ${naLegenda ? anoLeg : ano}`;
 
   return (
@@ -446,7 +509,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                 <p>A API não devolveu a análise <code>q5</code>. Confira se ela está rodando (<code>uvicorn app.main:app</code> em <code>api/</code>).</p>
               </div>
             )}
-            <div className="bloco noite painel-cab s4">
+            <div className={`bloco noite painel-cab s4${uf ? " alto" : ""}`}>
               <p className="palco-sobre">{mun ? `Município · ${uf}` : uf ? `Estado · ${idsUf.length} municípios` : "AP, ES, MG, PE, RJ e RR"}</p>
               <h2>{nomeUnidade}</h2>
               {total.aptos > 0 ? (
@@ -510,11 +573,15 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               <p className="muted pequeno">Anos gerais: governador; municipais: prefeito. As barras marcadas são as eleições comparadas com o Censo 2010.</p>
             </div>
 
+            {/* embaixo da série, ao lado do cabeçalho (mais alto): a ficha do município, ou, no estado, a dispersão
+                (ou os extremos, fora dos anos do Censo) */}
+            {mun ? blocoFicha : uf ? (comCenso ? blocoDispersao : blocoExtremos) : null}
+
             {comCenso ? (
               <>
                 <div className="bloco noite s4">
                   <h3>Censo 2010</h3>
-                  <p className="muted pequeno">{mun ? `O município entre os ${universo.length} de ${NOME_UF[uf!]}` : `Média ponderada pela população; a faixa mostra do menor ao maior município ${uf ? "do estado" : "dos seis estados"}`}. Para pintar o mapa com um deles, ligue-o em Camadas › Comparativos, no menu do mapa.</p>
+                  <p className="muted pequeno">{mun ? `O município entre os ${universo.length} de ${NOME_UF[uf!]}` : `Média ponderada pela população; a faixa mostra do menor ao maior município ${uf ? "do estado" : "dos seis estados"}`}. Para pintar o mapa com um deles, escolha-o em Camadas › Comparar, no menu do mapa.</p>
                   <ul className="indicadores">
                     {INDICADORES_CENSO.map((i) => {
                       const v = valorInd(i.chave);
@@ -532,24 +599,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                     })}
                   </ul>
                 </div>
-                <div className="bloco noite s8 bloco-dispersao">
-                  <div>
-                    <h3>Abstenção × {infoInd.rotulo}</h3>
-                    {pontos.length >= 3 ? (
-                      <>
-                        <p className="r-texto">{r != null && lerCorrelacao(r, /^[A-Z]{2}/.test(infoInd.rotulo) ? infoInd.rotulo : infoInd.rotulo[0].toLowerCase() + infoInd.rotulo.slice(1))}{r != null && <small> (r = {r.toLocaleString("pt-BR", { maximumFractionDigits: 2, minimumFractionDigits: 2 })})</small>}</p>
-                        <p className="muted pequeno">Cada ponto é um município {uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}{mun ? "; o círculo grande é o escolhido" : ""}. Correlação não é causa.</p>
-                      </>
-                    ) : <p>Poucos municípios com os dois dados.</p>}
-                  </div>
-                  {pontos.length >= 3 && (
-                    <Dispersao
-                      pontos={pontos} tendencia={tendencia(pontos)} rotuloX={infoInd.rotulo}
-                      formatoX={(v) => formatarIndicador(ind, v)}
-                      descricao={`Cada ponto é um município ${uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}: ${infoInd.rotulo} em 2010 no eixo horizontal, abstenção em ${ano} no vertical.${r != null ? ` Correlação ${r.toFixed(2)}.` : ""}`}
-                    />
-                  )}
-                </div>
               </>
             ) : (
               <div className="bloco noite censo-aviso s12">
@@ -559,21 +608,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               </div>
             )}
 
-            {uf && !mun && ranking.length > 0 && (
-              <div className="bloco noite s8">
-                <h3>Onde mais e menos se faltou</h3>
-                <ol className="extremos duas">
-                  {[...ranking.slice(0, 4), ...ranking.slice(-4)].map((x, i) => (
-                    <li key={x.id} className={i === 4 ? "corte" : undefined}>
-                      <Link scroll={false} href={href({ mun: x.id })}><span>{nomeMun.get(x.id)}</span><b>{pct(x.t, 1)}</b></Link>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
+            {comCenso && (mun || !uf) && blocoDispersao}
+            {comCenso && uf && !mun && blocoExtremos}
 
             {uf && (
-              <ul className={`atalhos ${!mun && ranking.length > 0 ? "s4" : "s12"}`}>
+              <ul className="atalhos s12">
                 <li><Link href={`/candidatos?uf=${uf}`}>Candidatos</Link></li>
                 <li><Link href={`/analises/financiamento?uf=${uf}`}>Financiamento</Link></li>
                 <li><Link href={`/analises/legenda?uf=${uf}`}>Voto de legenda</Link></li>
@@ -581,7 +620,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             )}
           </div>
           )}
-          <MiniMapa recorte={recorte}>{mapaPalco}</MiniMapa>
+          <MiniMapa recorte={recorte} foco={focoMini}>{mapaPalco}</MiniMapa>
           </>)}
         </section>
       )}

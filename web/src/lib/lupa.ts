@@ -24,3 +24,6 @@ export function aproximar(l: Lupa, fator: number, p: { x: number; y: number }): 
 
 /** Move a lupa de (dx, dy) unidades do viewBox, a partir de onde o arrasto começou. */
 export const arrastar = (inicio: Lupa, dx: number, dy: number): Lupa => limitar({ k: inicio.k, x: inicio.x + dx, y: inicio.y + dy });
+
+/** Lupa com escala k que põe o ponto `p` (unidades do viewBox) no centro da tela: o mini-mapa indo ao município. */
+export const centrarLupa = (p: { x: number; y: number }, k: number): Lupa => ({ k, x: TELA.larg / 2 - k * p.x, y: TELA.alt / 2 - k * p.y });
