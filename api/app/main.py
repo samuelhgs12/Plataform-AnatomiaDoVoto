@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from . import db
 from .config import get_settings
-from .routers import analises, busca, candidaturas, candidatos, meta, saude
+from .routers import analises, busca, candidaturas, candidatos, fotos, meta, saude
 
 app = FastAPI(title="Anatomia do Voto", version="0.1.0",
               description="Dados eleitorais do TSE (1998–2024) para AP, ES, MG, PE, RJ e RR. Somente leitura.")
@@ -18,7 +18,7 @@ async def cache_http(request: Request, call_next):
     """Os dados são históricos: o navegador e a CDN podem guardar as respostas."""
     resp = await call_next(request)
     if request.method == "GET" and request.url.path.startswith("/api/") and request.url.path != "/api/health" and resp.status_code == 200:
-        resp.headers["Cache-Control"] = "public, max-age=3600, s-maxage=86400"
+        resp.headers.setdefault("Cache-Control", "public, max-age=3600, s-maxage=86400")   # as fotos trazem o seu
     return resp
 
 
@@ -27,5 +27,5 @@ async def banco_indisponivel(_: Request, exc: db.BancoIndisponivel):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
-for r in (saude.router, meta.router, busca.router, candidaturas.router, candidatos.router, analises.router):
+for r in (saude.router, meta.router, busca.router, candidaturas.router, candidatos.router, fotos.router, analises.router):
     app.include_router(r, prefix="/api")

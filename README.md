@@ -31,6 +31,8 @@ BDR/
 ```
 Em outro lugar, informe o caminho em `api/.env` com `DATABASE_LOCAL=/caminho/para/bdr_final.duckdb`. Quando o fallback é usado, o terminal da API mostra o aviso `MotherDuck indisponível (...); usando o banco local ...`. O DuckDB não deixa abrir o arquivo enquanto a carga estiver escrevendo nele: rode a carga antes de subir a API.
 
+**Fotos dos candidatos** (opcional; decisão 7): ficam num banco à parte, `bdr_fotos`, com o mesmo token. Quem tem o banco na conta usa o padrão `FOTOS_DATABASE=md:bdr_fotos`; quem recebeu um share preenche `FOTOS_DATABASE=md:_share/bdr_fotos/<codigo>` em `api/.env`. Sem MotherDuck, a API lê `../load_BDR/dados_bdr/fotos/bdr_fotos.duckdb` (gerado por `python fotos_baixar.py processar` no `load_BDR`; outro caminho em `FOTOS_DATABASE_LOCAL`). Sem nenhum dos dois, tudo funciona e as páginas mostram as iniciais no lugar das fotos.
+
 **1. API**
 
 Rode tudo de dentro da pasta `api/` (o `app.main` é relativo a ela) e com o ambiente virtual ativo. Sem ele, o `pip` instala os pacotes no Python global e o comando `uvicorn` pode não ser encontrado.

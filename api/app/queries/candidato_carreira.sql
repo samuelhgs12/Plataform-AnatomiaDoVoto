@@ -1,5 +1,5 @@
 SELECT c.id_candidatura, c.ano, g.nome AS cargo, g.id_cargo, g.eh_titular, c.uf, m.nome AS municipio,
-       p.sigla AS partido, c.nome_urna, c.numero_urna, e.tipo_eleicao,
+       p.sigla AS partido, c.nome_urna, c.numero_urna, c.ue, c.sequencial, e.tipo_eleicao,
        r.categoria AS resultado, r.eleito, coalesce(c.disputou, r.disputou, false) AS disputou,
        coalesce(v.votos, 0) AS votos_1t
 FROM candidatura c

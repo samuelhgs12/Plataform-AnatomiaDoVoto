@@ -7,18 +7,19 @@ export interface CandidatoBusca {
   id_candidato: number; nome_civil: string | null; nome_urna: string | null; uf: string | null;
   ultimo_ano: number; partido: string | null; ultimo_cargo: string; ultimo_eleito: boolean;
   nome_urna_casado?: string | null;   // nome de urna de outra eleição em que a busca casou
+  ultimo_ue?: string | null; ultimo_sequencial?: string | null;   // com ultimo_ano, a chave da foto
 }
 
 export interface CandidaturaItem {
   id_candidatura: number; id_candidato: number | null; nome_urna: string | null; numero_urna: string | null;
-  uf: string | null; ano: number; partido: string | null; cargo: string; resultado: string; eleito: boolean; votos: number;
+  uf: string | null; ano: number; ue: string; sequencial: string; partido: string | null; cargo: string; resultado: string; eleito: boolean; votos: number;
 }
 export interface Listagem { total: number; pagina: number; tamanho: number; itens: CandidaturaItem[] }
 
 export interface CarreiraItem {
   id_candidatura: number; ano: number; cargo: string; id_cargo: number; nivel: number; eh_titular: boolean;
   uf: string | null; municipio: string | null; partido: string | null; nome_urna: string | null; numero_urna: string | null;
-  tipo_eleicao: string; resultado: string; eleito: boolean; disputou: boolean; votos_1t: number;
+  ue: string; sequencial: string; tipo_eleicao: string; resultado: string; eleito: boolean; disputou: boolean; votos_1t: number;
 }
 export interface Troca { ano: number; de: string; para: string }
 export interface Resumo { eleicoes_disputadas: number; vitorias: number; partidos: string[]; primeiro_ano: number | null; ultimo_ano: number | null }

@@ -3,8 +3,8 @@
 import { porUf, type LinhaFontes } from "./financiamento";
 import { cicloDoAno, proporcao, type CargoCiclo, type LinhaLegenda } from "./legenda";
 
-/** O que o mapa da página inicial pinta: a abstenção (padrão) ou o voto de legenda. */
-export const VISOES = ["abstencao", "legenda"] as const;
+/** O que o mapa da página inicial pinta: a abstenção (padrão), o voto de legenda ou os votos de um candidato. */
+export const VISOES = ["abstencao", "legenda", "candidato"] as const;
 export type Visao = (typeof VISOES)[number];
 
 /**

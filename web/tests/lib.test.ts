@@ -10,6 +10,7 @@ import { aproximar, arrastar, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lu
 import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
 import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
+import { fotoDaBusca, fotoDoPerfil, urlFoto } from "../src/lib/foto-candidato";
 import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
 import { respostaSucesso, resumoCampanhas, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
 
@@ -136,10 +137,41 @@ describe("destacarBusca", () => {
   });
 });
 
+describe("urlFoto", () => {
+  it("monta a rota da API pela chave (ano, ue, sequencial)", () => {
+    expect(urlFoto({ ano: 2022, ue: "RR", sequencial: "230001604255" })).toBe("/api/fotos/2022/RR/230001604255?tam=mini");
+    expect(urlFoto({ ano: 2024, ue: "54038", sequencial: "1" }, "ficha")).toBe("/api/fotos/2024/54038/1?tam=ficha");
+  });
+  it("sem chave ou antes de 2018 não pede foto", () => {
+    expect(urlFoto({ ano: 2016, ue: "MG", sequencial: "1" })).toBeNull();
+    expect(urlFoto({ ano: 2022, ue: "MG" })).toBeNull();
+    expect(urlFoto({ ano: 2022, ue: null, sequencial: "1" })).toBeNull();
+  });
+  it("fotoDaBusca usa a última candidatura", () => {
+    expect(fotoDaBusca({ ultimo_ano: 2020, ultimo_ue: "11111", ultimo_sequencial: "9" })).toBe("/api/fotos/2020/11111/9?tam=mini");
+    expect(fotoDaBusca({ ultimo_ano: 2020 })).toBeNull();
+  });
+});
+
+describe("fotoDoPerfil", () => {
+  const c = (id_candidatura: number, ano: number) => ({ id_candidatura, ano, ue: "MG", sequencial: String(id_candidatura) });
+  const carreira = [c(1, 2014), c(2, 2018), c(3, 2022)];
+  it("a mais recente que pode ter foto", () => {
+    expect(fotoDoPerfil(carreira)).toEqual({ url: "/api/fotos/2022/MG/3?tam=ficha", ano: 2022 });
+  });
+  it("a da campanha escolhida, se ela puder ter foto", () => {
+    expect(fotoDoPerfil(carreira, 2)?.ano).toBe(2018);
+    expect(fotoDoPerfil(carreira, 1)?.ano).toBe(2022);   // 2014: antes das fotos do TSE
+  });
+  it("sem candidatura de 2018 em diante, sem foto", () => {
+    expect(fotoDoPerfil([c(1, 2010)])).toBeNull();
+  });
+});
+
 describe("naLinhaDoTempo", () => {
   const c = (o: Partial<CarreiraItem>): CarreiraItem => ({
     id_candidatura: 1, ano: 2020, cargo: "Vereador", id_cargo: 13, nivel: 1, eh_titular: true, uf: "MG", municipio: null, partido: "PT",
-    nome_urna: null, numero_urna: null, tipo_eleicao: "ORDINARIA", resultado: "ELEITO", eleito: true, disputou: true, votos_1t: 0, ...o,
+    nome_urna: null, numero_urna: null, ue: "MG", sequencial: "1", tipo_eleicao: "ORDINARIA", resultado: "ELEITO", eleito: true, disputou: true, votos_1t: 0, ...o,
   });
 
   it("inclui vice-prefeito entre vereador e prefeito e deixa outros vices de fora", () => {
@@ -173,7 +205,7 @@ describe("rotulosPartido", () => {
 describe("resumoCampanhas", () => {
   const cand = (o: Partial<CarreiraItem>): CarreiraItem => ({
     id_candidatura: 1, ano: 2024, cargo: "Vereador", id_cargo: 13, nivel: 1, eh_titular: true, uf: "MG", municipio: null, partido: "PT",
-    nome_urna: null, numero_urna: null, tipo_eleicao: "ORDINARIA", resultado: "ELEITO", eleito: true, disputou: true, votos_1t: 0, ...o,
+    nome_urna: null, numero_urna: null, ue: "MG", sequencial: "1", tipo_eleicao: "ORDINARIA", resultado: "ELEITO", eleito: true, disputou: true, votos_1t: 0, ...o,
   });
   const rec = (publica: number, privada: number) => ({
     id_candidatura: 1, publica, privada, total: publica + privada, pct_publica: null, mediana_pct_publica_cargo: null,
@@ -434,6 +466,7 @@ describe("paleta (busca rápida)", () => {
     const c = { id_candidato: 7, nome_civil: "MARIA DA SILVA", nome_urna: "MARIA", uf: "PE", ultimo_ano: 2022, partido: "PT", ultimo_cargo: "Deputado federal", ultimo_eleito: true };
     expect(candidatoNaPaleta(c)).toEqual({ tipo: "candidato", titulo: "MARIA", detalhe: "Deputado federal · PE · 2022 · PT · eleito", href: "/candidato/7" });
     expect(candidatoNaPaleta({ ...c, nome_urna: null, partido: null, ultimo_eleito: false }).detalhe).toBe("Deputado federal · PE · 2022");
+    expect(candidatoNaPaleta({ ...c, ultimo_ue: "PE", ultimo_sequencial: "17" }).foto).toBe("/api/fotos/2022/PE/17?tam=mini");
   });
 
   it("agrupar: na ordem dos grupos, sem grupo vazio", () => {

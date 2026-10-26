@@ -27,6 +27,9 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
   e `src/lib/nuvem.ts`; desenho em `BarraPecas` e `NuvemPalavras`). A comparação com a campanha típica vem da análise q9:
   o perfil lê `referencia` e, só quando o grupo (cargo + ano + UF) tem menos de 30 campanhas, `parcelas`, para tirar a
   própria campanha da típica.
+- Visão Candidato do mapa (página inicial, `?ver=candidato&cand=<id_candidato>`): `/api/candidatos/<id>/mapa` (candidaturas
+  e números da ficha) e `/api/candidaturas/<id>/votos-municipio` (tabela `votos_candidatura_municipio`, da carga)
+  → `VisaoCandidato`; lógica em `src/lib/candidato-mapa.ts`.
 
 ## Como filtros viram searchParams
 
@@ -39,7 +42,8 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (também escolhe o partido na visão de legenda, com `nome="p"`; selects que aplicam na hora com
 `router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
-`BuscaNome` (abre/fecha), `MenuLateral` (recolhe em trilho com o botão ou a tecla `[`; gaveta no celular; estado em `<html data-menu>`), `PaletaBusca` (Ctrl K: páginas, estados e municípios de `/indice/municipios` filtrados por `src/lib/paleta.ts`, candidatos da `/api/busca`; a caixa nasce do botão por View Transition) e `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial). Gráficos
+`BuscaNome` (abre/fecha), `MenuLateral` (recolhe em trilho com o botão ou a tecla `[`; gaveta no celular; estado em `<html data-menu>`), `PaletaBusca` (Ctrl K: páginas, estados e municípios de `/indice/municipios` filtrados por `src/lib/paleta.ts`, candidatos da `/api/busca`; a caixa nasce do botão por View Transition) `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial) e `FotoCandidato` (foto de `/api/fotos`;
+se a imagem falhar, volta às iniciais; URLs e escolha da foto em `src/lib/foto-candidato.ts`). Gráficos
 (`MapaAbstencao`, `Dispersao`, `BarrasH`, `BarraPecas`, `NuvemPalavras`) e `PartyChip` são componentes de servidor sem JS
 (`SpendBars` e `WordList` também, mas estão sem uso).
 

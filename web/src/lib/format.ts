@@ -2,6 +2,8 @@ const nf = new Intl.NumberFormat("pt-BR");
 
 export const inteiro = (n: number) => nf.format(Math.round(n));
 export const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+/** Reais com centavos, para valores pequenos como o gasto por voto: "R$ 4,87". */
+export const brlCentavos = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const pct = (v: number, casas = 1) => `${(v * 100).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}%`;
 /** Porcentagem com sinal, para variações (0,25 → "+25%"; −0,1 → "−10%"). */
 export function pctSinal(v: number, casas = 0): string {

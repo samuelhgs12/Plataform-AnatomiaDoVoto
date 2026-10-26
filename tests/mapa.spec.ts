@@ -50,3 +50,56 @@ test('lupa: a roda aproxima o estado e, no estado inteiro, rola a página', asyn
   await page.mouse.wheel(0, 400);
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
 });
+
+// visão Candidato: dados reais da API (precisa da tabela votos_candidatura_municipio no banco)
+test('candidato: buscar um governador, ver o estado em zoom e virar a ficha', async ({ page }) => {
+  await page.goto('/?ver=candidato', { waitUntil: 'networkidle' });
+  await expect(page.getByRole('heading', { name: 'Onde cada candidato teve votos' })).toBeVisible();
+  await expect(page.locator('.mapa-abst .mun')).toHaveCount(0);
+
+  const busca = page.getByRole('combobox', { name: 'Buscar candidato pelo nome' });
+  await busca.fill('denarium');
+  await page.getByRole('option', { name: /Antonio Denarium/ }).click();
+  await expect(page).toHaveURL(/ver=candidato.*cand=\d+/);
+  await expect(page.getByRole('heading', { name: 'Onde Antonio Denarium teve votos em 2022' })).toBeVisible();
+  await expect(page.getByText('Governador · RR · 1º turno')).toBeVisible();
+  await expect(page.locator('.mapa-abst')).toHaveAttribute('data-zoom', 'uf');
+  await expect(page.locator('.mapa-abst .mun').first()).toBeVisible();
+
+  // o cartão inteiro é o controle: clicar nele vira; pelo teclado, Enter vira e o foco passa para a outra face
+  await page.getByRole('button', { name: /virar para ver os números/ }).click();
+  const mais = page.getByRole('link', { name: 'Ver mais detalhes' });
+  await expect(mais).toBeVisible();
+  await expect(mais).toHaveAttribute('href', /^\/candidato\/\d+\?campanha=\d+$/);
+  const voltar = page.getByRole('button', { name: /Voltar à frente da ficha/ });
+  await voltar.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: /virar para ver os números/ })).toBeFocused();
+  await expect(mais).toBeHidden();
+});
+
+test('candidato: presidente nos seis estados, zoom num estado e 2º turno', async ({ page }) => {
+  await page.goto('/?ver=candidato', { waitUntil: 'networkidle' });
+  await page.getByRole('combobox', { name: 'Buscar candidato pelo nome' }).fill('lula');
+  await page.getByRole('option', { name: /^Lula/ }).first().click();
+  await expect(page.getByRole('heading', { name: /Onde Lula teve votos em 2022/ })).toBeVisible();
+  await expect(page.getByText(/só AP, ES, MG, PE, RJ e RR · 1º turno/)).toBeVisible();
+  const mapa = page.getByRole('group', { name: /nos seis estados/ });
+  await expect(mapa.locator('a.uf[class*=" c"]')).toHaveCount(6); // os seis estados pintados pela proporção
+
+  await mapa.getByRole('link', { name: /^Pernambuco:/ }).click();
+  await expect(page).toHaveURL(/uf=PE/);
+  await expect(page.locator('.mapa-abst')).toHaveAttribute('data-zoom', 'uf');
+  await expect(page.locator('.mapa-abst .mun').first()).toBeVisible();
+  await expect(page.locator('.palco')).toHaveAttribute('aria-busy', 'false'); // a navegação do clique no estado terminou
+
+  await page.getByRole('group', { name: 'Turno' }).getByRole('link', { name: '2º turno' }).click();
+  await expect(page).toHaveURL(/turno=2/);
+  await expect(page).toHaveURL(/uf=PE/); // trocar de turno mantém o estado
+  await expect(page.getByText(/só AP, ES, MG, PE, RJ e RR · 2º turno/)).toBeVisible();
+});
+
+test('candidato: parâmetros inválidos voltam à busca', async ({ page }) => {
+  await page.goto('/?ver=candidato&cand=123&campanha=999');
+  await expect(page.getByRole('heading', { name: 'Onde cada candidato teve votos' })).toBeVisible();
+});

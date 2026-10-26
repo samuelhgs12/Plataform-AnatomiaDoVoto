@@ -8,7 +8,8 @@ import { TELA } from "@/lib/lupa";
 import { MapaVivo } from "@/components/MapaVivo";
 import { Dispersao } from "@/components/Dispersao";
 import { EscolhaMunicipio } from "@/components/EscolhaMunicipio";
-import { lerAnalise } from "@/lib/api";
+import { apiGetOpcional, lerAnalise } from "@/lib/api";
+import type { Listagem } from "@/lib/types";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
 import { CARGOS, anosDe as anosDaLegenda, cicloDoAno, type CargoCiclo, type LinhaLegenda } from "@/lib/legenda";
@@ -26,12 +27,15 @@ import { compacto, pct } from "@/lib/format";
 import { FOTOS } from "@/lib/fotos";
 import { ANALISES } from "@/lib/analises";
 import { FaixasAnalises } from "@/components/FaixasAnalises";
+import { VisaoCandidato } from "@/components/VisaoCandidato";
+import { abrangencia, candidaturasDe, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
 
 export const dynamic = "force-dynamic";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 const ESTADOS = ["Amapá", "Espírito Santo", "Minas Gerais", "Pernambuco", "Rio de Janeiro", "Roraima"];
+const ANO_SUGESTOES = 2022;   // última eleição geral: as sugestões da visão Candidato são os governadores eleitos nela
 const umaCasa = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 const ROTULO_CARGO: Record<CargoCiclo, string> = { ambos: "Os dois", federal: "Federal", estadual: "Estadual" };
 
@@ -58,7 +62,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const anoPadraoLeg = anoNaLegenda(anoPadrao, anosLeg);
   const anoLeg = anosLeg.includes(anoPedido) ? anoPedido : anoNaLegenda(anos.includes(anoPedido) ? anoPedido : anoPadrao, anosLeg);
   const pediuLegenda = um(sp.ver) === "legenda";
-  const ver: Visao = pediuLegenda && anoLeg !== undefined ? "legenda" : "abstencao";
+  const naCandidato = um(sp.ver) === "candidato";
+  const ver: Visao = naCandidato ? "candidato" : pediuLegenda && anoLeg !== undefined ? "legenda" : "abstencao";
   const naLegenda = ver === "legenda";
   const cargo = CARGOS.find((c) => c === um(sp.cargo)) ?? "ambos";
   const partido = legenda.some((l) => l.partido === um(sp.p)) ? um(sp.p) : undefined;
@@ -71,7 +76,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
 
   type Estado = { ver?: Visao; ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null; p?: string | null; cargo?: CargoCiclo };
   const params = (nova: Estado) => {
-    const n = { ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind, cor: cruzar ? "cruzar" : null, p: partido, cargo, ...nova };
+    const n = { ver: ver === "candidato" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind, cor: cruzar ? "cruzar" : null, p: partido, cargo, ...nova };
     if (nova.uf !== undefined && nova.mun === undefined) n.mun = null;   // trocar de estado solta o município
     const leg = n.ver === "legenda";
     const p = new URLSearchParams();
@@ -170,6 +175,31 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const hrefAbst = naLegenda ? href({ ver: "abstencao", ano: anos.includes(anoLeg!) ? anoLeg : ano }) : href({});
   const hrefLeg = naLegenda ? href({}) : href({ ver: "legenda", ano: anoNaLegenda(ano, anosLeg) ?? ano });
 
+  // visão candidato: cand e campanha validados contra os dados da API; inválidos (ou API fora) voltam à busca
+  const idCand = naCandidato && /^\d+$/.test(um(sp.cand) ?? "") ? Number(um(sp.cand)) : undefined;
+  const candidaturasMapa = idCand ? (await apiGetOpcional<CandidaturaMapa[]>(`/candidatos/${idCand}/mapa`)) ?? [] : [];
+  const { padrao: campanhaPadrao, lista: campanhas } = candidaturasDe(candidaturasMapa, idCand ?? 0);
+  const campanha = campanhas.find((c) => String(c.id_candidatura) === um(sp.campanha)) ?? campanhaPadrao;
+  const votosCand = campanha && abrangencia(campanha.cargo) !== "fora"
+    ? (await apiGetOpcional<VotoMunicipio[]>(`/candidaturas/${campanha.id_candidatura}/votos-municipio`)) ?? [] : [];
+  const turnosCand = turnosDe(votosCand);
+  const turnoCand = turnosCand.includes(Number(um(sp.turno))) ? Number(um(sp.turno)) : 1;
+  const alcanceCand = campanha ? abrangencia(campanha.cargo) : "fora";
+  const ufCand = alcanceCand === "uf" ? campanha!.uf : alcanceCand === "seis" ? ufs.find((u) => u === um(sp.uf)) : undefined;
+  const munCand = ufCand ? votosCand.find((v) => v.uf === ufCand && String(v.id_municipio) === um(sp.mun))?.id_municipio : undefined;
+  // sugestões sem candidato escolhido: governadores eleitos na última eleição geral (id_cargo 3)
+  const sugestoesCand = naCandidato && !campanha
+    ? sugestoesDe((await apiGetOpcional<Listagem>(`/candidaturas?cargo=3&ano=${ANO_SUGESTOES}&eleito=true&tamanho=6`))?.itens ?? []) : [];
+
+  const hrefCand = "/?ver=candidato#mapa";   // como as outras abas: <a data-mapa>, que o MapaVivo navega sem recarregar
+  const visoes = (
+    <nav className="visoes" aria-label="O que o mapa mostra">
+      <a href={hrefAbst} data-mapa="" aria-current={ver === "abstencao" ? "true" : undefined}>Abstenção</a>
+      <a href={hrefLeg} data-mapa="" aria-current={ver === "legenda" ? "true" : undefined}>Voto de legenda</a>
+      <a href={hrefCand} data-mapa="" aria-current={ver === "candidato" ? "true" : undefined}>Candidato</a>
+    </nav>
+  );
+
   // números do mosaico e achados das análises
   const dinheiro = dinheiroTotal(fontes);
   const anoSucesso = Math.max(0, ...sucesso.map((l) => l.ano));
@@ -191,13 +221,16 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         </div>
       ) : (
         <section id="mapa" className="quadro observatorio" aria-labelledby="h-mapa">
+          {naCandidato ? (
+            <VisaoCandidato
+              visoes={visoes} votos={votosCand} sugestoes={sugestoesCand} municipios={municipios} ufs={ufs}
+              escolha={{ campanha, lista: campanhas, turno: turnoCand, turnos: turnosCand, uf: ufCand, mun: munCand }}
+            />
+          ) : (<>
           <MapaVivo className="palco s8" estado={naLegenda ? undefined : uf}>
             <div className="palco-topo">
               <div>
-                <nav className="visoes" aria-label="O que o mapa mostra">
-                  <a href={hrefAbst} data-mapa="" aria-current={!naLegenda ? "true" : undefined}>Abstenção</a>
-                  <a href={hrefLeg} data-mapa="" aria-current={naLegenda ? "true" : undefined}>Voto de legenda</a>
-                </nav>
+                {visoes}
                 {naLegenda ? (
                   <>
                     <h1 id="h-mapa">{partido ? `${partido}: voto de legenda em ${anoLeg}` : `Quem votou só no partido em ${anoLeg}`}</h1>
@@ -455,6 +488,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             )}
           </div>
           )}
+          </>)}
         </section>
       )}
 

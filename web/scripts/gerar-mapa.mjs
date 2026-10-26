@@ -108,7 +108,8 @@ for (const arq of malhas) {
   const geo = JSON.parse(readFileSync(arq, "utf-8"));
   // ilhas oceânicas (Fernando de Noronha) ficam fora do quadro do mapa: saem do desenho e da caixa do zoom
   geo.features = geo.features.filter((f) => proj(f.geometry.type === "Polygon" ? f.geometry.coordinates[0][0] : f.geometry.coordinates[0][0][0])[0] <= LARGURA);
-  const aneis = (g) => (g.type === "Polygon" ? [g.coordinates] : g.coordinates).flat(1);
+  // e ilhas dentro de um município do continente (Trindade e Martim Vaz, em Vitória): o anel sai, o município fica
+  const aneis = (g) => (g.type === "Polygon" ? [g.coordinates] : g.coordinates).flat(1).filter((a) => a.every((p) => proj(p)[0] <= LARGURA));
   const xs = geo.features.flatMap((f) => aneis(f.geometry).flat()).map(proj);
   const caixa = [Math.min(...xs.map((p) => p[0])), Math.min(...xs.map((p) => p[1])), Math.max(...xs.map((p) => p[0])), Math.max(...xs.map((p) => p[1]))].map(r);
   const tolerancia = Math.max(caixa[2] - caixa[0], caixa[3] - caixa[1]) / 700; // ~1 px com o estado ocupando o mapa

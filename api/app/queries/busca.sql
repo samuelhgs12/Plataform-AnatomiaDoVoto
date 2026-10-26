@@ -36,7 +36,7 @@ achados AS (
 ),
 ultima AS (
     -- candidatura mais recente de cada pessoa achada (entre todas, não só as que passaram no pré-filtro)
-    SELECT c.id_candidato, k.nome_civil, c.nome_urna, c.uf, c.ano, e.id_cargo, p.sigla AS partido, g.nome AS cargo, r.eleito
+    SELECT c.id_candidato, k.nome_civil, c.nome_urna, c.uf, c.ano, c.ue, c.sequencial, e.id_cargo, p.sigla AS partido, g.nome AS cargo, r.eleito
     FROM candidatura c
     JOIN achados a          ON a.id_candidato = c.id_candidato
     JOIN candidato k        ON k.id_candidato = c.id_candidato
@@ -55,7 +55,7 @@ votos AS (
     GROUP BY c.id_candidato
 )
 SELECT u.id_candidato, u.nome_civil, u.nome_urna, u.uf, u.ano AS ultimo_ano, u.partido, u.cargo AS ultimo_cargo,
-       u.eleito AS ultimo_eleito,
+       u.eleito AS ultimo_eleito, u.ue AS ultimo_ue, u.sequencial AS ultimo_sequencial,   -- chave da foto
        -- o texto só aparece num nome de urna de outra eleição: mostra esse nome para explicar o resultado
        CASE WHEN NOT a.casou_civil AND a.urna_casada IS DISTINCT FROM u.nome_urna THEN a.urna_casada END AS nome_urna_casado
 FROM ultima u

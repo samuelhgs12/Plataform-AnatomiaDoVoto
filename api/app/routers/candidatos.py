@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from .. import db
-from ..schemas import Perfil, Pessoa, Resumo
+from ..schemas import CandidaturaMapa, Perfil, Pessoa, Resumo
 from .util import NIVEL_CARGO
 
 router = APIRouter(tags=["candidatos"])
@@ -34,3 +34,12 @@ def perfil(id_candidato: int):
         ultimo_ano=validas[-1]["ano"] if validas else None,
     )
     return Perfil(candidato=Pessoa(**pessoa), resumo=resumo, carreira=carreira, trocas=trocas)
+
+
+@router.get("/candidatos/{id_candidato}/mapa", response_model=list[CandidaturaMapa])
+def mapa(id_candidato: int):
+    """Candidaturas da pessoa para a visão Candidato do mapa (titulares, eleição ordinária), da mais recente para a
+    mais antiga, com os números da ficha. Lista vazia: a pessoa existe mas nunca disputou como titular."""
+    if not db.um("candidato_cabecalho", (id_candidato,)):
+        raise HTTPException(404, "Candidato não encontrado")
+    return db.consultar("candidato_mapa", (id_candidato,))
