@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { aproximar, arrastar, LUPA_INICIAL, LUPA_MAX, type Lupa } from "@/lib/lupa";
+import { lerFicha, posicionarDica, type FichaDica } from "@/lib/dica";
+import { CartaoDica } from "./CartaoDica";
 
 const svgDe = (el: HTMLElement | null) => el?.querySelector<SVGSVGElement>("svg.mapa-abst") ?? null;
 
@@ -25,7 +27,8 @@ function desenharLupa(svg: SVGSVGElement | null, l: Lupa, suave: boolean) {
 /**
  * Casca do mapa:
  * - links marcados com `data-mapa` navegam sem recarregar a página (o zoom e as cores animam em vez de piscar);
- * - o elemento sob o mouse com `data-dica` mostra a dica ao lado do cursor;
+ * - o elemento sob o mouse com `data-dica` mostra a dica ao lado do cursor (gráfica, se tiver `data-ficha`); ela é
+ *   fixa na janela e vira de lado perto das bordas, para nunca ser cortada (posicionarDica);
  * - com um estado aberto (`estado`), a roda do mouse aproxima e afasta e arrastar move o mapa (a "lupa"), para
  *   alcançar municípios pequenos. Afastar além do enquadramento do estado devolve a roda para a página.
  * São centenas de municípios: um ouvinte só, aqui, em vez de um <Link> por município. Sem JavaScript, os links
@@ -34,7 +37,10 @@ function desenharLupa(svg: SVGSVGElement | null, l: Lupa, suave: boolean) {
 export function MapaVivo({ children, className, estado }: { children: React.ReactNode; className?: string; estado?: string }) {
   const router = useRouter();
   const [carregando, iniciar] = useTransition();
-  const [dica, setDica] = useState<{ texto: string; x: number; y: number } | null>(null);
+  // a dica só renderiza de novo quando muda o elemento sob o cursor; mover o mouse só reposiciona (direto no DOM)
+  const [dica, setDica] = useState<{ alvo: Element; texto: string; ficha: FichaDica | null } | null>(null);
+  const cartao = useRef<HTMLDivElement>(null);
+  const cursor = useRef({ x: 0, y: 0 });
   // escala da lupa para os botões; vale só para o estado em que foi medida (trocar de estado volta a 1)
   const [escala, setEscala] = useState({ estado, k: 1 });
   const caixa = useRef<HTMLDivElement>(null);
@@ -42,6 +48,23 @@ export function MapaVivo({ children, className, estado }: { children: React.Reac
   const arrasto = useRef<{ x: number; y: number; lupa: Lupa; moveu: boolean } | null>(null);
   const ignorarClique = useRef(false);
   const k = escala.estado === estado ? escala.k : 1;
+
+  const posicionar = useCallback(() => {
+    const el = cartao.current;
+    if (!el) return;
+    const janela = { larg: document.documentElement.clientWidth, alt: document.documentElement.clientHeight };
+    const p = posicionarDica(cursor.current, { larg: el.offsetWidth, alt: el.offsetHeight }, janela);
+    el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
+  }, []);
+  useLayoutEffect(posicionar, [dica, posicionar]);
+
+  /** Mostra (ou esconde) a dica do elemento em (x, y) da janela. */
+  const mostrar = useCallback((sob: Element | null, x: number, y: number) => {
+    cursor.current = { x, y };
+    const alvo = sob?.closest("[data-dica]") ?? null;
+    setDica((d) => (d?.alvo === alvo ? d : alvo ? { alvo, texto: alvo.getAttribute("data-dica")!, ficha: lerFicha(alvo.getAttribute("data-ficha")) } : null));
+    posicionar();
+  }, [posicionar]);
 
   const aplicar = useCallback((l: Lupa, suave: boolean) => {
     atual.current = l;
@@ -63,10 +86,11 @@ export function MapaVivo({ children, className, estado }: { children: React.Reac
       if (e.deltaY > 0 && atual.current.k <= 1) return;   // já no estado inteiro: a roda rola a página
       e.preventDefault();
       aplicar(aproximar(atual.current, Math.exp(-e.deltaY * 0.002), noMapa(svg, e)), false);
+      mostrar(document.elementFromPoint(e.clientX, e.clientY), e.clientX, e.clientY);   // o mapa andou sob o cursor parado
     };
     el.addEventListener("wheel", roda, { passive: false });
     return () => el.removeEventListener("wheel", roda);
-  }, [estado, aplicar]);
+  }, [estado, aplicar, mostrar]);
 
   const clicar = (e: React.MouseEvent) => {
     if (ignorarClique.current) { ignorarClique.current = false; e.preventDefault(); return; }   // fim de um arrasto
@@ -91,9 +115,8 @@ export function MapaVivo({ children, className, estado }: { children: React.Reac
       aplicar(arrastar(a.lupa, dx * porPixel, dy * porPixel), false);
       return;
     }
-    const alvo = (e.target as Element).closest("[data-dica]");
-    const r = caixa.current!.getBoundingClientRect();
-    setDica(alvo ? { texto: alvo.getAttribute("data-dica")!, x: e.clientX - r.left, y: e.clientY - r.top } : null);
+    if (e.pointerType === "touch") return;   // no toque não há cursor para seguir: o toque já navega
+    mostrar(e.target as Element, e.clientX, e.clientY);
   };
   const soltar = () => {
     if (arrasto.current?.moveu) ignorarClique.current = true;
@@ -116,7 +139,11 @@ export function MapaVivo({ children, className, estado }: { children: React.Reac
         </div>
       )}
       {estado && <p className="lupa-dica" aria-hidden="true">Role para aproximar · arraste para mover</p>}
-      {dica && <div className="dica-mapa" aria-hidden="true" style={{ left: dica.x, top: dica.y }}>{dica.texto}</div>}
+      {dica && (
+        <div ref={cartao} className={`dica-mapa${dica.ficha ? " rica" : ""}`} aria-hidden="true">
+          <CartaoDica ficha={dica.ficha} texto={dica.texto} />
+        </div>
+      )}
     </div>
   );
 }

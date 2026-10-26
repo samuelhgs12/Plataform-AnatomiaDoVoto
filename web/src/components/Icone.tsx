@@ -13,6 +13,10 @@ const DESENHOS = {
   municipio: <><path d="M4 20V9l5-3 5 3v11M14 20V12h6v8M3 20h18" /><path d="M8 12h2M8 15.5h2" /></>,
   pagina: <><path d="M6.5 3.5h7l4 4v13h-11z" /><path d="M13.5 3.5v4h4M9 12.5h6M9 16h6" /></>,
   candidato: <><circle cx="12" cy="8" r="4" /><path d="M4.5 20.5c.8-4 3.7-6 7.5-6s6.7 2 7.5 6" /></>,
+  camadas: <><path d="m12 3.5 8.5 4.5-8.5 4.5L3.5 8z" /><path d="m3.5 12 8.5 4.5 8.5-4.5" /><path d="m3.5 16 8.5 4.5 8.5-4.5" /></>,
+  legenda: <><rect x="4" y="10.5" width="16" height="9.5" rx="1.5" /><path d="M8.5 10.5V4h7v6.5M8 14.5h8" /></>,
+  comparar: <><path d="M4 20V4M4 20h16" /><circle cx="9" cy="14" r="1.4" /><circle cx="13" cy="10.5" r="1.4" /><circle cx="17.5" cy="7" r="1.4" /></>,
+  seta: <><path d="m9 6 6 6-6 6" /></>,
 } as const;
 
 export type NomeIcone = keyof typeof DESENHOS;

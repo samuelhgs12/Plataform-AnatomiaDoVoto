@@ -40,6 +40,12 @@ export function medirLegenda(linhas: LinhaLegenda[], { ano, uf, partido }: { ano
   return { valor: total > 0 && disputou ? legenda / total : null, legenda, total };
 }
 
+/** Cada item com `p`, a fração do maior valor da lista (o primeiro de um ranking vale 1): o tamanho da barra. */
+export function escalaDoMaior<T extends { valor: number }>(lista: T[]): (T & { p: number })[] {
+  const topo = Math.max(0, ...lista.map((x) => x.valor));
+  return lista.map((x) => ({ ...x, p: topo > 0 ? x.valor / topo : 0 }));
+}
+
 /** Partidos por votos de legenda no recorte, do maior para o menor; valor: a parte de cada um nos votos de legenda. */
 export function rankingPartidos(linhas: LinhaLegenda[], { ano, uf }: { ano: number; uf?: string }): { partido: string; legenda: number; valor: number }[] {
   const porPartido = new Map<string, number>();
@@ -101,4 +107,22 @@ export function dinheiroTotal(linhas: LinhaFontes[]): { total: number; publico: 
   if (!anos.length) return null;
   const somas = anos.flatMap((ano) => porUf(linhas, { ano }));
   return { total: somas.reduce((s, u) => s + u.soma.total, 0), publico: somas.reduce((s, u) => s + u.soma.publico, 0), anos: [anos[0], anos[anos.length - 1]] };
+}
+
+/**
+ * A camada "Comparativos" (abstenção × um indicador do Censo 2010) no ano e recorte do mapa: só existe nos anos
+ * comparados com o Censo; ligada sem um estado aberto, guarda a escolha mas ainda não pinta (o cruzamento é por
+ * município, em terços dentro do estado). `motivo` diz ao leitor por que ela não pinta.
+ */
+export function situacaoComparativo({ ano, anosCenso, uf }: { ano: number; anosCenso: number[]; uf?: string }): { disponivel: boolean; pinta: boolean; motivo: string | null } {
+  if (!anosCenso.includes(ano)) return { disponivel: false, pinta: false, motivo: `O Censo 2010 só é comparado com as eleições de ${anosCenso.join(" e ")}.` };
+  if (!uf) return { disponivel: true, pinta: false, motivo: "Abra um estado no mapa para pintar os municípios com o cruzamento." };
+  return { disponivel: true, pinta: true, motivo: null };
+}
+
+/** O que o mapa está mostrando, em poucas palavras, para o botão do submenu: "Abstenção × IDHM", "Voto de legenda · PT". */
+export function resumoCamadas({ ver, partido, comparativo }: { ver: Visao; partido?: string; comparativo?: string }): string {
+  if (ver === "candidato") return "Votos de um candidato";
+  if (ver === "legenda") return partido ? `Voto de legenda · ${partido}` : "Voto de legenda";
+  return comparativo ? `Abstenção × ${comparativo}` : "Abstenção";
 }

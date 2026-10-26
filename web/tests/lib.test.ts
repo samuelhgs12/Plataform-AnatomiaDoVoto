@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { LinhaLegenda } from "../src/lib/legenda";
 import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
-import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos } from "../src/lib/mapa";
+import { anoNaLegenda, casasDosCortes, conjunto, escalaDoMaior, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
 import {
-  classe, corMunicipio, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
+  classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, reguaIndicador, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
 } from "../src/lib/abstencao";
-import { aproximar, arrastar, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
+import { aproximar, arrastar, centrarLupa, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
+import { lerFicha, naRegua, posicionarDica } from "../src/lib/dica";
 import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
 import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
@@ -472,5 +473,138 @@ describe("paleta (busca rápida)", () => {
   it("agrupar: na ordem dos grupos, sem grupo vazio", () => {
     const g = agrupar([{ tipo: "candidato", titulo: "X", detalhe: "", href: "/candidato/1" }, ...filtrarPaleta(indice, "bel")]);
     expect(g.map((x) => x.tipo)).toEqual(["municipio", "candidato"]);
+  });
+});
+
+describe("situacaoComparativo", () => {
+  const anosCenso = [2008, 2012];
+  it("fora dos anos do Censo, a camada não existe", () => {
+    expect(situacaoComparativo({ ano: 2022, anosCenso, uf: "PE" })).toEqual({ disponivel: false, pinta: false, motivo: "O Censo 2010 só é comparado com as eleições de 2008 e 2012." });
+  });
+  it("sem estado aberto, guarda a escolha mas não pinta; com estado, pinta", () => {
+    expect(situacaoComparativo({ ano: 2012, anosCenso })).toMatchObject({ disponivel: true, pinta: false });
+    expect(situacaoComparativo({ ano: 2008, anosCenso, uf: "RJ" })).toEqual({ disponivel: true, pinta: true, motivo: null });
+  });
+});
+
+describe("resumoCamadas", () => {
+  it("descreve a visão e a camada ligada", () => {
+    expect(resumoCamadas({ ver: "abstencao" })).toBe("Abstenção");
+    expect(resumoCamadas({ ver: "abstencao", comparativo: "IDHM" })).toBe("Abstenção × IDHM");
+    expect(resumoCamadas({ ver: "legenda", partido: "PSOL" })).toBe("Voto de legenda · PSOL");
+    expect(resumoCamadas({ ver: "candidato", comparativo: "IDHM" })).toBe("Votos de um candidato");
+  });
+});
+
+describe("composicaoEleitorado", () => {
+  const t = { aptos: 100, abstencoes: 20, comparecimento: 80, brancos: 6, nulos: 4, taxa: 0.2 };
+  it("divide os aptos em quem faltou, branco ou nulo e voto válido", () => {
+    expect(composicaoEleitorado(t).map((x) => [x.chave, x.n, x.p])).toEqual([["faltaram", 20, 0.2], ["brancos_nulos", 10, 0.1], ["validos", 70, 0.7]]);
+  });
+  it("sem eleitorado, tudo zero", () => {
+    expect(composicaoEleitorado({ aptos: 0, abstencoes: 0, comparecimento: 0, brancos: 0, nulos: 0, taxa: 0 }).map((x) => x.p)).toEqual([0, 0, 0]);
+  });
+});
+
+describe("compararComReferencia", () => {
+  it("diferença em pontos e posição das duas na mesma régua", () => {
+    const c = compararComReferencia(0.2, 0.15);
+    expect(c.sentido).toBe("acima");
+    expect(c.pontos).toBeCloseTo(5);
+    expect(c.pTaxa).toBeCloseTo(1 / 1.2);
+    expect(c.pRef).toBeCloseTo(0.75 / 1.2);
+    expect(compararComReferencia(0.1, 0.15).sentido).toBe("abaixo");
+    expect(compararComReferencia(0.1502, 0.15).sentido).toBe("igual");
+  });
+});
+
+describe("naRegua", () => {
+  const cortes = [0.1, 0.2];   // três faixas: até 10%, 10–20%, 20% ou mais; valores de 0 a 0,4
+  it("cai na faixa da cor e interpola dentro dela", () => {
+    expect(naRegua(0.05, cortes, 0, 0.4)).toBeCloseTo(0.5 / 3);
+    expect(naRegua(0.15, cortes, 0, 0.4)).toBeCloseTo(1.5 / 3);
+    expect(naRegua(0.4, cortes, 0, 0.4)).toBeCloseTo(1);
+    expect(naRegua(0.1, cortes, 0, 0.4)).toBeCloseTo(1 / 3);   // no corte, já é a faixa de cima
+  });
+  it("faixa sem largura fica no meio dela", () => {
+    expect(naRegua(0.4, [0.1, 0.4], 0, 0.4)).toBeCloseTo(2.5 / 3);   // o maior valor é o próprio corte de cima
+  });
+});
+
+describe("posicionarDica", () => {
+  const dica = { larg: 200, alt: 100 }, janela = { larg: 1000, alt: 800 };
+  it("abaixo e à direita do cursor quando cabe", () => {
+    expect(posicionarDica({ x: 100, y: 100 }, dica, janela)).toEqual({ x: 116, y: 116, esquerda: false, acima: false });
+  });
+  it("vira para a esquerda perto da borda direita e para cima perto da de baixo", () => {
+    expect(posicionarDica({ x: 900, y: 750 }, dica, janela)).toEqual({ x: 684, y: 634, esquerda: true, acima: true });
+  });
+  it("numa janela menor que a dica, fica presa à margem", () => {
+    expect(posicionarDica({ x: 150, y: 50 }, dica, { larg: 180, alt: 800 })).toMatchObject({ x: 8 });
+  });
+});
+
+describe("lerFicha", () => {
+  it("só aceita uma ficha válida", () => {
+    expect(lerFicha('{"titulo":"Recife","sub":"PE","medidas":[]}')).toEqual({ titulo: "Recife", sub: "PE", medidas: [] });
+    expect(lerFicha("Recife: 20%")).toBeNull();
+    expect(lerFicha('{"x":1}')).toBeNull();
+    expect(lerFicha(null)).toBeNull();
+  });
+});
+
+describe("distribuicao", () => {
+  const v = [{ id: 1, v: 0.1 }, { id: 2, v: 0.3 }, { id: 3, v: 0.2 }];
+  it("escala do menor ao maior, posição e ordem do escolhido", () => {
+    const d = distribuicao(v, 3);
+    expect(d.pontos.map((x) => x.p)).toEqual([0, 1, expect.closeTo(0.5)]);
+    expect(d).toMatchObject({ p: expect.closeTo(0.5), ordem: 2, total: 3 });
+    expect(distribuicao(v, 2).ordem).toBe(1);
+  });
+  it("sem o escolhido, sem posição", () => {
+    expect(distribuicao(v, 9)).toMatchObject({ p: null, ordem: null });
+  });
+});
+
+describe("extremosAbstencao", () => {
+  const l = [0.1, 0.4, 0.2, 0.3, 0.25].map((t, i) => ({ id: i, t }));
+  it("os que mais e os que menos faltaram, com barras de 0 ao maior", () => {
+    const e = extremosAbstencao(l, 2, 0.2);
+    expect(e.mais.map((x) => x.t)).toEqual([0.4, 0.3]);
+    expect(e.menos.map((x) => x.t)).toEqual([0.1, 0.2]);   // do menor para o maior
+    expect(e.mais[0].p).toBe(1);
+    expect(e.pMedia).toBeCloseTo(0.5);
+  });
+  it("com poucos municípios, não repete nenhum", () => {
+    const e = extremosAbstencao(l.slice(0, 3), 4, 0.2);
+    expect(e.mais.map((x) => x.id)).toEqual([1, 2]);
+    expect(e.menos.map((x) => x.id)).toEqual([0]);
+  });
+});
+
+describe("centrarLupa", () => {
+  it("leva o ponto ao centro da tela", () => {
+    const l = centrarLupa({ x: 100, y: 50 }, 3);
+    expect(100 * l.k + l.x).toBe(TELA.larg / 2);
+    expect(50 * l.k + l.y).toBe(TELA.alt / 2);
+  });
+});
+
+describe("reguaIndicador", () => {
+  it("escala do menor ao maior, um traço por posição e a média na mesma régua", () => {
+    const r = reguaIndicador(0.6, [0.5, 0.7, 0.6, 0.6], 0.65);
+    expect(r).toMatchObject({ min: 0.5, max: 0.7, p: expect.closeTo(0.5), pMedia: expect.closeTo(0.75) });
+    expect(r.tracos).toBe("M0 0V10M50 0V10M100 0V10");
+  });
+  it("média fora da escala fica presa à ponta; sem dado, sem posição", () => {
+    expect(reguaIndicador(null, [1, 2], 3)).toMatchObject({ p: null, pMedia: 1 });
+    expect(reguaIndicador(1, [1, 2], null).pMedia).toBeNull();
+  });
+});
+
+describe("escalaDoMaior", () => {
+  it("o maior vale 1 e os outros, a fração dele", () => {
+    expect(escalaDoMaior([{ valor: 0.26 }, { valor: 0.13 }]).map((x) => x.p)).toEqual([1, 0.5]);
+    expect(escalaDoMaior([{ valor: 0 }]).map((x) => x.p)).toEqual([0]);
   });
 });

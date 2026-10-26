@@ -43,6 +43,28 @@ export function somarParticipacao(linhas: LinhaParticipacao[]): Total {
   return { ...t, taxa: t.aptos > 0 ? t.abstencoes / t.aptos : 0 };
 }
 
+/** Para onde foi o eleitorado: partes dos aptos que faltaram, votaram branco ou nulo e deram voto válido (somam 1). */
+export function composicaoEleitorado(t: Total): { chave: "faltaram" | "brancos_nulos" | "validos"; rotulo: string; n: number; p: number }[] {
+  const bn = t.brancos + t.nulos;
+  const partes = [
+    { chave: "faltaram" as const, rotulo: "Não foram votar", n: t.abstencoes },
+    { chave: "brancos_nulos" as const, rotulo: "Brancos e nulos", n: bn },
+    { chave: "validos" as const, rotulo: "Votos válidos", n: Math.max(0, t.comparecimento - bn) },
+  ];
+  const soma = partes.reduce((s, x) => s + x.n, 0);
+  return partes.map((x) => ({ ...x, p: soma > 0 ? x.n / soma : 0 }));
+}
+
+/**
+ * A taxa ao lado da referência (a média de cima): diferença em pontos percentuais, o sentido e onde cada uma cai
+ * numa régua de 0 até um pouco além da maior das duas. Diferença abaixo de 0,05 ponto é "igual".
+ */
+export function compararComReferencia(taxa: number, ref: number): { pontos: number; sentido: "acima" | "abaixo" | "igual"; pTaxa: number; pRef: number } {
+  const pontos = (taxa - ref) * 100;
+  const topo = Math.max(taxa, ref, 1e-9) * 1.2;
+  return { pontos, sentido: Math.abs(pontos) < 0.05 ? "igual" : pontos > 0 ? "acima" : "abaixo", pTaxa: taxa / topo, pRef: ref / topo };
+}
+
 /** Taxa de abstenção de uma linha; null se não há linha ou eleitorado. */
 export const taxaDe = (l: { aptos: number; abstencoes: number } | undefined) => (l && l.aptos > 0 ? l.abstencoes / l.aptos : null);
 
@@ -124,6 +146,43 @@ export function lerCorrelacao(r: number, indicador: string): string {
   if (f < 0.1) return `Quase nenhuma relação entre ${indicador} e abstenção`;
   const forca = f < 0.3 ? "fraca" : f < 0.5 ? "moderada" : "forte";
   return `Relação ${forca}: onde ${indicador} é maior, a abstenção tende a ser ${r > 0 ? "maior" : "menor"}`;
+}
+
+/**
+ * Onde um município fica entre os do recorte: cada um numa escala de 0 (o menor valor) a 1 (o maior), a posição do
+ * escolhido e a ordem dele (1 = o maior valor). Sem o escolhido nos valores, p e ordem são null.
+ */
+export function distribuicao(valores: { id: number; v: number }[], id: number): { pontos: { id: number; p: number }[]; p: number | null; ordem: number | null; total: number } {
+  const vs = valores.map((x) => x.v);
+  const [min, max] = [Math.min(...vs), Math.max(...vs)];
+  const escala = (v: number) => (max > min ? (v - min) / (max - min) : 0.5);
+  const pontos = valores.map((x) => ({ id: x.id, p: escala(x.v) }));
+  const alvo = valores.find((x) => x.id === id);
+  return { pontos, p: alvo ? escala(alvo.v) : null, ordem: alvo ? 1 + vs.filter((v) => v > alvo.v).length : null, total: valores.length };
+}
+
+/**
+ * Os `n` municípios que mais e os `n` que menos faltaram (sem repetir quando há poucos), cada um com a barra de 0 ao
+ * maior valor (p) e a posição da média na mesma régua. "menos" vem do menor para o maior.
+ */
+export function extremosAbstencao(lista: { id: number; t: number }[], n: number, media: number): { mais: { id: number; t: number; p: number }[]; menos: { id: number; t: number; p: number }[]; pMedia: number } {
+  const desc = [...lista].sort((a, b) => b.t - a.t);
+  const topo = Math.max(desc[0]?.t ?? 0, media, 1e-9);
+  const k = Math.min(n, Math.ceil(desc.length / 2));
+  const comP = (x: { id: number; t: number }) => ({ ...x, p: x.t / topo });
+  return { mais: desc.slice(0, k).map(comP), menos: desc.slice(k).reverse().slice(0, n).map(comP), pMedia: media / topo };
+}
+
+/**
+ * Régua passiva de um indicador: a escala vai do menor ao maior município; `tracos` é o caminho SVG (viewBox 0 0 100 10)
+ * com um traço por município (traços na mesma posição, arredondada a 0,25, viram um só); p é o valor da unidade e
+ * pMedia o da média de referência, presos à escala (null quando falta o dado).
+ */
+export function reguaIndicador(v: number | null, valores: number[], media: number | null): { min: number; max: number; p: number | null; pMedia: number | null; tracos: string } {
+  const [min, max] = [Math.min(...valores), Math.max(...valores)];
+  const escala = (x: number) => (max > min ? Math.min(1, Math.max(0, (x - min) / (max - min))) : 0.5);
+  const xs = [...new Set(valores.map((x) => Math.round(escala(x) * 400) / 4))].sort((a, b) => a - b);
+  return { min, max, p: v == null ? null : escala(v), pMedia: media == null ? null : escala(media), tracos: xs.map((x) => `M${x} 0V10`).join("") };
 }
 
 /** Posição de 0 a 1 do valor entre os valores (0 = o menor, 1 = o maior). */

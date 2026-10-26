@@ -13,10 +13,20 @@ function Barra({ valor, max, cor, ano, status }: { valor: number | null; max: nu
   );
 }
 
+const SETA = { sobe: "M6 10V2M2.5 5.5 6 2l3.5 3.5", desce: "M6 2v8M2.5 6.5 6 10l3.5-3.5" };
+
+/** A variação como pílula: alta e queda nas cores do tema (com seta desenhada, não só cor); sem comparação, neutra. */
 function Variacao({ p }: { p: ParCiclo }) {
-  if (p.variacao == null) return <span className="muted">{p.status === "novo" ? "novo" : "—"}</span>;
-  if (pctSinal(p.variacao) === "0%") return <span>0%</span>;
-  return p.variacao > 0 ? <span className="sobe">▲ {pctSinal(p.variacao)}</span> : <span className="desce">▼ {pctSinal(p.variacao)}</span>;
+  if (p.variacao == null) return p.status === "novo" ? <span className="pilula neutra">novo</span> : <span className="muted" aria-label="sem variação">—</span>;   // o motivo já está na barra
+  const texto = pctSinal(p.variacao);
+  if (texto === "0%") return <span className="pilula neutra">0%</span>;
+  const lado = p.variacao > 0 ? "sobe" : "desce";
+  return (
+    <span className={`pilula ${lado}`}>
+      <svg viewBox="0 0 12 12" aria-hidden="true"><path d={SETA[lado]} /></svg>
+      {texto}
+    </span>
+  );
 }
 
 /**
@@ -33,7 +43,7 @@ export function ComparaCiclos({ comparacao, limite, todos, hrefAlternar }: { com
       <div className="legend">
         <span><i style={{ background: "var(--o)" }} />{anos[0]}</span>
         <span><i style={{ background: "var(--accent)" }} />{anos[1]}</span>
-        <span>À direita: variação dos votos de legenda</span>
+        <span>À direita: variação dos votos de legenda de {anos[0]} para {anos[1]}</span>
       </div>
       <div className="pares" role="table" aria-label={`Votos de legenda por partido, ${anos[0]} e ${anos[1]}`}>
         <div role="row" style={{ display: "contents" }}>
@@ -44,8 +54,8 @@ export function ComparaCiclos({ comparacao, limite, todos, hrefAlternar }: { com
         {visiveis.map((p) => (
           <div key={p.partido} role="row" style={{ display: "contents" }}>
             <div role="rowheader" className="nm">
-              {p.partido}
-              <small>nº {p.numero}{p.recente != null && ` · ${pct(p.fatia, 0)} da legenda · ${inteiro(p.eleitosRecente)} ${p.eleitosRecente === 1 ? "eleito" : "eleitos"}`}</small>
+              <span className="nm-sigla">{p.partido}<span className="nm-num">nº {p.numero}</span></span>
+              {p.recente != null && <small>{pct(p.fatia, 0)} da legenda · {inteiro(p.eleitosRecente)} {p.eleitosRecente === 1 ? "eleito" : "eleitos"}</small>}
             </div>
             <div role="cell">
               <Barra valor={p.anterior} max={max} cor="var(--o)" ano={anos[0]} status={p.anterior == null ? p.status : null} />

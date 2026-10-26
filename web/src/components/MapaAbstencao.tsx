@@ -1,9 +1,11 @@
 import type { CSSProperties } from "react";
 import { ESTADOS_MAPA } from "@/lib/brasil-uf";
 import { TELA } from "@/lib/lupa";
+import type { FichaDica } from "@/lib/dica";
 
-export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string }
-export interface MunicipioNoMapa { ibge: string; classe: string; href: string; dica: string; atraso: number }
+/** `ficha`: o conteúdo gráfico da dica (MapaVivo); sem ela, a dica mostra só o texto (`descricao`, `dica`). */
+export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string; ficha?: FichaDica }
+export interface MunicipioNoMapa { ibge: string; classe: string; href: string; dica: string; atraso: number; ficha?: FichaDica }
 
 interface Props {
   titulo: string;
@@ -46,7 +48,7 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
           {ESTADOS_MAPA.filter((e) => comDados.has(e.uf)).map((e) => {
             const d = comDados.get(e.uf)!;
             return (
-              <a key={e.uf} href={d.href} data-mapa="" data-dica={d.descricao} aria-label={d.descricao} aria-current={e.uf === uf ? "true" : undefined}
+              <a key={e.uf} href={d.href} data-mapa="" data-dica={d.descricao} data-ficha={d.ficha && JSON.stringify(d.ficha)} aria-label={d.descricao} aria-current={e.uf === uf ? "true" : undefined}
                 className={`uf ${d.classe}${e.uf === uf ? " on" : ""}`} style={varre(e.x)}>
                 <path d={e.d} />
               </a>
@@ -55,7 +57,7 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
           {uf && zoom && (
             <g className="municipios" key={uf}>
               {municipios.map((m) => (
-                <a key={m.ibge} href={m.href} data-mapa="" data-dica={m.dica} aria-label={m.dica} tabIndex={-1}
+                <a key={m.ibge} href={m.href} data-mapa="" data-dica={m.dica} data-ficha={m.ficha && JSON.stringify(m.ficha)} aria-label={m.dica} tabIndex={-1}
                   className={`mun ${m.classe}`} style={{ "--atraso": m.atraso } as CSSProperties}>
                   <use href={desenho(m.ibge)} />
                 </a>
