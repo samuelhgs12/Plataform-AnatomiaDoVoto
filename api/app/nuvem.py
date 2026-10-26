@@ -147,13 +147,24 @@ def termos(descricao: str | None, origem: str | None = None) -> tuple[list[str],
     return ([reserva], True) if reserva else ([], False)
 
 
+JORNAIS = "Publicidade por jornais e revistas"
+
+
 def pecas(descricao: str | None, origem: str | None = None) -> list[tuple[str, str]]:
     """(peça, formato) de uma descrição; uma peça aparece uma vez (o primeiro formato dela). Formato "sem detalhe" quando
-    a peça veio da categoria do TSE."""
+    a peça veio da categoria do TSE.
+
+    "anúncios" é o impulsionamento sem plataforma informada; um anúncio declarado como "Publicidade por jornais e
+    revistas" é anúncio em jornal ou revista e vira a peça "jornal" (quando a descrição cita jornal ou revista, o
+    formato "jornal e revista" já casa antes, na passada dos específicos).
+    """
     formatos, pela_categoria = termos(descricao, origem)
     saida: dict[str, str] = {}
     for f in formatos:
-        saida.setdefault(PECA[f], SEM_DETALHE if pela_categoria else f)
+        peca = PECA[f]
+        if peca == "anúncios" and origem == JORNAIS:
+            peca = "jornal"
+        saida.setdefault(peca, SEM_DETALHE if pela_categoria else f)
     return list(saida.items())
 
 
@@ -162,7 +173,7 @@ def nuvem(linhas: list[dict]) -> list[dict]:
 
     O valor de uma descrição com mais de uma peça é dividido entre elas em centavos inteiros (o resto vai para as
     primeiras), para a soma da nuvem bater com o total de propaganda. `grupo` é o tipo de propaganda com mais valor na
-    peça; `detalhes` são os formatos da peça, do maior para o menor valor.
+    peça; `por_tipo` é o valor da peça em cada tipo; `detalhes` são os formatos da peça, do maior para o menor valor.
     """
     acc: dict[str, dict] = {}
     for linha in linhas:
@@ -173,16 +184,21 @@ def nuvem(linhas: list[dict]) -> list[dict]:
         for i, (peca, formato) in enumerate(ps):
             parte = base + (1 if i < resto else 0)
             item = acc.setdefault(peca, {"termo": peca, "centavos": 0, "despesas": 0, "pela_categoria_centavos": 0,
-                                         "grupos": {}, "formatos": {}})
+                                         "grupos": {}, "despesas_grupo": {}, "formatos": {}})
             item["centavos"] += parte
             item["despesas"] += int(linha["despesas"])
             item["pela_categoria_centavos"] += parte if formato == SEM_DETALHE else 0
             item["grupos"][linha["grupo"]] = item["grupos"].get(linha["grupo"], 0) + parte
+            item["despesas_grupo"][linha["grupo"]] = item["despesas_grupo"].get(linha["grupo"], 0) + int(linha["despesas"])
             item["formatos"][formato] = item["formatos"].get(formato, 0) + parte
     saida = []
     for item in acc.values():
-        grupos, formatos = item.pop("grupos"), item.pop("formatos")
+        grupos, despesas_grupo, formatos = item.pop("grupos"), item.pop("despesas_grupo"), item.pop("formatos")
         item["grupo"] = max(sorted(grupos), key=lambda g: grupos[g])
+        # valor (e número de despesas) da peça em cada tipo (grupo da categoria do TSE): somado por tipo, o valor bate
+        # com o total oficial do tipo
+        item["por_tipo"] = [{"grupo": g, "centavos": c, "despesas": despesas_grupo[g]}
+                            for g, c in sorted(grupos.items(), key=lambda kv: (-kv[1], kv[0]))]
         item["generico"] = item["termo"] in GENERICAS
         item["explicacao"] = EXPLICACAO.get(item["termo"])
         item["detalhes"] = [{"termo": f, "centavos": c} for f, c in sorted(formatos.items(), key=lambda kv: (-kv[1], kv[0]))]

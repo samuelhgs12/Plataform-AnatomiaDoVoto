@@ -63,6 +63,43 @@ def test_formatos_viram_pecas_de_uma_palavra():
     assert all(len(p) <= 9 and " " not in p for p in PECA.values())
 
 
+def test_anuncio_em_jornal_ou_revista_e_peca_jornal():
+    jornais, impuls = "Publicidade por jornais e revistas", "Despesa com Impulsionamento de Conteúdos"
+    assert pecas("VEICULAÇÃO DE ANUNCIO", jornais) == [("jornal", "anúncio")]          # pela categoria
+    assert pecas("ANUNCIO 7·3X12·85CM EM 30/09/2022", jornais) == [("jornal", "anúncio")]
+    assert pecas("PUBLICAÇÃO DE ANUNCIO NO JORNAL FOLHA", jornais) == [("jornal", "jornal e revista")]  # pela descrição
+    assert pecas("PROPAGANDA E PUBLICIDADE", jornais) == [("jornal", "sem detalhe")]   # reserva pela categoria
+    assert pecas("INSERÇÃO DE ANUNCIOS NA INTERNET", impuls) == [("anúncios", "anúncio")]
+    assert pecas("IMPULSIONAMENTO DE CONTEUDO", impuls) == [("anúncios", "impulsionamento")]
+    assert pecas("IMPULSIONAMENTO DE CONTEUDO") == [("anúncios", "impulsionamento")]
+
+
+def test_por_tipo_soma_por_grupo_igual_ao_total_das_linhas():
+    linha = lambda d, c, g, o: {"descricao": d, "origem": o, "grupo": g, "despesas": 1, "centavos": c}
+    fis, av, dig = "propaganda_fisica", "propaganda_audiovisual", "propaganda_digital"
+    linhas = [
+        linha("SANTINHOS E ADESIVOS", 1001, fis, "Publicidade por materiais impressos"),
+        linha("PRODUÇÃO DE VIDEOS PARA REDES SOCIAIS", 777, av, "Produção de programas de rádio, televisão ou vídeo"),
+        linha("GESTÃO DE REDES SOCIAIS", 300, dig, "Despesa com Impulsionamento de Conteúdos"),
+        linha("VEICULAÇÃO DE ANUNCIO", 250, fis, "Publicidade por jornais e revistas"),
+        linha("propaganda e publicidade", 99, dig, "Criação e inclusão de páginas na internet"),
+    ]
+    itens = nuvem(linhas)
+    soma = {}
+    for i in itens:
+        assert sum(p["centavos"] for p in i["por_tipo"]) == i["centavos"]
+        for p in i["por_tipo"]:
+            soma[p["grupo"]] = soma.get(p["grupo"], 0) + p["centavos"]
+    assert soma == {fis: 1251, av: 777, dig: 399}
+    # "vídeos para redes sociais" (777, audiovisual) divide entre vídeo (389) e redes (388): "redes" fica nos dois tipos,
+    # com o valor de cada um, e o grupo dominante continua em "grupo"
+    redes = next(i for i in itens if i["termo"] == "redes")
+    assert redes["por_tipo"] == [{"grupo": av, "centavos": 388, "despesas": 1}, {"grupo": dig, "centavos": 300, "despesas": 1}]
+    assert redes["grupo"] == av and redes["despesas"] == 2          # as despesas também separadas por tipo
+    video = next(i for i in itens if i["termo"] == "vídeo")
+    assert video["por_tipo"] == [{"grupo": av, "centavos": 389, "despesas": 1}]
+
+
 def test_nuvem_soma_por_peca_divide_o_valor_e_guarda_os_formatos():
     linha = lambda d, c, n=1, g="propaganda_fisica", o="Publicidade por materiais impressos": \
         {"descricao": d, "origem": o, "grupo": g, "despesas": n, "centavos": c}

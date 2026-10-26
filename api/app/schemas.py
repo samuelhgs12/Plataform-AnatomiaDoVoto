@@ -131,10 +131,17 @@ class DetalheTermo(BaseModel):
     centavos: int
 
 
+class PorTipo(BaseModel):
+    grupo: str                  # tipo de propaganda (grupo da categoria do TSE): propaganda_fisica, _audiovisual, _digital
+    centavos: int
+    despesas: int               # despesas da peça neste tipo
+
+
 class TermoPropaganda(BaseModel):
     """Uma palavra da nuvem (app/nuvem.py): uma peça de propaganda. A descrição original das despesas não sai da API."""
     termo: str                  # peça, em uma palavra ("adesivo", "santinho", "Facebook", "anúncios"...)
-    grupo: str                  # tipo de propaganda com mais valor na peça (propaganda_fisica, _audiovisual, _digital)
+    grupo: str                  # tipo de propaganda com mais valor na peça (mantido por compatibilidade; ver por_tipo)
+    por_tipo: list[PorTipo]     # valor da peça em cada tipo; por tipo, a soma das peças = total oficial das categorias
     centavos: int               # valor contratado atribuído à peça
     despesas: int
     pela_categoria_centavos: int  # parte do valor cuja descrição era vaga: a peça veio da categoria do TSE
