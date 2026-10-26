@@ -3,7 +3,7 @@ import type { LinhaLegenda } from "../src/lib/legenda";
 import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
 import { anoNaLegenda, casasDosCortes, conjunto, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
 import {
-  classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
+  classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, reguaIndicador, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
 } from "../src/lib/abstencao";
 import { aproximar, arrastar, centrarLupa, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
@@ -587,5 +587,17 @@ describe("centrarLupa", () => {
     const l = centrarLupa({ x: 100, y: 50 }, 3);
     expect(100 * l.k + l.x).toBe(TELA.larg / 2);
     expect(50 * l.k + l.y).toBe(TELA.alt / 2);
+  });
+});
+
+describe("reguaIndicador", () => {
+  it("escala do menor ao maior, um traço por posição e a média na mesma régua", () => {
+    const r = reguaIndicador(0.6, [0.5, 0.7, 0.6, 0.6], 0.65);
+    expect(r).toMatchObject({ min: 0.5, max: 0.7, p: expect.closeTo(0.5), pMedia: expect.closeTo(0.75) });
+    expect(r.tracos).toBe("M0 0V10M50 0V10M100 0V10");
+  });
+  it("média fora da escala fica presa à ponta; sem dado, sem posição", () => {
+    expect(reguaIndicador(null, [1, 2], 3)).toMatchObject({ p: null, pMedia: 1 });
+    expect(reguaIndicador(1, [1, 2], null).pMedia).toBeNull();
   });
 });

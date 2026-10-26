@@ -21,8 +21,8 @@ import {
   anoNaLegenda, casasDosCortes, doCargo, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
 } from "@/lib/mapa";
 import {
-  ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, compararComReferencia, composicaoEleitorado, corMunicipio, distribuicao, extremosAbstencao, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
-  mediaPonderada, nomeProprio, posicao, quantis, rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia,
+  ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, compararComReferencia, composicaoEleitorado, corMunicipio, distribuicao, extremosAbstencao, reguaIndicador, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
+  mediaPonderada, nomeProprio, quantis, rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia,
   type ChaveIndicador, type LinhaIndicador, type LinhaMunicipio, type LinhaParticipacao,
 } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
@@ -34,6 +34,7 @@ import { MiniMapa } from "@/components/MiniMapa";
 import { CartaoDica } from "@/components/CartaoDica";
 import { FaixaMunicipios } from "@/components/FaixaMunicipios";
 import { ExtremosAbstencao } from "@/components/ExtremosAbstencao";
+import { IndicadoresCenso, type LinhaIndicadorCenso } from "@/components/IndicadoresCenso";
 import { SerieLegenda } from "@/components/SerieLegenda";
 import { ComparaCiclos } from "@/components/ComparaCiclos";
 import { abrangencia, candidaturasDe, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
@@ -171,6 +172,20 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     return x == null || y == null ? [] : [{ id, x, y, on: id === mun?.id_municipio }];
   });
   const r = correlacao(pontos);
+  // réguas do Censo: a unidade entre os municípios do recorte e a média de cima (do estado, para o município; dos seis
+  // estados, para o estado), as duas ponderadas pela população
+  const refCenso = mun ? { ids: idsUf, rotulo: `Média de ${NOME_UF[uf!]}` } : uf ? { ids: idsTodos, rotulo: "Média dos seis estados" } : null;
+  const linhasCenso: LinhaIndicadorCenso[] = INDICADORES_CENSO.map((i) => {
+    const v = valorInd(i.chave);
+    const todos = universo.flatMap((id) => indicadores.get(id)?.[i.chave] ?? []);
+    const media = refCenso ? mediaPonderada(refCenso.ids, indicadores, i.chave) : null;
+    const g = reguaIndicador(v, todos, media);
+    const f = (x: number) => formatarIndicador(i.chave, x);
+    return {
+      chave: i.chave, rotulo: i.rotulo, valor: v == null ? "—" : f(v), min: todos.length ? f(g.min) : "", max: todos.length ? f(g.max) : "", p: g.p, pMedia: g.pMedia, tracos: todos.length ? g.tracos : "",
+      descricao: `${i.rotulo}: ${nomeUnidade} ${v == null ? "sem dado" : f(v)}${media != null ? `; ${refCenso!.rotulo.toLowerCase()} ${f(media)}` : ""}; municípios de ${todos.length ? `${f(g.min)} a ${f(g.max)}` : "—"}`,
+    };
+  });
   const ranking = idsUf.flatMap((id) => { const t = taxaDe(doAno.get(id)); return t == null ? [] : [{ id, t }]; }).sort((a, b) => b.t - a.t);
   // ficha fixa do município escolhido: o mesmo cartão da dica do mapa, e a faixa com todos os municípios do estado
   const fichaMun = mun ? noMapa.find((m) => m.ibge === mun.cod_ibge)?.ficha : undefined;
@@ -581,23 +596,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               <>
                 <div className="bloco noite s4">
                   <h3>Censo 2010</h3>
-                  <p className="muted pequeno">{mun ? `O município entre os ${universo.length} de ${NOME_UF[uf!]}` : `Média ponderada pela população; a faixa mostra do menor ao maior município ${uf ? "do estado" : "dos seis estados"}`}. Para pintar o mapa com um deles, escolha-o em Camadas › Comparar, no menu do mapa.</p>
-                  <ul className="indicadores">
-                    {INDICADORES_CENSO.map((i) => {
-                      const v = valorInd(i.chave);
-                      const todos = universo.flatMap((id) => indicadores.get(id)?.[i.chave] ?? []);
-                      const p = v == null ? null : posicao(v, todos);
-                      return (
-                        <li key={i.chave}>
-                          <div className={`ind${i.chave === ind ? " on" : ""}`}>
-                            <span className="ind-nome">{i.rotulo}</span>
-                            <b>{v == null ? "—" : formatarIndicador(i.chave, v)}</b>
-                            <span className="ind-faixa" aria-hidden="true">{p != null && <i style={{ "--p": p } as CSSProperties} />}</span>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <p className="muted pequeno">{mun ? `O município entre os ${universo.length} de ${NOME_UF[uf!]}; a média do estado é ponderada pela população` : uf ? `O estado (média ponderada pela população) entre os ${universo.length} municípios dele` : "Os seis estados juntos (média ponderada pela população) entre os municípios deles"}. Para pintar o mapa com um deles, escolha-o em Camadas › Comparar, no menu do mapa.</p>
+                  <IndicadoresCenso
+                    destaque={linhasCenso.find((l) => l.chave === ind)!} outros={linhasCenso.filter((l) => l.chave !== ind)}
+                    legenda={{ unidade: nomeUnidade, media: refCenso?.rotulo }}
+                  />
                 </div>
               </>
             ) : (
@@ -611,13 +614,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             {comCenso && (mun || !uf) && blocoDispersao}
             {comCenso && uf && !mun && blocoExtremos}
 
-            {uf && (
-              <ul className="atalhos s12">
-                <li><Link href={`/candidatos?uf=${uf}`}>Candidatos</Link></li>
-                <li><Link href={`/analises/financiamento?uf=${uf}`}>Financiamento</Link></li>
-                <li><Link href={`/analises/legenda?uf=${uf}`}>Voto de legenda</Link></li>
-              </ul>
-            )}
           </div>
           )}
           <MiniMapa recorte={recorte} foco={focoMini}>{mapaPalco}</MiniMapa>

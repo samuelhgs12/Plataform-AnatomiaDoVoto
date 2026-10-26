@@ -173,6 +173,18 @@ export function extremosAbstencao(lista: { id: number; t: number }[], n: number,
   return { mais: desc.slice(0, k).map(comP), menos: desc.slice(k).reverse().slice(0, n).map(comP), pMedia: media / topo };
 }
 
+/**
+ * Régua passiva de um indicador: a escala vai do menor ao maior município; `tracos` é o caminho SVG (viewBox 0 0 100 10)
+ * com um traço por município (traços na mesma posição, arredondada a 0,25, viram um só); p é o valor da unidade e
+ * pMedia o da média de referência, presos à escala (null quando falta o dado).
+ */
+export function reguaIndicador(v: number | null, valores: number[], media: number | null): { min: number; max: number; p: number | null; pMedia: number | null; tracos: string } {
+  const [min, max] = [Math.min(...valores), Math.max(...valores)];
+  const escala = (x: number) => (max > min ? Math.min(1, Math.max(0, (x - min) / (max - min))) : 0.5);
+  const xs = [...new Set(valores.map((x) => Math.round(escala(x) * 400) / 4))].sort((a, b) => a - b);
+  return { min, max, p: v == null ? null : escala(v), pMedia: media == null ? null : escala(media), tracos: xs.map((x) => `M${x} 0V10`).join("") };
+}
+
 /** Posição de 0 a 1 do valor entre os valores (0 = o menor, 1 = o maior). */
 export function posicao(v: number, valores: number[]): number {
   if (valores.length < 2) return 0.5;
