@@ -29,6 +29,8 @@ class CandidatoBusca(BaseModel):
     ultimo_cargo: str
     ultimo_eleito: bool
     nome_urna_casado: str | None = None   # nome de urna de outra eleição em que a busca casou
+    ultimo_ue: str | None = None          # com ultimo_ano e ultimo_sequencial, a chave da foto (/api/fotos/...)
+    ultimo_sequencial: str | None = None
 
 
 class CandidaturaItem(BaseModel):
@@ -38,6 +40,8 @@ class CandidaturaItem(BaseModel):
     numero_urna: str | None
     uf: str | None
     ano: int
+    ue: str              # ano, ue e sequencial: chave natural da candidatura no TSE (e da foto)
+    sequencial: str
     partido: str | None
     cargo: str
     resultado: str
@@ -64,6 +68,8 @@ class CarreiraItem(BaseModel):
     partido: str | None
     nome_urna: str | None
     numero_urna: str | None
+    ue: str
+    sequencial: str
     tipo_eleicao: str
     resultado: str
     eleito: bool
