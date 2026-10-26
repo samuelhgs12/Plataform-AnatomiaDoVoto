@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 
 from .. import db
-from ..schemas import CategoriaGasto, Despesas, Listagem, Palavra, Propaganda, Receitas
+from ..schemas import CategoriaGasto, Despesas, Listagem, Palavra, Propaganda, Receitas, VotoMunicipio
 from .util import contar_palavras
 
 router = APIRouter(tags=["candidaturas"])
@@ -95,3 +95,11 @@ def receitas(id_candidatura: int):
     return Receitas(id_candidatura=id_candidatura, **{k: v for k, v in r.items() if k != "total"}, total=total,
                     pct_publica=(r["publica"] / total) if total else None,
                     mediana_pct_publica_cargo=float(ref["mediana_pct_publica"]) if ref and ref["mediana_pct_publica"] is not None else None)
+
+
+@router.get("/candidaturas/{id_candidatura}/votos-municipio", response_model=list[VotoMunicipio])
+def votos_municipio(id_candidatura: int):
+    """Votos da candidatura em cada município dos estados do projeto, por turno, com os válidos do cargo e a colocação
+    (mapa da visão Candidato). Onde a disputa teve voto e a candidatura não, vem com 0."""
+    _contexto(id_candidatura)
+    return db.consultar("votos_municipio", (id_candidatura,))

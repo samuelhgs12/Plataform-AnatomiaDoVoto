@@ -10,6 +10,8 @@ Com a API rodando, a documentação interativa (gerada automaticamente) fica em 
 | GET | `/api/candidaturas` | `cargo` (id), `ano`, `uf`, `partido` (sigla), `eleito`, `ordem` (`votos`\|`nome`), `pagina`, `tamanho` (≤100), `incluir_suplementares` | listagem paginada de titulares |
 | GET | `/api/partidos` | `ano`, `cargo` (id, obrigatório), `uf` | siglas com titulares na eleição ordinária (opções do filtro de partido) |
 | GET | `/api/candidatos/{id}` | — | cabeçalho, resumo, carreira completa e trocas de partido |
+| GET | `/api/candidatos/{id}/mapa` | — | visão Candidato do mapa: as candidaturas titulares da pessoa (mais recente primeiro) com os números da ficha (votos no 1º turno, gasto, mediana do gasto da disputa, parte pública, disputas e mandatos até ali) e a chave da foto |
+| GET | `/api/candidaturas/{id}/votos-municipio` | — | votos da candidatura em cada município dos seis estados, por turno, com os válidos do cargo (nominais da disputa + legenda; a legenda por município só existe de 2018 em diante) e a colocação; 0 onde a disputa teve voto e ela não (tabela `votos_candidatura_municipio`) |
 | GET | `/api/candidaturas/{id}/despesas` | — | gasto por categoria + mediana do cargo/ano/UF (pergunta 9) |
 | GET | `/api/candidaturas/{id}/propaganda` | — | onde a campanha investiu em propaganda (pergunta 9): despesas consideradas, propaganda e propaganda por categoria original do TSE, em centavos inteiros |
 | GET | `/api/candidaturas/{id}/palavras` | `limite` (≤100) | termos das despesas de propaganda (nuvem de palavras) |
