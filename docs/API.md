@@ -13,6 +13,7 @@ Com a API rodando, a documentação interativa (gerada automaticamente) fica em 
 | GET | `/api/candidaturas/{id}/despesas` | — | gasto por categoria + mediana do cargo/ano/UF (pergunta 9) |
 | GET | `/api/candidaturas/{id}/propaganda` | — | onde a campanha investiu em propaganda (pergunta 9): despesas consideradas, propaganda e propaganda por categoria original do TSE, em centavos inteiros |
 | GET | `/api/candidaturas/{id}/palavras` | `limite` (≤100) | termos das despesas de propaganda (nuvem de palavras) |
+| GET | `/api/fotos/{ano}/{ue}/{sequencial}` | `tam` (`mini`: WebP 120×160, padrão; `ficha`: JPEG original 161×225) | a foto da candidatura (banco `bdr_fotos`), com `Cache-Control` de um ano; 404 sem foto (guardado por um dia); 503 se o banco de fotos não abrir. A chave sai em `ue`/`sequencial` de `/api/candidaturas` e da carreira, e em `ultimo_ue`/`ultimo_sequencial` da busca |
 | GET | `/api/candidaturas/{id}/receitas` | — | receita pública × privada, valor por fonte (fundo eleitoral, fundo partidário, doações de pessoas, recursos próprios, outros privados) + mediana (pergunta 8) |
 
 Exemplos:
@@ -21,6 +22,7 @@ Exemplos:
 curl "http://localhost:8000/api/busca?q=maria"
 curl "http://localhost:8000/api/candidaturas?cargo=13&ano=2024&uf=MG&eleito=true&pagina=1"
 curl "http://localhost:8000/api/candidatos/1"
+curl -o foto.webp "http://localhost:8000/api/fotos/2022/RR/230001604255?tam=mini"
 ```
 
 ## Regras que não se negociam
