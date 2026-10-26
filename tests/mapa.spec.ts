@@ -9,7 +9,7 @@ test('mapa da abstenção: estado, município, indicador e ano', async ({ page }
   await mapa.getByRole('link', { name: /^Pernambuco:/ }).click();
   await expect(page).toHaveURL(/uf=PE/);
   await expect(page.getByRole('heading', { name: 'Pernambuco', level: 2 })).toBeVisible();
-  await expect(page.locator('.mapa-abst .mun')).toHaveCount(184); // Fernando de Noronha fica fora do quadro do mapa
+  await expect(page.locator('.palco .mapa-abst .mun')).toHaveCount(184); // Fernando de Noronha fica fora do quadro do mapa
 
   await page.getByRole('combobox', { name: /^Município/ }).selectOption({ label: 'Recife' });
   await expect(page).toHaveURL(/mun=\d+/);
@@ -28,26 +28,26 @@ test('mapa da abstenção: estado, município, indicador e ano', async ({ page }
 
 test('cruzar abstenção com indicador pinta o mapa em 3 × 3', async ({ page }) => {
   await page.goto('/?uf=ES&cor=cruzar');
-  await expect(page.locator('.mapa-abst .mun[class*=" b"]').first()).toBeVisible();
-  await expect(page.locator('.mapa-abst .mun[class*=" q"]')).toHaveCount(0);
+  await expect(page.locator('.palco .mapa-abst .mun[class*=" b"]').first()).toBeVisible();
+  await expect(page.locator('.palco .mapa-abst .mun[class*=" q"]')).toHaveCount(0);
 });
 
 test('parâmetros inválidos voltam ao padrão', async ({ page }) => {
   await page.goto('/?ano=1900&uf=SP&ind=xyz&cor=cruzar');
   await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2012' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Os seis estados', level: 2 })).toBeVisible(); // SP fora do recorte
-  await expect(page.locator('.mapa-abst .mun')).toHaveCount(0);
+  await expect(page.locator('.palco .mapa-abst .mun')).toHaveCount(0);
 });
 
 test('lupa: a roda aproxima o estado e, no estado inteiro, rola a página', async ({ page }) => {
   await page.goto('/?uf=RJ', { waitUntil: 'networkidle' });
-  const mapa = page.locator('.mapa-abst');
+  const mapa = page.locator('.palco .mapa-abst');
   const caixa = (await mapa.boundingBox())!;
   await page.mouse.move(caixa.x + caixa.width / 2, caixa.y + caixa.height / 2);
   await page.mouse.wheel(0, -300);
-  await expect(page.locator('.mapa-abst .lupa')).toHaveAttribute('style', /scale\((?!1\))/);
+  await expect(page.locator('.palco .mapa-abst .lupa')).toHaveAttribute('style', /scale\((?!1\))/);
   await page.getByRole('button', { name: 'Ver o estado inteiro' }).click();
-  await expect(page.locator('.mapa-abst .lupa')).toHaveAttribute('style', /scale\(1\)/);
+  await expect(page.locator('.palco .mapa-abst .lupa')).toHaveAttribute('style', /scale\(1\)/);
   await page.mouse.wheel(0, 400);
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
 });
@@ -56,7 +56,7 @@ test('lupa: a roda aproxima o estado e, no estado inteiro, rola a página', asyn
 test('candidato: buscar um governador, ver o estado em zoom e virar a ficha', async ({ page }) => {
   await page.goto('/?ver=candidato', { waitUntil: 'networkidle' });
   await expect(page.getByRole('heading', { name: 'Onde cada candidato teve votos' })).toBeVisible();
-  await expect(page.locator('.mapa-abst .mun')).toHaveCount(0);
+  await expect(page.locator('.palco .mapa-abst .mun')).toHaveCount(0);
 
   const busca = page.getByRole('combobox', { name: 'Buscar candidato pelo nome' });
   await busca.fill('denarium');
@@ -64,8 +64,8 @@ test('candidato: buscar um governador, ver o estado em zoom e virar a ficha', as
   await expect(page).toHaveURL(/ver=candidato.*cand=\d+/);
   await expect(page.getByRole('heading', { name: 'Onde Antonio Denarium teve votos em 2022' })).toBeVisible();
   await expect(page.getByText('Governador · RR · 1º turno')).toBeVisible();
-  await expect(page.locator('.mapa-abst')).toHaveAttribute('data-zoom', 'uf');
-  await expect(page.locator('.mapa-abst .mun').first()).toBeVisible();
+  await expect(page.locator('.palco .mapa-abst')).toHaveAttribute('data-zoom', 'uf');
+  await expect(page.locator('.palco .mapa-abst .mun').first()).toBeVisible();
 
   // o cartão inteiro é o controle: clicar nele vira; pelo teclado, Enter vira e o foco passa para a outra face
   await page.getByRole('button', { name: /virar para ver os números/ }).click();
@@ -90,8 +90,8 @@ test('candidato: presidente nos seis estados, zoom num estado e 2º turno', asyn
 
   await mapa.getByRole('link', { name: /^Pernambuco:/ }).click();
   await expect(page).toHaveURL(/uf=PE/);
-  await expect(page.locator('.mapa-abst')).toHaveAttribute('data-zoom', 'uf');
-  await expect(page.locator('.mapa-abst .mun').first()).toBeVisible();
+  await expect(page.locator('.palco .mapa-abst')).toHaveAttribute('data-zoom', 'uf');
+  await expect(page.locator('.palco .mapa-abst .mun').first()).toBeVisible();
   await expect(page.locator('.palco')).toHaveAttribute('aria-busy', 'false'); // a navegação do clique no estado terminou
 
   await page.getByRole('group', { name: 'Turno' }).getByRole('link', { name: '2º turno' }).click();
@@ -114,7 +114,7 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
   // Comparativos: ligar um indicador pinta o estado em 3 × 3; recolhido, o trilho diz o que está ligado
   await submenu.getByRole('link', { name: /^IDHM/ }).click();
   await expect(page).toHaveURL(/cor=cruzar/);
-  await expect(page.locator('.mapa-abst .mun[class*=" b"]').first()).toBeVisible();
+  await expect(page.locator('.palco .mapa-abst .mun[class*=" b"]').first()).toBeVisible();
   await submenu.locator(':scope > summary').click();
   await expect(submenu.locator('.submenu-resumo')).toHaveText('Abstenção × IDHM');
   await expect(submenu.locator('.submenu-resumo')).toBeVisible();
@@ -134,4 +134,16 @@ test('menu do mapa: fora dos anos do Censo, Comparativos explica e leva a 2008 o
   await expect(page.getByText('O Censo 2010 só é comparado com as eleições de 2008 e 2012.')).toBeVisible();
   await page.locator('.submenu').getByRole('link', { name: 'Ver 2012' }).click();
   await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2012' })).toBeVisible();
+});
+
+test('mini-mapa: aparece ao rolar até os números e volta ao mapa', async ({ page, browserName }) => {
+  test.skip(browserName === 'firefox', 'sem animação ligada à rolagem, o Firefox não mostra o mini-mapa');
+  await page.goto('/?uf=RJ', { waitUntil: 'networkidle' });
+  const mini = page.locator('.minimapa');
+  await expect(mini).not.toBeInViewport(); // no topo, só o mapa grande está na tela
+  await page.evaluate(() => window.scrollTo(0, innerHeight * 1.6));
+  await expect(mini).toBeInViewport();
+  await expect(mini.getByRole('link', { name: /Abstenção · RJ · 2012.*Voltar ao mapa/ })).toBeVisible();
+  await mini.getByRole('link').click();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(50);
 });

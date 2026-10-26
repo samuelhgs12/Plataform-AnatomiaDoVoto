@@ -13,7 +13,10 @@ import { apiGetOpcional, lerAnalise } from "@/lib/api";
 import type { Listagem } from "@/lib/types";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { NOME_UF } from "@/lib/financiamento";
-import { CARGOS, anosDe as anosDaLegenda, cicloDoAno, type CargoCiclo, type LinhaLegenda } from "@/lib/legenda";
+import {
+  CARGOS, anosDe as anosDaLegenda, cicloDoAno, compararCiclos, cortesTom, faixaEventos, filtrar, hrefLegenda, resumoCiclos, resumoSerie, serie as serieLegenda, sugestoes,
+  type CargoCiclo, type EventoPartido, type LinhaLegenda,
+} from "@/lib/legenda";
 import {
   anoNaLegenda, casasDosCortes, doCargo, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
 } from "@/lib/mapa";
@@ -26,6 +29,9 @@ import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import { compacto, pct } from "@/lib/format";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
+import { MiniMapa } from "@/components/MiniMapa";
+import { SerieLegenda } from "@/components/SerieLegenda";
+import { ComparaCiclos } from "@/components/ComparaCiclos";
 import { abrangencia, candidaturasDe, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
 
 export const dynamic = "force-dynamic";
@@ -37,8 +43,9 @@ const ROTULO_CARGO: Record<CargoCiclo, string> = { ambos: "Os dois", federal: "F
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const [q5, dados] = await Promise.all([lerAnalise("q5", ["legenda"]), lerEstatico("mapa")]);
+  const [q5, dados] = await Promise.all([lerAnalise("q5", ["legenda", "eventos"]), lerEstatico("mapa")]);
   const legenda = comoObjetos<LinhaLegenda>(q5?.legenda);
+  const eventosLeg = comoObjetos<EventoPartido>(q5?.eventos);
   const municipios = comoObjetos<LinhaMunicipio>(dados?.municipios);
   const participacao = comoObjetos<LinhaParticipacao>(dados?.participacao);
   const indicadores = indicadoresPorMunicipio(comoObjetos<LinhaIndicador>(dados?.indicadores));
@@ -161,8 +168,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const algumSem = porUfLeg.some((x) => x.m.valor == null);
   const medidaLeg = medir(uf);
   const medidaTodos = medir();
-  const serieLeg = anosLeg.map((a) => ({ ano: a, valor: medir(uf, a).valor }));
-  const maiorSerieLeg = Math.max(0, ...serieLeg.map((s) => s.valor ?? 0));
   const rankingLeg = anoLeg === undefined ? [] : rankingPartidos(linhasLeg, { ano: anoLeg, uf }).slice(0, 8);
   const partidosDoAno = anoLeg === undefined ? [] : rankingPartidos(linhasLeg, { ano: anoLeg }).map((r) => r.partido);
   const opcoesPartido = [...new Set([...partidosDoAno, ...(partido ? [partido] : [])])].sort((a, b) => a.localeCompare(b, "pt-BR")).map((x) => [x, x] as [string, string]);
@@ -170,6 +175,16 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   // trocar de visão mantém o estado; o ano vai para o mais perto que a outra visão tem
   const hrefAbst = naLegenda ? href({ ver: "abstencao", ano: anos.includes(anoLeg!) ? anoLeg : ano }) : href({});
   const hrefLeg = naLegenda ? href({}) : href({ ver: "legenda", ano: anoNaLegenda(ano, anosLeg) ?? ano });
+
+  // a análise de voto de legenda (pergunta 5) no relatório embaixo do mapa: série por partido e comparação de ciclos,
+  // no estado e no partido escolhidos no mapa
+  const linhasSerie = filtrar(legenda, { uf });
+  const escolhidosSerie = partido ? [partido] : sugestoes(linhasSerie, [], 3);
+  const seriesLeg = serieLegenda(linhasSerie, escolhidosSerie);
+  const resumoLeg = resumoSerie(seriesLeg);
+  const cortesSerie = Object.fromEntries(escolhidosSerie.map((p) => [p, cortesTom(p, eventosLeg, false)]));
+  const comparacaoLeg = anoLeg === undefined ? null : compararCiclos(linhasSerie, { ciclo: cicloDoAno(anoLeg), cargo, ordem: "soma" });
+  const hrefTodosCiclos = hrefLegenda({ uf, juntar: false, p: escolhidosSerie, ciclo: anoLeg === undefined ? "geral" : cicloDoAno(anoLeg), cargo, ordem: "soma", todos: true });
 
   // visão candidato: cand e campanha validados contra os dados da API; inválidos (ou API fora) voltam à busca
   const idCand = naCandidato && /^\d+$/.test(um(sp.cand) ?? "") ? Number(um(sp.cand)) : undefined;
@@ -234,6 +249,21 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
     </SubmenuMapa>
   );
 
+  // o mapa do palco, repetido pequeno no mini-mapa que acompanha a rolagem
+  const mapaPalco = naLegenda ? (
+    <MapaAbstencao
+      titulo={`Voto de legenda${partido ? ` do partido ${partido}` : ""} em ${anoLeg} nos seis estados`}
+      camera={camera} estados={estadosLeg} uf={uf} zoom={false} municipios={[]}
+    />
+  ) : (
+    <MapaAbstencao
+      titulo={uf ? `Municípios de ${NOME_UF[uf]}: abstenção em ${ano}` : `Abstenção em ${ano} nos seis estados`}
+      camera={camera} estados={estados} uf={uf} municipios={noMapa}
+      destaque={mun && centro ? { ibge: mun.cod_ibge, nome: nomeMun.get(mun.id_municipio)!, x: centro[0], y: centro[1] } : undefined}
+    />
+  );
+  const recorte = `${resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined })} · ${naLegenda ? (uf ?? "seis estados") : mun ? nomeMun.get(mun.id_municipio) : uf ?? "seis estados"} · ${naLegenda ? anoLeg : ano}`;
+
   return (
     <>
       {!participacao.length ? (
@@ -243,6 +273,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         </div>
       ) : (
         <section id="mapa" className="quadro observatorio" aria-labelledby="h-mapa">
+          <div className="palco-trilho" aria-hidden="true" />
           {naCandidato ? (
             <VisaoCandidato
               menu={submenu} votos={votosCand} municipios={municipios} ufs={ufs}
@@ -279,18 +310,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             </div>
 
             <div className="palco-mapa">
-              {naLegenda ? (
-                <MapaAbstencao
-                  titulo={`Voto de legenda${partido ? ` do partido ${partido}` : ""} em ${anoLeg} nos seis estados`}
-                  camera={camera} estados={estadosLeg} uf={uf} zoom={false} municipios={[]}
-                />
-              ) : (
-                <MapaAbstencao
-                  titulo={uf ? `Municípios de ${NOME_UF[uf]}: abstenção em ${ano}` : `Abstenção em ${ano} nos seis estados`}
-                  camera={camera} estados={estados} uf={uf} municipios={noMapa}
-                  destaque={mun && centro ? { ibge: mun.cod_ibge, nome: nomeMun.get(mun.id_municipio)!, x: centro[0], y: centro[1] } : undefined}
-                />
-              )}
+              {mapaPalco}
               {!uf && <p className="palco-dica" aria-hidden="true">{naLegenda ? "Clique num estado para ver os números dele" : "Clique num estado para ver os municípios"}</p>}
             </div>
 
@@ -332,7 +352,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           </MapaVivo>
 
           {naLegenda ? (
-          <div className="painel s12" key={`legenda-${uf}`}>
+          <div className="painel s12" key={`legenda-${uf}-${anoLeg}-${cargo}-${partido}`}>
             <div className="bloco noite painel-cab s4">
               <p className="palco-sobre">{uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"}</p>
               <h2>{uf ? NOME_UF[uf] : "Os seis estados"}</h2>
@@ -347,27 +367,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               ) : <p>{partido ? `O partido ${partido} não teve votos para ${cargoTexto}${uf ? ` em ${NOME_UF[uf]}` : ""} em ${anoLeg}.` : `Sem votos para ${cargoTexto} em ${anoLeg}.`}</p>}
             </div>
 
-            <div className="bloco noite s8">
-              <h3>Voto de legenda, eleição a eleição</h3>
-              <ol className="serie-anos" aria-label={`Voto de legenda${partido ? ` do partido ${partido}` : ""} em ${uf ? NOME_UF[uf] : "seis estados"}, por ano`}>
-                {serieLeg.map((s) => (
-                  <li key={s.ano}>
-                    <Link scroll={false} href={href({ ano: s.ano })} className={s.ano === anoLeg ? "on" : undefined} aria-label={`${s.ano}: ${s.valor == null ? "sem votos" : pct(s.valor)}`}>
-                      <span className="serie-valor">{s.valor == null ? "—" : pct(s.valor, 1)}</span>
-                      <span className="serie-barra"><i style={{ "--v": maiorSerieLeg && s.valor ? s.valor / maiorSerieLeg : 0 } as CSSProperties} /></span>
-                      <span className="serie-ano">{String(s.ano).slice(2)}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-              <p className="muted pequeno">Anos gerais: deputados{cargo !== "ambos" && ` (só ${cargo})`}; municipais: vereadores. Votos do 1º turno, nas eleições ordinárias.</p>
-            </div>
-
             {rankingLeg.length > 0 && (
               <div className="bloco noite s8">
                 <h3>Partidos com mais voto de legenda</h3>
                 <p className="muted pequeno">Parte de cada partido nos votos só na legenda para {cargoTexto}{uf ? ` em ${NOME_UF[uf]}` : ""} em {anoLeg}. Escolha um para pintar o mapa com ele.</p>
-                <ol className="extremos duas">
+                <ol className="extremos">
                   {rankingLeg.map((r) => (
                     <li key={r.partido}>
                       <Link scroll={false} href={href({ p: r.partido === partido ? null : r.partido })} className={r.partido === partido ? "on" : undefined} aria-current={r.partido === partido ? "true" : undefined}>
@@ -379,13 +383,28 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               </div>
             )}
 
-            <ul className={`atalhos ${rankingLeg.length > 0 ? "s4" : "s12"}`}>
-              <li><Link href={hrefAnalise}>Análise completa</Link></li>
+            <div className="bloco noite s12">
+              <h3>Eleição a eleição, por partido</h3>
+              <p className="r-texto">{resumoLeg}</p>
+              <SerieLegenda series={seriesLeg} cortes={cortesSerie} eventos={faixaEventos(escolhidosSerie, eventosLeg)} descricao={resumoLeg} />
+              <p className="muted pequeno">{partido ? `A linha é o ${partido}` : `As linhas são os três partidos com mais votos de legenda${uf ? ` em ${NOME_UF[uf]}` : ""}`}; a área, todos os partidos. Proporção = votos de legenda ÷ (legenda + nominais), deputados e vereadores juntos; faixas = eleições municipais.</p>
+            </div>
+
+            {comparacaoLeg && (
+              <div className="bloco noite s12">
+                <h3>De um ciclo para o outro</h3>
+                <p className="r-texto">{resumoCiclos(comparacaoLeg)}</p>
+                <ComparaCiclos comparacao={comparacaoLeg} limite={8} todos={false} hrefAlternar={hrefTodosCiclos} />
+              </div>
+            )}
+
+            <ul className="atalhos s12">
+              <li><Link href={hrefAnalise}>Análise completa do voto de legenda</Link></li>
               <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
             </ul>
           </div>
           ) : (
-          <div className="painel s12" key={`${uf}-${mun?.id_municipio}`}>
+          <div className="painel s12" key={`${uf}-${mun?.id_municipio}-${ano}-${ind}`}>
             {pediuLegenda && (
               <div className="card aviso s12">
                 <h2>Voto de legenda indisponível</h2>
@@ -501,6 +520,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             )}
           </div>
           )}
+          <MiniMapa recorte={recorte}>{mapaPalco}</MiniMapa>
           </>)}
         </section>
       )}

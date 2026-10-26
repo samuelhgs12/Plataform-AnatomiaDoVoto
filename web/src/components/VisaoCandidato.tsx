@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "./MapaAbstencao";
 import { MapaVivo } from "./MapaVivo";
 import { FichaCandidato } from "./FichaCandidato";
+import { MiniMapa } from "./MiniMapa";
 import { classe, enquadrar, nomeProprio, type LinhaMunicipio } from "@/lib/abstencao";
 import {
   abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato,
@@ -117,6 +118,15 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   const noMapaT1 = linhas1.reduce((s, l) => ({ votos: s.votos + l.votos, validos: s.validos + l.validos_cargo }), { votos: 0, validos: 0 });
   const cargoMin = c?.cargo.toLowerCase();
 
+  // o mapa do palco, repetido pequeno no mini-mapa que acompanha a rolagem
+  const mapa = (
+    <MapaAbstencao
+      titulo={c ? `${nome}, ${cargoMin} em ${c.ano}, ${turnoTexto}: votos ${comMunicipios ? `nos municípios de ${NOME_UF[uf!]}` : "nos seis estados"}. ${frase}` : "Os seis estados, à espera de um candidato"}
+      camera={camera} estados={estados} uf={comMunicipios ? uf : undefined} municipios={noMapa}
+      destaque={munSel && centroSel ? { ibge: munSel.cod_ibge, nome: nomes.get(munSel.id_municipio)!, x: centroSel[0], y: centroSel[1] } : undefined}
+    />
+  );
+
   return (
     <>
       <MapaVivo className="palco cand s12" estado={comMunicipios ? uf : undefined}>
@@ -145,11 +155,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
         </div>
 
         <div className="palco-mapa">
-          <MapaAbstencao
-            titulo={c ? `${nome}, ${cargoMin} em ${c.ano}, ${turnoTexto}: votos ${comMunicipios ? `nos municípios de ${NOME_UF[uf!]}` : "nos seis estados"}. ${frase}` : "Os seis estados, à espera de um candidato"}
-            camera={camera} estados={estados} uf={comMunicipios ? uf : undefined} municipios={noMapa}
-            destaque={munSel && centroSel ? { ibge: munSel.cod_ibge, nome: nomes.get(munSel.id_municipio)!, x: centroSel[0], y: centroSel[1] } : undefined}
-          />
+          {mapa}
           {c && alcance === "fora" && <p className="palco-aviso">Para este cargo o mapa por município ainda não está disponível.</p>}
           {c && alcance !== "fora" && !votos.length && <p className="palco-aviso">Os votos por município desta candidatura não estão disponíveis agora.</p>}
           {seis && !uf && <p className="palco-dica" aria-hidden="true">Clique num estado para ver os municípios</p>}
@@ -231,6 +237,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
           </div>
         </div>
       )}
+      {c && <MiniMapa recorte={`${nome} · ${c.cargo} · ${comMunicipios ? uf : "seis estados"} · ${c.ano}`}>{mapa}</MiniMapa>}
     </>
   );
 }
