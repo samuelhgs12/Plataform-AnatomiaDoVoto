@@ -8,7 +8,8 @@ import { TELA } from "@/lib/lupa";
 import { MapaVivo } from "@/components/MapaVivo";
 import { Dispersao } from "@/components/Dispersao";
 import { EscolhaMunicipio } from "@/components/EscolhaMunicipio";
-import { lerAnalise } from "@/lib/api";
+import { apiGetOpcional, lerAnalise } from "@/lib/api";
+import type { Listagem } from "@/lib/types";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
 import { CARGOS, anosDe as anosDaLegenda, cicloDoAno, type CargoCiclo, type LinhaLegenda } from "@/lib/legenda";
@@ -27,15 +28,14 @@ import { FOTOS } from "@/lib/fotos";
 import { ANALISES } from "@/lib/analises";
 import { FaixasAnalises } from "@/components/FaixasAnalises";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
-import { abrangencia, candidaturasDe, indiceCandidatos, turnosDe } from "@/lib/candidato-mapa";
-// protótipo: dados fictícios; para ligar na API, troque só esta importação por funções com o mesmo retorno
-import { lerCandidaturasMapa, lerVotosCandidatura } from "@/lib/candidato-mapa.mock";
+import { abrangencia, candidaturasDe, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
 
 export const dynamic = "force-dynamic";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 const ESTADOS = ["Amapá", "Espírito Santo", "Minas Gerais", "Pernambuco", "Rio de Janeiro", "Roraima"];
+const ANO_SUGESTOES = 2022;   // última eleição geral: as sugestões da visão Candidato são os governadores eleitos nela
 const umaCasa = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 const ROTULO_CARGO: Record<CargoCiclo, string> = { ambos: "Os dois", federal: "Federal", estadual: "Estadual" };
 
@@ -175,18 +175,21 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const hrefAbst = naLegenda ? href({ ver: "abstencao", ano: anos.includes(anoLeg!) ? anoLeg : ano }) : href({});
   const hrefLeg = naLegenda ? href({}) : href({ ver: "legenda", ano: anoNaLegenda(ano, anosLeg) ?? ano });
 
-  // visão candidato (protótipo): cand e campanha validados contra os dados; inválidos voltam à busca
-  const candidaturasMapa = naCandidato ? await lerCandidaturasMapa() : [];
-  const { padrao: campanhaPadrao, lista: campanhas } = candidaturasDe(candidaturasMapa, Number(um(sp.cand)));
+  // visão candidato: cand e campanha validados contra os dados da API; inválidos (ou API fora) voltam à busca
+  const idCand = naCandidato && /^\d+$/.test(um(sp.cand) ?? "") ? Number(um(sp.cand)) : undefined;
+  const candidaturasMapa = idCand ? (await apiGetOpcional<CandidaturaMapa[]>(`/candidatos/${idCand}/mapa`)) ?? [] : [];
+  const { padrao: campanhaPadrao, lista: campanhas } = candidaturasDe(candidaturasMapa, idCand ?? 0);
   const campanha = campanhas.find((c) => String(c.id_candidatura) === um(sp.campanha)) ?? campanhaPadrao;
-  const votosCand = campanha ? await lerVotosCandidatura(campanha.id_candidatura) : [];
+  const votosCand = campanha && abrangencia(campanha.cargo) !== "fora"
+    ? (await apiGetOpcional<VotoMunicipio[]>(`/candidaturas/${campanha.id_candidatura}/votos-municipio`)) ?? [] : [];
   const turnosCand = turnosDe(votosCand);
   const turnoCand = turnosCand.includes(Number(um(sp.turno))) ? Number(um(sp.turno)) : 1;
   const alcanceCand = campanha ? abrangencia(campanha.cargo) : "fora";
   const ufCand = alcanceCand === "uf" ? campanha!.uf : alcanceCand === "seis" ? ufs.find((u) => u === um(sp.uf)) : undefined;
   const munCand = ufCand ? votosCand.find((v) => v.uf === ufCand && String(v.id_municipio) === um(sp.mun))?.id_municipio : undefined;
-  const indiceCand = indiceCandidatos(candidaturasMapa);
-  const sugestoesCand = [9001, 9003, 9007, 9006].flatMap((id) => indiceCand.find((e) => e.id_candidato === id) ?? []);
+  // sugestões sem candidato escolhido: governadores eleitos na última eleição geral (id_cargo 3)
+  const sugestoesCand = naCandidato && !campanha
+    ? sugestoesDe((await apiGetOpcional<Listagem>(`/candidaturas?cargo=3&ano=${ANO_SUGESTOES}&eleito=true&tamanho=6`))?.itens ?? []) : [];
 
   const hrefCand = "/?ver=candidato#mapa";   // como as outras abas: <a data-mapa>, que o MapaVivo navega sem recarregar
   const visoes = (
@@ -220,7 +223,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         <section id="mapa" className="quadro observatorio" aria-labelledby="h-mapa">
           {naCandidato ? (
             <VisaoCandidato
-              visoes={visoes} votos={votosCand} indice={indiceCand} sugestoes={sugestoesCand} municipios={municipios} ufs={ufs}
+              visoes={visoes} votos={votosCand} sugestoes={sugestoesCand} municipios={municipios} ufs={ufs}
               escolha={{ campanha, lista: campanhas, turno: turnoCand, turnos: turnosCand, uf: ufCand, mun: munCand }}
             />
           ) : (<>

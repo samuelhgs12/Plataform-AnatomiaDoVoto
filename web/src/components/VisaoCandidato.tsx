@@ -6,7 +6,7 @@ import { FichaCandidato } from "./FichaCandidato";
 import { BuscaCandidatoMapa } from "./BuscaCandidatoMapa";
 import { classe, enquadrar, nomeProprio, type LinhaMunicipio } from "@/lib/abstencao";
 import {
-  abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, proporcaoPorUf, rotulosCandidato,
+  abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato,
   type CandidaturaMapa, type EntradaCandidato, type VotoMunicipio,
 } from "@/lib/candidato-mapa";
 import { faixasFixas } from "@/lib/mapa";
@@ -31,7 +31,6 @@ interface Props {
   visoes: ReactNode;
   escolha: EscolhaCandidato;
   votos: VotoMunicipio[];
-  indice: EntradaCandidato[];
   sugestoes: EntradaCandidato[];
   municipios: LinhaMunicipio[];
   ufs: string[];
@@ -40,11 +39,11 @@ interface Props {
 const SEIS = "AP, ES, MG, PE, RJ e RR";
 
 /**
- * Visão "Candidato" do mapa da página inicial (protótipo com dados fictícios): onde a candidatura teve votos, com a
+ * Visão "Candidato" do mapa da página inicial: onde a candidatura teve votos, com a
  * ficha ao lado. Cargos estaduais abrem no estado; presidente abre nos seis estados e o clique dá zoom. Só desenha:
  * as contas são de src/lib/candidato-mapa.ts.
  */
-export function VisaoCandidato({ visoes, escolha, votos, indice, sugestoes, municipios, ufs }: Props) {
+export function VisaoCandidato({ visoes, escolha, votos, sugestoes, municipios, ufs }: Props) {
   const { campanha: c, lista, turno, turnos, uf, mun } = escolha;
   const alcance = c ? abrangencia(c.cargo) : "fora";
   const seis = alcance === "seis";
@@ -128,12 +127,12 @@ export function VisaoCandidato({ visoes, escolha, votos, indice, sugestoes, muni
             {c ? (
               <>
                 <h1 id="h-mapa">Onde {nome} teve votos em {c.ano}</h1>
-                <p className="palco-sobre">{sub}<span className="selo-prototipo">Protótipo · dados fictícios</span></p>
+                <p className="palco-sobre">{sub}</p>
               </>
             ) : (
               <>
                 <h1 id="h-mapa">Onde cada candidato teve votos</h1>
-                <p className="palco-sobre">Escolha um nome para pintar o mapa, município a município<span className="selo-prototipo">Protótipo · dados fictícios</span></p>
+                <p className="palco-sobre">Escolha um nome para pintar o mapa, município a município</p>
               </>
             )}
           </div>
@@ -153,6 +152,7 @@ export function VisaoCandidato({ visoes, escolha, votos, indice, sugestoes, muni
             destaque={munSel && centroSel ? { ibge: munSel.cod_ibge, nome: nomes.get(munSel.id_municipio)!, x: centroSel[0], y: centroSel[1] } : undefined}
           />
           {c && alcance === "fora" && <p className="palco-aviso">Para este cargo o mapa por município ainda não está disponível.</p>}
+          {c && alcance !== "fora" && !votos.length && <p className="palco-aviso">Os votos por município desta candidatura não estão disponíveis agora.</p>}
           {seis && !uf && <p className="palco-dica" aria-hidden="true">Clique num estado para ver os municípios</p>}
         </div>
 
@@ -213,6 +213,7 @@ export function VisaoCandidato({ visoes, escolha, votos, indice, sugestoes, muni
               <div className="bloco noite">
                 <h3>Onde estão os votos</h3>
                 <p className="r-texto">{frase}</p>
+                {notaValidos(c) && <p className="r-texto">{notaValidos(c)}</p>}
                 <details className="tabela-cand">
                   <summary>Ver votos por {seis && !uf ? "estado" : "município"}</summary>
                   <div className="tabela-rola">
@@ -231,18 +232,18 @@ export function VisaoCandidato({ visoes, escolha, votos, indice, sugestoes, muni
             )}
 
             <div className="bloco noite">
-              <BuscaCandidatoMapa indice={indice} rotulo="Trocar de candidato" />
+              <BuscaCandidatoMapa rotulo="Trocar de candidato" />
             </div>
           </>
         ) : (
           <div className="bloco noite painel-cab busca-vazia">
             <h2>Buscar um candidato</h2>
             <p>O mapa mostra em que municípios a pessoa teve votos e quanto isso pesou entre os votos válidos de cada um.</p>
-            <BuscaCandidatoMapa indice={indice} destaque />
-            <p className="rotulo">Ou comece por um destes</p>
+            <BuscaCandidatoMapa destaque />
+            {sugestoes.length > 0 && <p className="rotulo">Ou comece por um dos governadores eleitos em {sugestoes[0].ultimo_ano}</p>}
             <ul className="chips sugestoes-cand">
               {sugestoes.map((s) => (
-                <li key={s.id_candidato}><Link scroll={false} className="chip" href={`/?ver=candidato&cand=${s.id_candidato}#mapa`}>{nomeProprio(s.nome_urna)}<small>{s.ultimo_cargo}</small></Link></li>
+                <li key={s.id_candidato}><Link scroll={false} className="chip" href={`/?ver=candidato&cand=${s.id_candidato}#mapa`}>{nomeProprio(s.nome_urna ?? "")}<small>{s.ultimo_cargo} · {s.uf}</small></Link></li>
               ))}
             </ul>
           </div>

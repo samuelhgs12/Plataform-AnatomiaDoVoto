@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cabecalho } from "@/components/Cabecalho";
 import { FOTOS } from "@/lib/fotos";
+import { CREDITO_FOTOS } from "@/lib/foto-candidato";
 
 export const metadata: Metadata = { title: "Sobre os dados" };
 
@@ -29,6 +30,12 @@ export default function Sobre() {
           <h2 id="h-priv">Privacidade</h2>
           <p>Os dados são públicos, mas não exibimos título eleitoral, CPF, data de nascimento nem documentos de doadores.</p>
           <p>Para pedir uma correção, entre em contato com a equipe (TODO: e-mail do grupo).</p>
+        </section>
+        <section className="bloco s12" aria-labelledby="h-fotos" id="fotos">
+          <h2 id="h-fotos">Fotos dos candidatos</h2>
+          <p>As fotos são as que os próprios candidatos entregaram à Justiça Eleitoral no registro da candidatura, publicadas pelo TSE de 2018 em diante. Cada foto é da eleição indicada ao lado dela; candidaturas sem foto mostram as iniciais.</p>
+          <p>{CREDITO_FOTOS} Usamos as fotos só para identificar a candidatura: não fazemos reconhecimento facial nem qualquer outro tratamento das imagens.</p>
+          <p>Para pedir a remoção de uma foto, entre em contato com a equipe (TODO: e-mail do grupo) informando o nome e o ano da candidatura.</p>
         </section>
       </div>
     </>

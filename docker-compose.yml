@@ -1,6 +1,6 @@
 # Desenvolvimento com contêineres (opcional): docker compose up --build
 # Precisa de MOTHERDUCK_TOKEN no ambiente (DATABASE padrão: md:bdr). Sem acesso ao MotherDuck, o fallback lê
-# o banco da carga montado em /dados (padrão: ../load_BDR/dados_bdr; mude com DADOS_CARGA).
+# o banco da carga montado em /dados (padrão: ../load_BDR/dados_bdr; mude com DADOS_CARGA); as fotos, em /dados/fotos.
 services:
   api:
     build: ./api
@@ -8,6 +8,8 @@ services:
       DATABASE: ${DATABASE:-md:bdr}
       MOTHERDUCK_TOKEN: ${MOTHERDUCK_TOKEN:-}
       DATABASE_LOCAL: /dados/bdr_final.duckdb
+      FOTOS_DATABASE: ${FOTOS_DATABASE:-md:bdr_fotos}
+      FOTOS_DATABASE_LOCAL: /dados/fotos/bdr_fotos.duckdb
       CORS_ORIGINS: http://localhost:3000
     volumes:
       - ${DADOS_CARGA:-../load_BDR/dados_bdr}:/dados:ro

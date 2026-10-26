@@ -10,6 +10,7 @@ import { DinheiroCampanha } from "@/components/DinheiroCampanha";
 import { PropagandaCampanha } from "@/components/PropagandaCampanha";
 import type { Propaganda } from "@/lib/propaganda";
 import { naLinhaDoTempo } from "@/lib/carreira";
+import { fotoDoPerfil } from "@/lib/foto-candidato";
 import { Rolar } from "@/components/Rolar";
 
 type Props = { params: Promise<{ id: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
@@ -38,6 +39,7 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
   // escolhe outra (a mesma nos dois blocos)
   const comContas = disputadas.filter((c) => c.ano >= ANO_RECEITAS).reverse();
   const pedida = Number(Array.isArray(sp.campanha) ? sp.campanha[0] : sp.campanha);
+  const foto = fotoDoPerfil(carreira, pedida);
   const contas = await Promise.all(comContas.map(async (c) => ({
     c,
     r: await apiGetOpcional<Receitas>(`/candidaturas/${c.id_candidatura}/receitas`),
@@ -50,7 +52,7 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
         <div className="bloco s8 titulo">
           <Link href="/candidatos" className="voltar">← Voltar à listagem</Link>
           <div className="cand">
-            <Avatar nome={nome} partido={ultima?.partido ?? null} />
+            <Avatar nome={nome} partido={ultima?.partido ?? null} foto={foto?.url} lazy={false} />
             <div>
               <h1 id="h-cab">{ultima?.nome_urna ?? nome}</h1>
               <p className="lead" style={{ margin: 0 }}>{nome}{candidato.ocupacao ? ` · ${candidato.ocupacao.toLowerCase()}` : ""}</p>

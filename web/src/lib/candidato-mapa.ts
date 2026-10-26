@@ -1,9 +1,10 @@
 // Visão "Candidato" do mapa da página inicial: onde uma candidatura teve votos, município a município.
-// Os tipos têm o formato que a API vai devolver; por enquanto os dados vêm de candidato-mapa.mock.ts.
+// Os dados vêm da API: GET /api/candidatos/{id}/mapa (as candidaturas, com os números da ficha) e
+// GET /api/candidaturas/{id}/votos-municipio (votos por município e turno).
 
 import { classe, quantis } from "./abstencao";
-import { normalizarBusca } from "./busca";
 import { pct } from "./format";
+import type { CandidaturaItem } from "./types";
 
 /** Uma candidatura (pessoa × eleição × cargo), com os números do verso da ficha. */
 export interface CandidaturaMapa {
@@ -13,17 +14,21 @@ export interface CandidaturaMapa {
   cargo: string;
   /** UF da candidatura; "BR" para presidente */
   uf: string;
-  partido: string;
-  numero: number;
+  partido: string | null;
+  numero: string | null;
+  /** o nome civil quando não há nome de urna */
   nome_urna: string;
+  /** com o ano, a chave da candidatura no TSE e da foto (src/lib/foto-candidato.ts) */
+  ue: string;
+  sequencial: string;
   /** chave de ROTULO_RESULTADO (format.ts): ELEITO, NAO_ELEITO… */
   resultado: string;
   /** votos no 1º turno, na abrangência inteira do cargo (para presidente, o país) */
   votos_total: number;
-  /** despesas contratadas na prestação final (sem transferências), em reais */
-  gasto_total: number;
-  /** mediana do gasto das candidaturas do mesmo cargo, ano e UF */
-  mediana_gasto_cargo: number;
+  /** despesas contratadas na prestação final (sem transferências), em reais; null sem prestação (antes de 2018) */
+  gasto_total: number | null;
+  /** mediana do gasto das candidaturas do mesmo cargo, ano e UF; null sem prestação */
+  mediana_gasto_cargo: number | null;
   /** parte das receitas vinda do Fundo Eleitoral e do Fundo Partidário (0 a 1); null sem receitas */
   parte_publica: number | null;
   /** eleições disputadas pela pessoa até esta, contando esta */
@@ -112,10 +117,10 @@ export interface Resumo {
 }
 
 export function resumoCandidatura(c: Pick<CandidaturaMapa, "votos_total" | "gasto_total" | "mediana_gasto_cargo" | "parte_publica">): Resumo {
-  const razao = c.mediana_gasto_cargo > 0 ? c.gasto_total / c.mediana_gasto_cargo : null;
+  const razao = c.gasto_total != null && c.mediana_gasto_cargo ? c.gasto_total / c.mediana_gasto_cargo : null;
   const r = razao == null ? null : razao < 10 ? Math.round(razao * 10) / 10 : Math.round(razao);
   return {
-    gastoPorVoto: c.votos_total > 0 ? c.gasto_total / c.votos_total : null,
+    gastoPorVoto: c.gasto_total != null && c.votos_total > 0 ? c.gasto_total / c.votos_total : null,
     razaoMediana: razao,
     textoMediana: r == null ? null : `${r.toLocaleString("pt-BR")}× a mediana do cargo`,
     publico: c.parte_publica,
@@ -171,19 +176,29 @@ export function candidaturasDe<T extends Pick<CandidaturaMapa, "id_candidato" | 
   return { padrao: lista[0], lista };
 }
 
-/** Uma entrada por pessoa para a busca, a partir da candidatura mais recente (mesmo formato de /api/busca). */
-export interface EntradaCandidato { id_candidato: number; nome_urna: string; partido: string; uf: string; ultimo_ano: number; ultimo_cargo: string }
-
-export function indiceCandidatos(todas: CandidaturaMapa[]): EntradaCandidato[] {
-  const ids = [...new Set(todas.map((c) => c.id_candidato))];
-  return ids.map((id) => candidaturasDe(todas, id).padrao!)
-    .map((c) => ({ id_candidato: c.id_candidato, nome_urna: c.nome_urna, partido: c.partido, uf: c.uf, ultimo_ano: c.ano, ultimo_cargo: c.cargo }))
-    .sort((a, b) => a.nome_urna.localeCompare(b.nome_urna, "pt-BR"));
+/** Uma pessoa na busca do mapa e nas sugestões (mesmo formato de /api/busca). */
+export interface EntradaCandidato {
+  id_candidato: number; nome_urna: string | null; partido: string | null; uf: string | null; ultimo_ano: number; ultimo_cargo: string;
+  ultimo_ue?: string | null; ultimo_sequencial?: string | null;
 }
 
-/** Candidatos cujo nome tem uma palavra começando pelo termo (sem acento nem maiúsculas), como a /api/busca casa. */
-export function buscarCandidato<T extends { nome_urna: string | null }>(indice: T[], termo: string): T[] {
-  const alvo = normalizarBusca(termo);
-  if (!alvo) return [];
-  return indice.filter((c) => ` ${normalizarBusca(c.nome_urna ?? "")}`.includes(` ${alvo}`));
+/** Sugestões a partir de uma listagem de /api/candidaturas: uma por pessoa, na ordem da listagem. */
+export function sugestoesDe(itens: CandidaturaItem[], n = 4): EntradaCandidato[] {
+  const vistos = new Set<number>();
+  return itens.flatMap((c) => {
+    if (c.id_candidato == null || vistos.has(c.id_candidato)) return [];
+    vistos.add(c.id_candidato);
+    return [{ id_candidato: c.id_candidato, nome_urna: c.nome_urna, partido: c.partido, uf: c.uf, ultimo_ano: c.ano, ultimo_cargo: c.cargo, ultimo_ue: c.ue, ultimo_sequencial: c.sequencial }];
+  }).slice(0, n);
+}
+
+/** Cargos com voto de legenda: os válidos somam os votos no partido, que o TSE só publica por município de 2018 em diante. */
+const PROPORCIONAIS = ["Deputado federal", "Deputado estadual", "Deputado distrital", "Vereador"];
+export const ANO_LEGENDA_POR_MUNICIPIO = 2018;
+
+/** Aviso para o mapa quando os válidos de cada município não incluem a legenda; null quando incluem. */
+export function notaValidos(c: Pick<CandidaturaMapa, "ano" | "cargo">): string | null {
+  return PROPORCIONAIS.includes(c.cargo) && c.ano < ANO_LEGENDA_POR_MUNICIPIO
+    ? `Antes de ${ANO_LEGENDA_POR_MUNICIPIO} o TSE não publica o voto de legenda por município: a parte de cada município é calculada só sobre os votos nominais.`
+    : null;
 }

@@ -2,6 +2,7 @@
 
 ```
 [Repositório de carga] ──► MotherDuck / bdr_final.duckdb   (já carregado e validado; somente leitura aqui)
+                      └──► MotherDuck / bdr_fotos.duckdb    (fotos dos candidatos, banco à parte; decisão 7)
                                │  token só no servidor
                                ▼
                     ┌───────────────────────┐        ┌───────────────────────────┐
@@ -30,6 +31,39 @@
 | Respostas com `Cache-Control` e cache em memória | Os dados são históricos: a mesma consulta nunca precisa ser refeita |
 | Modelos Pydantic como lista de campos permitidos | É a barreira de privacidade: o que não está em `schemas.py` não sai |
 | Consultas em arquivos `.sql` | Quem sabe SQL revisa e altera sem mexer em Python; todas são parametrizadas |
+
+## Banco de fotos (fora do DER principal)
+
+As fotos ficam em outro banco (`bdr_fotos`, gerado por `load_BDR/fotos_baixar.py`), aberto pela API numa segunda conexão
+(`FOTOS_DATABASE`, com fallback em `FOTOS_DATABASE_LOCAL`, como o banco principal). Sem chave estrangeira entre os dois:
+a ligação é a chave natural da candidatura no TSE, que não muda quando a carga é refeita (o `id_candidatura` muda).
+
+```mermaid
+erDiagram
+    candidatura ||--o| candidatura_foto : "(ano, ue, sequencial)"
+    candidatura {
+        bigint id_candidatura PK
+        smallint ano UK
+        varchar ue UK
+        varchar sequencial UK
+    }
+    candidatura_foto {
+        smallint ano PK
+        varchar ue PK
+        varchar sequencial PK
+        varchar uf
+        blob miniatura "WebP 120x160 (listas e buscas)"
+        smallint largura
+        smallint altura
+        integer bytes
+        blob foto "JPEG original do TSE, sem metadados (ficha)"
+        smallint foto_largura
+        smallint foto_altura
+        integer foto_bytes
+    }
+```
+
+`foto_progresso` (uma linha por pacote ano × UF: fotos, órfãs, ilegíveis, sem foto) é só controle da carga e a API não lê.
 
 ## Fluxo de uma visita ao perfil
 

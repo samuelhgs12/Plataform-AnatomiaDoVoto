@@ -106,13 +106,13 @@ def test_listagem_padrao_so_ordinaria(client):
 
 def test_listagem_filtros_ordem_e_paginacao(client):
     r = client.get("/api/candidaturas", params={"ano": 2022}).json()
-    assert [i["nome_urna"] for i in r["itens"]] == ["ANA ADVOGADA", "MARIA DA SILVA"]     # por votos
+    assert [i["nome_urna"] for i in r["itens"]] == ["ANA ADVOGADA", "MARIA DA SILVA", "ZÉ DA SERRA"]     # por votos
     r = client.get("/api/candidaturas", params={"ano": 2022, "ordem": "nome"}).json()
-    assert [i["nome_urna"] for i in r["itens"]] == ["ANA ADVOGADA", "MARIA DA SILVA"]
+    assert [i["nome_urna"] for i in r["itens"]] == ["ANA ADVOGADA", "MARIA DA SILVA", "ZÉ DA SERRA"]
     r = client.get("/api/candidaturas", params={"ano": 2022, "eleito": True}).json()
     assert r["total"] == 1 and r["itens"][0]["eleito"] is True
     r = client.get("/api/candidaturas", params={"ano": 2022, "tamanho": 1, "pagina": 2}).json()
-    assert r["total"] == 2 and len(r["itens"]) == 1 and r["itens"][0]["nome_urna"] == "MARIA DA SILVA"
+    assert r["total"] == 3 and len(r["itens"]) == 1 and r["itens"][0]["nome_urna"] == "MARIA DA SILVA"
     assert client.get("/api/candidaturas", params={"uf": "pe"}).json()["total"] == 2        # 2016 e 2020 do João
 
 
@@ -237,3 +237,89 @@ def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
         texto = json.dumps(client.get(rota).json(), ensure_ascii=False).lower()
         for p in proibidos:
             assert p not in texto, f"{rota} expõe '{p}'"
+
+
+def test_foto_miniatura_e_ficha(client):
+    from tests.conftest import JPEG, WEBP
+
+    r = client.get("/api/fotos/2022/MG/S3")   # mini é o padrão
+    assert r.status_code == 200 and r.content == WEBP and r.headers["content-type"] == "image/webp"
+    assert "immutable" in r.headers["cache-control"]   # o middleware não troca pelo cache de 1 hora
+    r = client.get("/api/fotos/2022/MG/S3?tam=ficha")
+    assert r.status_code == 200 and r.content == JPEG and r.headers["content-type"] == "image/jpeg"
+
+
+def test_foto_ficha_sem_original_devolve_miniatura(client):
+    from tests.conftest import WEBP
+
+    r = client.get("/api/fotos/2022/RJ/S7?tam=ficha")
+    assert r.status_code == 200 and r.content == WEBP
+
+
+def test_foto_ausente_e_invalida(client):
+    r = client.get("/api/fotos/2016/11111/S1")
+    assert r.status_code == 404 and r.headers["cache-control"] == "public, max-age=86400"
+    assert client.get("/api/fotos/2022/mg/S3").status_code == 422             # ue só em maiúsculas
+    assert client.get("/api/fotos/2022/MG/S3?tam=grande").status_code == 422
+
+
+def test_fotos_fallback_local_quando_motherduck_falha(monkeypatch, banco, banco_fotos):
+    from fastapi.testclient import TestClient
+    from app import db
+
+    monkeypatch.setenv("DATABASE", banco)
+    monkeypatch.setenv("FOTOS_DATABASE", "md:bdr_fotos")
+    monkeypatch.setenv("MOTHERDUCK_TOKEN", "")
+    monkeypatch.setenv("FOTOS_DATABASE_LOCAL", banco_fotos)
+    db.reiniciar()
+    from app.main import app
+
+    assert TestClient(app).get("/api/fotos/2022/MG/S3").status_code == 200
+    db.reiniciar()
+
+
+def test_sem_banco_de_fotos_o_resto_funciona(monkeypatch, banco, tmp_path):
+    from fastapi.testclient import TestClient
+    from app import db
+
+    monkeypatch.setenv("DATABASE", banco)
+    monkeypatch.setenv("FOTOS_DATABASE", str(tmp_path / "nao_existe.duckdb"))
+    db.reiniciar()
+    from app.main import app
+
+    c = TestClient(app)
+    assert c.get("/api/fotos/2022/MG/S3").status_code == 503
+    assert c.get("/api/health").json() == {"status": "ok", "db": "ok"}
+    db.reiniciar()
+
+
+def test_chave_da_foto_nas_listas(client):
+    item = client.get("/api/candidaturas?ano=2022&uf=MG").json()["itens"][0]
+    assert (item["ano"], item["ue"], item["sequencial"]) == (2022, "MG", "S3")
+    car = client.get("/api/candidatos/1").json()["carreira"]
+    assert [(c["ue"], c["sequencial"]) for c in car][-1] == ("MG", "S3")
+    b = client.get("/api/busca?q=maria da silva").json()[0]
+    assert (b["ultimo_ano"], b["ultimo_ue"], b["ultimo_sequencial"]) == (2022, "MG", "S3")
+
+
+def test_mapa_do_candidato(client):
+    c = client.get("/api/candidatos/1/mapa").json()
+    assert [x["id_candidatura"] for x in c] == [3, 2, 1]                  # da mais recente para a mais antiga
+    assert [(x["disputas"], x["mandatos"]) for x in c] == [(3, 2), (2, 2), (1, 1)]
+    dep = c[0]
+    assert (dep["cargo"], dep["uf"], dep["numero"], dep["votos_total"], dep["resultado"]) == ("Deputado estadual", "MG", "55123", 30000, "NAO_ELEITO")
+    assert (dep["ue"], dep["sequencial"], dep["gasto_total"]) == ("MG", "S3", None)
+    ver = c[1]                                                         # 2020: despesas sem a transferência e sem a parcial
+    assert ver["gasto_total"] == 5500 and ver["mediana_gasto_cargo"] == 5500
+    assert abs(ver["parte_publica"] - 4000 / 5500) < 1e-9             # sem o repasse entre candidatos
+    assert client.get("/api/candidatos/999/mapa").status_code == 404
+
+
+def test_votos_por_municipio(client):
+    v = client.get("/api/candidaturas/3/votos-municipio").json()
+    # Alvorada: Maria 30000 + rival 3000 nominais + 70 de legenda; Serra Azul: só o rival votado, ela com 0
+    assert [(x["id_municipio"], x["votos"], x["validos_cargo"], x["posicao"]) for x in v] == [(1, 30000, 33070, 1), (4, 0, 2000, 2)]
+    assert {x["turno"] for x in v} == {1} and {x["uf"] for x in v} == {"MG"}
+    r = client.get("/api/candidaturas/10/votos-municipio").json()
+    assert [(x["id_municipio"], x["votos"], x["posicao"]) for x in r] == [(1, 3000, 2), (4, 2000, 1)]
+    assert client.get("/api/candidaturas/999/votos-municipio").status_code == 404

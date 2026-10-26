@@ -156,6 +156,15 @@ CREATE TABLE resultado_candidatura (
 
 -- ------------------------------ VOTAÇÃO --------------------------------------------
 
+CREATE TABLE votos_candidatura_municipio (
+    id_votos_candidatura  bigint    PRIMARY KEY,
+    id_candidatura        bigint    NOT NULL REFERENCES candidatura (id_candidatura),
+    id_municipio          integer   NOT NULL REFERENCES municipio (id_municipio),
+    turno                 smallint  NOT NULL CHECK (turno IN (1, 2)),
+    votos                 bigint    NOT NULL,   -- só municípios com voto
+    UNIQUE (id_candidatura, id_municipio, turno)
+);
+
 CREATE TABLE votos_partido_municipio (
     id_votos        bigint     PRIMARY KEY,
     id_eleicao      integer   NOT NULL REFERENCES eleicao (id_eleicao),

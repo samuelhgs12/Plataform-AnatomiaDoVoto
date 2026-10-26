@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  abrangencia, buscarCandidato, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseResumo, indiceCandidatos, proporcaoNoMunicipio,
-  proporcaoPorUf, resumoCandidatura, rotulosCandidato, turnosDe, type CandidaturaMapa, type VotoMunicipio,
+  abrangencia, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoNoMunicipio,
+  proporcaoPorUf, resumoCandidatura, rotulosCandidato, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio,
 } from "../src/lib/candidato-mapa";
+import type { CandidaturaItem } from "../src/lib/types";
 
 const c = (o: Partial<CandidaturaMapa>): CandidaturaMapa => ({
-  id_candidato: 1, id_candidatura: 10, ano: 2022, cargo: "Deputado federal", uf: "MG", partido: "PFA", numero: 1234, nome_urna: "ANA LIMA",
+  id_candidato: 1, id_candidatura: 10, ano: 2022, cargo: "Deputado federal", uf: "MG", partido: "PFA", numero: "1234", nome_urna: "ANA LIMA", ue: "MG", sequencial: "1",
   resultado: "ELEITO", votos_total: 1000, gasto_total: 50_000, mediana_gasto_cargo: 20_000, parte_publica: 0.6, disputas: 1, mandatos: 1, ...o,
 });
 const v = (o: Partial<VotoMunicipio>): VotoMunicipio => ({ id_candidatura: 10, id_municipio: 1, uf: "MG", turno: 1, votos: 10, validos_cargo: 100, posicao: 3, ...o });
@@ -75,6 +76,11 @@ describe("resumoCandidatura", () => {
     expect(r.textoMediana).toBeNull();
     expect(r.privado).toBeNull();
   });
+  it("sem prestação de contas (antes de 2018), sem gasto por voto nem comparação", () => {
+    const r = resumoCandidatura(c({ gasto_total: null, mediana_gasto_cargo: null }));
+    expect(r.gastoPorVoto).toBeNull();
+    expect(r.textoMediana).toBeNull();
+  });
   it("acima de 10 vezes arredonda para inteiro", () => {
     expect(resumoCandidatura(c({ gasto_total: 123_000, mediana_gasto_cargo: 10_000 })).textoMediana).toBe("12× a mediana do cargo");
   });
@@ -123,32 +129,25 @@ describe("partesDoNome", () => {
   });
 });
 
-describe("indiceCandidatos e buscarCandidato", () => {
-  const todas = [c({ id_candidato: 1, nome_urna: "ÂNGELA SOUZA", ano: 2018, id_candidatura: 1 }), c({ id_candidato: 1, nome_urna: "ÂNGELA SOUZA", ano: 2022, cargo: "Senador", id_candidatura: 2 }), c({ id_candidato: 2, nome_urna: "BRUNO ANGELIM", id_candidatura: 3 })];
-  it("uma entrada por pessoa, com o cargo da candidatura mais recente", () => {
-    const ind = indiceCandidatos(todas);
-    expect(ind.map((e) => [e.id_candidato, e.ultimo_cargo])).toEqual([[1, "Senador"], [2, "Deputado federal"]]);
+describe("sugestoesDe", () => {
+  const item = (o: Partial<CandidaturaItem>): CandidaturaItem => ({
+    id_candidatura: 1, id_candidato: 1, nome_urna: "ANA", numero_urna: "11", uf: "RR", ano: 2022, ue: "RR", sequencial: "9",
+    partido: "PP", cargo: "Governador", resultado: "ELEITO", eleito: true, votos: 10, ...o,
   });
-  it("casa o começo de qualquer palavra, sem acento", () => {
-    const ind = indiceCandidatos(todas);
-    expect(buscarCandidato(ind, "angel").map((e) => e.id_candidato)).toEqual([1, 2]);
-    expect(buscarCandidato(ind, "souza").map((e) => e.id_candidato)).toEqual([1]);
-    expect(buscarCandidato(ind, "ouza")).toEqual([]);
-    expect(buscarCandidato(ind, "  ")).toEqual([]);
+  it("uma por pessoa, na ordem da listagem, com a chave da foto; sem id_candidato fica de fora", () => {
+    const s = sugestoesDe([item({}), item({ id_candidatura: 2 }), item({ id_candidato: null }), item({ id_candidato: 2, uf: "MG" })]);
+    expect(s.map((x) => [x.id_candidato, x.uf])).toEqual([[1, "RR"], [2, "MG"]]);
+    expect(s[0]).toMatchObject({ ultimo_ano: 2022, ultimo_cargo: "Governador", ultimo_ue: "RR", ultimo_sequencial: "9" });
+  });
+  it("limita a quantidade", () => {
+    expect(sugestoesDe([1, 2, 3, 4, 5].map((id) => item({ id_candidato: id })), 3)).toHaveLength(3);
   });
 });
 
-describe("mock da visão Candidato", () => {
-  it("é determinístico, cobre os municípios da abrangência e fecha o 2º turno entre os dois lados", async () => {
-    const { lerCandidaturasMapa, lerVotosCandidatura } = await import("../src/lib/candidato-mapa.mock");
-    const todas = await lerCandidaturasMapa();
-    expect(new Set(todas.map((x) => x.id_candidato)).size).toBeGreaterThanOrEqual(6);
-    const presidente = await lerVotosCandidatura(900701);
-    expect(doTurno(presidente, 1)).toHaveLength(1239);
-    expect(proporcaoPorUf(doTurno(presidente, 1)).map((u) => u.uf)).toEqual(["AP", "ES", "MG", "PE", "RJ", "RR"]);
-    const [a, b] = [doTurno(await lerVotosCandidatura(900301), 2), doTurno(await lerVotosCandidatura(900401), 2)];
-    expect(a.every((l, i) => l.votos + b[i].votos === l.validos_cargo)).toBe(true);
-    expect(doTurno(await lerVotosCandidatura(900102), 1)).toHaveLength(853);
-    expect(await lerVotosCandidatura(900201)).toEqual([]);   // prefeito: fora do mapa
+describe("notaValidos", () => {
+  it("avisa só em cargo proporcional antes de 2018 (sem legenda por município)", () => {
+    expect(notaValidos({ ano: 2014, cargo: "Deputado federal" })).toMatch(/só sobre os votos nominais/);
+    expect(notaValidos({ ano: 2018, cargo: "Deputado estadual" })).toBeNull();
+    expect(notaValidos({ ano: 2010, cargo: "Governador" })).toBeNull();
   });
 });

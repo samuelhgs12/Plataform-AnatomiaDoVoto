@@ -5,6 +5,7 @@ import { MenuLateral } from "@/components/MenuLateral";
 import { PaletaBusca } from "@/components/PaletaBusca";
 import { Movimento } from "@/components/Movimento";
 import { FOTOS } from "@/lib/fotos";
+import { CREDITO_FOTOS } from "@/lib/foto-candidato";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <a href={f.pagina}>“{f.titulo}”</a>, {f.autor}, <a href={f.urlLicenca}>{f.licenca}</a>{i < todas.length - 1 ? "; " : "."}
                 </span>
               ))}
+              {" "}{CREDITO_FOTOS.replace(/^Fotos:/, "Fotos dos candidatos:")} <Link href="/sobre#fotos">Pedir a remoção de uma foto</Link>.
             </p>
           </div>
         </footer>

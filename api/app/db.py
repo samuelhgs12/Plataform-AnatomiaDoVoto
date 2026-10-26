@@ -6,10 +6,14 @@ Regras:
   * cada requisição usa seu próprio cursor (conexões do DuckDB não são seguras entre threads);
   * o token do MotherDuck nunca aparece em mensagens de erro;
   * se o MotherDuck falhar, usa o arquivo DuckDB local da carga (DATABASE_LOCAL), quando ele existe.
+
+As fotos dos candidatos ficam num banco à parte (FOTOS_DATABASE, com fallback em FOTOS_DATABASE_LOCAL), aberto numa
+segunda conexão que fica aberta como a principal; sem ele a API funciona, só não há fotos.
 """
 import logging
 import re
 import threading
+import time
 from datetime import date, datetime
 from decimal import Decimal
 from functools import lru_cache
@@ -26,6 +30,10 @@ ANALISES = Path(__file__).parent / "analises"
 COPY_RE = re.compile(r"COPY\s*\((.*)\)\s*TO\s*'[^']*?([A-Za-z0-9_]+)\.csv'\s*\(HEADER\)", re.S | re.I)
 _lock = threading.Lock()
 _con: duckdb.DuckDBPyConnection | None = None
+_lock_fotos = threading.Lock()
+_con_fotos: duckdb.DuckDBPyConnection | None = None
+_falha_fotos: tuple[float, str] | None = None   # (quando, por quê): não tenta reabrir a cada foto pedida
+ESPERA_FOTOS = 60                                # segundos até tentar abrir de novo o banco de fotos
 _cache: TTLCache | None = None
 
 
@@ -33,8 +41,8 @@ class BancoIndisponivel(RuntimeError):
     """O banco não pôde ser aberto (arquivo ausente, token inválido, share sem acesso...)."""
 
 
-def _anexar_share(con: duckdb.DuckDBPyConnection, alvo: str) -> str:
-    """Anexa o share do MotherDuck como `bdr` e devolve o nome com que ele está anexado.
+def _anexar_share(con: duckdb.DuckDBPyConnection, alvo: str, apelido: str = "bdr") -> str:
+    """Anexa o share do MotherDuck como `apelido` e devolve o nome com que ele está anexado.
 
     No MotherDuck o ATTACH de um share fica salvo na conta (não só na sessão): da segunda
     execução em diante o share já aparece anexado, e anexá-lo de novo dá erro.
@@ -45,13 +53,13 @@ def _anexar_share(con: duckdb.DuckDBPyConnection, alvo: str) -> str:
     ).fetchone()
     if ja_anexado:
         return ja_anexado[0]
-    if con.execute("SELECT 1 FROM duckdb_databases() WHERE database_name = 'bdr'").fetchone():
+    if con.execute("SELECT 1 FROM duckdb_databases() WHERE database_name = ?", [apelido]).fetchone():
         raise BancoIndisponivel(
-            "Já existe um banco chamado 'bdr' na sua conta do MotherDuck que não é este share. "
-            "Use DATABASE=md:bdr ou faça DETACH bdr."
+            f"Já existe um banco chamado '{apelido}' na sua conta do MotherDuck que não é este share. "
+            f"Use md:{apelido} ou faça DETACH {apelido}."
         )
-    con.execute("ATTACH '" + alvo.replace("'", "''") + "' AS bdr")
-    return "bdr"
+    con.execute("ATTACH '" + alvo.replace("'", "''") + f"' AS {apelido}")
+    return apelido
 
 
 def _abrir_arquivo(alvo: str) -> duckdb.DuckDBPyConnection:
@@ -63,7 +71,7 @@ def _abrir_arquivo(alvo: str) -> duckdb.DuckDBPyConnection:
         raise BancoIndisponivel(f"Não foi possível abrir o banco local ({type(e).__name__}).") from None
 
 
-def _abrir_motherduck(alvo: str) -> duckdb.DuckDBPyConnection:
+def _abrir_motherduck(alvo: str, apelido: str = "bdr") -> duckdb.DuckDBPyConnection:
     s = get_settings()
     try:
         if not s.motherduck_token:
@@ -72,7 +80,7 @@ def _abrir_motherduck(alvo: str) -> duckdb.DuckDBPyConnection:
             # Anexa (se preciso) e reabre já apontando para o share: um `USE bdr` não vale
             # para os cursores criados em consultar(), que voltariam ao banco padrão da conta.
             with duckdb.connect(f"md:?motherduck_token={s.motherduck_token}") as con:
-                nome = _anexar_share(con, alvo)
+                nome = _anexar_share(con, alvo, apelido)
             return duckdb.connect(f"md:{nome}?motherduck_token={s.motherduck_token}")
         sep = "&" if "?" in alvo else "?"
         return duckdb.connect(f"{alvo}{sep}motherduck_token={s.motherduck_token}")
@@ -83,18 +91,18 @@ def _abrir_motherduck(alvo: str) -> duckdb.DuckDBPyConnection:
         raise BancoIndisponivel(f"Não foi possível abrir o banco ({type(e).__name__}).") from None
 
 
-def _abrir() -> duckdb.DuckDBPyConnection:
-    s = get_settings()
-    if not s.database.startswith("md:"):
-        return _abrir_arquivo(s.database)
+def _abrir(alvo: str, alvo_local: str, apelido: str = "bdr", variavel: str = "DATABASE_LOCAL",
+           arquivo: str = "bdr_final.duckdb") -> duckdb.DuckDBPyConnection:
+    if not alvo.startswith("md:"):
+        return _abrir_arquivo(alvo)
     try:
-        return _abrir_motherduck(s.database)
+        return _abrir_motherduck(alvo, apelido)
     except BancoIndisponivel as erro_md:
         # o plano gratuito do MotherDuck limita a organização a 3 pessoas: quem ficou de fora lê a carga local
-        local = Path(s.database_local).expanduser() if s.database_local else None
+        local = Path(alvo_local).expanduser() if alvo_local else None
         if not local or not local.exists():
-            raise BancoIndisponivel(f"{erro_md} Sem fallback local: não há banco em {local or '(DATABASE_LOCAL vazio)'}; "
-                                    "defina DATABASE_LOCAL com o caminho completo do bdr_final.duckdb da carga.") from None
+            raise BancoIndisponivel(f"{erro_md} Sem fallback local: não há banco em {local or f'({variavel} vazio)'}; "
+                                    f"defina {variavel} com o caminho completo do {arquivo} da carga.") from None
         log.warning("MotherDuck indisponível (%s); usando o banco local %s", erro_md, local)
         return _abrir_arquivo(str(local))
 
@@ -103,17 +111,52 @@ def conexao() -> duckdb.DuckDBPyConnection:
     global _con
     with _lock:
         if _con is None:
-            _con = _abrir()
+            s = get_settings()
+            _con = _abrir(s.database, s.database_local)
         return _con
+
+
+def conexao_fotos() -> duckdb.DuckDBPyConnection:
+    """Conexão com o banco de fotos. Se ele falhar, as próximas chamadas falham na hora por ESPERA_FOTOS segundos
+    (uma página de listagem pede dezenas de fotos; cada tentativa no MotherDuck pode demorar)."""
+    global _con_fotos, _falha_fotos
+    with _lock_fotos:
+        if _con_fotos is None:
+            if _falha_fotos and time.monotonic() - _falha_fotos[0] < ESPERA_FOTOS:
+                raise BancoIndisponivel(_falha_fotos[1])
+            s = get_settings()
+            try:
+                _con_fotos = _abrir(s.fotos_database, s.fotos_database_local, "bdr_fotos", "FOTOS_DATABASE_LOCAL",
+                                    "bdr_fotos.duckdb")
+            except BancoIndisponivel as e:
+                _falha_fotos = (time.monotonic(), f"Fotos indisponíveis: {e}")
+                raise BancoIndisponivel(_falha_fotos[1]) from None
+            _falha_fotos = None
+        return _con_fotos
+
+
+def foto(ano: int, ue: str, sequencial: str, tam: str) -> bytes | None:
+    """A miniatura (tam="mini", WebP) ou a foto original (tam="ficha", JPEG) da candidatura; sem a pedida, a outra.
+    Não guarda no cache da API: são muitas e o navegador já as guarda (Cache-Control longo)."""
+    cur = conexao_fotos().cursor()
+    try:
+        r = cur.execute(sql("foto_candidatura"), [tam, ano, ue, sequencial]).fetchone()
+    finally:
+        cur.close()
+    return bytes(r[0]) if r and r[0] is not None else None
 
 
 def reiniciar() -> None:
     """Fecha a conexão e limpa o cache (usado nos testes)."""
-    global _con, _cache
+    global _con, _cache, _con_fotos, _falha_fotos
     with _lock:
         if _con is not None:
             _con.close()
         _con, _cache = None, None
+    with _lock_fotos:
+        if _con_fotos is not None:
+            _con_fotos.close()
+        _con_fotos, _falha_fotos = None, None
     get_settings.cache_clear()
     sql.cache_clear()
 

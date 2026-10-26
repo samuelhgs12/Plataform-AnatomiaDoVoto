@@ -29,6 +29,8 @@ class CandidatoBusca(BaseModel):
     ultimo_cargo: str
     ultimo_eleito: bool
     nome_urna_casado: str | None = None   # nome de urna de outra eleição em que a busca casou
+    ultimo_ue: str | None = None          # com ultimo_ano e ultimo_sequencial, a chave da foto (/api/fotos/...)
+    ultimo_sequencial: str | None = None
 
 
 class CandidaturaItem(BaseModel):
@@ -38,6 +40,8 @@ class CandidaturaItem(BaseModel):
     numero_urna: str | None
     uf: str | None
     ano: int
+    ue: str              # ano, ue e sequencial: chave natural da candidatura no TSE (e da foto)
+    sequencial: str
     partido: str | None
     cargo: str
     resultado: str
@@ -64,6 +68,8 @@ class CarreiraItem(BaseModel):
     partido: str | None
     nome_urna: str | None
     numero_urna: str | None
+    ue: str
+    sequencial: str
     tipo_eleicao: str
     resultado: str
     eleito: bool
@@ -97,6 +103,37 @@ class Perfil(BaseModel):
     resumo: Resumo
     carreira: list[CarreiraItem]
     trocas: list[Troca]
+
+
+class CandidaturaMapa(BaseModel):
+    """Uma candidatura na visão Candidato do mapa, com os números do verso da ficha."""
+    id_candidato: int
+    id_candidatura: int
+    ano: int
+    cargo: str
+    uf: str                              # "BR" para presidente
+    partido: str | None
+    numero: str | None
+    nome_urna: str                       # o nome civil quando não há nome de urna
+    resultado: str                       # categoria de rotulo_resultado (ELEITO, NAO_ELEITO...)
+    votos_total: int                     # 1º turno, na abrangência inteira do cargo
+    gasto_total: float | None            # despesas contratadas (FINAL, sem transferências); None antes de 2018
+    mediana_gasto_cargo: float | None    # mediana de quem disputou a mesma eleição na mesma UF
+    parte_publica: float | None          # fundos eleitoral e partidário / receita total (0 a 1)
+    disputas: int                        # eleições disputadas até esta, contando esta
+    mandatos: int
+    ue: str
+    sequencial: str
+
+
+class VotoMunicipio(BaseModel):
+    id_candidatura: int
+    id_municipio: int
+    uf: str
+    turno: int
+    votos: int
+    validos_cargo: int                   # nominais da disputa + legenda (a legenda só existe de 2018 em diante)
+    posicao: int                         # colocação no município e turno (1 = mais votado)
 
 
 class CategoriaGasto(BaseModel):

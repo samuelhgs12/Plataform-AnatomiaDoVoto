@@ -1,6 +1,7 @@
 -- Massa de teste pequena e conhecida. Os valores são fictícios e servem para os testes automáticos.
 INSERT INTO municipio (id_municipio, cod_tse, nome, uf, regiao) VALUES
-  (1, '11111', 'Alvorada', 'MG', 'Sudeste'), (2, '22222', 'Bela Vista', 'PE', 'Nordeste'), (3, '33333', 'Campo Alegre', 'RJ', 'Sudeste');
+  (1, '11111', 'Alvorada', 'MG', 'Sudeste'), (2, '22222', 'Bela Vista', 'PE', 'Nordeste'), (3, '33333', 'Campo Alegre', 'RJ', 'Sudeste'),
+  (4, '44444', 'Serra Azul', 'MG', 'Sudeste');
 INSERT INTO partido (id_partido, numero, sigla, nome) VALUES
   (1, 40, 'PSB', 'Partido Socialista Brasileiro'), (2, 55, 'PSD', 'Partido Social Democrático'), (3, 13, 'PT', 'Partido dos Trabalhadores'), (4, 22, 'PL', 'Partido Liberal');
 INSERT INTO eleicao (id_eleicao, cd_eleicao_tse, ano, id_cargo, tipo_eleicao, turno, data) VALUES
@@ -24,10 +25,12 @@ INSERT INTO candidatura (id_candidatura, ano, ue, sequencial, id_eleicao, id_can
   (6, 2018, 'RJ',    'S6', 3, 3, 4, NULL, 'RJ', 'ANA ADVOGADA',  '2255', 43, 3, true),
   (7, 2022, 'RJ',    'S7', 6, 3, 4, NULL, 'RJ', 'ANA ADVOGADA',  '2255', 47, 1, true),
   (8, 2024, '33333', 'S8', 8, 4, 2, 3, 'RJ', 'MARIANA',          '55777', 34, 6, true),
-  (9, 2020, '22222', 'S9', 9, 2, 3, 2, 'PE', 'JOÃO DO COMERCIO', '13', 49, 1, true);
+  (9, 2020, '22222', 'S9', 9, 2, 3, 2, 'PE', 'JOÃO DO COMERCIO', '13', 49, 1, true),
+  (10, 2022, 'MG', 'S10', 7, NULL, 4, NULL, 'MG', 'ZÉ DA SERRA', '22100', 50, 6, true);   -- rival de Maria (mapa do candidato)
 INSERT INTO resultado_candidatura (id_resultado, id_candidatura, turno, resultado, votos) VALUES
   (1, 1, 1, 'ELEITO', 1200), (2, 2, 1, 'ELEITO', 1500), (3, 3, 1, 'NÃO ELEITO', 30000), (4, 4, 1, 'ELEITO', 9000),
-  (5, 5, 1, 'ELEITO', 11000), (6, 6, 1, 'ELEITO POR MÉDIA', 80000), (7, 7, 1, 'ELEITO', 120000), (8, 8, 1, 'SUPLENTE', 800), (9, 9, 1, 'ELEITO', 500);
+  (5, 5, 1, 'ELEITO', 11000), (6, 6, 1, 'ELEITO POR MÉDIA', 80000), (7, 7, 1, 'ELEITO', 120000), (8, 8, 1, 'SUPLENTE', 800), (9, 9, 1, 'ELEITO', 500),
+  (10, 10, 1, 'SUPLENTE', 5000);
 INSERT INTO fonte_recurso (id_fonte_recurso, nome_fonte, tipo) VALUES (1, 'Fundo Especial de Financiamento de Campanha (FEFC)', 'publico'), (2, 'Recursos de pessoas físicas', 'privado');
 INSERT INTO categoria_despesa (id_categoria_despesa, origem_despesa, grupo_classificacao, publicidade, transferencia) VALUES
   (1, 'Publicidade por materiais impressos', 'propaganda_fisica', true, false), (2, 'Publicidade por mídia digital', 'propaganda_digital', true, false),
@@ -47,3 +50,6 @@ INSERT INTO receita_campanha (id_receita, id_candidatura, id_fonte_recurso, orig
 -- votos de partido (para os painéis agregados da pergunta 5): 2020 vereador e 2022 deputado
 INSERT INTO votos_partido_municipio (id_votos, id_eleicao, id_partido, id_municipio, turno, votos_nominais, votos_legenda) VALUES
   (1, 4, 1, 1, 1, 400, 120), (2, 4, 2, 1, 1, 900, 60), (3, 4, 3, 2, 1, 1000, 50), (4, 7, 1, 1, 1, 700, 70), (5, 7, 4, 3, 1, 600, 0);
+-- votos por município (mapa do candidato): Maria (3) só em Alvorada; o rival (10) nos dois municípios de MG
+INSERT INTO votos_candidatura_municipio (id_votos_candidatura, id_candidatura, id_municipio, turno, votos) VALUES
+  (1, 3, 1, 1, 30000), (2, 10, 1, 1, 3000), (3, 10, 4, 1, 2000);

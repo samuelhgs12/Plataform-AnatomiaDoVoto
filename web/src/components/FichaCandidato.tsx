@@ -2,9 +2,11 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { PartyChip } from "./PartyChip";
 import { VirarFicha } from "./VirarFicha";
+import { FotoCandidato } from "./FotoCandidato";
 import { nomeProprio } from "@/lib/abstencao";
 import { partesDoNome, resumoCandidatura, type CandidaturaMapa } from "@/lib/candidato-mapa";
 import { brlCentavos, iniciais, inteiro, pct, reais, ROTULO_RESULTADO } from "@/lib/format";
+import { urlFoto } from "@/lib/foto-candidato";
 
 /** As ondas do santinho, em duas camadas de tom (a de trás aparece como uma faixa fina acima da da frente). */
 const Onda = ({ className }: { className: string }) => (
@@ -26,15 +28,16 @@ interface Props {
  * Ficha de consulta da candidatura, no molde de um santinho e sem nada de campanha: o mesmo cartão para todos, em
  * papel e marinho, sem cor de partido fora do chip, sem chamada de voto, e o número pequeno, preso ao ano. Do santinho
  * fica a estrutura: o nome grande no alto, o retrato embaixo à direita sobre um campo que sobe em curva e, no verso,
- * uma grade de casas, aqui com os números da candidatura. O retrato tem a proporção 3 × 4 de uma foto (decisão 7: sem
- * foto; ficam as iniciais). O cartão inteiro vira ao clique (VirarFicha).
+ * uma grade de casas, aqui com os números da candidatura. O retrato é a foto do TSE da candidatura (decisão 7), em
+ * 3 × 4; sem ela, ficam as iniciais. O cartão inteiro vira ao clique (VirarFicha).
  */
 export function FichaCandidato({ c, noMapa, onde }: Props) {
   const nome = nomeProprio(c.nome_urna);
   const r = resumoCandidatura(c);
   const presidente = c.cargo === "Presidente";
   const lugar = presidente ? "Brasil" : c.uf;
-  const fonte = <p className="ficha-fonte">Dados do TSE · projeto acadêmico UFPI · não é fonte oficial</p>;
+  const foto = urlFoto({ ano: c.ano, ue: c.ue, sequencial: c.sequencial }, "ficha");
+  const fonte = <p className="ficha-fonte">Dados{foto ? " e foto" : ""} do TSE{foto ? " (CC BY)" : ""} · projeto acadêmico UFPI · não é fonte oficial</p>;
   const parte = (v: number, t: number) => (t > 0 ? `${pct(v / t, 1)} dos votos válidos` : null);
 
   // o sobrenome ocupa a largura do cartão: o tamanho sai do número de letras (CSS, com unidades do contêiner)
@@ -51,11 +54,13 @@ export function FichaCandidato({ c, noMapa, onde }: Props) {
         <Onda className="ficha-onda-topo" />
       </div>
       <div className="ficha-meio">
-        <div className="ficha-retrato" aria-hidden="true"><span>{iniciais(c.nome_urna)}</span></div>
+        <div className="ficha-retrato">
+          <FotoCandidato url={foto} alt={`Foto de ${nome}`} lazy={false}><span aria-hidden="true">{iniciais(c.nome_urna)}</span></FotoCandidato>
+        </div>
       </div>
       <div className="ficha-base">
         <Onda className="ficha-onda-base" />
-        <p className="ficha-numero">nº {c.numero} em {c.ano}</p>
+        {c.numero && <p className="ficha-numero">nº {c.numero} em {c.ano}</p>}
         {fonte}
       </div>
     </>
@@ -83,9 +88,9 @@ export function FichaCandidato({ c, noMapa, onde }: Props) {
         )}
         <div><dt>{presidente ? "Resultado da eleição" : "Resultado"}</dt><dd>{ROTULO_RESULTADO[c.resultado] ?? c.resultado}</dd></div>
         <div><dt>Disputas · mandatos</dt><dd>{c.disputas} · {c.mandatos}</dd></div>
-        <div><dt>Gasto total</dt><dd>{reais(c.gasto_total)}</dd></div>
+        <div><dt>Gasto total</dt><dd>{c.gasto_total == null ? "—" : reais(c.gasto_total)}</dd></div>
         <div><dt>Gasto por voto</dt><dd>{r.gastoPorVoto == null ? "—" : brlCentavos(r.gastoPorVoto)}</dd></div>
-        {r.textoMediana && <div className="ficha-largo"><dt>Comparado com o cargo</dt><dd>{r.textoMediana}<small>mediana: {reais(c.mediana_gasto_cargo)}</small></dd></div>}
+        {r.textoMediana && <div className="ficha-largo"><dt>Comparado com o cargo</dt><dd>{r.textoMediana}<small>mediana: {reais(c.mediana_gasto_cargo!)}</small></dd></div>}
         {r.publico != null && (
           <div className="ficha-largo">
             <dt>De onde veio o dinheiro</dt>
@@ -98,7 +103,7 @@ export function FichaCandidato({ c, noMapa, onde }: Props) {
           </div>
         )}
       </dl>
-      <p className="ficha-nota">{presidente ? "O mapa mostra só os votos dos seis estados; o resultado é o da eleição nacional." : `Votos de todos os municípios ${onde}.`} Disputas e mandatos contam até {c.ano}.</p>
+      <p className="ficha-nota">{presidente ? "O mapa mostra só os votos dos seis estados; o resultado é o da eleição nacional." : `Votos de todos os municípios ${onde}.`} Disputas e mandatos contam até {c.ano}.{c.gasto_total == null && " O TSE só tem a prestação de contas de 2018 em diante."}</p>
       <Link className="ficha-mais" href={`/candidato/${c.id_candidato}?campanha=${c.id_candidatura}`}>
         Ver mais detalhes
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
