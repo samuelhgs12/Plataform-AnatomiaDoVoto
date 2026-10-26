@@ -24,6 +24,9 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 - O que é **por candidatura** não é análise: fica no perfil (`candidato/[id]`), com um endpoint por bloco em
   `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. P8:
   `receitas` → `DinheiroCampanha`; P9: `propaganda` (centavos inteiros) → `PropagandaCampanha` (lógica em `src/lib/propaganda.ts`).
+- Visão Candidato do mapa (página inicial, `?ver=candidato&cand=<id_candidato>`): `/api/candidatos/<id>/mapa` (candidaturas
+  e números da ficha) e `/api/candidaturas/<id>/votos-municipio` (tabela `votos_candidatura_municipio`, da carga)
+  → `VisaoCandidato`; lógica em `src/lib/candidato-mapa.ts`.
 
 ## Como filtros viram searchParams
 

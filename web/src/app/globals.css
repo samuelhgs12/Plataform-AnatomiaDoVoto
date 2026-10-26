@@ -734,7 +734,6 @@ a.linha:hover { background: var(--panel2); }
 .visoes a { white-space: nowrap; }
 .trilha [aria-current] { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* município de nome longo não empurra o título */
 .palco.cand .mapa-abst .uf-fora { fill: var(--noite2); }   /* o resto do país desce um degrau: o estado com menos votos ainda se separa dele */
-.selo-prototipo { display: inline-block; margin-left: 8px; padding: 1px 8px; white-space: nowrap; border: 1px dashed var(--brilho); border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--brilho); }
 .palco-aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30ch, 80%); margin: 0; padding: 14px 18px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); font-size: 16px; text-align: center; text-wrap: balance; }
 .palco-escolhas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .palco-escolhas .ano small { text-transform: none; letter-spacing: 0; font-size: 11px; }
@@ -761,8 +760,7 @@ a.linha:hover { background: var(--panel2); }
 .busca-cand li small { display: block; margin-top: 2px; font-size: 13px; color: color-mix(in srgb, var(--noite) 70%, var(--sobre-noite)); }
 .busca-cand-status { margin: 4px 0 0; font-size: 14px; color: var(--noite-muted); }
 .busca-cand-status:empty { display: none; }
-.busca-cand-sem-js { display: flex; gap: 6px; margin-top: 8px; }
-.busca-cand-sem-js select { flex: 1; min-width: 0; background: var(--noite3); color: var(--sobre-noite); box-shadow: none; }
+.busca-cand-sem-js { margin-top: 8px; font-size: 14px; }
 
 /* tabela equivalente ao mapa */
 .tabela-cand summary { color: var(--sobre-noite); }
@@ -804,7 +802,15 @@ a.linha:hover { background: var(--panel2); }
 .ficha-meio { position: relative; z-index: 1; flex: 1; min-height: calc(56cqi * 4 / 3 + 6px); container-type: size; }   /* cabe o retrato, que entra 40px na faixa do pé */
 .ficha-retrato { position: absolute; bottom: -40px; left: 50%; display: grid; place-items: center; width: min(74cqw, (100cqh + 40px - 34px) * 0.75); aspect-ratio: 3 / 4;   /* cresce com a altura que o verso deixa */
   border-radius: 14px 14px 0 0; background: var(--ficha-retrato); transform: translateX(-50%); }
-.ficha-retrato { max-width: 340px; overflow: hidden; }   /* o original tem só 161 × 225: maior que isso fica mole */
+.ficha-retrato { overflow: hidden; }
+/* com foto: um 3 × 4 colado na ficha. Pequeno (o original tem só 161 × 225; até ~1,25× ainda fica nítido), no meio do
+   papel, longe das ondas, e com moldura: o fundo da foto, que muda de pessoa para pessoa, fica dentro dela */
+.ficha-retrato:has(> .foto-cand) {
+  bottom: auto; top: 50%; width: min(200px, 62cqw, (100cqh - 100px) * 0.75); padding: 5px; border-radius: 8px;
+  background: var(--ficha-papel); transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ficha-tinta) 12%, transparent), 0 10px 24px -10px color-mix(in srgb, var(--ficha-tinta) 45%, transparent);
+}
+.ficha-retrato > .foto-cand { border-radius: 4px; }
 .ficha-retrato span { font-size: min(22cqw, 17cqh); font-weight: 700; letter-spacing: -0.03em; color: var(--ficha-sobre-campo); }
 .ficha-base { position: relative; z-index: 2; display: grid; gap: 4px; padding: 6px 24px 12px; background: var(--ficha-base); color: var(--ficha-sobre-campo); }
 .ficha-numero { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }

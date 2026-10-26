@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, useTransition, type KeyboardEvent } from "react";
-import { buscarCandidato, type EntradaCandidato } from "@/lib/candidato-mapa";
+import type { EntradaCandidato } from "@/lib/candidato-mapa";
 import { nomeProprio } from "@/lib/abstencao";
 import { fotoDaBusca } from "@/lib/foto-candidato";
 import { FotoCandidato } from "./FotoCandidato";
@@ -12,10 +12,9 @@ const hrefCandidato = (id: number) => `/?ver=candidato&cand=${id}#mapa`;
 
 /**
  * Combobox que escolhe o candidato do mapa (setas, Enter e Esc) e muda ?cand= na URL; o resto da página é renderizado
- * de novo no servidor. Com `indice`, filtra a lista recebida (o protótipo, com dados fictícios); sem ela, pergunta à
- * /api/busca como a SearchBox: a troca para os dados reais é tirar a prop. Sem JavaScript, um <select> faz o mesmo.
+ * de novo no servidor. As sugestões vêm da /api/busca, como na SearchBox. Sem JavaScript, leva à página de candidatos.
  */
-export function BuscaCandidatoMapa({ indice, rotulo = "Buscar candidato pelo nome", destaque = false }: { indice?: EntradaCandidato[]; rotulo?: string; destaque?: boolean }) {
+export function BuscaCandidatoMapa({ rotulo = "Buscar candidato pelo nome", destaque = false }: { rotulo?: string; destaque?: boolean }) {
   const router = useRouter();
   const id = useId();
   const [termo, setTermo] = useState("");
@@ -24,9 +23,9 @@ export function BuscaCandidatoMapa({ indice, rotulo = "Buscar candidato pelo nom
   const [remotos, setRemotos] = useState<EntradaCandidato[]>([]);
   const [carregando, iniciar] = useTransition();
 
-  // sem índice local: as mesmas sugestões da SearchBox, a partir de 3 letras
+  // as mesmas sugestões da SearchBox, a partir de 3 letras
   useEffect(() => {
-    if (indice || termo.trim().length < 3) return;
+    if (termo.trim().length < 3) return;
     const ctl = new AbortController();
     const t = setTimeout(async () => {
       try {
@@ -35,14 +34,14 @@ export function BuscaCandidatoMapa({ indice, rotulo = "Buscar candidato pelo nom
       } catch { /* sem sugestões; a caixa continua usável */ }
     }, 250);
     return () => { clearTimeout(t); ctl.abort(); };
-  }, [termo, indice]);
+  }, [termo]);
 
-  const opcoes = (indice ? buscarCandidato(indice, termo) : termo.trim().length < 3 ? [] : remotos).slice(0, 8);
+  const opcoes = (termo.trim().length < 3 ? [] : remotos).slice(0, 8);
   const mostrar = aberto && opcoes.length > 0;
   const marcado = Math.min(ativo, opcoes.length - 1);
 
   const escolher = (e: EntradaCandidato) => {
-    setTermo(nomeProprio(e.nome_urna));
+    setTermo(nomeProprio(e.nome_urna ?? ""));
     setAberto(false);
     iniciar(() => router.push(hrefCandidato(e.id_candidato), { scroll: false }));
   };
@@ -70,7 +69,7 @@ export function BuscaCandidatoMapa({ indice, rotulo = "Buscar candidato pelo nom
           id={`${id}-campo`} type="text" role="combobox" autoComplete="off" spellCheck={false}
           aria-autocomplete="list" aria-expanded={mostrar} aria-controls={`${id}-lista`}
           aria-activedescendant={mostrar ? `${id}-op-${marcado}` : undefined}
-          placeholder="Ex.: Teodora, Otávio" value={termo}
+          placeholder="Ex.: Zema, Raquel Lyra" value={termo}
           onChange={(e) => { setTermo(e.target.value); setAtivo(0); setAberto(true); }}
           onKeyDown={teclas} onFocus={() => setAberto(true)} onBlur={() => setAberto(false)}
         />
@@ -83,23 +82,13 @@ export function BuscaCandidatoMapa({ indice, rotulo = "Buscar candidato pelo nom
           >
             {/* alt vazio: o nome está logo ao lado, no texto da opção */}
             <FotoCandidato url={fotoDaBusca(o)} alt="" />
-            <b>{nomeProprio(o.nome_urna)}</b>
+            <b>{nomeProprio(o.nome_urna ?? "")}</b>
             <small>{o.ultimo_cargo} · {o.uf === "BR" ? "Brasil" : o.uf} · {o.ultimo_ano} <PartyChip sigla={o.partido} /></small>
           </li>
         ))}
       </ul>
-      <p className="busca-cand-status" role="status">{termo.trim() !== "" && !opcoes.length && (indice || termo.trim().length >= 3) ? "Nenhum candidato encontrado." : ""}</p>
-      {indice && (
-        <noscript>
-          <form method="get" action="/#mapa" className="busca-cand-sem-js">
-            <input type="hidden" name="ver" value="candidato" />
-            <select name="cand" aria-label="Candidato">
-              {indice.map((o) => <option key={o.id_candidato} value={o.id_candidato}>{nomeProprio(o.nome_urna)} ({o.ultimo_cargo}, {o.ultimo_ano})</option>)}
-            </select>
-            <button type="submit">Ver no mapa</button>
-          </form>
-        </noscript>
-      )}
+      <p className="busca-cand-status" role="status">{termo.trim().length >= 3 && !opcoes.length ? "Nenhum candidato encontrado." : ""}</p>
+      <noscript><p className="busca-cand-sem-js">Sem JavaScript, busque pela <a href="/candidatos">página de candidatos</a>.</p></noscript>
     </div>
   );
 }
