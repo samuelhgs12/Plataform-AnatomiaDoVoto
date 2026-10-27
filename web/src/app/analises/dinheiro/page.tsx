@@ -7,10 +7,10 @@ import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import {
   cargosDoAno, classeComPorte, contaGasto, contaGastoEstado, corCidade, corPorFaixas, ehMajoritario, ehMunicipal, emCada100, legendaCidade,
-  legendaPorFaixas, lerRecorte, ordenarLinhas, qualificacao, referenciaDoPorte, textoValor, tresGrupos, valorCidade, valorDoEstado, valorDoPorte, type GrupoTaxa,
+  legendaPorFaixas, lerRecorte, mediasPorResultado, ordenarLinhas, qualificacao, textoValor, tresGrupos, valorCidade, valorDoEstado, valorDoPorte, type GrupoTaxa,
 } from "@/lib/dinheiro";
 import { compararGrupos, pontosPercentuais } from "@/lib/estatistica";
-import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaSucesso } from "@/lib/financiamento";
+import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
 import { inteiro, pct, reais } from "@/lib/format";
 import { coberturaDisputas, daMedida, maiorGastador, respostaMaior, sucessoPorGasto, type LinhaGastoFaixa, type LinhaMaiorGasto } from "@/lib/gastos";
 import { TELA } from "@/lib/lupa";
@@ -29,8 +29,6 @@ type SP = Promise<Record<string, string | string[] | undefined>>;
 const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 /** Vereadores não eleitos mostrados de uma vez (os mais votados); nas capitais passam de mil. */
 const MAX_LISTA = 40;
-const grupoVazio: GrupoTaxa = { candidaturas: 0, eleitos: 0, taxa: 0 };
-const grupoDe = (cand?: number | null, eleitos?: number | null): GrupoTaxa => (cand ? { candidaturas: cand, eleitos: eleitos ?? 0, taxa: (eleitos ?? 0) / cand } : grupoVazio);
 const pp = (a: number, b: number) => { const d = Math.abs(pontosPercentuais(a, b)); return `${d} ${d === 1 ? "ponto percentual" : "pontos percentuais"}`; };
 
 /** Barras de taxa de eleição em três grupos, com eleitos e candidaturas abaixo de cada uma (para conferir). */
@@ -52,7 +50,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const [dados, q2, q8] = await Promise.all([
     lerAnalise("municipios", ["municipios", "resumo", "estados"]),
     lerAnalise("q2", ["faixas", "maior_gasto"]),
-    lerAnalise("q8", ["sucesso"]),
+    lerAnalise("q8", ["sucesso", "fontes"]),
   ]);
   if (!dados?.resumo || !dados.estados || !dados.municipios) {
     return (
@@ -101,7 +99,6 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const valorEstadoGasto = (u: string | undefined) => (porteFiltro ? gastoEm(u)!.valor : valorDoEstado(estados, ano, u, "gasto", cargo));
   const custo = mun ? valorCidade(linhaMun, "gasto", cargo) : valorEstadoGasto(uf);
   const conta = mun ? contaGasto(linhaMun, cargo) : porteFiltro ? gastoEm(uf)!.conta : contaGastoEstado(estados, ano, uf, cargo);
-  const refPorte = mun && porte ? referenciaDoPorte(resumo, ano, porte.chave, "gasto", cargo) : null;
   const custoUf = mun ? valorEstadoGasto(uf) : uf ? valorEstadoGasto(undefined) : null;
   const comPorte = porteFiltro ? ` (cidades de ${porteFiltro.rotulo})` : "";
 
@@ -147,8 +144,6 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   });
   // de onde veio o dinheiro do lugar (a outra metade da P8): parte pública das receitas das campanhas ao cargo
   const publico = mun ? valorCidade(linhaMun, "publico", cargo) : valorDoEstado(estados, ano, uf, "publico", cargo);
-  const recCidade = { mais: grupoDe(linhaMun?.rec_mais_cand, linhaMun?.rec_mais_eleitos), demais: grupoDe(linhaMun?.rec_demais_cand, linhaMun?.rec_demais_eleitos) };
-  const pubCidade = { mais: grupoDe(linhaMun?.pub_mais_cand, linhaMun?.pub_mais_eleitos), demais: grupoDe(linhaMun?.pub_demais_cand, linhaMun?.pub_demais_eleitos) };
 
   // ---------- candidatos do recorte ----------
   const [candidatos, eleitosUf] = await Promise.all([
@@ -159,6 +154,10 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const linhas: LinhaCandidato[] = disputa ? disputa.candidatos : candidatos ?? (eleitosUf ?? []).filter((e) => e.cargo === cargo).map((e) => ({ ...e, eleito: true }));
   const naoEleitos = linhas.filter((c) => !c.eleito);
   const maisGastou = disputa?.candidatos.find((c) => c.maisGastou);
+  const eleitoPrefeito = disputa?.candidatos.find((c) => c.eleito);
+  // média de dinheiro público e privado por candidato no estado (ou nos seis), eleitos × não eleitos
+  const fontes = q8?.fontes ? comoObjetos<LinhaFontes>(q8.fontes) : [];
+  const medias = mediasPorResultado(fontes, ano, cargo, uf);
   const temCandidatos = !!mun || (!municipal && !!uf);
 
   return (
@@ -243,12 +242,19 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
 
         <div className="area-painel s4" key={`${uf}-${mun?.id_municipio}-${ano}-${cargo}`}>
           <div className="bloco noite painel-cab">
-            <p className="palco-sobre">{cargo} · {ano}{mun ? (porte ? ` · ${porte.rotulo}` : "") : porteFiltro ? ` · cidades de ${porteFiltro.rotulo}` : ""}</p>
+            <p className="palco-sobre">{cargo} · {ano}{!mun && porteFiltro ? ` · cidades de ${porteFiltro.rotulo}` : ""}</p>
             <h3>{lugar}</h3>
-            <p className="painel-resumo"><b>{custo === null ? "Não informado" : reais(custo)}</b> por vaga de {cargo.toLowerCase()}</p>
-            <p className="pequeno">Gastos das campanhas divididos pelas vagas disponíveis{conta ? `: ${reais(conta.gasto)} ÷ ${inteiro(conta.vagas)} ${conta.vagas === 1 ? "vaga" : "vagas"}` : ""}.
-              {cargo === "Prefeito" && mun && " Com uma vaga, é o total gasto na disputa, não o gasto do eleito."}</p>
-            {refPorte?.valor != null && <p className="pequeno">Cidades de porte semelhante: <b>{reais(refPorte.valor)}</b> <span className="muted-noite">(valor central de {inteiro(refPorte.n)})</span></p>}
+            {cargo === "Prefeito" && mun ? (
+              <>
+                <p className="painel-resumo"><b>{custo === null ? "Não informado" : reais(custo)}</b> gastos por todas as campanhas a prefeito</p>
+                {eleitoPrefeito && <p className="pequeno">Prefeito eleito: <b>{eleitoPrefeito.nome_urna}</b> ({eleitoPrefeito.partido}) {eleitoPrefeito.prestou === false ? "não entregou a prestação de contas final" : <>gastou <b>{reais(eleitoPrefeito.gasto)}</b></>}.</p>}
+              </>
+            ) : (
+              <>
+                <p className="painel-resumo"><b>{custo === null ? "Não informado" : reais(custo)}</b> por vaga de {cargo.toLowerCase()}</p>
+                <p className="pequeno">Gastos das campanhas divididos pelas vagas disponíveis{conta ? `: ${reais(conta.gasto)} ÷ ${inteiro(conta.vagas)} ${conta.vagas === 1 ? "vaga" : "vagas"}` : ""}.</p>
+              </>
+            )}
             {custoUf !== null && <p className="pequeno">{mun ? NOME_UF[uf!] : "Seis estados"}{comPorte}: <b>{reais(custoUf)}</b> <span className="muted-noite">(gasto total ÷ total de vagas)</span></p>}
             {!mun && porteFiltro && gastoEm(uf) && <p className="pequeno muted-noite">Soma de {inteiro(gastoEm(uf)!.n)} {gastoEm(uf)!.n === 1 ? "cidade" : "cidades"} deste porte.</p>}
             <p className="painel-links">
@@ -259,9 +265,55 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
         </div>
       </section>
 
-      {/* 2. Perguntas 2 e 8 juntas: o mesmo gráfico, medindo por todo o dinheiro ou só pelo público */}
+      {/* 3. Candidatos do lugar escolhido: resultado, gasto e dinheiro público na mesma linha */}
+      {temCandidatos && (
+        <section id="candidatos" className="card area-candidatos" aria-labelledby="h-cand">
+          <h2 id="h-cand">{mun ? `Candidatos a ${cargo.toLowerCase()} em ${lugar}` : `Eleitos: ${cargo.toLowerCase()} em ${nomeUf}`}</h2>
+          {mun ? (
+            <>
+              {cargo === "Prefeito" && maisGastou && <p className="frase-comp"><b>{maisGastou.nome_urna}</b> teve o maior gasto declarado e {maisGastou.eleito ? "foi eleito" : "não foi eleito"}.</p>}
+              <h3>Eleitos</h3>
+              <LinhasCandidatos linhas={linhas.filter((c) => c.eleito)} ano={ano}
+                vazio={candidatos === null ? "Não foi possível carregar os candidatos agora. Recarregue a página para tentar de novo." : "Nenhum eleito registrado."} />
+              {naoEleitos.length > 0 && (
+                <>
+                  <h3>Não eleitos <span className="muted">({inteiro(naoEleitos.length)}{naoEleitos.length > MAX_LISTA ? `; os ${MAX_LISTA} mais votados` : ""})</span></h3>
+                  <LinhasCandidatos linhas={naoEleitos.slice(0, MAX_LISTA)} ano={ano} vazio="" />
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <LinhasCandidatos linhas={linhas} ano={ano} vazio={eleitosUf === null ? "Não foi possível carregar os eleitos agora." : "Nenhum eleito registrado."} />
+              <p className="escala">Por estado, só os eleitos estão disponíveis.</p>
+            </>
+          )}
+          <p className="escala">O gasto de cada candidato é individual; o gasto por vaga, lá em cima, é de todas as campanhas juntas.</p>
+        </section>
+      )}
+
+      {/* Média de dinheiro público e privado por candidato no estado: eleitos × não eleitos */}
+      {(medias.eleitos.candidaturas > 0 || medias.naoEleitos.candidaturas > 0) && (
+        <section className="card area-medias" aria-labelledby="h-medias">
+          <h2 id="h-medias">Quanto cada candidato recebeu, em média, {uf ? `em ${nomeUf}` : "nos seis estados"}</h2>
+          <p className="comparacao-sub">{cargo} · {ano} · dinheiro público (Fundo Eleitoral e Fundo Partidário) e privado (doações e recursos próprios), por candidato</p>
+          <BarrasH compacto titulo={`Média de dinheiro público e privado por candidato a ${cargo} ${uf ? `em ${nomeUf}` : "nos seis estados"}, ${ano}`}
+            linhas={[["eleitos", "Eleitos", medias.eleitos], ["nao", "Não eleitos", medias.naoEleitos]].filter(([, , g]) => (g as { candidaturas: number }).candidaturas > 0).map(([k, t, g]) => {
+              const m = g as { candidaturas: number; publico: number; privado: number };
+              return { chave: k as string, rotulo: t as string, detalhe: `${inteiro(m.candidaturas)} candidatos`, valor: m.publico + m.privado, classe: "pub",
+                pedacos: [{ rotulo: `Público: ${reais(m.publico)}`, valor: m.publico, classe: "pub" }, { rotulo: `Privado: ${reais(m.privado)}`, valor: m.privado, classe: "priv" }],
+                texto: reais(m.publico + m.privado), subtexto: `${reais(m.publico)} público\n${reais(m.privado)} privado` };
+            })} />
+          <div className="legend"><span><i className="pub" />Dinheiro público</span><span><i className="priv" />Dinheiro privado</span></div>
+          <p className="escala">Média = soma do que os candidatos do grupo receberam ÷ número de candidatos (inclusive os que não receberam nada). Sem repasses entre candidatos. Valores sem correção pela inflação.</p>
+        </section>
+      )}
+
+      {/* 2. Perguntas 2 e 8 juntas: o mesmo gráfico, medindo por todo o dinheiro ou só pelo público.
+          Com uma cidade escolhida, é a comparação do estado inteiro: fica recolhida, para não misturar com a cidade. */}
       <section id="resultado" className="card area-comparacao" aria-labelledby="h-res">
-        <h2 id="h-res">Quem teve mais dinheiro se elegeu mais?</h2>
+        <details open={!mun}>
+        <summary><h2 id="h-res">Quem teve mais dinheiro se elegeu mais?{mun ? ` Comparação em ${nomeUf}` : ""}</h2></summary>
         <p className="comparacao-sub">Comparação {uf ? `em ${nomeUf}` : "nos seis estados"} · {cargo.toLowerCase()} · {ano}{mun ? `. Os candidatos de ${lugar} estão na lista abaixo.` : ""}
           {porteFiltro && " O filtro de porte vale para o gasto por vaga; esta comparação usa todas as cidades (a análise estatística não separa por porte)."}</p>
         <div className="chips" role="group" aria-label="Medir pelo">
@@ -272,8 +324,8 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
         {ver === "recursos" ? (majoritario ? (
           <>
             <p className="frase-comp">{maior.disputas ? <>Quem mais gastou venceu em <b>{inteiro(maior.venceu)} de {inteiro(maior.disputas)}</b> disputas comparáveis ({pct(maior.pct, 0)}).</> : "Sem disputas comparáveis."}
-              {mun && disputa && <> Em {lugar}: {maisGastou ? <><b>{maisGastou.nome_urna}</b> teve o maior gasto declarado e {maisGastou.eleito ? "foi eleito" : "não foi eleito"}.</> : "não dá para comparar (candidato único, empate ou prestação incompleta)."}</>}</p>
-            {cargo === "Prefeito" && municipal && (
+</p>
+            {cargo === "Prefeito" && municipal && !mun && (
               <BarrasH compacto max={1} titulo={`Quem mais gastou para prefeito venceu, por porte da cidade, ${ano}`}
                 linhas={porPorte.filter((p) => p.n > 0).map((p) => ({ chave: p.chave, rotulo: p.rotulo.replace(" eleitores", ""), valor: p.parte, classe: porte?.chave === p.chave ? "pub" : "fx2", trilhoCheio: true, texto: pct(p.parte, 0), subtexto: `${inteiro(p.venceu)} de ${inteiro(p.n)} cidades` }))} />
             )}
@@ -287,7 +339,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
             <BarrasGrupos titulo={`Taxa de eleição por recursos de campanha, ${cargo}, ${ano}`}
               grupos={[["nada", "Declarou zero", recUf.nada], ["menos", "Demais candidatos com recursos", recUf.menos], ["mais", "Grupo com mais recursos", recUf.mais]]} />
             <p className="escala">{qualificacao(respRec)}
-              {mun && recCidade.mais.candidaturas > 0 && ` Só em ${lugar} (descritivo): ${emCada100(recCidade.mais.taxa)}% de eleitos no grupo com mais recursos (${inteiro(recCidade.mais.eleitos)} de ${inteiro(recCidade.mais.candidaturas)}) e ${emCada100(recCidade.demais.taxa)}% nos demais.`}</p>
+</p>
           </>
         )) : (
           <>
@@ -297,7 +349,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
             <BarrasGrupos titulo={`Taxa de eleição por dinheiro público recebido, ${cargo}, ${ano}`}
               grupos={[["nada", "Não recebeu dinheiro público", pubUf.nada], ["menos", "Demais candidatos que receberam", pubUf.pouco], ["mais", "Grupo com maiores recebimentos", pubUf.muito]]} />
             <p className="escala">{qualificacao(respPub.curta)} Os partidos costumam mandar mais dinheiro para quem já tem mais chance.
-              {mun && cargo === "Vereador" && pubCidade.mais.candidaturas > 0 && ` Só em ${lugar} (descritivo): ${emCada100(pubCidade.mais.taxa)}% de eleitos entre os que mais receberam e ${emCada100(pubCidade.demais.taxa)}% nos demais.`}</p>
+</p>
             {publico !== null && (
               <div className="origem">
                 <p>De onde veio o dinheiro {emLugar}: <b>R$ {Math.round(publico * 100)} de cada R$ 100</b> recebidos pelas campanhas a {cargo.toLowerCase()} vieram de fundos públicos (Fundo Eleitoral e Fundo Partidário).</p>
@@ -309,32 +361,9 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
           </>
         )}
         <p className="escala">Cada candidato é comparado só com os concorrentes da mesma disputa; o grupo com mais é cerca de 1/4 dos que declararam algum valor. Mostra associação, não que o dinheiro fez ganhar.</p>
+        </details>
       </section>
 
-      {/* 3. Candidatos do lugar escolhido: resultado, gasto e dinheiro público na mesma linha */}
-      {temCandidatos && (
-        <section id="candidatos" className="card area-candidatos" aria-labelledby="h-cand">
-          <h2 id="h-cand">{mun ? `Candidatos a ${cargo.toLowerCase()} em ${lugar}` : `Eleitos: ${cargo.toLowerCase()} em ${nomeUf}`}</h2>
-          {mun ? (
-            <>
-              <LinhasCandidatos linhas={cargo === "Prefeito" ? linhas : linhas.filter((c) => c.eleito)} ano={ano}
-                vazio={candidatos === null ? "Não foi possível carregar os candidatos agora. Recarregue a página para tentar de novo." : "Nenhum candidato registrado."} />
-              {cargo !== "Prefeito" && naoEleitos.length > 0 && (
-                <details>
-                  <summary>Não eleitos ({inteiro(naoEleitos.length)}){naoEleitos.length > MAX_LISTA && `: os ${MAX_LISTA} mais votados`}</summary>
-                  <LinhasCandidatos linhas={naoEleitos.slice(0, MAX_LISTA)} ano={ano} vazio="" />
-                </details>
-              )}
-            </>
-          ) : (
-            <>
-              <LinhasCandidatos linhas={linhas} ano={ano} vazio={eleitosUf === null ? "Não foi possível carregar os eleitos agora." : "Nenhum eleito registrado."} />
-              <p className="escala">Por estado, só os eleitos estão disponíveis.</p>
-            </>
-          )}
-          <p className="escala">O gasto de cada candidato é individual; o gasto por vaga, lá em cima, é de todas as campanhas juntas.</p>
-        </section>
-      )}
 
       <details className="card analise-metodo">
         <summary>Como calculamos</summary>

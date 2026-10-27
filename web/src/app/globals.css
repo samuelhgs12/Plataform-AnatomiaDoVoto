@@ -1582,6 +1582,7 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
 .linhas-nome small, .linhas-resultado small, .linhas-valor small { font-size: 13px; color: var(--muted); }
 .linhas-resultado b.eleito { color: var(--accent); }
 .linhas-valor { text-align: right; font-variant-numeric: tabular-nums; }
+.linhas-valores { display: contents; }   /* no computador, os três valores são colunas da própria linha */
 .selo { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--panel); font-size: 12px; }
 details.mais > summary, .analise-metodo > summary { cursor: pointer; font-size: 18px; font-weight: 600; }
 details.mais { margin-bottom: var(--gap); }
@@ -1591,11 +1592,13 @@ details.mais[open] > summary, .analise-metodo[open] > summary { margin-bottom: 1
   .palco-area { height: auto; min-height: 0; }
   .palco-area .palco-mapa { height: 62svh; min-height: 340px; }
   .palco-area .lupa-dica { display: none; }
-  .linhas-cand li { grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr); }
+  /* no celular: foto, nome e resultado em cima; os três valores lado a lado embaixo, cada um com o rótulo */
+  .linhas-cand li { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 6px 10px; }
   .linhas-cand .linhas-cab { display: none; }
-  .linhas-resultado { grid-column: 2; }
-  .linhas-valor { grid-column: 3; text-align: right; }
-  .linhas-valor + .linhas-valor { grid-column: 3; }
+  .linhas-resultado { text-align: right; }
+  .linhas-valores { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .linhas-valores .linhas-valor { text-align: left; }
+  .linhas-valor b { font-size: 14px; }
   .resumo-tres, .comparacao-duas { grid-template-columns: 1fr; }
 }
 
@@ -1638,7 +1641,13 @@ details.mais[open] > summary, .analise-metodo[open] > summary { margin-bottom: 1
 .comparacao-duas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
 .comparacao-duas h3 { font-size: 18px; margin: 0 0 6px; }
 .comparacao-duas h3 small { margin-left: 6px; color: var(--muted); font-weight: 500; font-size: 13px; }
-.linhas-cand li { display: grid; grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.linhas-cand li { display: grid; grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.area-candidatos h3 { font-size: 17px; margin: 18px 0 6px; }
+.area-medias { margin-bottom: var(--gap); }
+.area-medias h2 { font-size: 22px; margin: 0 0 4px; }
+.area-comparacao > details > summary { cursor: pointer; list-style-position: outside; }
+.area-comparacao > details > summary h2 { display: inline; }
+.area-comparacao > details[open] > summary { margin-bottom: 8px; }
 .linhas-cand .linhas-cab { padding: 0 0 6px; font-size: 13px; color: var(--muted); }
 .linhas-cand .linhas-cab span:nth-child(n + 4) { text-align: right; }
 @media (max-width: 900px) { .resumo-tres { grid-template-columns: 1fr; } .comparacao-duas { grid-template-columns: 1fr; } }

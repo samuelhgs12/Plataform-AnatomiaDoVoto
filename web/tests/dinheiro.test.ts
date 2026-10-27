@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  cargosDoAno, classeComPorte, contaGasto, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
+  cargosDoAno, classeComPorte, contaGasto, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
@@ -182,5 +182,16 @@ describe("valorDoPorte", () => {
     expect(valorDoPorte(linhas, 2024, "PE", "ate5", "resultado", "Prefeito").valor).toBe(1);
     expect(valorDoPorte(linhas, 2024, "PE", "ate5", "resultado", "Vereador").valor).toBeCloseTo(0.3);
     expect(valorDoPorte(linhas, 2024, "PE", "ate5", "publico", "Vereador").valor).toBeCloseTo(0.5);
+  });
+});
+
+describe("mediasPorResultado", () => {
+  const l = (o: Partial<{ ano: number; cargo: string; uf: string; eleito: boolean; candidaturas: number; fundo_eleitoral: number; fundo_partidario: number; doacoes_pessoas: number; recursos_proprios: number; outros_privados: number }>) =>
+    ({ ano: 2024, cargo: "Vereador", uf: "PE", eleito: false, candidaturas: 10, fundo_eleitoral: 100, fundo_partidario: 0, doacoes_pessoas: 30, recursos_proprios: 10, outros_privados: 0, ...o });
+  it("divide o público e o privado pelos candidatos de cada grupo", () => {
+    const m = mediasPorResultado([l({}), l({ partido: "X", candidaturas: 10, fundo_eleitoral: 0, doacoes_pessoas: 0, recursos_proprios: 0 } as never), l({ eleito: true, candidaturas: 2, fundo_eleitoral: 400, fundo_partidario: 100, doacoes_pessoas: 50 }), l({ uf: "RJ", candidaturas: 99 })], 2024, "Vereador", "PE");
+    expect(m.naoEleitos).toEqual({ candidaturas: 20, publico: 5, privado: 2 });
+    expect(m.eleitos).toEqual({ candidaturas: 2, publico: 250, privado: 30 });
+    expect(mediasPorResultado([], 2024, "Vereador").eleitos).toEqual({ candidaturas: 0, publico: 0, privado: 0 });
   });
 });

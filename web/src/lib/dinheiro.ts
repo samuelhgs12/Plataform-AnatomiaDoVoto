@@ -281,3 +281,23 @@ export function valorDoPorte(resumo: LinhaResumo[], ano: number, uf: string | un
   const cand = soma((r) => r.rec_mais_cand ?? 0), ele = soma((r) => r.rec_mais_eleitos ?? 0);
   return { valor: cand > 0 ? ele / cand : null, n: sel.length, conta: null };
 }
+
+/** Média de dinheiro por candidato de um grupo: público (Fundo Eleitoral + Fundo Partidário) e privado (o resto). */
+export interface MediaDinheiro { candidaturas: number; publico: number; privado: number }
+
+/**
+ * A média de dinheiro público e privado recebido por candidato, separando eleitos e não eleitos, num estado (ou nos
+ * seis), para um cargo e ano. Das somas da análise q8 (sem repasses entre candidatos: o mesmo real não conta duas
+ * vezes). A média divide por todos os candidatos do grupo, inclusive os que não receberam nada.
+ */
+export function mediasPorResultado(fontes: { ano: number; cargo: string; uf: string; eleito: boolean; candidaturas: number; fundo_eleitoral: number; fundo_partidario: number; doacoes_pessoas: number; recursos_proprios: number; outros_privados: number }[],
+  ano: number, cargo: string, uf?: string): { eleitos: MediaDinheiro; naoEleitos: MediaDinheiro } {
+  const grupo = (eleito: boolean): MediaDinheiro => {
+    const sel = fontes.filter((l) => l.ano === ano && l.cargo === cargo && l.eleito === eleito && (!uf || l.uf === uf));
+    const cand = sel.reduce((a, l) => a + l.candidaturas, 0);
+    const pub = sel.reduce((a, l) => a + l.fundo_eleitoral + l.fundo_partidario, 0);
+    const priv = sel.reduce((a, l) => a + l.doacoes_pessoas + l.recursos_proprios + l.outros_privados, 0);
+    return { candidaturas: cand, publico: cand ? pub / cand : 0, privado: cand ? priv / cand : 0 };
+  };
+  return { eleitos: grupo(true), naoEleitos: grupo(false) };
+}
