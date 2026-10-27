@@ -5,7 +5,9 @@ SELECT g.nome AS cargo, g.id_cargo, c.id_candidato, c.id_candidatura, c.nome_urn
        coalesce(v.votos, 0) AS votos,
        coalesce(d.gasto_total, 0) AS gasto,
        coalesce(r.receita_total, 0) AS receita,
-       coalesce(r.receita_publica, 0) AS receita_publica
+       coalesce(r.receita_publica, 0) AS receita_publica,
+       EXISTS (SELECT 1 FROM despesa_campanha x WHERE x.id_candidatura = c.id_candidatura AND x.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO'))
+         OR EXISTS (SELECT 1 FROM receita_campanha x WHERE x.id_candidatura = c.id_candidatura AND x.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')) AS prestou
 FROM candidatura c
 JOIN eleicao e           ON e.id_eleicao = c.id_eleicao
 JOIN cargo g             ON g.id_cargo = e.id_cargo

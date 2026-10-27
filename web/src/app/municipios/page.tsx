@@ -177,7 +177,7 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
           </div>
         </MapaVivo>
 
-        <div className="painel s4" key={`${uf}-${mun?.id_municipio}`}>
+        <div className="area-painel s4" key={`${uf}-${mun?.id_municipio}`}>
           <div className="bloco noite painel-cab">
             <p className="palco-sobre">{mun ? `Município · ${uf}` : uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"}</p>
             <h2>{nomeLugar}</h2>

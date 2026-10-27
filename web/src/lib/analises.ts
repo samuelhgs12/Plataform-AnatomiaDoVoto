@@ -4,6 +4,7 @@
 export interface Analise { href: string; pergunta: string; titulo: string; curto: string; resumo: string }
 
 export const ANALISES: Analise[] = [
+  { href: "/analises/dinheiro", pergunta: "Perguntas 1, 2 e 8", titulo: "Dinheiro nas eleições", curto: "Dinheiro nas eleições", resumo: "Quanto as campanhas gastaram, de onde veio o dinheiro e se quem teve mais se elegeu mais, por eleição, cargo e lugar." },
   { href: "/analises/custo-cadeira", pergunta: "Pergunta 1", titulo: "Quanto custa uma cadeira", curto: "Custo da cadeira", resumo: "O gasto de campanha de cada cargo dividido pelas vagas e pelos candidatos, de 2018 a 2024." },
   { href: "/analises/gastos", pergunta: "Pergunta 2", titulo: "Recursos de campanha e sucesso eleitoral", curto: "Recursos e sucesso", resumo: "Quem tem mais recursos na campanha se elege mais? E o candidato com mais recursos costuma vencer?" },
   { href: "/analises/financiamento", pergunta: "Pergunta 8", titulo: "Dinheiro público e sucesso eleitoral", curto: "Dinheiro público", resumo: "Quem recebe mais dinheiro público para a campanha se elege mais? De 2018 a 2024." },

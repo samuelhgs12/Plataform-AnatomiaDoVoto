@@ -1540,3 +1540,66 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
 .avatar.retrato { object-fit: cover; }
 .painel-mini dd small { display: block; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--noite-muted); }
 .candidatos-cidade { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: var(--gap); align-items: start; }
+
+/* Dinheiro nas eleições (/analises/dinheiro): um recorte (eleição, cargo, lugar) e três abas */
+/* painel ao lado do mapa (aqui e em /municipios): o .painel da página inicial agora é uma faixa de 12 colunas embaixo do mapa */
+.area-painel { display: grid; gap: var(--gap); align-content: start; min-width: 0; }
+.area-cab { padding: 8px 0 16px; }
+.area-cab h1 { font-size: clamp(32px, 2vw + 20px, 52px); letter-spacing: -0.035em; line-height: 1.05; margin: 4px 0 8px; }
+.area-cab p { max-width: 65ch; margin: 0; color: var(--muted); }
+.area-cab .rotulo { margin: 0; }
+.filtros-dinheiro { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding: 16px; margin: 0 0 var(--gap); border-radius: var(--raio); background: var(--panel); }
+.filtros-dinheiro label { display: grid; gap: 4px; min-width: 150px; flex: 1 1 150px; font-size: 14px; color: var(--muted); }
+.filtros-dinheiro select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font-size: 16px; }
+.filtros-dinheiro select:disabled { opacity: 0.6; }
+.filtros-dinheiro[aria-busy="true"] { cursor: progress; opacity: 0.8; }
+.filtros-nota { flex-basis: 100%; margin: 0; font-size: 14px; color: var(--muted); }
+.aviso-linha { margin: -8px 0 var(--gap); padding-left: 12px; box-shadow: inset 3px 0 0 var(--warn); font-size: 16px; }
+.area-abas { display: flex; gap: 4px; margin: 0 0 var(--gap); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.area-abas a { padding: 12px 18px; text-decoration: none; color: var(--muted); font-weight: 600; white-space: nowrap; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.area-abas a:hover { color: var(--fg); }
+.area-abas a[aria-current] { color: var(--fg); border-bottom-color: var(--accent); }
+.area-resposta { margin: 0 0 var(--gap); }
+.area-resposta h2 { font-size: clamp(24px, 1.2vw + 16px, 34px); margin: 0 0 8px; }
+.area-frase { font-size: clamp(18px, 0.5vw + 15px, 22px); line-height: 1.4; max-width: 70ch; margin: 0 0 6px; }
+.palco-area { position: relative; top: auto; height: min(76svh, 720px); min-height: 520px; }
+.palco-area h2 { font-size: clamp(22px, 1vw + 16px, 32px); line-height: 1.1; margin: 4px 0 0; }
+.palco-lista { overflow: auto; padding: 0 30px; min-height: 0; }
+.palco-lista table { color: var(--sobre-noite); }
+.palco-lista th { color: var(--noite-muted); }
+.palco-lista td, .palco-lista th { border-color: var(--noite-linha); }
+.palco-lista a { color: var(--sobre-noite); }
+.palco-lista tr[aria-current] td { background: var(--noite2); }
+.painel-resumo { font-size: 17px; line-height: 1.35; margin: 4px 0 10px; }
+.painel-resumo b { display: block; font-size: clamp(30px, 1.4vw + 18px, 42px); line-height: 1.05; letter-spacing: -0.03em; color: var(--brilho); }
+.muted-noite { color: var(--noite-muted); }
+.portes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; }
+.portes .palco-sobre { flex-basis: 100%; margin: 0; }
+.portes a { padding: 5px 9px; border-radius: 6px; background: var(--noite2); color: var(--sobre-noite); font-size: 13px; text-decoration: none; }
+.portes a.on { background: var(--sobre-noite); color: var(--noite); font-weight: 600; }
+.painel-mini.tres { grid-template-columns: 1fr; }
+.mapa-abst .mun.apagado { opacity: 0.18; }
+.area-comparacao, .area-candidatos { margin-bottom: var(--gap); }
+.area-comparacao h2, .area-candidatos h2 { font-size: 22px; margin: 0 0 12px; }
+.area-candidatos details > summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
+.linhas-cand { list-style: none; margin: 0; padding: 0; }
+.linhas-cand li { display: grid; grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.linhas-foto .avatar, .linhas-foto .foto-cand { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; font-size: 15px; }
+.linhas-nome, .linhas-resultado, .linhas-valor { display: grid; min-width: 0; }
+.linhas-nome a { font-weight: 600; color: var(--fg); }
+.linhas-nome small, .linhas-resultado small, .linhas-valor small { font-size: 13px; color: var(--muted); }
+.linhas-resultado b.eleito { color: var(--accent); }
+.linhas-valor { text-align: right; font-variant-numeric: tabular-nums; }
+.selo { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--panel); font-size: 12px; }
+details.mais > summary, .analise-metodo > summary { cursor: pointer; font-size: 18px; font-weight: 600; }
+details.mais { margin-bottom: var(--gap); }
+details.mais[open] > summary, .analise-metodo[open] > summary { margin-bottom: 12px; }
+@media (max-width: 600px) {
+  .filtros-dinheiro label { flex-basis: 100%; min-width: 0; }
+  .palco-area { height: auto; min-height: 0; }
+  .palco-area .palco-mapa { height: 62svh; min-height: 340px; }
+  .palco-area .lupa-dica { display: none; }
+  .linhas-cand li { grid-template-columns: 40px minmax(0, 1fr) auto; }
+  .linhas-resultado { grid-column: 2; }
+  .linhas-valor { grid-column: 3; grid-row: 1 / span 2; }
+}

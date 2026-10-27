@@ -229,13 +229,13 @@ class Eleito(BaseModel):
     gasto: float
     receita: float
     receita_publica: float
+    prestou: bool | None = None   # entregou a prestação final (sem ela, zero quer dizer "não informado")
 
 
 class CandidatoLocal(Eleito):
     """Um candidato (eleito ou não) a prefeito ou vereador num município. Só dados públicos da candidatura."""
     eleito: bool
     resultado: str
-    prestou: bool
 
 
 class Saude(BaseModel):

@@ -22,6 +22,9 @@ export interface LinhaResumo {
   maior_excluida?: "um_candidato" | "sem_prestacao" | "sem_gasto" | "empate" | null;
   /** Eleitores aptos no ano: o porte da cidade. */
   eleitorado?: number | null;
+  /** Vereadores em grupos (recursos considerados e dinheiro público): "mais" = cerca de 1/4 de maior valor na cidade. */
+  rec_mais_cand?: number | null; rec_mais_eleitos?: number | null; rec_demais_cand?: number | null; rec_demais_eleitos?: number | null;
+  pub_mais_cand?: number | null; pub_mais_eleitos?: number | null; pub_demais_cand?: number | null; pub_demais_eleitos?: number | null;
 }
 
 /** Um cargo num estado e ano. disputas_maior/maior_venceu: só para prefeito (P2). */

@@ -18,6 +18,8 @@ SELECT c.id_candidatura, c.id_candidato, c.ano, g.id_cargo, g.nome AS cargo, coa
        coalesce(d.gasto_total, 0) AS gasto,
        coalesce(r.receita_total, 0) AS receita,
        coalesce(r.receita_publica, 0) AS receita_publica,
+       -- por candidato (como nas perguntas 2 e 8): o que recebeu, inclusive de outros candidatos
+       coalesce(rec.recebido, 0) AS recebido, coalesce(rec.publico_rec, 0) AS publico_rec,
        c.id_candidatura IN (SELECT id_candidatura FROM prestou) AS prestou
 FROM candidatura c
 JOIN eleicao e           ON e.id_eleicao = c.id_eleicao
@@ -28,6 +30,12 @@ LEFT JOIN (SELECT id_candidatura, sum(votos) AS votos FROM resultado_candidatura
        ON v.id_candidatura = c.id_candidatura
 LEFT JOIN vw_despesa_candidatura d ON d.id_candidatura = c.id_candidatura
 LEFT JOIN vw_receita_candidatura r ON r.id_candidatura = c.id_candidatura
+LEFT JOIN (
+    SELECT rc.id_candidatura, sum(rc.valor_receita) AS recebido, sum(rc.valor_receita) FILTER (WHERE f.tipo = 'publico') AS publico_rec
+    FROM receita_campanha rc LEFT JOIN fonte_recurso f ON f.id_fonte_recurso = rc.id_fonte_recurso
+    WHERE rc.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')
+    GROUP BY rc.id_candidatura
+) rec ON rec.id_candidatura = c.id_candidatura
 WHERE c.ano >= 2018 AND g.eh_titular AND e.tipo_eleicao = 'ORDINARIA' AND rr.disputou;
 
 -- Cada disputa para prefeito e se ela entra na pergunta 2 ("quem mais gastou venceu?"). excluida = o motivo, na ordem:
@@ -51,6 +59,27 @@ WITH d AS (
     FROM d JOIN topo ON topo.ano = d.ano AND topo.id_municipio = d.id_municipio
 )
 SELECT ano, uf, id_municipio, excluida, CASE WHEN excluida IS NULL THEN venceu END AS maior_venceu FROM classificada;
+
+-- Vereadores de cada cidade em grupos (perguntas 2 e 8 no mapa): "mais" = cerca de 1/4 dos que declararam algum valor, os
+-- de maior valor na cidade (percent_rank, valores iguais no mesmo grupo, como nas análises q2 e q8). Duas medidas:
+-- recursos de campanha considerados (o maior entre gasto e recebido) e dinheiro público recebido. Quem não entregou a
+-- prestação final fica de fora (valor desconhecido).
+CREATE OR REPLACE TEMP TABLE grupos_vereador AS
+WITH v AS (
+    SELECT ano, id_municipio, eleito, greatest(gasto, recebido) AS recursos, publico_rec
+    FROM cand_lugar WHERE cargo = 'Vereador' AND prestou
+), r AS (
+    SELECT *,
+           recursos > 0 AND percent_rank() OVER (PARTITION BY ano, id_municipio, recursos > 0 ORDER BY recursos) >= 0.75 AS mais_rec,
+           publico_rec > 0 AND percent_rank() OVER (PARTITION BY ano, id_municipio, publico_rec > 0 ORDER BY publico_rec) >= 0.75 AS mais_pub
+    FROM v
+)
+SELECT ano, id_municipio,
+       count(*) FILTER (WHERE mais_rec) AS rec_mais_cand, count(*) FILTER (WHERE mais_rec AND eleito) AS rec_mais_eleitos,
+       count(*) FILTER (WHERE NOT mais_rec) AS rec_demais_cand, count(*) FILTER (WHERE NOT mais_rec AND eleito) AS rec_demais_eleitos,
+       count(*) FILTER (WHERE mais_pub) AS pub_mais_cand, count(*) FILTER (WHERE mais_pub AND eleito) AS pub_mais_eleitos,
+       count(*) FILTER (WHERE NOT mais_pub) AS pub_demais_cand, count(*) FILTER (WHERE NOT mais_pub AND eleito) AS pub_demais_eleitos
+FROM r GROUP BY ALL;
 
 -- Eleitorado apto de cada município em cada eleição (1º turno): o porte da cidade, para comparar cidades parecidas.
 CREATE OR REPLACE TEMP TABLE eleitorado_mun AS
@@ -101,7 +130,9 @@ COPY (
            round(coalesce(pre.receita, 0), 2) AS prefeito_receita, round(coalesce(pre.publica, 0), 2) AS prefeito_publica,
            eleito.id_candidato AS prefeito_id_candidato, eleito.nome_urna AS prefeito_nome, eleito.partido AS prefeito_partido,
            eleito.votos AS prefeito_votos, round(eleito.gasto, 2) AS prefeito_gasto_eleito,
-           dp.maior_venceu, dp.excluida AS maior_excluida, el.eleitorado
+           dp.maior_venceu, dp.excluida AS maior_excluida, el.eleitorado,
+           gv.rec_mais_cand, gv.rec_mais_eleitos, gv.rec_demais_cand, gv.rec_demais_eleitos,
+           gv.pub_mais_cand, gv.pub_mais_eleitos, gv.pub_demais_cand, gv.pub_demais_eleitos
     FROM ver
     JOIN municipio m ON m.id_municipio = ver.id_municipio
     LEFT JOIN vag    ON vag.ano = ver.ano AND vag.id_municipio = ver.id_municipio
@@ -109,6 +140,7 @@ COPY (
     LEFT JOIN eleito ON eleito.ano = ver.ano AND eleito.id_municipio = ver.id_municipio
     LEFT JOIN disputa_prefeito dp ON dp.ano = ver.ano AND dp.id_municipio = ver.id_municipio
     LEFT JOIN eleitorado_mun el   ON el.ano = ver.ano AND el.id_municipio = ver.id_municipio
+    LEFT JOIN grupos_vereador gv  ON gv.ano = ver.ano AND gv.id_municipio = ver.id_municipio
     ORDER BY ver.ano, m.uf, ver.id_municipio
 ) TO 'municipios/resumo.csv' (HEADER);
 
