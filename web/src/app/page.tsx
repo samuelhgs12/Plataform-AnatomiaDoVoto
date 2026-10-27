@@ -11,7 +11,6 @@ import { CamadasMapa } from "@/components/CamadasMapa";
 import { BuscaCandidatoMapa } from "@/components/BuscaCandidatoMapa";
 import { Icone } from "@/components/Icone";
 import { apiGetOpcional, lerAnalise } from "@/lib/api";
-import type { Listagem } from "@/lib/types";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { NOME_UF } from "@/lib/financiamento";
 import {
@@ -39,13 +38,12 @@ import { ComparaReferencia } from "@/components/ComparaReferencia";
 import { IndicadoresCenso, type LinhaIndicadorCenso } from "@/components/IndicadoresCenso";
 import { SerieLegenda } from "@/components/SerieLegenda";
 import { ComparaCiclos } from "@/components/ComparaCiclos";
-import { abrangencia, candidaturasDe, noMapaEstatico, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
+import { abrangencia, candidaturasDe, noMapaEstatico, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
 
 export const dynamic = "force-dynamic";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-const ANO_SUGESTOES = 2022;   // última eleição geral: as sugestões da visão Candidato são os governadores eleitos nela
 const ROTULO_CARGO: Record<CargoCiclo, string> = { ambos: "Os dois", federal: "Federal", estadual: "Estadual" };
 
 export default async function Home({ searchParams }: { searchParams: SP }) {
@@ -255,16 +253,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const turnosCand = turnosDe(votosCand);
   const turnoCand = turnosCand.includes(Number(um(sp.turno))) ? Number(um(sp.turno)) : 1;
   const alcanceCand = campanha ? abrangencia(campanha.cargo) : "fora";
-  // sem candidato, o estado clicado no mapa dá zoom nele e filtra a busca e as sugestões do menu (?uf=)
+  // sem candidato, o estado clicado no mapa dá zoom nele e filtra a busca do menu (?uf=)
   const ufBusca = naCandidato && !campanha ? uf : undefined;
   const ufCand = alcanceCand === "uf" || alcanceCand === "municipio" ? campanha!.uf : alcanceCand === "seis" ? uf : ufBusca;
   const munCand = ufCand ? votosCand.find((v) => v.uf === ufCand && String(v.id_municipio) === um(sp.mun))?.id_municipio : undefined;
-  // sugestões sem candidato escolhido: governadores eleitos na última eleição geral (id_cargo 3); com um estado,
-  // os mais votados entre os eleitos dele nessa eleição (governador, senador e deputados)
-  const sugestoesCand = naCandidato && !campanha
-    ? sugestoesDe((await apiGetOpcional<Listagem>(ufBusca
-      ? `/candidaturas?uf=${ufBusca}&ano=${ANO_SUGESTOES}&eleito=true&tamanho=6`
-      : `/candidaturas?cargo=3&ano=${ANO_SUGESTOES}&eleito=true&tamanho=6`))?.itens ?? [], 6) : [];
 
   const hrefCand = "/?ver=candidato#mapa";   // como as camadas: <a data-mapa>, que o MapaVivo navega sem recarregar
 
@@ -312,18 +304,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             </p>
           )}
           <BuscaCandidatoMapa uf={ufBusca} rotulo={ufBusca ? `Buscar candidato de ${NOME_UF[ufBusca]}` : undefined} />
-          {sugestoesCand.length > 0 && (
-            <>
-              <p className="rotulo">{ufBusca ? `Ou comece pelos eleitos mais votados de ${ufBusca} em ${ANO_SUGESTOES}` : `Ou comece por um dos governadores eleitos em ${sugestoesCand[0].ultimo_ano}`}</p>
-              {/* outra chave a cada estado: a lista entra de novo */}
-              <ul className="sugestoes-cand" key={ufBusca ?? "seis"}>
-                {sugestoesCand.map((s, i) => (
-                  <li key={s.id_candidato} style={{ "--i": i } as CSSProperties}><a href={`/?ver=candidato&cand=${s.id_candidato}#mapa`} data-mapa="">{nomeProprio(s.nome_urna ?? "")}<small>{s.ultimo_cargo} · {s.uf}</small></a></li>
-                ))}
-              </ul>
-            </>
-          )}
-          {ufBusca && !sugestoesCand.length && <p className="rotulo">Busque pelo nome de quem disputou em {NOME_UF[ufBusca]}.</p>}
+          {ufBusca && <p className="rotulo">Busque pelo nome de quem disputou em {NOME_UF[ufBusca]}.</p>}
         </div>
       ) : camadas}
     </SubmenuMapa>

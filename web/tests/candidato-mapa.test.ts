@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   abrangencia, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseMunicipal, fraseResumo, noMapaEstatico, notaValidos, proporcaoNoMunicipio,
-  proporcaoPorUf, resumoCandidatura, rotulosCandidato, semDadosDeCampanha, sugestoesDe, textoPontos, trechosDaCarreira, turnosDe, variacaoTurnos, type CandidaturaMapa, type VotoMunicipio,
+  proporcaoPorUf, resumoCandidatura, rotulosCandidato, semDadosDeCampanha, textoPontos, trechosDaCarreira, turnosDe, variacaoTurnos, type CandidaturaMapa, type VotoMunicipio,
 } from "../src/lib/candidato-mapa";
-import type { CandidaturaItem } from "../src/lib/types";
 
 const c = (o: Partial<CandidaturaMapa>): CandidaturaMapa => ({
   id_candidato: 1, id_candidatura: 10, ano: 2022, cargo: "Deputado federal", uf: "MG", partido: "PFA", numero: "1234", nome_urna: "ANA LIMA", ue: "MG", sequencial: "1",
@@ -195,21 +194,6 @@ describe("partesDoNome", () => {
     expect(partesDoNome("Otávio Cerejeira")).toEqual({ antes: "Otávio", destaque: "Cerejeira" });
     expect(partesDoNome(" Ana  da Silva ")).toEqual({ antes: "Ana da", destaque: "Silva" });
     expect(partesDoNome("Fulano")).toEqual({ antes: "", destaque: "Fulano" });
-  });
-});
-
-describe("sugestoesDe", () => {
-  const item = (o: Partial<CandidaturaItem>): CandidaturaItem => ({
-    id_candidatura: 1, id_candidato: 1, nome_urna: "ANA", numero_urna: "11", uf: "RR", ano: 2022, ue: "RR", sequencial: "9",
-    partido: "PP", cargo: "Governador", resultado: "ELEITO", eleito: true, votos: 10, ...o,
-  });
-  it("uma por pessoa, na ordem da listagem, com a chave da foto; sem id_candidato fica de fora", () => {
-    const s = sugestoesDe([item({}), item({ id_candidatura: 2 }), item({ id_candidato: null }), item({ id_candidato: 2, uf: "MG" })]);
-    expect(s.map((x) => [x.id_candidato, x.uf])).toEqual([[1, "RR"], [2, "MG"]]);
-    expect(s[0]).toMatchObject({ ultimo_ano: 2022, ultimo_cargo: "Governador", ultimo_ue: "RR", ultimo_sequencial: "9" });
-  });
-  it("limita a quantidade", () => {
-    expect(sugestoesDe([1, 2, 3, 4, 5].map((id) => item({ id_candidato: id })), 3)).toHaveLength(3);
   });
 });
 

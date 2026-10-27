@@ -4,7 +4,6 @@
 
 import { classe, quantis } from "./abstencao";
 import { pct } from "./format";
-import type { CandidaturaItem } from "./types";
 
 /** Uma candidatura (pessoa × eleição × cargo), com os números do verso da ficha. */
 export interface CandidaturaMapa {
@@ -256,20 +255,10 @@ export function trechosDaCarreira<T extends Pick<CandidaturaMapa, "cargo" | "uf"
   return trechos;
 }
 
-/** Uma pessoa na busca do mapa e nas sugestões (mesmo formato de /api/busca). */
+/** Uma pessoa na busca do mapa (mesmo formato de /api/busca). */
 export interface EntradaCandidato {
   id_candidato: number; nome_urna: string | null; partido: string | null; uf: string | null; ultimo_ano: number; ultimo_cargo: string;
   ultimo_ue?: string | null; ultimo_sequencial?: string | null;
-}
-
-/** Sugestões a partir de uma listagem de /api/candidaturas: uma por pessoa, na ordem da listagem. */
-export function sugestoesDe(itens: CandidaturaItem[], n = 4): EntradaCandidato[] {
-  const vistos = new Set<number>();
-  return itens.flatMap((c) => {
-    if (c.id_candidato == null || vistos.has(c.id_candidato)) return [];
-    vistos.add(c.id_candidato);
-    return [{ id_candidato: c.id_candidato, nome_urna: c.nome_urna, partido: c.partido, uf: c.uf, ultimo_ano: c.ano, ultimo_cargo: c.cargo, ultimo_ue: c.ue, ultimo_sequencial: c.sequencial }];
-  }).slice(0, n);
 }
 
 /** Cargos com voto de legenda: os válidos somam os votos no partido, que o TSE só publica por município de 2018 em diante. */

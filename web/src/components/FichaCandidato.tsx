@@ -43,7 +43,6 @@ export function FichaCandidato({ c, noMapa, onde, municipio, foto }: Props) {
   const lugar = presidente ? "Brasil" : municipio ? `${municipio} (${c.uf})` : c.uf;
   const lugarLongo = presidente ? "Brasil" : municipio ? `${municipio} (${c.uf})` : NOME_UF[c.uf] ?? c.uf;
   const semCampanha = semDadosDeCampanha(c);
-  const fonte = <p className="ficha-fonte">Dados{foto ? " e foto" : ""} do TSE{foto ? " (CC BY)" : ""} · projeto acadêmico UFPI · não é fonte oficial</p>;
   const parte = (v: number, t: number) => (t > 0 ? `${pct(v / t, 1)} dos votos válidos` : null);
 
   // o sobrenome ocupa a largura do cartão: o tamanho sai do número de letras (CSS, com unidades do contêiner)
@@ -72,7 +71,6 @@ export function FichaCandidato({ c, noMapa, onde, municipio, foto }: Props) {
       <div className="ficha-base">
         <Onda className="ficha-onda-base" />
         {c.numero && <p className="ficha-numero">nº {c.numero} em {c.ano}</p>}
-        {fonte}
       </div>
     </>
   );
@@ -131,7 +129,6 @@ export function FichaCandidato({ c, noMapa, onde, municipio, foto }: Props) {
         Ver mais detalhes
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
       </Link>
-      {fonte}
     </>
   );
 
