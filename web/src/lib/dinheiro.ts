@@ -301,3 +301,17 @@ export function mediasPorResultado(fontes: { ano: number; cargo: string; uf: str
   };
   return { eleitos: grupo(true), naoEleitos: grupo(false) };
 }
+
+/**
+ * A média de dinheiro público e privado recebido por candidato (eleitos e não eleitos juntos) de um estado, para a
+ * comparação entre os estados. Mesma base de mediasPorResultado.
+ */
+export function mediaPorCandidato(fontes: Parameters<typeof mediasPorResultado>[0], ano: number, cargo: string, uf?: string): MediaDinheiro {
+  const { eleitos: e, naoEleitos: n } = mediasPorResultado(fontes, ano, cargo, uf);
+  const cand = e.candidaturas + n.candidaturas;
+  return {
+    candidaturas: cand,
+    publico: cand ? (e.publico * e.candidaturas + n.publico * n.candidaturas) / cand : 0,
+    privado: cand ? (e.privado * e.candidaturas + n.privado * n.candidaturas) / cand : 0,
+  };
+}

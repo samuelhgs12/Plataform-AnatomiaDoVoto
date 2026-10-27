@@ -1593,9 +1593,9 @@ details.mais[open] > summary, .analise-metodo[open] > summary { margin-bottom: 1
   .palco-area .palco-mapa { height: 62svh; min-height: 340px; }
   .palco-area .lupa-dica { display: none; }
   /* no celular: foto, nome e resultado em cima; os três valores lado a lado embaixo, cada um com o rótulo */
-  .linhas-cand li { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 6px 10px; }
+  ul.linhas-cand li { grid-template-columns: 40px minmax(0, 1fr); gap: 6px 10px; }
   .linhas-cand .linhas-cab { display: none; }
-  .linhas-resultado { text-align: right; }
+  .linhas-cand .linhas-resultado { grid-column: 2; display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }   /* embaixo do nome, que fica com a linha toda */
   .linhas-valores { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .linhas-valores .linhas-valor { text-align: left; }
   .linhas-valores .mini-divisao { justify-self: start; }
@@ -1706,3 +1706,31 @@ a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 .origem { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); max-width: 70ch; }
 .origem p { margin: 0 0 6px; }
 .area-comparacao h3 { font-size: 18px; margin: 12px 0 6px; }
+
+/* Gastou × recebeu nas linhas de candidatos: o verbo acima do valor e pontos de cor no lugar de porcentagens */
+.linhas-verbo { display: none; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }  /* no computador, o cabeçalho da coluna já diz */
+@media (max-width: 600px) { .linhas-valores .linhas-verbo { display: block; } .linhas-valores { align-items: start; } }
+.linhas-valor .ponto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: 0; }
+.linhas-valor .ponto.pub { background: var(--pub); } .linhas-valor .ponto.priv { background: var(--priv); }
+
+/* Comparar os estados */
+.area-estados { margin-top: 24px; }
+.area-estados h3 { font-size: 16px; }
+
+/* Grades de 100 (quem teve mais dinheiro se elegeu mais?) */
+.grades { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 28px; margin: 16px 0 12px; }
+.grades.tres { grid-template-columns: repeat(3, minmax(0, 220px)); }
+.grades figure { margin: 0; display: grid; gap: 8px; align-content: start; }
+.grades.tres figure { grid-row: span 3; grid-template-rows: subgrid; }   /* títulos de alturas diferentes não desalinham as grades */
+.grades figcaption { font-size: 14px; }
+.grades figcaption small { display: block; color: var(--muted); font-size: 12px; }
+.grade-titulo b { font-size: 15px; }
+.grade-cem { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; width: 100%; max-width: 200px; aspect-ratio: 1; }
+.grade-cem i { display: block; border-radius: 2px; background: var(--line); }
+.grade-cem i.on { background: var(--fx2); }
+.grade-cem.destaque i.on { background: var(--pub); }
+@media (max-width: 640px) {
+  .grades { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .grades.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .grade-cem { gap: 2px; }
+}

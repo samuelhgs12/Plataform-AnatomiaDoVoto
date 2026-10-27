@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  cargosDoAno, classeComPorte, contaGasto, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
+  cargosDoAno, classeComPorte, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
@@ -193,5 +193,17 @@ describe("mediasPorResultado", () => {
     expect(m.naoEleitos).toEqual({ candidaturas: 20, publico: 5, privado: 2 });
     expect(m.eleitos).toEqual({ candidaturas: 2, publico: 250, privado: 30 });
     expect(mediasPorResultado([], 2024, "Vereador").eleitos).toEqual({ candidaturas: 0, publico: 0, privado: 0 });
+  });
+});
+
+describe("mediaPorCandidato", () => {
+  const l = (o: Partial<{ ano: number; cargo: string; uf: string; eleito: boolean; candidaturas: number; fundo_eleitoral: number; fundo_partidario: number; doacoes_pessoas: number; recursos_proprios: number; outros_privados: number }>) =>
+    ({ ano: 2024, cargo: "Vereador", uf: "PE", eleito: false, candidaturas: 10, fundo_eleitoral: 100, fundo_partidario: 0, doacoes_pessoas: 30, recursos_proprios: 10, outros_privados: 0, ...o });
+  it("junta eleitos e não eleitos, pesando pelo número de candidatos", () => {
+    const m = mediaPorCandidato([l({}), l({ eleito: true, candidaturas: 2, fundo_eleitoral: 500, doacoes_pessoas: 60 })], 2024, "Vereador", "PE");
+    expect(m.candidaturas).toBe(12);
+    expect(m.publico).toBeCloseTo(600 / 12);
+    expect(m.privado).toBeCloseTo(110 / 12);   // 30 + 10 (não eleitos) + 60 + 10 (eleitos)
+    expect(mediaPorCandidato([], 2024, "Vereador").publico).toBe(0);
   });
 });
