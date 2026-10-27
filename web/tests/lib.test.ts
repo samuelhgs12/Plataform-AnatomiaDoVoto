@@ -3,7 +3,7 @@ import type { LinhaLegenda } from "../src/lib/legenda";
 import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
 import { anoNaLegenda, casasDosCortes, conjunto, escalaDoMaior, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
 import {
-  classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, reguaIndicador, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
+  censoDoAno, classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, reguaIndicador, enquadrar, formatarIndicador, indicadorNoCenso, indicadoresDoCenso, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
 } from "../src/lib/abstencao";
 import { aproximar, arrastar, centrarLupa, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
@@ -320,12 +320,40 @@ describe("serieAbstencao", () => {
   });
 });
 
+describe("censoDoAno", () => {
+  it("a eleição do ano do Censo e as municipais em volta; nos outros anos, nenhum", () => {
+    expect([2008, 2010, 2012].map(censoDoAno)).toEqual([2010, 2010, 2010]);
+    expect([2020, 2022, 2024].map(censoDoAno)).toEqual([2022, 2022, 2022]);
+    expect([2014, 2016, 2018].map(censoDoAno)).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+describe("indicadoresDoCenso e indicadorNoCenso", () => {
+  it("o Censo 2022 só tem os equivalentes do IBGE, com o rótulo da definição dele", () => {
+    expect(indicadoresDoCenso(2010)).toHaveLength(10);
+    expect(indicadoresDoCenso(2022)).toEqual([
+      { chave: "rdpc", rotulo: "Renda por pessoa" }, { chave: "pmpob", rotulo: "Pobres" },
+      { chave: "t_analf18m", rotulo: "Analfabetismo (15 anos ou mais)" }, { chave: "t_med18m", rotulo: "Ensino médio completo (18 ou mais)" },
+      { chave: "t_des18m", rotulo: "Desocupação (14 ou mais)" },
+    ]);
+  });
+  it("mantém o pedido se o Censo o tem; senão, o primeiro do Censo", () => {
+    expect(indicadorNoCenso("pmpob", 2022)).toBe("pmpob");
+    expect(indicadorNoCenso("idhm", 2022)).toBe("rdpc");
+    expect(indicadorNoCenso("idhm", 2010)).toBe("idhm");
+  });
+});
+
 describe("indicadores", () => {
   const ind = indicadoresPorMunicipio([
-    { id_municipio: 1, indicador: "idhm", valor: 0.8 }, { id_municipio: 1, indicador: "pesotot", valor: 300 },
-    { id_municipio: 2, indicador: "idhm", valor: 0.6 }, { id_municipio: 2, indicador: "pesotot", valor: 100 },
-    { id_municipio: 3, indicador: "pesotot", valor: 500 },
-  ]);
+    { id_municipio: 1, censo: 2010, indicador: "idhm", valor: 0.8 }, { id_municipio: 1, censo: 2010, indicador: "pesotot", valor: 300 },
+    { id_municipio: 2, censo: 2010, indicador: "idhm", valor: 0.6 }, { id_municipio: 2, censo: 2010, indicador: "pesotot", valor: 100 },
+    { id_municipio: 3, censo: 2010, indicador: "pesotot", valor: 500 },
+    { id_municipio: 1, censo: 2022, indicador: "idhm", valor: 0.1 }, { id_municipio: 1, censo: 2022, indicador: "pesotot", valor: 900 },
+  ], 2010);
+  it("indicadoresPorMunicipio fica só com o Censo pedido", () => {
+    expect(ind.get(1)).toEqual({ idhm: 0.8, pesotot: 300 });
+  });
   it("mediaPonderada pesa pela população e pula quem não tem o dado", () => {
     expect(mediaPonderada([1, 2, 3], ind, "idhm")).toBeCloseTo(0.75);
     expect(mediaPonderada([3], ind, "idhm")).toBeNull();
@@ -475,13 +503,16 @@ describe("paleta (busca rápida)", () => {
 });
 
 describe("situacaoComparativo", () => {
-  const anosCenso = [2008, 2012];
-  it("fora dos anos do Censo, a camada não existe", () => {
-    expect(situacaoComparativo({ ano: 2022, anosCenso, uf: "PE" })).toEqual({ disponivel: false, pinta: false, motivo: "O Censo 2010 só é comparado com as eleições de 2008 e 2012." });
+  const anosPorCenso = { 2010: [2008, 2010, 2012], 2022: [2020, 2022, 2024] };
+  it("fora dos anos de Censo, a camada não existe e o motivo lista os anos de cada um", () => {
+    expect(situacaoComparativo({ ano: 2018, anosPorCenso, uf: "PE" })).toEqual({
+      disponivel: false, pinta: false,
+      motivo: "Os indicadores do Censo só são comparados com as eleições em volta dele: 2008, 2010 e 2012 (Censo 2010) e 2020, 2022 e 2024 (Censo 2022).",
+    });
   });
   it("sem estado aberto, guarda a escolha mas não pinta; com estado, pinta", () => {
-    expect(situacaoComparativo({ ano: 2012, anosCenso })).toMatchObject({ disponivel: true, pinta: false });
-    expect(situacaoComparativo({ ano: 2008, anosCenso, uf: "RJ" })).toEqual({ disponivel: true, pinta: true, motivo: null });
+    expect(situacaoComparativo({ ano: 2012, anosPorCenso })).toMatchObject({ disponivel: true, pinta: false });
+    expect(situacaoComparativo({ ano: 2024, anosPorCenso, uf: "RJ" })).toEqual({ disponivel: true, pinta: true, motivo: null });
   });
 });
 

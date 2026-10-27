@@ -691,10 +691,6 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
 .aba-candidato { padding: 0 4px; }
 .aba-candidato .busca-cand label { color: var(--noite-muted); }
 .aba-candidato .rotulo { margin: 20px 0 8px; font-size: 14px; }
-.aba-candidato .sugestoes-cand { display: grid; gap: 2px; }
-.aba-candidato .sugestoes-cand a { display: grid; gap: 1px; padding: 9px 10px; border-radius: 7px; font-size: 15px; font-weight: 600; color: var(--sobre-noite); text-decoration: none; transition: background-color var(--t-hover) ease; }
-.aba-candidato .sugestoes-cand a:hover { background: var(--noite3); }
-.aba-candidato .sugestoes-cand small { font-size: 13px; font-weight: 400; color: var(--noite-muted); }
 /* o estado clicado no mapa filtra a busca: uma etiqueta com o nome dele e o × que volta aos seis estados */
 .filtro-uf { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 14px; padding: 6px 6px 6px 12px; border-radius: 8px;
   background: color-mix(in srgb, var(--brilho) 16%, var(--noite2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brilho) 45%, transparent); font-size: 14px; color: var(--sobre-noite); }
@@ -707,9 +703,7 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
   /* ao mesmo tempo que o mapa dá zoom no estado, a etiqueta se desenha da esquerda (como o filtro de partido) e as
      sugestões do estado entram uma a uma, de cima para baixo */
   .js .filtro-uf { animation: filtro-entra 460ms var(--ease-expo) both; }
-  .js .aba-candidato .sugestoes-cand li { animation: sugestao-entra 520ms var(--ease-expo) both; animation-delay: calc(120ms + var(--i, 0) * 45ms); }
 }
-@keyframes sugestao-entra { from { opacity: 0; transform: translateY(8px); filter: blur(3px); } }
 
 /* camadas: o mapa pinta uma coisa de cada vez. Escolha única em dois níveis: segmentos para o modo (ícone sobre o
    nome, mais altos que as abas de cima, para não parecerem o mesmo controle), e dentro do modo segmentos menores
@@ -1107,10 +1101,12 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
 .mapa-abst .c0 { fill: var(--c0); } .mapa-abst .c1 { fill: var(--c1); } .mapa-abst .c2 { fill: var(--c2); }
 .mapa-abst .c3 { fill: var(--c3); } .mapa-abst .c4 { fill: var(--c4); } .mapa-abst .neutro { fill: var(--neutro); }
 .legenda-q .c0 { background: var(--c0); box-shadow: inset 0 0 0 1px var(--noite-linha); } .legenda-q .c1 { background: var(--c1); } .legenda-q .c2 { background: var(--c2); }
-.legenda-q .c3 { background: var(--c3); } .legenda-q .c4 { background: var(--c4); }
+.legenda-q .c3 { background: var(--c3); } .legenda-q .c4 { background: var(--c4); } .legenda-q .neutro { background: var(--neutro); }
 .legenda-cand { gap: 3px; }
 .legenda-cand li { min-width: 62px; }
 .legenda-cand li:first-child { min-width: 92px; }
+.legenda-mun { gap: 24px; }   /* prefeito e vereador: duas categorias, não uma escala; cada amostra solta */
+.legenda-mun li i, .legenda-mun li:first-child i, .legenda-mun li:last-child i { width: 44px; border-radius: 3px; }
 .trilha [aria-current] { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* município de nome longo não empurra o título */
 .palco.cand .mapa-abst .uf-fora { fill: var(--noite2); }   /* o resto do país desce um degrau: o estado com menos votos ainda se separa dele */
 .palco-aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30ch, 80%); margin: 0; padding: 14px 18px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); font-size: 16px; text-align: center; text-wrap: balance; }
@@ -1172,7 +1168,6 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
 /* a ficha não estica com a pilha ao lado: o cartão tem a altura dele */
 .painel-cand > .s4 { align-self: start; }
 
-.sugestoes-cand { list-style: none; padding: 0; margin: 0; }
 .busca-cand { max-width: none; }
 .busca-cand-campo { position: relative; }
 .busca-cand-campo svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: var(--noite-muted); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
@@ -1241,8 +1236,6 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
 .ficha-iniciais { font-size: min(76px, 22cqi); font-weight: 700; letter-spacing: -0.04em; color: var(--ficha-sobre-campo); }
 .ficha-base { position: relative; z-index: 2; display: grid; gap: 4px; padding: 6px 24px 12px; background: var(--ficha-base); color: var(--ficha-sobre-campo); }
 .ficha-numero { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.ficha-base .ficha-fonte { color: color-mix(in srgb, var(--ficha-sobre-campo) 70%, var(--ficha-base)); }
-.ficha-fonte { font-size: 12px; line-height: 1.4; color: var(--ficha-muted); }
 
 /* verso: o número de votos em destaque e a grade de casas (as casas do santinho, aqui com os números) */
 .ficha-verso { gap: 14px; padding: 22px 22px 20px; }

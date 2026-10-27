@@ -1,7 +1,7 @@
 -- Massa de teste pequena e conhecida. Os valores são fictícios e servem para os testes automáticos.
-INSERT INTO municipio (id_municipio, cod_tse, nome, uf, regiao) VALUES
-  (1, '11111', 'Alvorada', 'MG', 'Sudeste'), (2, '22222', 'Bela Vista', 'PE', 'Nordeste'), (3, '33333', 'Campo Alegre', 'RJ', 'Sudeste'),
-  (4, '44444', 'Serra Azul', 'MG', 'Sudeste');
+INSERT INTO municipio (id_municipio, cod_tse, cod_ibge, nome, uf, regiao) VALUES
+  (1, '11111', '3100001', 'Alvorada', 'MG', 'Sudeste'), (2, '22222', '2600002', 'Bela Vista', 'PE', 'Nordeste'), (3, '33333', '3300003', 'Campo Alegre', 'RJ', 'Sudeste'),
+  (4, '44444', NULL, 'Serra Azul', 'MG', 'Sudeste');
 INSERT INTO partido (id_partido, numero, sigla, nome) VALUES
   (1, 40, 'PSB', 'Partido Socialista Brasileiro'), (2, 55, 'PSD', 'Partido Social Democrático'), (3, 13, 'PT', 'Partido dos Trabalhadores'), (4, 22, 'PL', 'Partido Liberal');
 INSERT INTO eleicao (id_eleicao, cd_eleicao_tse, ano, id_cargo, tipo_eleicao, turno, data) VALUES

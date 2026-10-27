@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  abrangencia, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoNoMunicipio,
-  proporcaoPorUf, resumoCandidatura, rotulosCandidato, semDadosDeCampanha, sugestoesDe, textoPontos, trechosDaCarreira, turnosDe, variacaoTurnos, type CandidaturaMapa, type VotoMunicipio,
+  abrangencia, partesDoNome, candidaturasDe, corCandidato, cortesCandidato, doTurno, fraseMunicipal, fraseResumo, noMapaEstatico, notaValidos, proporcaoNoMunicipio,
+  proporcaoPorUf, resumoCandidatura, rotulosCandidato, semDadosDeCampanha, textoPontos, trechosDaCarreira, turnosDe, variacaoTurnos, type CandidaturaMapa, type VotoMunicipio,
 } from "../src/lib/candidato-mapa";
-import type { CandidaturaItem } from "../src/lib/types";
 
 const c = (o: Partial<CandidaturaMapa>): CandidaturaMapa => ({
   id_candidato: 1, id_candidatura: 10, ano: 2022, cargo: "Deputado federal", uf: "MG", partido: "PFA", numero: "1234", nome_urna: "ANA LIMA", ue: "MG", sequencial: "1",
   resultado: "ELEITO", votos_total: 1000, gasto_total: 50_000, mediana_gasto_cargo: 20_000, parte_publica: 0.6, disputas: 1, mandatos: 1, ...o,
 });
-const v = (o: Partial<VotoMunicipio>): VotoMunicipio => ({ id_candidatura: 10, id_municipio: 1, uf: "MG", turno: 1, votos: 10, validos_cargo: 100, posicao: 3, ...o });
+const v = (o: Partial<VotoMunicipio>): VotoMunicipio => ({ id_candidatura: 10, id_municipio: 1, cod_ibge: "3100001", uf: "MG", turno: 1, votos: 10, validos_cargo: 100, posicao: 3, ...o });
 
 describe("proporcaoNoMunicipio", () => {
   it("divide pelos válidos do cargo; sem válidos, null", () => {
@@ -55,10 +54,12 @@ describe("doTurno e turnosDe", () => {
 });
 
 describe("abrangencia", () => {
-  it("UF para cargos estaduais, seis estados para presidente, fora para municipais", () => {
+  it("UF para cargos estaduais, seis estados para presidente, o município para prefeito e vereador", () => {
     expect(abrangencia("Senador")).toBe("uf");
     expect(abrangencia("Presidente")).toBe("seis");
-    expect(abrangencia("Vereador")).toBe("fora");
+    expect(abrangencia("Prefeito")).toBe("municipio");
+    expect(abrangencia("Vereador")).toBe("municipio");
+    expect(abrangencia("Vice-prefeito")).toBe("fora");
   });
 });
 
@@ -147,6 +148,25 @@ describe("fraseResumo", () => {
   });
 });
 
+describe("noMapaEstatico", () => {
+  it("troca o id da API pelo do mapa estático pelo código IBGE e deixa de fora quem não casa", () => {
+    const municipios = [{ id_municipio: 2426, cod_ibge: "3106200" }, { id_municipio: 2428, cod_ibge: "3106309" }];
+    const votos = [v({ id_municipio: 2428, cod_ibge: "3106200", votos: 97 }), v({ id_municipio: 7, cod_ibge: null }), v({ id_municipio: 8, cod_ibge: "9999999" })];
+    expect(noMapaEstatico(votos, municipios)).toEqual([v({ id_municipio: 2426, cod_ibge: "3106200", votos: 97 })]);
+  });
+});
+
+describe("fraseMunicipal", () => {
+  it("a parte dos válidos e a colocação no município da disputa", () => {
+    expect(fraseMunicipal(v({ votos: 300, validos_cargo: 1000, posicao: 1 }), "Alfa", "Prefeito")).toBe("Disputou só em Alfa: 30,0% dos votos válidos para prefeito, 1º lugar.");
+    expect(fraseMunicipal(v({ votos: 12, validos_cargo: 4000, posicao: 37 }), "Beta", "Vereador")).toBe("Disputou só em Beta: 0,3% dos votos válidos para vereador, 37º lugar.");
+  });
+  it("sem votos ou sem válidos, não inventa proporção", () => {
+    expect(fraseMunicipal(v({ votos: 0, validos_cargo: 1000, posicao: 5 }), "Alfa", "Vereador")).toBe("Disputou só em Alfa, sem votos registrados neste turno.");
+    expect(fraseMunicipal(v({ votos: 0, validos_cargo: 0 }), "Alfa", "Prefeito")).toMatch(/sem votos registrados/);
+  });
+});
+
 describe("proporcaoPorUf", () => {
   it("soma as contagens por UF em vez de tirar a média das porcentagens", () => {
     const linhas = [v({ uf: "RR", votos: 90, validos_cargo: 100 }), v({ uf: "RR", votos: 10, validos_cargo: 900 }), v({ uf: "AP", votos: 0, validos_cargo: 0 })];
@@ -174,21 +194,6 @@ describe("partesDoNome", () => {
     expect(partesDoNome("Otávio Cerejeira")).toEqual({ antes: "Otávio", destaque: "Cerejeira" });
     expect(partesDoNome(" Ana  da Silva ")).toEqual({ antes: "Ana da", destaque: "Silva" });
     expect(partesDoNome("Fulano")).toEqual({ antes: "", destaque: "Fulano" });
-  });
-});
-
-describe("sugestoesDe", () => {
-  const item = (o: Partial<CandidaturaItem>): CandidaturaItem => ({
-    id_candidatura: 1, id_candidato: 1, nome_urna: "ANA", numero_urna: "11", uf: "RR", ano: 2022, ue: "RR", sequencial: "9",
-    partido: "PP", cargo: "Governador", resultado: "ELEITO", eleito: true, votos: 10, ...o,
-  });
-  it("uma por pessoa, na ordem da listagem, com a chave da foto; sem id_candidato fica de fora", () => {
-    const s = sugestoesDe([item({}), item({ id_candidatura: 2 }), item({ id_candidato: null }), item({ id_candidato: 2, uf: "MG" })]);
-    expect(s.map((x) => [x.id_candidato, x.uf])).toEqual([[1, "RR"], [2, "MG"]]);
-    expect(s[0]).toMatchObject({ ultimo_ano: 2022, ultimo_cargo: "Governador", ultimo_ue: "RR", ultimo_sequencial: "9" });
-  });
-  it("limita a quantidade", () => {
-    expect(sugestoesDe([1, 2, 3, 4, 5].map((id) => item({ id_candidato: id })), 3)).toHaveLength(3);
   });
 });
 

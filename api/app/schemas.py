@@ -129,6 +129,7 @@ class CandidaturaMapa(BaseModel):
 class VotoMunicipio(BaseModel):
     id_candidatura: int
     id_municipio: int
+    cod_ibge: str | None                 # casa com o mapa estático, que tem outros id_municipio
     uf: str
     turno: int
     votos: int

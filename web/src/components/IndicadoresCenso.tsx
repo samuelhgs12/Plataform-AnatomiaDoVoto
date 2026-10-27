@@ -29,7 +29,7 @@ function Regua({ l }: { l: LinhaIndicadorCenso }) {
 }
 
 /**
- * Indicadores do Censo 2010 da unidade escolhida, só para leitura: nenhum fundo, borda ou "bolinha" que lembre botão
+ * Indicadores do Censo (2010 ou 2022, conforme o ano) da unidade escolhida, só para leitura: nenhum fundo, borda ou "bolinha" que lembre botão
  * ou slider. O indicador do comparativo (o da dispersão ao lado) vem primeiro e maior; os outros seguem numa lista
  * contínua. Cada régua é a distribuição dos municípios (um traço cada, entre o menor e o maior), com a média de
  * referência tracejada e a unidade como uma barra laranja. Componente de servidor sem JS.
