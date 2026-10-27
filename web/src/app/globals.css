@@ -1737,123 +1737,81 @@ a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 }
 
 /* =====================================================================================================
-   /sobre: as perguntas e a metodologia, em camadas (frase simples por cima, detalhe técnico recolhido)
-   O corpo é um contêiner: o diagrama, a matriz e as colunas das seções se ajustam à largura que sobra ao lado do
-   menu e do índice, não à da janela.
+   /sobre: as dez perguntas em ordem; a respondida abre (details) com a metodologia e o caminho da resposta.
+   O diagrama e a matriz se ajustam à largura do conteúdo (container query), não à da janela.
    ===================================================================================================== */
-.sobre { display: block; }
-.sobre-corpo { container: corpo / inline-size; min-width: 0; }
-.sobre-indice { margin-bottom: 24px; }
-.sobre-indice-titulo { font-size: var(--t-pequeno); font-weight: 600; color: var(--muted); margin: 0 0 8px; }
-.sobre-indice ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.sobre-indice a { display: block; font-size: 15px; line-height: 1.3; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: var(--panel); color: var(--fg); text-decoration: none; transition: background-color var(--t-hover) ease, color var(--t-hover) ease; }
-@media (hover: hover) and (pointer: fine) { .sobre-indice a:hover { background: var(--panel2); } }
-@media (min-width: 1280px) {
-  .sobre { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 0 32px; align-items: start; }
-  .sobre-indice { position: sticky; top: var(--gap); margin: 24px 0 0; }
-  .sobre-indice ol { display: grid; gap: 2px; }
-  .sobre-indice a { background: none; color: var(--muted); padding: 7px 12px; }
-  .sobre-indice a:hover { background: var(--panel); color: var(--fg); }
-}
-
-.sobre-secao { margin-top: 88px; scroll-margin-top: var(--gap); }
-.sobre-intro { font-size: var(--t-lead); line-height: 1.35; max-width: 52ch; margin: 0 0 28px; }
-.sobre-numeros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 32px; }
+.sobre-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 24px; padding: 32px; container: numeros / inline-size; }
 .sobre-numeros p { margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .sobre-numeros b { font-size: clamp(64px, 5.6vw, 112px); font-weight: 600; line-height: 0.9; letter-spacing: -0.045em; }
 .sobre-numeros span { font-size: 17px; max-width: 24ch; color: color-mix(in srgb, var(--sobre-tinta) 82%, transparent); }
 .sobre-escopo-texto { padding: 20px 32px; }
 .sobre-escopo-texto p:first-child { font-size: 19px; }
 
-/* Do dado à tela */
-.caminho { display: block; width: 100%; height: auto; margin: 0 0 8px; }
-.caminho.estreito { display: none; max-width: 400px; }
-.cd-caixa rect { fill: var(--panel2); }
-.cd-caixa.fraca rect { fill: var(--bg); }
-.cd-caixa.destino rect { fill: var(--tinta); }
-.cd-titulo { font: 600 17px var(--fonte), system-ui, sans-serif; fill: var(--fg); letter-spacing: -0.01em; }
-.cd-sub { font: 400 14px var(--fonte), system-ui, sans-serif; fill: var(--muted); }
-.cd-caixa.destino .cd-titulo, .cd-caixa.destino .cd-sub { fill: var(--sobre-tinta); }
-.cd-seta { fill: none; stroke: var(--muted); stroke-width: 1.75; }
-.cd-ponta { fill: var(--muted); }
+.sobre-nav ul { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sobre-nav a { display: block; font-size: 15px; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: var(--panel); text-decoration: none; transition: background-color var(--t-hover) ease; }
+@media (hover: hover) and (pointer: fine) { .sobre-nav a:hover { background: var(--panel2); } }
 
-/* detalhes técnicos */
-.sobre-tecnico > summary, .met-tecnico > summary { font-size: 16px; font-weight: 600; margin: 0; }
-.sobre-tecnico { margin-top: 16px; }
-.sobre-tecnico-corpo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 40px; margin-top: 20px; }
-.sobre-tecnico-corpo h3 { font-size: 17px; margin: 0 0 10px; }
-.sobre-tecnico-corpo .lista + h3 { margin-top: 22px; }
-.sobre-tecnico-corpo .lista { font-size: 16px; }
-.sobre-def { margin: 0; display: grid; gap: 4px; font-size: 16px; }
-.sobre-def dt { font-weight: 600; margin-top: 8px; }
-.sobre-def dd { margin: 0; }
+.sobre-secao { margin-top: 88px; scroll-margin-top: var(--gap); container: secao / inline-size; }
+.sobre-titulo { font-size: clamp(36px, 2.6vw + 12px, 60px); letter-spacing: -0.035em; line-height: 1; margin: 0 0 14px; }
+.sobre-intro { font-size: var(--t-lead); line-height: 1.35; max-width: 52ch; margin: 0 0 28px; text-wrap: pretty; }
 
-/* O que existe em cada ano: uma linha por dado, um ano por coluna; cheio = no banco, vazado = fora, círculo = Censo */
-.matriz-legenda { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 15px; }
-.matriz-legenda li { display: flex; align-items: center; gap: 8px; }
-.matriz-grade { display: grid; gap: 4px; margin-bottom: 16px; }
-.matriz-linha { display: grid; grid-template-columns: minmax(200px, 1.6fr) repeat(14, minmax(0, 1fr)); gap: 3px; align-items: stretch; }
-.matriz-anos span { font-size: 12px; color: var(--muted); text-align: center; align-self: end; padding-bottom: 4px; }
-.matriz-dado { margin: 0; padding: 8px 14px 8px 0; display: flex; flex-direction: column; line-height: 1.3; }
-.matriz-dado b { font-size: 16px; font-weight: 600; }
-.matriz-dado span { font-size: 14px; }
-.matriz-dado small { font-size: 13px; color: var(--muted); }
-.matriz-cel { display: grid; place-items: center; min-height: 40px; border-radius: 3px; background: color-mix(in srgb, var(--fg) 5%, transparent); }
-.cob { display: inline-block; flex: none; width: 16px; height: 16px; border-radius: 3px; }
-.cob.banco { background: var(--tinta); }
-.cob.externo { box-shadow: inset 0 0 0 2.5px var(--tinta); }
-.cob.censo { background: var(--tinta); border-radius: 50%; }
-.matriz-cel .cob.banco, .matriz-cel .cob.externo { width: 100%; height: 100%; }
+/* ---------- As perguntas ----------
+   Três papéis de texto: o número (grande, cifras tabulares), a pergunta (o título do cartão) e o corpo (16–19 px).
+   A respondida é um bloco que abre; a que falta é só uma linha, sem fundo, com o selo "Em breve". */
+.perguntas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.q { border-radius: var(--raio); scroll-margin-top: var(--gap); }
+details.q { background: var(--panel); transition: background-color var(--t-hover) ease; }
+.q > summary, .q.breve { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 20px 24px; }
+.q > summary { cursor: pointer; list-style: none; margin: 0; color: var(--fg); border-radius: var(--raio); }
+.q > summary::-webkit-details-marker { display: none; }
+@media (hover: hover) and (pointer: fine) { details.q:not([open]) > summary:hover { background: var(--panel2); } }
+.q-marca { display: flex; }
+.q-n { font-size: 44px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.icone.q-n { width: 40px; height: 40px; stroke-width: 1.5; }
+.q-texto { font-size: clamp(19px, 0.5vw + 15px, 23px); line-height: 1.3; letter-spacing: -0.015em; font-weight: 600; margin: 0; max-width: 58ch; text-wrap: balance; }
+.q-abre { width: 22px; height: 22px; color: var(--muted); }
+details.q[open] .q-abre { transform: rotate(90deg); color: var(--fg); }
+@media (prefers-reduced-motion: no-preference) { .q-abre { transition: transform var(--t-ui) var(--ease-out), color var(--t-hover) ease; } }
+.q.breve { color: var(--muted); padding-top: 14px; padding-bottom: 14px; }
+.q.breve .q-texto { font-weight: 500; }
+.q-selo { font-size: 14px; font-weight: 500; padding: 5px 10px; border-radius: 6px; background: var(--panel); white-space: nowrap; }
 
-/* uma seção por pergunta */
-.met-cab { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 32px; padding: 32px; }
-.met-marca { margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.met-marca span { font-size: 15px; font-weight: 500; color: var(--muted); }
-.met-marca b { font-size: clamp(80px, 7vw, 128px); font-weight: 600; line-height: 0.85; letter-spacing: -0.05em; }
-.met-marca b.longo { font-size: clamp(40px, 3.4vw, 60px); line-height: 1; letter-spacing: -0.035em; }
-.met-marca .icone { width: 56px; height: 56px; stroke-width: 1.5; margin-bottom: 4px; }
-.met-marca small { font-size: 14px; color: var(--muted); }
-.met h2 { font-size: clamp(30px, 1.4vw + 16px, 44px); line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 12px; text-wrap: balance; }
-.met-pergunta { font-size: var(--t-lead); line-height: 1.3; color: var(--muted); max-width: 44ch; text-wrap: pretty; }
-.met-resposta { font-size: 19px; max-width: 62ch; text-wrap: pretty; }
-.met-recorte { list-style: none; padding: 0; margin: 18px 0 22px; }
-.met-recorte .chip { font-size: 14px; padding: 6px 12px; }
-.met-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin: 0; }
-.met-links a { color: var(--brand); font-weight: 500; text-underline-offset: 0.2em; }
-.met-links a.met-ver { display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; transition: filter var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
-.met-ver .icone { width: 18px; height: 18px; stroke-width: 2.25; }
-@media (hover: hover) and (pointer: fine) { .met-links a.met-ver:hover { filter: brightness(1.08); } }
-a.met-ver:active { transform: scale(0.98); }
+.q-corpo { padding: 4px 24px 28px calc(24px + 64px + 20px); }
+.q-resposta { font-size: 19px; line-height: 1.45; max-width: 62ch; margin-bottom: 14px; text-wrap: pretty; }
+.q-recorte { list-style: none; padding: 0; margin: 0 0 28px; }
+.q-recorte .chip { font-size: 14px; padding: 6px 12px; }
+.q-colunas { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px 40px; }
+.q-lado { display: grid; gap: 28px; align-content: start; }
+.q h4 { font-size: 17px; line-height: 1.3; margin: 0 0 10px; }
+.q .lista { font-size: 16px; gap: 10px; }
+.q .lista li { max-width: 70ch; }
+.q-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin: 28px 0 0; }
+.q-acoes a { color: var(--brand); font-weight: 500; text-underline-offset: 0.2em; }
+.q-acoes a.q-ver { display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; transition: filter var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.q-ver .icone { width: 18px; height: 18px; stroke-width: 2.25; }
+@media (hover: hover) and (pointer: fine) { .q-acoes a.q-ver:hover { filter: brightness(1.08); } }
+a.q-ver:active { transform: scale(0.98); }
 @media (prefers-reduced-motion: no-preference) {
-  .met-ver .icone { transition: transform var(--t-ui) var(--ease-out); }
-  .met-links a.met-ver:hover .icone { transform: translateX(3px); }
+  .q-ver .icone { transition: transform var(--t-ui) var(--ease-out); }
+  .q-acoes a.q-ver:hover .icone { transform: translateX(3px); }
 }
-.met-corpo { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--gap); margin-top: var(--gap); }
-.met-lado { display: grid; gap: var(--gap); align-content: start; }
-.met h3 { font-size: 19px; margin-bottom: 14px; }
-.met-como .lista { font-size: 16px; gap: 12px; }
-.met-como .lista li { max-width: 72ch; }
-.met-limites .lista { font-size: 16px; }
-.met-tecnico { margin-top: var(--gap); padding: 18px 24px; }
-.met-tecnico[open] { padding-bottom: 24px; }
-.met-sql code { background: none; padding: 0; font-size: 14px; word-break: break-all; }
-.met-sql a { color: var(--brand); }
-.met-parte { margin-top: 14px; padding: 14px 18px; border-radius: 6px; background: var(--bg); }
-.met-parte > summary { margin: 0; font-size: 15px; }
-.met-parte[open] > summary { margin-bottom: 10px; }
-.met-parte .lista { font-size: 15px; margin-bottom: 12px; }
-.met-parte p a { color: var(--brand); }
-.met-parte code { font-size: 13px; }
+.q-tecnico { margin-top: 20px; }
+.q-tecnico > summary { font-size: 15px; font-weight: 600; margin: 0; }
+.q h5 { font-size: 15px; margin: 0 0 8px; }
+.q .sobre-tecnico-corpo .lista + h5 { margin-top: 18px; }
+.q .sobre-tecnico-corpo .lista { font-size: 15px; }
+.q-sql a { color: var(--brand); }
+.q-sql code { background: none; padding: 0; font-size: 14px; word-break: break-all; }
+.perguntas-tambem { font-size: 17px; color: var(--muted); font-weight: 500; margin: 28px 0 10px; }
 
 /* ilustrações: a ideia de cada medida, sem dados */
-.formula { margin: 0 0 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
-.formula-resultado { font-size: 18px; font-weight: 600; }
+.formula { margin: 0 0 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.formula-resultado { font-size: 17px; font-weight: 600; }
 .formula-fracao { display: inline-grid; gap: 6px; text-align: center; font-size: 16px; line-height: 1.25; max-width: 30ch; }
 .formula-fracao i { display: block; height: 2px; background: currentColor; border-radius: 1px; }
-.met-ideia > :last-child { margin-bottom: 0; }
-.ideia-mapa { display: flex; flex-wrap: wrap; gap: 24px 32px; align-items: end; }
+.ideia-mapa { display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: end; }
 .ideia-mapa figure, .ideia-propaganda, .ideia-carreira { margin: 0; }
-.ideia-mapa figcaption { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.ideia-mapa figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 13px; color: var(--muted); margin-top: 6px; }
 .ideia-quintos { display: flex; gap: 3px; }
 .ideia-quintos i { width: 34px; height: 26px; border-radius: 3px; }
 .ideia-grade { display: grid; grid-template-columns: repeat(3, 30px); gap: 3px; }
@@ -1871,27 +1829,67 @@ a.met-ver:active { transform: scale(0.98); }
 .ideia-carreira i.cheio { background: var(--fg); }
 .ideia-carreira i.vazado { box-shadow: inset 0 0 0 2px var(--fg); }
 
-/* regras para tudo: no marinho, em duas colunas */
+/* ---------- Do dado à tela ---------- */
+.caminho { display: block; width: 100%; height: auto; margin: 0 0 8px; }
+.caminho.estreito { display: none; max-width: 400px; }
+.cd-caixa rect { fill: var(--panel2); }
+.cd-caixa.fraca rect { fill: var(--bg); }
+.cd-caixa.destino rect { fill: var(--tinta); }
+.cd-titulo { font: 600 17px var(--fonte), system-ui, sans-serif; fill: var(--fg); letter-spacing: -0.01em; }
+.cd-sub { font: 400 14px var(--fonte), system-ui, sans-serif; fill: var(--muted); }
+.cd-caixa.destino .cd-titulo, .cd-caixa.destino .cd-sub { fill: var(--sobre-tinta); }
+.cd-seta { fill: none; stroke: var(--muted); stroke-width: 1.75; }
+.cd-ponta { fill: var(--muted); }
+
+.sobre-tecnico > summary { font-size: 16px; font-weight: 600; margin: 0; }
+.sobre-tecnico { margin-top: 16px; }
+.sobre-tecnico-corpo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 40px; margin-top: 18px; }
+.sobre-tecnico-corpo h3 { font-size: 17px; margin: 0 0 10px; }
+.sobre-tecnico-corpo .lista { font-size: 16px; }
+.sobre-def { margin: 0; display: grid; gap: 4px; font-size: 16px; }
+.sobre-def dt { font-weight: 600; margin-top: 8px; }
+.sobre-def dd { margin: 0; }
+
+/* ---------- O que existe em cada ano: cheio = no banco, vazado = fora, círculo = Censo ---------- */
+.matriz-legenda { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 15px; }
+.matriz-legenda li { display: flex; align-items: center; gap: 8px; }
+.matriz-grade { display: grid; gap: 4px; margin-bottom: 16px; }
+.matriz-linha { display: grid; grid-template-columns: minmax(200px, 1.6fr) repeat(14, minmax(0, 1fr)); gap: 3px; align-items: stretch; }
+.matriz-anos span { font-size: 12px; color: var(--muted); text-align: center; align-self: end; padding-bottom: 4px; }
+.matriz-dado { margin: 0; padding: 8px 14px 8px 0; display: flex; flex-direction: column; line-height: 1.3; }
+.matriz-dado b { font-size: 16px; font-weight: 600; }
+.matriz-dado span { font-size: 14px; }
+.matriz-dado small { font-size: 13px; color: var(--muted); }
+.matriz-cel { display: grid; place-items: center; min-height: 40px; border-radius: 3px; background: color-mix(in srgb, var(--fg) 5%, transparent); }
+.cob { display: inline-block; flex: none; width: 16px; height: 16px; border-radius: 3px; }
+.cob.dado { background: var(--tinta); }
+.cob.censo { background: var(--tinta); border-radius: 50%; }
+.matriz-cel .cob.dado { width: 100%; height: 100%; }
+
+/* ---------- Regras e qualidade ---------- */
 .sobre-regras { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 48px; }
 .sobre-regras li { position: relative; padding-left: 22px; font-size: 18px; line-height: 1.45; max-width: 46ch; }
 .sobre-regras li::before { content: ""; position: absolute; left: 0; top: 0.5em; width: 9px; height: 9px; border-radius: 2px; background: color-mix(in srgb, var(--sobre-tinta) 55%, transparent); }
 #regras .bloco { padding: 32px; }
+.sobre-qualidade { max-width: 72ch; }
 
-@container corpo (max-width: 760px) {
-  .caminho.largo { display: none; }
-  .caminho.estreito { display: block; }
-  .met-cab, .met-corpo, .sobre-tecnico-corpo, .sobre-regras, .sobre-numeros { grid-template-columns: minmax(0, 1fr); }
-  .met-cab { gap: 12px; padding: 24px; }
-  .met-marca { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
-  .met-marca b { font-size: 72px; }
-  .met-marca b.longo { font-size: 44px; }
-  .met-marca small { flex-basis: 100%; }
-  .sobre-numeros { padding: 24px; gap: 20px; }
+@container numeros (max-width: 640px) {
   .sobre-numeros p { flex-direction: row; align-items: baseline; gap: 14px; }
   .sobre-numeros b { font-size: 64px; min-width: 1.4ch; }
-  .sobre-escopo-texto, #regras .bloco { padding: 24px; }
 }
-@container corpo (max-width: 620px) {
+@container secao (max-width: 760px) {
+  .caminho.largo { display: none; }
+  .caminho.estreito { display: block; }
+  .sobre-tecnico-corpo, .sobre-regras, .q-colunas { grid-template-columns: minmax(0, 1fr); }
+  #regras .bloco { padding: 24px; }
+  .q > summary, .q.breve { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; padding: 16px; }
+  .q.breve { grid-template-columns: 40px minmax(0, 1fr); }
+  .q.breve .q-selo { grid-column: 2; justify-self: start; }
+  .q-n { font-size: 32px; }
+  .icone.q-n { width: 30px; height: 30px; }
+  .q-corpo { padding: 0 16px 22px; }
+}
+@container secao (max-width: 620px) {
   .matriz-anos { display: none; }
   .matriz-grade { gap: 6px; }
   .matriz-linha { grid-template-columns: minmax(0, 1fr); }
@@ -1899,4 +1897,4 @@ a.met-ver:active { transform: scale(0.98); }
   .matriz-dado { padding: 12px 14px; border-radius: 6px; background: var(--panel); }
   .matriz-dado span { font-size: 16px; font-weight: 500; }
 }
-@media (max-width: 1000px) { .sobre-secao { margin-top: 56px; } }
+@media (max-width: 1000px) { .sobre-secao { margin-top: 56px; } .sobre-escopo-texto { padding: 20px 24px; } }

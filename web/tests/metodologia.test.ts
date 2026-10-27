@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ESCOPO, METODOLOGIA, ORDEM_SOBRE, escopoEmTexto, formulasDa, linkFonte, marca, trechosDeAnos, type LinhaEscopo } from "../src/lib/metodologia";
+import { ESCOPO, METODOLOGIA, PERGUNTAS, TAMBEM, escopoEmTexto, linkFonte, trechosDeAnos, type LinhaEscopo } from "../src/lib/metodologia";
 import { VISOES } from "../src/lib/mapa";
 
 const raiz = (caminho: string) => new URL(`../../${caminho}`, import.meta.url);
@@ -13,7 +13,7 @@ describe("METODOLOGIA", () => {
   it("cada entrada tem o id da própria chave e o texto essencial", () => {
     for (const [id, m] of Object.entries(METODOLOGIA)) {
       expect(m.id).toBe(id);
-      for (const campo of [m.numero, m.pergunta, m.resposta, m.anos, m.cargos]) expect(campo.trim()).not.toBe("");
+      for (const campo of [m.resposta, m.anos, m.cargos]) expect(campo.trim()).not.toBe("");
       expect(m.calculo.length).toBeGreaterThan(0);
       expect(m.limites.length).toBeGreaterThan(0);
     }
@@ -40,28 +40,25 @@ describe("METODOLOGIA", () => {
     for (const q of ["q1", "q2", "q5", "q8", "q9", "q10", "municipios"]) expect(citadas).toContain(`api/app/analises/${q}.sql`);
   });
 
-  it("as partes existem e a ordem da /sobre não repete nem esconde uma parte como seção", () => {
-    const partes = todas.flatMap((m) => m.partes ?? []);
-    for (const p of partes) expect(METODOLOGIA[p]).toBeDefined();
-    expect(new Set(ORDEM_SOBRE).size).toBe(ORDEM_SOBRE.length);
-    expect(ORDEM_SOBRE.filter((id) => partes.includes(id))).toEqual([]);
-    expect([...ORDEM_SOBRE, ...partes].sort()).toEqual(Object.keys(METODOLOGIA).sort());
+  it("o primeiro link de cada pergunta respondida leva à resposta", () => {
+    for (const { id } of PERGUNTAS) if (id) expect(METODOLOGIA[id].ondeVer[0].rotulo).toMatch(/^Ver a resposta/);
   });
 });
 
-describe("marca", () => {
-  it("separa o rótulo do número e o que não é pergunta numerada", () => {
-    expect(marca("Pergunta 5")).toEqual({ rotulo: "Pergunta", valor: "5", nota: null });
-    expect(marca("Perguntas 1, 2 e 8")).toEqual({ rotulo: "Perguntas", valor: "1, 2 e 8", nota: null });
-    expect(marca("Mapa · ligado à pergunta 3")).toEqual({ rotulo: "Mapa", valor: null, nota: "ligado à pergunta 3" });
+describe("PERGUNTAS", () => {
+  it("são as dez do dossiê, em ordem", () => {
+    expect(PERGUNTAS.map((p) => p.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    for (const p of PERGUNTAS) expect(p.texto).toMatch(/\?$/);
   });
-});
 
-describe("formulasDa", () => {
-  it("usa a fórmula da própria seção e, na de dinheiro, a das partes", () => {
-    expect(formulasDa(METODOLOGIA.p5).map((f) => f.resultado)).toEqual(["proporção de legenda"]);
-    expect(formulasDa(METODOLOGIA.dinheiro).map((f) => f.resultado)).toEqual(["custo da cadeira"]);
-    expect(formulasDa(METODOLOGIA.p10)).toEqual([]);
+  it("cada metodologia aparece uma vez na /sobre (a de dinheiro é só da página de dinheiro)", () => {
+    const usadas = [...PERGUNTAS.flatMap((p) => (p.id ? [p.id] : [])), ...TAMBEM.map((t) => t.id)];
+    expect(new Set(usadas).size).toBe(usadas.length);
+    expect([...usadas, "dinheiro"].sort()).toEqual(Object.keys(METODOLOGIA).sort());
+  });
+
+  it("4, 6 e 7 ainda não têm resposta", () => {
+    expect(PERGUNTAS.filter((p) => !p.id).map((p) => p.n)).toEqual([4, 6, 7]);
   });
 });
 
@@ -83,15 +80,17 @@ describe("trechosDeAnos", () => {
 describe("escopoEmTexto", () => {
   const l = (o: Partial<LinhaEscopo>): LinhaEscopo => ({ dado: "x", nota: "", anos: {}, ...o });
 
-  it("escreve os anos e diz quais vêm de fora do banco", () => {
-    expect(escopoEmTexto(l({ anos: { 2018: "banco", 2020: "banco" } }))).toBe("2018–2020");
-    expect(escopoEmTexto(l({ anos: { 2008: "externo", 2010: "externo", 2012: "banco" } }))).toBe("2008–2012 (2008–2010 dos dados abertos do TSE)");
+  it("escreve os anos em trechos; num Censo, cada ano comparado", () => {
+    expect(escopoEmTexto(l({ anos: { 2018: "dado", 2020: "dado" } }))).toBe("2018–2020");
+    expect(escopoEmTexto(l({ anos: { 2012: "censo", 2008: "censo", 2010: "censo" } }))).toBe("comparado com 2008, 2010 e 2012");
   });
 
-  it("na matriz real, dinheiro começa em 2018 e o Censo só encosta em 2008 e 2012", () => {
+  it("na matriz real: abstenção de 2008 a 2024, dinheiro de 2018 e cada Censo com os três anos dele", () => {
     const linha = (dado: string) => ESCOPO.find((e) => e.dado === dado)!;
+    expect(escopoEmTexto(linha("Participação e abstenção"))).toBe("2008–2024");
     expect(escopoEmTexto(linha("Receitas e despesas"))).toBe("2018–2024");
-    expect(escopoEmTexto(linha("Indicadores do Censo 2010"))).toBe("2008 e 2012");
+    expect(escopoEmTexto(linha("Censo 2010"))).toBe("comparado com 2008, 2010 e 2012");
+    expect(escopoEmTexto(linha("Censo 2022"))).toBe("comparado com 2020, 2022 e 2024");
     expect(escopoEmTexto(linha("Candidaturas e votação"))).toBe("1998–2024");
   });
 });

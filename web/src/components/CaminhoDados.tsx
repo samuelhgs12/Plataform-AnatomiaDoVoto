@@ -12,7 +12,7 @@ const PRINCIPAL: Etapa[] = [
 ];
 
 const PROVISORIO: Etapa[] = [
-  { titulo: "Censo 2010", sub: "Atlas + TSE 2008–2016" },
+  { titulo: "Censos 2010 e 2022", sub: "e TSE 2008–2016" },
   { titulo: "export_static.py", sub: "decisão 10" },
   { titulo: "mapa.json", sub: "arquivo estático" },
 ];
@@ -20,8 +20,8 @@ const PROVISORIO: Etapa[] = [
 export const DESCRICAO_CAMINHO =
   "Caminho dos dados. Principal: dados abertos do TSE (candidaturas, votos, prestação de contas e fotos) passam pela carga e validação no repositório load_BDR, " +
   "vão para o banco bdr_final (DuckDB no MotherDuck; as fotos num banco à parte, bdr_fotos), são consultados pela API FastAPI, com um arquivo .sql por análise, " +
-  "e chegam às páginas Next.js, montadas no servidor. Provisório, só para o mapa: os indicadores do Atlas do Desenvolvimento Humano (Censo 2010) e a abstenção " +
-  "de 2008 a 2016 dos dados abertos do TSE são exportados pelo pipeline/export_static.py para o arquivo estático mapa.json, que a página inicial lê.";
+  "e chegam às páginas Next.js, montadas no servidor. Provisório, só para o mapa: os indicadores do Censo 2010 (Atlas do Desenvolvimento Humano) e do Censo 2022 (IBGE) " +
+  "e a abstenção de 2008 a 2016 dos dados abertos do TSE são exportados pelo pipeline/export_static.py para o arquivo estático mapa.json, que a página inicial lê.";
 
 function Caixa({ e, x, y, w, h, fraca }: { e: Etapa; x: number; y: number; w: number; h: number; fraca?: boolean }) {
   const cls = e.destino ? "cd-caixa destino" : fraca ? "cd-caixa fraca" : "cd-caixa";

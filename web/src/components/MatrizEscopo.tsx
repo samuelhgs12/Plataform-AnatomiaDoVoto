@@ -1,13 +1,12 @@
 import { ANOS_ELEICAO, ESCOPO, escopoEmTexto, type Cobertura } from "@/lib/metodologia";
 
-// "O que existe em cada ano" (/sobre): cada tipo de dado numa linha, um ano de eleição por coluna. A forma diz a origem
-// (quadrado cheio = no banco; vazado = dados abertos do TSE, fora do banco; círculo = comparado com o Censo), e cada
-// linha diz os anos por escrito, que é o que fica no celular e o que o leitor de tela lê.
+// "O que existe em cada ano" (/sobre): cada tipo de dado numa linha, um ano de eleição por coluna. A forma diz o que é
+// (quadrado cheio = o dado existe no ano; círculo = a eleição do ano é comparada com o Censo da linha), e cada linha diz
+// os anos por escrito, que é o que fica no celular e o que o leitor de tela lê.
 
 const LEGENDA: { c: Cobertura; texto: string }[] = [
-  { c: "banco", texto: "No banco do projeto" },
-  { c: "externo", texto: "Dados abertos do TSE, fora do banco" },
-  { c: "censo", texto: "Ano comparado com o Censo 2010" },
+  { c: "dado", texto: "Dado disponível no ano" },
+  { c: "censo", texto: "Eleição comparada com o Censo" },
 ];
 
 export function MatrizEscopo() {

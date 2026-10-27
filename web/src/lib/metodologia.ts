@@ -1,17 +1,12 @@
 // Metodologia de cada pergunta que a plataforma responde: a fonte única do texto. As páginas de análise (o bloco "Como
 // calculamos") e a página /sobre leem daqui, para as duas versões não divergirem. O texto de `calculo` é o que a equipe
-// já revisou nas páginas; para a /sobre há `resposta` e `resumo`, sem editar o original.
+// já revisou nas páginas; para a /sobre há `resposta`, sem editar o original. As perguntas, no texto do dossiê, estão em
+// PERGUNTAS.
 
 export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p5" | "p8" | "p9" | "p10" | "candidato";
 
 export interface Metodologia {
   id: IdMetodologia;
-  /** "Pergunta 1", "Perguntas 1, 2 e 8", "Mapa" */
-  numero: string;
-  /** nome curto da análise: o título da seção na /sobre */
-  titulo: string;
-  /** a pergunta como aparece no topo da página da análise */
-  pergunta: string;
   /** 1–2 frases para o leigo: o que a página mostra */
   resposta: string;
   /** a medida principal numa linha, para a ilustração da /sobre */
@@ -31,8 +26,6 @@ export interface Metodologia {
   sql: string[];
   /** linha de fonte que a página da análise mostra no rodapé */
   fonte?: string;
-  /** perguntas detalhadas dentro desta (a de dinheiro reúne 1, 2 e 8) */
-  partes?: IdMetodologia[];
 }
 
 export const REPOSITORIO = "https://github.com/samuelhgs12/Plataform-AnatomiaDoVoto";
@@ -45,45 +38,42 @@ const UFS = "AP, ES, MG, PE, RJ e RR";
 export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
   mapa: {
     id: "mapa",
-    numero: "Mapa · ligado à pergunta 3",
-    titulo: "Abstenção e indicadores do Censo",
-    pergunta: "Onde os eleitores mais deixaram de votar, e isso acompanha os indicadores sociais do município?",
-    resposta: "A abstenção de cada estado e município, de 2008 a 2024. Em 2008 e 2012 dá para pôr ao lado um indicador do Censo 2010 (renda, escolaridade, IDHM e outros) e ver se os dois andam juntos.",
+    resposta: "A abstenção de cada estado e município, de 2008 a 2024. Em 2008, 2010 e 2012 dá para pôr ao lado um indicador do Censo 2010 (renda, escolaridade, IDHM e outros), e em 2020, 2022 e 2024 um do Censo 2022, e ver se os dois andam juntos.",
     formula: { resultado: "abstenção", parcelas: ["eleitores que faltaram", "eleitores aptos"], operador: "÷" },
-    ondeVer: [{ rotulo: "Ver o mapa", href: "/" }],
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/" }],
     anos: "2008–2024",
     cargos: "Governador (anos gerais) e prefeito (anos municipais)",
     turno: "1º turno",
     dados: [
       "participacao_eleitoral, eleicao e municipio (banco bdr_final), de 2018 em diante",
       "Dados abertos do TSE (detalhe_votacao_munzona), de 2008 a 2016, baixados pelo pipeline/export_static.py (provisório, decisão 10)",
-      "Indicadores do Atlas do Desenvolvimento Humano no Brasil (PNUD, Ipea e FJP), Censo 2010, com o código IBGE (banco bdr_v2)",
+      "Censo 2010: indicadores do Atlas do Desenvolvimento Humano no Brasil (PNUD, Ipea e FJP), com o código IBGE (banco bdr_v2)",
+      "Censo 2022: IBGE (SIDRA), só os equivalentes aos do Atlas (renda, pobres, analfabetismo, ensino médio, desocupação e população), com a mesma chave; definições em pipeline/sql/mapa.sql",
       "Malhas de estados e municípios do IBGE",
     ],
     recorte: [
       "Eleição ordinária, 1º turno: governador nos anos gerais, prefeito nos municipais; as suplementares do mesmo ano ficam de fora.",
-      "Indicadores do Censo 2010 só ao lado das eleições municipais em volta dele: 2008 e 2012 (decisão 11).",
+      "Cada Censo só ao lado da eleição do ano dele e das municipais em volta: Censo 2010 com 2008, 2010 e 2012; Censo 2022 com 2020, 2022 e 2024 (decisão 11).",
     ],
     calculo: [
       "Abstenção = abstenções ÷ eleitores aptos. Para um estado ou os seis juntos, as abstenções e os aptos são somados antes da divisão: não é a média das taxas dos municípios.",
       "Cores do mapa em quintos: cada cor reúne um quinto (20%) dos municípios dos seis estados naquele ano.",
-      "Comparativo com o Censo (2008 e 2012, com um estado aberto): cada município recebe o terço da abstenção e o terço do indicador dentro do estado, e a cor vem da grade 3 × 3 formada pelos dois.",
+      "Comparativo com o Censo (nos anos com Censo, com um estado aberto): cada município recebe o terço da abstenção e o terço do indicador dentro do estado, e a cor vem da grade 3 × 3 formada pelos dois.",
       "Dispersão: cada ponto é um município. A correlação de Pearson (r) mede o quanto abstenção e indicador sobem ou descem juntos; a reta é a de mínimos quadrados. Em palavras: |r| abaixo de 0,1 é quase nenhuma relação, até 0,3 fraca, até 0,5 moderada e acima disso forte.",
-      "Indicador de um estado ou dos seis juntos: média dos municípios ponderada pela população de 2010, um retrato do conjunto e não o índice oficial dele.",
+      "Indicador de um estado ou dos seis juntos: média dos municípios ponderada pela população do mesmo Censo, um retrato do conjunto e não o índice oficial dele.",
     ],
     limites: [
       "Correlação não é causa: o mapa mostra onde as duas coisas aparecem juntas, não que uma explique a outra.",
-      "Os indicadores são de 2010; por isso só são comparados com 2008 e 2012. Nos outros anos o mapa mostra só a abstenção.",
+      "Cada Censo só é comparado com as eleições em volta dele; de 2014 a 2018 o mapa mostra só a abstenção.",
+      "No Censo 2022, os indicadores são os equivalentes do IBGE aos do Atlas, nem sempre com a mesma definição (idade mínima, linha de pobreza). IDHM, Gini, esperança de vida, trabalho formal e água encanada só existem com o Censo 2010.",
       "De 2008 a 2016 a abstenção vem direto dos dados abertos do TSE, fora do banco, até a carga trazer esses anos.",
+      "A outra metade da pergunta, a votação por partido, ainda não tem página.",
     ],
     sql: ["pipeline/sql/mapa.sql"],
   },
 
   dinheiro: {
     id: "dinheiro",
-    numero: "Perguntas 1, 2 e 8",
-    titulo: "Dinheiro nas eleições",
-    pergunta: "Quanto custa uma vaga, e quem teve mais dinheiro (inclusive público) se elegeu mais?",
     resposta: "Quanto as campanhas gastaram por vaga, cidade por cidade, e se quem teve mais dinheiro, ou mais dinheiro público, se elegeu mais. De 2018 a 2024.",
     ondeVer: [
       { rotulo: "Ver a análise", href: "/analises/dinheiro" },
@@ -108,17 +98,13 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
       "Valores sem correção pela inflação.",
     ],
     sql: ["api/app/analises/municipios.sql", "api/app/analises/q1.sql", "api/app/analises/q2.sql", "api/app/analises/q8.sql"],
-    partes: ["p1", "p2", "p8"],
   },
 
   p1: {
     id: "p1",
-    numero: "Pergunta 1",
-    titulo: "Quanto custa uma cadeira",
-    pergunta: "Quanto custa uma cadeira/mandato?",
     resposta: "Quanto todas as campanhas a um cargo gastaram, dividido pelo número de vagas, por ano e estado.",
     formula: { resultado: "custo da cadeira", parcelas: ["gasto de todas as campanhas ao cargo", "número de vagas"], operador: "÷" },
-    ondeVer: [{ rotulo: "Ver a análise", href: "/analises/custo-cadeira" }],
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/custo-cadeira" }, { rotulo: "Dinheiro nas eleições, cidade por cidade", href: "/analises/dinheiro" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     dados: ["vw_despesa_candidatura (sobre despesa_campanha)", "vagas", "candidatura, eleicao, cargo e rotulo_resultado"],
@@ -136,11 +122,8 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p2: {
     id: "p2",
-    numero: "Pergunta 2",
-    titulo: "Recursos de campanha e sucesso eleitoral",
-    pergunta: "Existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?",
     resposta: "Se, na mesma disputa, quem teve mais dinheiro se elegeu mais do que quem teve menos.",
-    ondeVer: [{ rotulo: "Ver a análise", href: "/analises/gastos" }],
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/gastos" }, { rotulo: "Dinheiro nas eleições, cidade por cidade", href: "/analises/dinheiro" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     turno: "Votos do 1º turno na correlação",
@@ -165,11 +148,8 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p8: {
     id: "p8",
-    numero: "Pergunta 8",
-    titulo: "Dinheiro público e sucesso eleitoral",
-    pergunta: "Quem recebe mais dinheiro público para a campanha se elege mais?",
     resposta: "De onde vem o dinheiro das campanhas e se quem recebeu mais do Fundo Eleitoral e do Fundo Partidário se elegeu mais que os concorrentes.",
-    ondeVer: [{ rotulo: "Ver a análise", href: "/analises/financiamento" }],
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/financiamento" }, { rotulo: "Dinheiro nas eleições, cidade por cidade", href: "/analises/dinheiro" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     dados: ["receita_campanha e fonte_recurso", "candidatura, eleicao, cargo e rotulo_resultado"],
@@ -194,12 +174,9 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p5: {
     id: "p5",
-    numero: "Pergunta 5",
-    titulo: "Voto de legenda",
-    pergunta: "Quantos votos cada partido recebeu só na sigla, sem escolher candidato?",
     resposta: "Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2024, com as fusões e renomeações marcadas.",
     formula: { resultado: "proporção de legenda", parcelas: ["votos de legenda", "votos de legenda + votos nominais"], operador: "÷" },
-    ondeVer: [{ rotulo: "Ver a análise", href: "/analises/legenda" }, { rotulo: "Ver no mapa", href: "/?ver=legenda" }],
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/legenda" }, { rotulo: "Voto de legenda no mapa", href: "/?ver=legenda" }],
     anos: "2018–2024",
     cargos: "Deputado federal, deputado estadual e vereador",
     turno: "1º turno",
@@ -220,11 +197,8 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p9: {
     id: "p9",
-    numero: "Pergunta 9",
-    titulo: "Onde a campanha investe em propaganda",
-    pergunta: "Onde o candidato investe em propaganda?",
     resposta: "No perfil de cada candidato, quanto a campanha escolhida contratou em propaganda, dividido em impresso e de rua, rádio, TV e vídeo, e internet, ao lado da campanha típica do mesmo cargo, ano e estado.",
-    ondeVer: [{ rotulo: "Buscar um candidato", href: "/candidatos" }],
+    ondeVer: [{ rotulo: "Ver a resposta no perfil de um candidato", href: "/candidatos" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     dados: ["despesa_campanha e categoria_despesa (categorias de publicidade)", "candidatura, eleicao, cargo e rotulo_resultado"],
@@ -243,11 +217,8 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p10: {
     id: "p10",
-    numero: "Pergunta 10",
-    titulo: "Carreira eleitoral",
-    pergunta: "Como é a carreira de quem disputa eleições: quantas vezes concorre, se é eleito e por quais cargos passa?",
     resposta: "No perfil de cada candidato, a carreira de 1998 a 2024 numa linha do tempo: cada eleição disputada, o cargo, o partido e se foi eleito.",
-    ondeVer: [{ rotulo: "Buscar um candidato", href: "/candidatos" }],
+    ondeVer: [{ rotulo: "Ver a resposta no perfil de um candidato", href: "/candidatos" }],
     anos: "1998–2024",
     cargos: "Todos os cargos titulares e vice-prefeito",
     dados: ["candidato e candidatura", "eleicao, cargo, partido e rotulo_resultado", "resultado_candidatura (votos do 1º turno)"],
@@ -267,47 +238,47 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   candidato: {
     id: "candidato",
-    numero: "Visão Candidato no mapa",
-    titulo: "Votos de um candidato no mapa",
-    pergunta: "Onde um candidato teve votos, município a município?",
-    resposta: "Escolhido um nome, o mapa pinta cada município pela parte dos votos válidos do cargo que foi para essa candidatura.",
+    resposta: "Escolhido um nome, o mapa pinta cada município pela parte dos votos válidos do cargo que foi para essa candidatura. Para prefeito e vereador, destaca o município da disputa.",
     formula: { resultado: "parte no município", parcelas: ["votos da candidatura", "votos válidos do cargo no município"], operador: "÷" },
     ondeVer: [{ rotulo: "Abrir a visão Candidato", href: "/?ver=candidato" }],
-    anos: "Eleições gerais, 1998–2022",
-    cargos: "Deputado federal, deputado estadual, senador, governador e presidente",
+    anos: "1998–2024",
+    cargos: "Titulares, de vereador a presidente",
     turno: "1º e 2º turno, separados",
     dados: ["votos_candidatura_municipio", "votos_partido_municipio (votos de legenda)", "candidatura, eleicao e municipio"],
-    recorte: ["Municípios da UF da candidatura", "Presidente: os seis estados do projeto", "Prefeito e vereador ainda sem mapa"],
+    recorte: ["Deputados, senador e governador: os municípios da UF da candidatura", "Presidente: os seis estados do projeto", "Prefeito e vereador: o município da disputa, em destaque no estado"],
     calculo: [
       "Válidos do cargo = votos nominais de todas as candidaturas da mesma disputa + votos de legenda. Antes de 2018 o TSE não publica o voto de legenda por município: a parte de cada município é calculada só sobre os votos nominais.",
       "Cores em quintos dos municípios. Um deputado costuma ter quase 0% na maior parte do estado: se um quinto ou mais dos municípios fica abaixo de 0,5%, essa vira a primeira faixa e as outras quatro dividem o resto.",
       "Com 2º turno, cada turno tem o seu mapa; a variação é a diferença, em pontos, da parte dos válidos entre os dois.",
+      "Prefeito e vereador disputam num município só, e não há votos por bairro ou seção: o mapa destaca o município da disputa, sem pintar uma proporção.",
     ],
     limites: [
       "Para presidente, o mapa cobre só os seis estados do projeto, não o país.",
+      "Para prefeito e vereador, o mapa não mostra onde, dentro do município, vieram os votos.",
       "Mostra onde a candidatura teve votos, não por quê.",
     ],
     sql: ["api/app/queries/votos_municipio.sql", "api/app/queries/candidato_mapa.sql"],
   },
 };
 
-/** Ordem das seções na /sobre. As partes (p1, p2, p8) aparecem dentro da seção de dinheiro. */
-export const ORDEM_SOBRE: IdMetodologia[] = ["mapa", "dinheiro", "p5", "p9", "p10", "candidato"];
+/** As dez perguntas de pesquisa, no texto do dossiê. Sem `id`, a plataforma ainda não responde: a /sobre diz "Em breve". */
+export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [
+  { n: 1, texto: "Qual é o custo por cadeira conquistada?", id: "p1" },
+  { n: 2, texto: "Existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?", id: "p2" },
+  { n: 3, texto: "Como as características socioeconômicas dos municípios se relacionam com votação partidária e abstenção?", id: "mapa" },
+  { n: 4, texto: "Grau de instrução dos candidatos versus o da população?" },
+  { n: 5, texto: "Qual é a quantidade e a proporção de votos de legenda recebidos por cada partido?", id: "p5" },
+  { n: 6, texto: "Qual a relação entre a idade da população do município com o viés político?" },
+  { n: 7, texto: "Qual o viés político do município/região na linha do tempo?" },
+  { n: 8, texto: "Candidatos eleitos e não eleitos apresentam diferenças no uso de recursos públicos e privados?", id: "p8" },
+  { n: 9, texto: "Onde o candidato investe em propaganda?", id: "p9" },
+  { n: 10, texto: "Como ocorre a permanência e a trajetória dos políticos na carreira eleitoral ao longo do tempo?", id: "p10" },
+];
 
-/**
- * O número grande ao lado do título de cada seção: "Pergunta" + "5", "Perguntas" + "1, 2 e 8"; o que não é uma pergunta
- * numerada (o mapa, a visão Candidato) fica só com o rótulo, e `nota` guarda o que vem depois do "·".
- */
-export function marca(numero: string): { rotulo: string; valor: string | null; nota: string | null } {
-  const [cabeca, nota = null] = numero.split(" · ");
-  const m = cabeca.match(/^(Perguntas?) (.+)$/);
-  return m ? { rotulo: m[1], valor: m[2], nota } : { rotulo: cabeca, valor: null, nota };
-}
-
-/** As fórmulas que ilustram uma seção: a dela e, numa seção que reúne perguntas, as das partes. */
-export function formulasDa(m: Metodologia): NonNullable<Metodologia["formula"]>[] {
-  return [m.formula, ...(m.partes ?? []).map((p) => METODOLOGIA[p].formula)].filter((f) => f != null);
-}
+/** Fora das dez perguntas, mas com metodologia própria na /sobre. */
+export const TAMBEM: { texto: string; id: IdMetodologia }[] = [
+  { texto: "Onde um candidato teve votos, município a município?", id: "candidato" },
+];
 
 /** Regras que valem para todas as análises (antes "Como lemos os dados" na /sobre). */
 export const REGRAS_GERAIS: string[] = [
@@ -321,8 +292,8 @@ export const REGRAS_GERAIS: string[] = [
 
 // ---------- Escopo de relance: o que existe em cada ano ----------
 
-/** banco: no bdr_final; externo: fora do banco (dados abertos do TSE); censo: ano comparado com o Censo 2010. */
-export type Cobertura = "banco" | "externo" | "censo";
+/** dado: existe naquele ano; censo: a eleição daquele ano é comparada com o Censo da linha. */
+export type Cobertura = "dado" | "censo";
 
 export interface LinhaEscopo { dado: string; nota: string; anos: Partial<Record<number, Cobertura>> }
 
@@ -333,12 +304,13 @@ const de = (a0: number, a1: number, c: Cobertura) =>
   Object.fromEntries(ANOS_ELEICAO.filter((a) => a >= a0 && a <= a1).map((a) => [a, c])) as Partial<Record<number, Cobertura>>;
 
 export const ESCOPO: LinhaEscopo[] = [
-  { dado: "Candidaturas e votação", nota: "carreira e perfil", anos: de(1998, 2024, "banco") },
-  { dado: "Participação e abstenção", nota: "o mapa da página inicial", anos: { ...de(2008, 2016, "externo"), ...de(2018, 2024, "banco") } },
-  { dado: "Indicadores do Censo 2010", nota: "comparados só com 2008 e 2012", anos: { 2008: "censo", 2012: "censo" } },
-  { dado: "Voto de legenda", nota: "pergunta 5", anos: de(2018, 2024, "banco") },
-  { dado: "Receitas e despesas", nota: "perguntas 1, 2, 8 e 9", anos: de(2018, 2024, "banco") },
-  { dado: "Fotos dos candidatos", nota: "banco à parte (bdr_fotos)", anos: de(2018, 2024, "banco") },
+  { dado: "Candidaturas e votação", nota: "carreira e perfil", anos: de(1998, 2024, "dado") },
+  { dado: "Participação e abstenção", nota: "o mapa (pergunta 3)", anos: de(2008, 2024, "dado") },
+  { dado: "Censo 2010", nota: "Atlas do Desenvolvimento Humano", anos: de(2008, 2012, "censo") },
+  { dado: "Censo 2022", nota: "IBGE", anos: de(2020, 2024, "censo") },
+  { dado: "Voto de legenda", nota: "pergunta 5", anos: de(2018, 2024, "dado") },
+  { dado: "Receitas e despesas", nota: "perguntas 1, 2, 8 e 9", anos: de(2018, 2024, "dado") },
+  { dado: "Fotos dos candidatos", nota: "banco à parte (bdr_fotos)", anos: de(2018, 2024, "dado") },
 ];
 
 /** Anos em trechos contínuos (de dois em dois), por escrito: [2008, 2010, 2018] → "2008–2010 e 2018". */
@@ -356,8 +328,8 @@ export function trechosDeAnos(anos: number[]): string {
 
 /** Uma linha da matriz em palavras, para o celular e para leitores de tela. */
 export function escopoEmTexto(l: LinhaEscopo): string {
-  const anos = (c?: Cobertura) => Object.entries(l.anos).filter(([, v]) => !c || v === c).map(([a]) => Number(a));
-  const externo = anos("externo");
-  const base = trechosDeAnos(anos());
-  return externo.length ? `${base} (${trechosDeAnos(externo)} dos dados abertos do TSE)` : base;
+  const anos = Object.keys(l.anos).map(Number).sort((a, b) => a - b);
+  if (!Object.values(l.anos).includes("censo")) return trechosDeAnos(anos);
+  // o Censo vale para anos soltos, um a um: "comparado com 2008, 2010 e 2012"
+  return `comparado com ${anos.slice(0, -1).join(", ")} e ${anos[anos.length - 1]}`;
 }
