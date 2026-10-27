@@ -1596,8 +1596,9 @@ details.mais[open] > summary, .analise-metodo[open] > summary { margin-bottom: 1
   .linhas-cand li { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 6px 10px; }
   .linhas-cand .linhas-cab { display: none; }
   .linhas-resultado { text-align: right; }
-  .linhas-valores { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .linhas-valores { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .linhas-valores .linhas-valor { text-align: left; }
+  .linhas-valores .mini-divisao { justify-self: start; }
   .linhas-valor b { font-size: 14px; }
   .resumo-tres, .comparacao-duas { grid-template-columns: 1fr; }
 }
@@ -1641,7 +1642,17 @@ details.mais[open] > summary, .analise-metodo[open] > summary { margin-bottom: 1
 .comparacao-duas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
 .comparacao-duas h3 { font-size: 18px; margin: 0 0 6px; }
 .comparacao-duas h3 small { margin-left: 6px; color: var(--muted); font-weight: 500; font-size: 13px; }
-.linhas-cand li { display: grid; grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.linhas-cand li { display: grid; grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.linhas-valor .mini-divisao { height: 6px; width: 100%; max-width: 160px; margin: 4px 0 2px; justify-self: end; }
+.linhas-nome a { overflow-wrap: anywhere; }
+.ver-todos { margin: 6px 0 0; }
+.ver-todos > summary { cursor: pointer; font-weight: 600; font-size: 15px; padding: 8px 0; }
+.mais-filtros { flex-basis: 100%; }
+.mais-filtros > summary { cursor: pointer; font-size: 15px; color: var(--muted); }
+.mais-filtros[open] { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 16px; }
+.mais-filtros[open] > summary { flex-basis: 100%; }
+.mais-filtros label { max-width: 320px; }
+.mais-filtros .filtros-nota { flex: 1 1 260px; }
 .area-candidatos h3 { font-size: 17px; margin: 18px 0 6px; }
 .area-medias { margin-bottom: var(--gap); }
 .area-medias h2 { font-size: 22px; margin: 0 0 4px; }

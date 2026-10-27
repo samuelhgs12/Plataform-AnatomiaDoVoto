@@ -29,6 +29,8 @@ type SP = Promise<Record<string, string | string[] | undefined>>;
 const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 /** Vereadores não eleitos mostrados de uma vez (os mais votados); nas capitais passam de mil. */
 const MAX_LISTA = 40;
+/** Quantos candidatos de cada grupo aparecem de início; o resto fica em "Ver todos". */
+const INICIO_LISTA = 8;
 const pp = (a: number, b: number) => { const d = Math.abs(pontosPercentuais(a, b)); return `${d} ${d === 1 ? "ponto percentual" : "pontos percentuais"}`; };
 
 /** Barras de taxa de eleição em três grupos, com eleitos e candidaturas abaixo de cada uma (para conferir). */
@@ -153,6 +155,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const disputa = cargo === "Prefeito" && candidatos ? disputaPrefeito(candidatos) : null;
   const linhas: LinhaCandidato[] = disputa ? disputa.candidatos : candidatos ?? (eleitosUf ?? []).filter((e) => e.cargo === cargo).map((e) => ({ ...e, eleito: true }));
   const naoEleitos = linhas.filter((c) => !c.eleito);
+  const eleitosLista = linhas.filter((c) => c.eleito);
   const maisGastou = disputa?.candidatos.find((c) => c.maisGastou);
   const eleitoPrefeito = disputa?.candidatos.find((c) => c.eleito);
   // média de dinheiro público e privado por candidato no estado (ou nos seis), eleitos × não eleitos
@@ -163,9 +166,9 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <header className="area-cab">
-        <p className="rotulo">Dinheiro nas eleições · perguntas 1, 2 e 8 · AP, ES, MG, PE, RJ e RR</p>
+        <p className="rotulo">Dinheiro nas eleições · AP, ES, MG, PE, RJ e RR</p>
         <h1>Quanto as campanhas gastaram por vaga?</h1>
-        <p>Escolha um estado no mapa ou busque o município. Mais abaixo: quem teve mais dinheiro se elegeu mais?</p>
+        <p>Escolha um estado no mapa ou busque o município.</p>
       </header>
 
       <FiltrosDinheiro
@@ -190,8 +193,8 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
         <MapaVivo className="palco s8 palco-area" estado={r.vista === "lista" ? undefined : uf}>
           <div className="palco-topo">
             <div>
-              <h2 id="h-mapa">Onde as campanhas registraram mais gastos por vaga?</h2>
-              <p className="palco-sobre">{cargo} · {municipal ? `eleição municipal de ${ano}` : `eleição geral de ${ano}, por estado`}{porteFiltro ? ` · só cidades de ${porteFiltro.rotulo}` : ""}</p>
+              <h2 id="h-mapa">Gasto por vaga · {cargo} · {ano}</h2>
+              <p className="palco-sobre">{municipal ? (uf ? "por cidade" : "por estado; clique para ver as cidades") : "eleição geral: por estado"}{porteFiltro ? ` · só cidades de ${porteFiltro.rotulo}` : ""}</p>
             </div>
             <nav className="trilha" aria-label="Onde você está">
               <a href={href({ uf: null }, "mapa")} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>
@@ -259,7 +262,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
             {!mun && porteFiltro && gastoEm(uf) && <p className="pequeno muted-noite">Soma de {inteiro(gastoEm(uf)!.n)} {gastoEm(uf)!.n === 1 ? "cidade" : "cidades"} deste porte.</p>}
             <p className="painel-links">
               {temCandidatos && <a href="#candidatos">Ver candidatos ↓</a>}
-              <a href="#resultado">Quem teve mais dinheiro se elegeu mais? ↓</a>
+              <a href="#comparar">{uf ? `Comparar com ${mun ? nomeUf : "os outros estados"}` : "Quem teve mais dinheiro se elegeu mais?"} ↓</a>
             </p>
           </div>
         </div>
@@ -272,13 +275,23 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
           {mun ? (
             <>
               {cargo === "Prefeito" && maisGastou && <p className="frase-comp"><b>{maisGastou.nome_urna}</b> teve o maior gasto declarado e {maisGastou.eleito ? "foi eleito" : "não foi eleito"}.</p>}
-              <h3>Eleitos</h3>
-              <LinhasCandidatos linhas={linhas.filter((c) => c.eleito)} ano={ano}
+              <h3>Eleitos <span className="muted">({inteiro(eleitosLista.length)})</span></h3>
+              <LinhasCandidatos linhas={eleitosLista.slice(0, INICIO_LISTA)} ano={ano}
                 vazio={candidatos === null ? "Não foi possível carregar os candidatos agora. Recarregue a página para tentar de novo." : "Nenhum eleito registrado."} />
+              {eleitosLista.length > INICIO_LISTA && (
+                <details className="ver-todos"><summary>Ver todos os {inteiro(eleitosLista.length)} eleitos</summary>
+                  <LinhasCandidatos linhas={eleitosLista.slice(INICIO_LISTA)} ano={ano} vazio="" />
+                </details>
+              )}
               {naoEleitos.length > 0 && (
                 <>
-                  <h3>Não eleitos <span className="muted">({inteiro(naoEleitos.length)}{naoEleitos.length > MAX_LISTA ? `; os ${MAX_LISTA} mais votados` : ""})</span></h3>
-                  <LinhasCandidatos linhas={naoEleitos.slice(0, MAX_LISTA)} ano={ano} vazio="" />
+                  <h3>Não eleitos <span className="muted">({inteiro(naoEleitos.length)})</span></h3>
+                  <LinhasCandidatos linhas={naoEleitos.slice(0, INICIO_LISTA)} ano={ano} vazio="" />
+                  {naoEleitos.length > INICIO_LISTA && (
+                    <details className="ver-todos"><summary>Ver {naoEleitos.length > MAX_LISTA ? `os ${MAX_LISTA} mais votados` : `todos os ${inteiro(naoEleitos.length)} não eleitos`}</summary>
+                      <LinhasCandidatos linhas={naoEleitos.slice(INICIO_LISTA, MAX_LISTA)} ano={ano} vazio="" />
+                    </details>
+                  )}
                 </>
               )}
             </>
@@ -288,38 +301,23 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
               <p className="escala">Por estado, só os eleitos estão disponíveis.</p>
             </>
           )}
-          <p className="escala">O gasto de cada candidato é individual; o gasto por vaga, lá em cima, é de todas as campanhas juntas.</p>
+          <p className="escala">Gasto e dinheiro recebido de cada candidato; o gasto por vaga, no painel, é de todas as campanhas juntas.</p>
         </section>
       )}
 
-      {/* Média de dinheiro público e privado por candidato no estado: eleitos × não eleitos */}
-      {(medias.eleitos.candidaturas > 0 || medias.naoEleitos.candidaturas > 0) && (
-        <section className="card area-medias" aria-labelledby="h-medias">
-          <h2 id="h-medias">Quanto cada candidato recebeu, em média, {uf ? `em ${nomeUf}` : "nos seis estados"}</h2>
-          <p className="comparacao-sub">{cargo} · {ano} · dinheiro público (Fundo Eleitoral e Fundo Partidário) e privado (doações e recursos próprios), por candidato</p>
-          <BarrasH compacto titulo={`Média de dinheiro público e privado por candidato a ${cargo} ${uf ? `em ${nomeUf}` : "nos seis estados"}, ${ano}`}
-            linhas={[["eleitos", "Eleitos", medias.eleitos], ["nao", "Não eleitos", medias.naoEleitos]].filter(([, , g]) => (g as { candidaturas: number }).candidaturas > 0).map(([k, t, g]) => {
-              const m = g as { candidaturas: number; publico: number; privado: number };
-              return { chave: k as string, rotulo: t as string, detalhe: `${inteiro(m.candidaturas)} candidatos`, valor: m.publico + m.privado, classe: "pub",
-                pedacos: [{ rotulo: `Público: ${reais(m.publico)}`, valor: m.publico, classe: "pub" }, { rotulo: `Privado: ${reais(m.privado)}`, valor: m.privado, classe: "priv" }],
-                texto: reais(m.publico + m.privado), subtexto: `${reais(m.publico)} público\n${reais(m.privado)} privado` };
-            })} />
-          <div className="legend"><span><i className="pub" />Dinheiro público</span><span><i className="priv" />Dinheiro privado</span></div>
-          <p className="escala">Média = soma do que os candidatos do grupo receberam ÷ número de candidatos (inclusive os que não receberam nada). Sem repasses entre candidatos. Valores sem correção pela inflação.</p>
-        </section>
-      )}
 
       {/* 2. Perguntas 2 e 8 juntas: o mesmo gráfico, medindo por todo o dinheiro ou só pelo público.
           Com uma cidade escolhida, é a comparação do estado inteiro: fica recolhida, para não misturar com a cidade. */}
-      <section id="resultado" className="card area-comparacao" aria-labelledby="h-res">
+      <section id="comparar" className="card area-comparacao" aria-labelledby="h-comp">
         <details open={!mun}>
-        <summary><h2 id="h-res">Quem teve mais dinheiro se elegeu mais?{mun ? ` Comparação em ${nomeUf}` : ""}</h2></summary>
-        <p className="comparacao-sub">Comparação {uf ? `em ${nomeUf}` : "nos seis estados"} · {cargo.toLowerCase()} · {ano}{mun ? `. Os candidatos de ${lugar} estão na lista abaixo.` : ""}
-          {porteFiltro && " O filtro de porte vale para o gasto por vaga; esta comparação usa todas as cidades (a análise estatística não separa por porte)."}</p>
+        <summary><h2 id="h-comp">{mun ? `Comparar com ${nomeUf}` : uf ? `Dinheiro e resultado em ${nomeUf}` : "Dinheiro e resultado nos seis estados"}</h2></summary>
+        <p className="comparacao-sub">Dados de {uf ? nomeUf : "seis estados"} · {cargo.toLowerCase()} · {ano}: todos os candidatos{uf ? " do estado" : ""}, de todas as cidades.</p>
+        <h3 id="resultado">Quem teve mais dinheiro se elegeu mais?</h3>
         <div className="chips" role="group" aria-label="Medir pelo">
-          <Link href={href({ ver: null }, "resultado")} scroll={false} className={`chip${ver === "recursos" ? " on" : ""}`} aria-current={ver === "recursos" ? "true" : undefined}>Todo o dinheiro de campanha <small>P2</small></Link>
-          <Link href={href({ ver: "publico" }, "resultado")} scroll={false} className={`chip${ver === "publico" ? " on" : ""}`} aria-current={ver === "publico" ? "true" : undefined}>Só o dinheiro público <small>P8</small></Link>
+          <Link href={href({ ver: null }, "comparar")} scroll={false} className={`chip${ver === "recursos" ? " on" : ""}`} aria-current={ver === "recursos" ? "true" : undefined}>Recursos considerados <small>P2</small></Link>
+          <Link href={href({ ver: "publico" }, "comparar")} scroll={false} className={`chip${ver === "publico" ? " on" : ""}`} aria-current={ver === "publico" ? "true" : undefined}>Só o dinheiro público <small>P8</small></Link>
         </div>
+        <p className="escala">{ver === "recursos" ? "Recursos considerados: o maior valor entre o que o candidato recebeu e o que gastou (considera também quem recebeu material de campanha)." : "Dinheiro público: o que veio do Fundo Eleitoral e do Fundo Partidário."}</p>
 
         {ver === "recursos" ? (majoritario ? (
           <>
@@ -361,6 +359,21 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
           </>
         )}
         <p className="escala">Cada candidato é comparado só com os concorrentes da mesma disputa; o grupo com mais é cerca de 1/4 dos que declararam algum valor. Mostra associação, não que o dinheiro fez ganhar.</p>
+
+        {(medias.eleitos.candidaturas > 0 || medias.naoEleitos.candidaturas > 0) && (
+          <>
+            <h3>Quanto cada candidato recebeu, em média</h3>
+            <BarrasH compacto titulo={`Média de dinheiro público e privado por candidato a ${cargo} ${uf ? `em ${nomeUf}` : "nos seis estados"}, ${ano}`}
+              linhas={[["eleitos", "Eleitos", medias.eleitos], ["nao", "Não eleitos", medias.naoEleitos]].filter(([, , g]) => (g as { candidaturas: number }).candidaturas > 0).map(([k, t, g]) => {
+                const m = g as { candidaturas: number; publico: number; privado: number };
+                return { chave: k as string, rotulo: t as string, detalhe: `${inteiro(m.candidaturas)} candidatos`, valor: m.publico + m.privado, classe: "pub",
+                  pedacos: [{ rotulo: `Público: ${reais(m.publico)}`, valor: m.publico, classe: "pub" }, { rotulo: `Privado: ${reais(m.privado)}`, valor: m.privado, classe: "priv" }],
+                  texto: reais(m.publico + m.privado), subtexto: `${reais(m.publico)} público\n${reais(m.privado)} privado` };
+              })} />
+            <div className="legend"><span><i className="pub" />Público (fundos eleitoral e partidário)</span><span><i className="priv" />Privado (doações e recursos próprios)</span></div>
+            <p className="escala">Soma do que os candidatos do grupo receberam ÷ número de candidatos, inclusive os que não receberam nada.</p>
+          </>
+        )}
         </details>
       </section>
 

@@ -62,15 +62,20 @@ export function FiltrosDinheiro({ anos, cargos, ufs, cidades, portes, atual, fix
           </select>
         ) : <select disabled aria-describedby="mun-geral"><option>Não se aplica</option></select>}
       </label>
-      <label><span>Porte da cidade</span>
-        {portes ? (
-          <select name="porte" value={atual.porte} onChange={(e) => ir("porte", e.target.value)}>
-            <option value="">Todos os portes</option>
-            {portes.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-          </select>
-        ) : <select disabled><option>Não se aplica</option></select>}
-      </label>
       {!cidades && <p id="mun-geral" className="filtros-nota">Nas eleições gerais não há dados por município.</p>}
+      {/* porte: um filtro secundário, com o alcance escrito ao lado (só vale nas eleições municipais) */}
+      {portes && (
+        <details className="mais-filtros" open={!!atual.porte}>
+          <summary>Mais filtros{atual.porte && ": porte da cidade"}</summary>
+          <label><span>Porte da cidade</span>
+            <select name="porte" value={atual.porte} onChange={(e) => ir("porte", e.target.value)} aria-describedby="porte-alcance">
+              <option value="">Todos os portes</option>
+              {portes.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+            </select>
+          </label>
+          <p id="porte-alcance" className="filtros-nota">Muda o mapa, a lista e os valores do estado (só as cidades daquele porte). Não muda a lista de candidatos nem a comparação com o estado.</p>
+        </details>
+      )}
       <noscript><button type="submit">Aplicar</button></noscript>
     </form>
   );
