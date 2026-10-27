@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  cargosDoAno, classeComPorte, contaGasto, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
+  cargosDoAno, classeComPorte, contaGasto, ordenarLinhas, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
@@ -156,5 +156,13 @@ describe("contaGasto, contaGastoEstado e legendaPorFaixas", () => {
     const l = legendaPorFaixas([10, 20], (v) => `${v}%`);
     expect(l.map((x) => x.texto)).toEqual(["até 10%", "10%–20%", "20% ou mais", "Não informado"]);
     expect(legendaPorFaixas([], String)).toEqual([{ classe: "sem", texto: "Não informado" }]);
+  });
+});
+
+describe("ordenarLinhas", () => {
+  const ls = [{ nome: "Olinda", valor: 10 }, { nome: "Recife", valor: 90 }, { nome: "Arcoverde", valor: null }, { nome: "Caruaru", valor: 10 }];
+  it("ordena por valor (maior primeiro, empate pelo nome, não informado no fim) ou por nome", () => {
+    expect(ordenarLinhas(ls, "valor").map((l) => l.nome)).toEqual(["Recife", "Caruaru", "Olinda", "Arcoverde"]);
+    expect(ordenarLinhas(ls, "nome").map((l) => l.nome)).toEqual(["Arcoverde", "Caruaru", "Olinda", "Recife"]);
   });
 });

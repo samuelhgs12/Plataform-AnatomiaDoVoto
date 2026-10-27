@@ -1672,4 +1672,17 @@ a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 .mais-dentro > summary { cursor: pointer; font-weight: 600; }
 .mais-dentro p { margin: 8px 0 0; color: var(--muted); }
 .comparacao-sub { margin: -4px 0 12px; color: var(--muted); }
+/* versão enxuta: painel curto da P1, lista ordenável e as perguntas 2 e 8 num bloco só */
+.painel-links { display: grid; gap: 6px; margin: 14px 0 0; }
+.painel-links a { color: var(--sobre-noite); font-weight: 600; }
+.portes-det { margin-top: 12px; }
+.portes-det > summary { cursor: pointer; color: var(--noite-muted); font-size: 14px; }
+.portes-det .portes { margin-top: 8px; }
+.lista-ordem { margin: 0 0 8px; font-size: 14px; color: var(--noite-muted); }
+.lista-ordem a { color: var(--noite-muted); }
+.lista-ordem a[aria-current] { color: var(--sobre-noite); font-weight: 700; text-decoration: none; }
+.area-comparacao .chips { margin: 0 0 14px; }
+.frase-comp { font-size: 18px; max-width: 70ch; margin: 0 0 10px; }
+.origem { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); max-width: 70ch; }
+.origem p { margin: 0 0 6px; }
 .area-comparacao h3 { font-size: 18px; margin: 12px 0 6px; }

@@ -243,3 +243,13 @@ export function legendaPorFaixas(faixas: number[], fmt: (v: number) => string): 
     { classe: "sem", texto: "Não informado" },
   ];
 }
+
+/**
+ * Ordena as linhas da lista (cidades ou estados): por valor, do maior para o menor, com "não informado" no fim; ou por
+ * nome. Na lista, cidades pequenas que somem no mapa podem ser comparadas com precisão.
+ */
+export function ordenarLinhas<T extends { nome: string; valor: number | null }>(linhas: T[], por: "valor" | "nome"): T[] {
+  const porNome = (a: T, b: T) => a.nome.localeCompare(b.nome, "pt-BR");
+  if (por === "nome") return [...linhas].sort(porNome);
+  return [...linhas].sort((a, b) => (a.valor === null ? 1 : 0) - (b.valor === null ? 1 : 0) || (b.valor ?? 0) - (a.valor ?? 0) || porNome(a, b));
+}
