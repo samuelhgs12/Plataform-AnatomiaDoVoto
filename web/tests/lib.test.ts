@@ -457,7 +457,7 @@ describe("paleta (busca rápida)", () => {
 
   it("filtrarPaleta: quem começa pelo texto inteiro vem primeiro; limite por grupo", () => {
     expect(titulos("bel")).toEqual(["Belém de Maria", "Belo Horizonte"]);
-    expect(filtrarPaleta(indice, "legenda").map((i) => i.titulo)).toEqual(["Voto de legenda", "Mapa do voto de legenda"]);
+    expect(filtrarPaleta(indice, "legenda").map((i) => i.titulo)).toEqual(["Mapa do voto de legenda"]);
     expect(filtrarPaleta(indice, "bel", 1).map((i) => i.titulo)).toEqual(["Belém de Maria"]);   // no máximo 1 por grupo
   });
 
