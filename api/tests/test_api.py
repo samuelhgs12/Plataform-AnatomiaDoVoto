@@ -340,6 +340,12 @@ def test_analise_municipios(client):
     assert alvorada["vereador_eleitos"] == 1 and alvorada["vereador_gasto"] == 5500
     estados = [dict(zip(dados["estados"]["colunas"], l)) for l in dados["estados"]["linhas"]]
     assert any(e["uf"] == "RJ" and e["cargo"] == "Deputado federal" and e["ano"] == 2022 and e["eleitos"] == 1 for e in estados)
+    # porte e cobertura: toda linha do resumo traz o eleitorado e, se a disputa para prefeito ficou de fora, o motivo
+    assert {"eleitorado", "maior_excluida"} <= set(dados["resumo"]["colunas"])
+    assert alvorada["eleitorado"] is None   # sem participação eleitoral na massa de teste: fica nulo, não zero
+    # a única disputa para prefeito de PE em 2020 tem um candidato: sai da comparação e é contada pelo motivo
+    pe = next(e for e in estados if e["cargo"] == "Prefeito" and e["uf"] == "PE" and e["ano"] == 2020)
+    assert (pe["disputas_maior"], pe["maior_venceu"], pe["excl_um_candidato"], pe["excl_sem_prestacao"], pe["excl_empate"]) == (0, 0, 1, 0, 0)
 
 
 def test_cabecalho_de_cache_nos_dados_historicos(client):

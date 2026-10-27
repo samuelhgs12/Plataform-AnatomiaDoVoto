@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compararGrupos, explicacao, responder, zContagem, zProporcoes } from "../src/lib/estatistica";
+import { compararGrupos, explicacao, pontosPercentuais, responder, zContagem, zProporcoes } from "../src/lib/estatistica";
 
 describe("zProporcoes", () => {
   it("calcula o teste de duas proporções", () => {
@@ -38,5 +38,12 @@ describe("responder e compararGrupos", () => {
   });
   it("sem teste possível, diz que faltam dados", () => {
     expect(responder(0.5, 0.1, null)).toBe("Sem dados suficientes.");
+  });
+});
+
+describe("pontosPercentuais", () => {
+  it("dá a diferença entre duas taxas em pontos percentuais inteiros", () => {
+    expect(pontosPercentuais(0.30, 0.05)).toBe(25);
+    expect(pontosPercentuais(0.11, 0.234)).toBe(-12);
   });
 });

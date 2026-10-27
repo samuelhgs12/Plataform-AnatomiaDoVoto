@@ -57,3 +57,9 @@ export function compararGrupos(cima: { eleitos: number; candidaturas: number }, 
   const t1 = cima.candidaturas ? cima.eleitos / cima.candidaturas : 0, t2 = base.candidaturas ? base.eleitos / base.candidaturas : 0;
   return { resposta: responder(t1, t2, z), z };
 }
+
+/**
+ * A diferença entre duas taxas em pontos percentuais, inteira ("25" para 30% × 5%). Acompanha a frase com as taxas
+ * ("30 em cada 100, contra 5 em cada 100 — diferença de 25 pontos percentuais"), que é o destaque; o teste vem depois.
+ */
+export const pontosPercentuais = (taxa1: number, taxa2: number) => Math.round((taxa1 - taxa2) * 100);

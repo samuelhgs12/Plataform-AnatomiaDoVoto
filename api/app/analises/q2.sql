@@ -93,30 +93,44 @@ COPY (
 -- 2. Disputas com poucos candidatos (prefeito, governador, senador, presidente): o que tinha mais venceu?
 --    chance_sorteio = vitórias esperadas se a medida não importasse (soma de p = vagas / candidatos de cada disputa);
 --    var_sorteio = soma de p(1 - p), a variância dessa contagem, usada no teste estatístico da página.
---    Somas em inteiros (milionésimos): o resultado não depende da ordem da soma. Empate: vale o de menor id.
---    Só disputas em que todos entregaram a prestação final (senão não se sabe quem tinha mais).
+--    Somas em inteiros (milionésimos): o resultado não depende da ordem da soma.
+--    Entram só as disputas comparáveis; as outras são contadas por motivo (a cobertura que a página mostra):
+--    excl_um_candidato, excl_sem_prestacao (alguém não entregou a prestação final: não se sabe quem tinha mais),
+--    excl_sem_gasto (ninguém declarou nada) e excl_empate (mais de um com o maior valor, comparado pelo valor exato
+--    da base, antes de qualquer arredondamento: em vez de escolher pelo código interno, a disputa sai da conta).
 -------------------------------------------------------------------------------
 COPY (
-    WITH disputas AS (
-        SELECT medida, ano, cargo, uf, disputa, count(*) AS candidatos, least(count(*) FILTER (WHERE eleito), count(*)) AS vagas
+    WITH base AS (
+        SELECT medida, ano, cargo, uf, disputa, count(*) AS candidatos, least(count(*) FILTER (WHERE eleito), count(*)) AS vagas,
+               max(valor) AS maior, bool_and(prestou) AS todos_prestaram
         FROM faixa_q2
         WHERE cargo IN ('Prefeito', 'Governador', 'Senador', 'Presidente')
         GROUP BY ALL
-        HAVING count(*) > 1 AND max(valor) > 0 AND bool_and(prestou)
     ), topo AS (
-        SELECT medida, ano, cargo, disputa, eleito, tinha_cargo,
-               row_number() OVER (PARTITION BY medida, ano, cargo, disputa ORDER BY valor DESC, id_candidatura) AS pos
-        FROM faixa_q2
-        WHERE cargo IN ('Prefeito', 'Governador', 'Senador', 'Presidente')
+        SELECT f.medida, f.ano, f.cargo, f.disputa, count(*) AS no_topo, bool_or(f.eleito) AS eleito, bool_or(f.tinha_cargo) AS tinha_cargo
+        FROM faixa_q2 f JOIN base b USING (medida, ano, cargo, disputa)
+        WHERE f.valor = b.maior
+        GROUP BY ALL
+    ), classificada AS (
+        SELECT b.*, t.eleito, t.tinha_cargo,
+               CASE WHEN b.candidatos < 2 THEN 'um_candidato'
+                    WHEN NOT b.todos_prestaram THEN 'sem_prestacao'
+                    WHEN b.maior <= 0 THEN 'sem_gasto'
+                    WHEN t.no_topo > 1 THEN 'empate' END AS excluida
+        FROM base b JOIN topo t USING (medida, ano, cargo, disputa)
     )
-    SELECT d.medida, d.ano, d.cargo, d.uf, count(*) AS disputas,
-           count(*) FILTER (WHERE t.eleito) AS maior_venceu,
-           count(*) FILTER (WHERE t.tinha_cargo) AS maior_tinha_cargo,
-           round(sum((d.vagas * 1000000) // d.candidatos) / 1000000, 4) AS chance_sorteio,
-           round(sum((d.vagas * (d.candidatos - d.vagas) * 1000000) // (d.candidatos * d.candidatos)) / 1000000, 4) AS var_sorteio
-    FROM disputas d
-    JOIN topo t ON t.medida = d.medida AND t.ano = d.ano AND t.cargo = d.cargo AND t.disputa = d.disputa AND t.pos = 1
-    GROUP BY ALL ORDER BY d.medida, d.ano, d.cargo, d.uf
+    SELECT medida, ano, cargo, uf,
+           count(*) FILTER (WHERE excluida IS NULL) AS disputas,
+           count(*) FILTER (WHERE excluida IS NULL AND eleito) AS maior_venceu,
+           count(*) FILTER (WHERE excluida IS NULL AND tinha_cargo) AS maior_tinha_cargo,
+           round(coalesce(sum((vagas * 1000000) // candidatos) FILTER (WHERE excluida IS NULL), 0) / 1000000, 4) AS chance_sorteio,
+           round(coalesce(sum((vagas * (candidatos - vagas) * 1000000) // (candidatos * candidatos)) FILTER (WHERE excluida IS NULL), 0) / 1000000, 4) AS var_sorteio,
+           count(*) FILTER (WHERE excluida = 'um_candidato') AS excl_um_candidato,
+           count(*) FILTER (WHERE excluida = 'sem_prestacao') AS excl_sem_prestacao,
+           count(*) FILTER (WHERE excluida = 'sem_gasto') AS excl_sem_gasto,
+           count(*) FILTER (WHERE excluida = 'empate') AS excl_empate
+    FROM classificada
+    GROUP BY ALL ORDER BY medida, ano, cargo, uf
 ) TO 'painel_q2/maior_gasto.csv' (HEADER);
 
 -------------------------------------------------------------------------------

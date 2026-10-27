@@ -18,6 +18,10 @@ export interface LinhaResumo {
   prefeito_id_candidato: number | null; prefeito_nome: string | null; prefeito_partido: string | null;
   prefeito_votos: number | null; prefeito_gasto_eleito: number | null;
   maior_venceu: boolean | null;
+  /** Por que a disputa para prefeito ficou fora da P2 (null = comparável). */
+  maior_excluida?: "um_candidato" | "sem_prestacao" | "sem_gasto" | "empate" | null;
+  /** Eleitores aptos no ano: o porte da cidade. */
+  eleitorado?: number | null;
 }
 
 /** Um cargo num estado e ano. disputas_maior/maior_venceu: só para prefeito (P2). */
@@ -25,6 +29,8 @@ export interface LinhaEstado {
   ano: number; uf: string; cargo: string; candidatos: number; eleitos: number; vagas: number;
   gasto: number; receita: number; receita_publica: number; disputas_maior: number | null; maior_venceu: number | null;
   sem_prestacao: number;
+  /** Prefeito: disputas que ficaram fora da P2, por motivo. */
+  excl_um_candidato?: number | null; excl_sem_prestacao?: number | null; excl_sem_gasto?: number | null; excl_empate?: number | null;
 }
 
 /** Um eleito (resposta de /api/municipios/<id>/eleitos ou /api/estados/<uf>/eleitos). */
@@ -153,3 +159,55 @@ export function disputaPrefeito(cands: CandidatoLocal[]) {
     })),
   };
 }
+
+/**
+ * Porte da cidade pelo eleitorado apto do ano: não faz sentido comparar uma cidade de 5 mil eleitores com uma de 500 mil.
+ * Faixas escolhidas pela distribuição dos 1.238 municípios dos seis estados (em 2024: 253, 365, 301, 190, 98 e 31).
+ */
+export const PORTES = [
+  { chave: "ate5", ate: 5_000, rotulo: "até 5 mil eleitores" },
+  { chave: "ate10", ate: 10_000, rotulo: "5 a 10 mil eleitores" },
+  { chave: "ate20", ate: 20_000, rotulo: "10 a 20 mil eleitores" },
+  { chave: "ate50", ate: 50_000, rotulo: "20 a 50 mil eleitores" },
+  { chave: "ate200", ate: 200_000, rotulo: "50 a 200 mil eleitores" },
+  { chave: "mais200", ate: Infinity, rotulo: "200 mil eleitores ou mais" },
+] as const;
+export type Porte = (typeof PORTES)[number]["chave"];
+
+/** O porte de uma cidade (null sem eleitorado). */
+export function porteDe(eleitorado: number | null | undefined): (typeof PORTES)[number] | null {
+  if (eleitorado == null || eleitorado <= 0) return null;
+  return PORTES.find((p) => eleitorado < p.ate) ?? null;
+}
+
+/** Mediana (a referência de "cidade típica": não é puxada pelas capitais como a média). null sem valores. */
+export function mediana(valores: number[]): number | null {
+  if (!valores.length) return null;
+  const v = [...valores].sort((a, b) => a - b), meio = Math.floor(v.length / 2);
+  return v.length % 2 ? v[meio] : (v[meio - 1] + v[meio]) / 2;
+}
+
+/**
+ * Referência de comparação de uma cidade: as cidades do mesmo porte no mesmo ano (nos seis estados, ou só no estado).
+ * Para "maior" (sim/não), a parte das cidades do grupo em que quem mais gastou venceu. `n` = cidades com o dado.
+ */
+export function referenciaPorte(resumo: LinhaResumo[], ano: number, porte: Porte, ind: Indicador, uf?: string): { valor: number | null; n: number } {
+  const valores = resumo
+    .filter((r) => r.ano === ano && porteDe(r.eleitorado)?.chave === porte && (!uf || r.uf === uf))
+    .flatMap((r) => valorMunicipio(r, ind) ?? []);
+  if (ind === "maior") return { valor: valores.length ? valores.reduce((a, v) => a + v, 0) / valores.length : null, n: valores.length };
+  return { valor: mediana(valores), n: valores.length };
+}
+
+/**
+ * Como mostrar um valor que pode faltar, sem transformar ausência em zero:
+ * "zero" (declarou R$ 0), "ausente" (não informado, ex.: sem prestação de contas), "nao_se_aplica" (o indicador não
+ * existe nesse recorte, ex.: prefeito numa eleição geral) e "valor". A falha de carregamento é tratada na página.
+ */
+export type SituacaoDado = "valor" | "zero" | "ausente" | "nao_se_aplica";
+export function situacaoDado(v: number | null | undefined, aplica = true): SituacaoDado {
+  if (!aplica) return "nao_se_aplica";
+  if (v == null || Number.isNaN(v)) return "ausente";
+  return v === 0 ? "zero" : "valor";
+}
+export const TEXTO_SITUACAO: Record<Exclude<SituacaoDado, "valor">, string> = { zero: "R$ 0", ausente: "Não informado", nao_se_aplica: "Não se aplica" };

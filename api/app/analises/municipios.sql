@@ -30,6 +30,35 @@ LEFT JOIN vw_despesa_candidatura d ON d.id_candidatura = c.id_candidatura
 LEFT JOIN vw_receita_candidatura r ON r.id_candidatura = c.id_candidatura
 WHERE c.ano >= 2018 AND g.eh_titular AND e.tipo_eleicao = 'ORDINARIA' AND rr.disputou;
 
+-- Cada disputa para prefeito e se ela entra na pergunta 2 ("quem mais gastou venceu?"). excluida = o motivo, na ordem:
+-- um_candidato, sem_prestacao (alguém não entregou a prestação final: não se sabe quem gastou mais), sem_gasto (ninguém
+-- declarou gasto) e empate (mais de um candidato com o maior gasto, comparado pelo valor exato da base). Nula = comparável.
+CREATE OR REPLACE TEMP TABLE disputa_prefeito AS
+WITH d AS (
+    SELECT ano, uf, id_municipio, count(*) AS candidatos, max(gasto) AS maior, bool_and(prestou) AS todos_prestaram
+    FROM cand_lugar WHERE cargo = 'Prefeito' GROUP BY ALL
+), topo AS (
+    SELECT c.ano, c.id_municipio, count(*) AS no_topo, bool_or(c.eleito) AS venceu
+    FROM cand_lugar c JOIN d ON d.ano = c.ano AND d.id_municipio = c.id_municipio
+    WHERE c.cargo = 'Prefeito' AND c.gasto = d.maior
+    GROUP BY ALL
+), classificada AS (
+    SELECT d.ano, d.uf, d.id_municipio, topo.venceu,
+           CASE WHEN d.candidatos < 2 THEN 'um_candidato'
+                WHEN NOT d.todos_prestaram THEN 'sem_prestacao'
+                WHEN d.maior <= 0 THEN 'sem_gasto'
+                WHEN topo.no_topo > 1 THEN 'empate' END AS excluida
+    FROM d JOIN topo ON topo.ano = d.ano AND topo.id_municipio = d.id_municipio
+)
+SELECT ano, uf, id_municipio, excluida, CASE WHEN excluida IS NULL THEN venceu END AS maior_venceu FROM classificada;
+
+-- Eleitorado apto de cada município em cada eleição (1º turno): o porte da cidade, para comparar cidades parecidas.
+CREATE OR REPLACE TEMP TABLE eleitorado_mun AS
+SELECT e.ano, p.id_municipio, max(p.eleitorado_apto) AS eleitorado
+FROM participacao_eleitoral p JOIN eleicao e ON e.id_eleicao = p.id_eleicao
+WHERE p.turno = 1 AND e.ano >= 2018
+GROUP BY ALL;
+
 -------------------------------------------------------------------------------
 -- 1. Municípios dos seis estados, com o código IBGE (o desenho do mapa usa esse código)
 -------------------------------------------------------------------------------
@@ -42,8 +71,8 @@ COPY (
 
 -------------------------------------------------------------------------------
 -- 2. Por município, nas eleições municipais: vereadores (P1: custo da cadeira), prefeito eleito, dinheiro público (P8)
---    e se o candidato a prefeito que mais gastou venceu (P2). maior_venceu é nulo com um só candidato ou sem gasto.
---    Empate no maior gasto: vale o de menor id (resultado estável).
+--    e se o candidato a prefeito que mais gastou venceu (P2): maior_venceu é nulo quando a disputa não é comparável, e
+--    maior_excluida diz por quê (tabela disputa_prefeito). eleitorado = eleitores aptos no ano (porte da cidade).
 -------------------------------------------------------------------------------
 COPY (
     WITH vag AS (
@@ -57,16 +86,12 @@ COPY (
         FROM cand_lugar WHERE cargo = 'Vereador' GROUP BY ALL
     ), pre AS (
         SELECT ano, id_municipio, count(*) AS candidatos, sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
-               max(gasto) AS maior_gasto, count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
+               count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar WHERE cargo = 'Prefeito' GROUP BY ALL
     ), eleito AS (
         SELECT ano, id_municipio, id_candidato, nome_urna, partido, votos, gasto
         FROM cand_lugar WHERE cargo = 'Prefeito' AND eleito
         QUALIFY row_number() OVER (PARTITION BY ano, id_municipio ORDER BY votos DESC, id_candidatura) = 1
-    ), topo AS (
-        SELECT ano, id_municipio, eleito
-        FROM cand_lugar WHERE cargo = 'Prefeito'
-        QUALIFY row_number() OVER (PARTITION BY ano, id_municipio ORDER BY gasto DESC, id_candidatura) = 1
     )
     SELECT ver.ano, ver.id_municipio, m.uf,
            ver.candidatos AS vereador_candidatos, ver.eleitos AS vereador_eleitos, coalesce(vag.vagas, 0) AS vereador_vagas,
@@ -76,19 +101,20 @@ COPY (
            round(coalesce(pre.receita, 0), 2) AS prefeito_receita, round(coalesce(pre.publica, 0), 2) AS prefeito_publica,
            eleito.id_candidato AS prefeito_id_candidato, eleito.nome_urna AS prefeito_nome, eleito.partido AS prefeito_partido,
            eleito.votos AS prefeito_votos, round(eleito.gasto, 2) AS prefeito_gasto_eleito,
-           CASE WHEN pre.candidatos > 1 AND pre.maior_gasto > 0 AND pre.sem_prestacao = 0 THEN topo.eleito END AS maior_venceu
+           dp.maior_venceu, dp.excluida AS maior_excluida, el.eleitorado
     FROM ver
     JOIN municipio m ON m.id_municipio = ver.id_municipio
     LEFT JOIN vag    ON vag.ano = ver.ano AND vag.id_municipio = ver.id_municipio
     LEFT JOIN pre    ON pre.ano = ver.ano AND pre.id_municipio = ver.id_municipio
     LEFT JOIN eleito ON eleito.ano = ver.ano AND eleito.id_municipio = ver.id_municipio
-    LEFT JOIN topo   ON topo.ano = ver.ano AND topo.id_municipio = ver.id_municipio
+    LEFT JOIN disputa_prefeito dp ON dp.ano = ver.ano AND dp.id_municipio = ver.id_municipio
+    LEFT JOIN eleitorado_mun el   ON el.ano = ver.ano AND el.id_municipio = ver.id_municipio
     ORDER BY ver.ano, m.uf, ver.id_municipio
 ) TO 'municipios/resumo.csv' (HEADER);
 
 -------------------------------------------------------------------------------
--- 3. Por estado e cargo, em todas as eleições (presidente fica na UF "BR"). Para prefeito, quantas disputas tinham
---    mais de um candidato com gasto (todos com prestação final) e em quantas o que mais gastou venceu (P2).
+-- 3. Por estado e cargo, em todas as eleições (presidente fica na UF "BR"). Para prefeito (P2): quantas disputas são
+--    comparáveis, em quantas o que mais gastou venceu e quantas ficaram de fora, por motivo (a cobertura da análise).
 -------------------------------------------------------------------------------
 COPY (
     WITH vag AS (
@@ -98,23 +124,22 @@ COPY (
                sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
                count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar GROUP BY ALL
-    ), disputas AS (
-        SELECT ano, uf, id_municipio, count(*) AS candidatos, max(gasto) AS maior, bool_and(prestou) AS todos_prestaram
-        FROM cand_lugar WHERE cargo = 'Prefeito' GROUP BY ALL
-    ), topo AS (
-        SELECT ano, id_municipio, eleito
-        FROM cand_lugar WHERE cargo = 'Prefeito'
-        QUALIFY row_number() OVER (PARTITION BY ano, id_municipio ORDER BY gasto DESC, id_candidatura) = 1
     ), maior AS (
-        SELECT d.ano, d.uf, count(*) AS disputas, count(*) FILTER (WHERE t.eleito) AS venceu
-        FROM disputas d JOIN topo t ON t.ano = d.ano AND t.id_municipio = d.id_municipio
-        WHERE d.candidatos > 1 AND d.maior > 0 AND d.todos_prestaram
-        GROUP BY ALL
+        SELECT ano, uf, count(*) FILTER (WHERE excluida IS NULL) AS disputas, count(*) FILTER (WHERE maior_venceu) AS venceu,
+               count(*) FILTER (WHERE excluida = 'um_candidato') AS excl_um_candidato,
+               count(*) FILTER (WHERE excluida = 'sem_prestacao') AS excl_sem_prestacao,
+               count(*) FILTER (WHERE excluida = 'sem_gasto') AS excl_sem_gasto,
+               count(*) FILTER (WHERE excluida = 'empate') AS excl_empate
+        FROM disputa_prefeito GROUP BY ALL
     )
     SELECT s.ano, s.uf, s.cargo, s.candidatos, s.eleitos, coalesce(vag.vagas, 0) AS vagas, s.sem_prestacao,
            round(s.gasto, 2) AS gasto, round(s.receita, 2) AS receita, round(s.publica, 2) AS receita_publica,
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.disputas, 0) END AS disputas_maior,
-           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.venceu, 0) END AS maior_venceu
+           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.venceu, 0) END AS maior_venceu,
+           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_um_candidato, 0) END AS excl_um_candidato,
+           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_sem_prestacao, 0) END AS excl_sem_prestacao,
+           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_sem_gasto, 0) END AS excl_sem_gasto,
+           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_empate, 0) END AS excl_empate
     FROM soma s
     LEFT JOIN vag   ON vag.ano = s.ano AND vag.id_cargo = s.id_cargo AND vag.uf = s.uf
     LEFT JOIN maior ON maior.ano = s.ano AND maior.uf = s.uf

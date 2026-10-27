@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  acharMunicipio, agruparEleitos, anosDisponiveis, cortesFixos, disputaPrefeito, escolherAno, nomeDoGrupo, parteDoEleito, resumoEstado,
+  acharMunicipio, mediana, porteDe, PORTES, referenciaPorte, situacaoDado, TEXTO_SITUACAO, agruparEleitos, anosDisponiveis, cortesFixos, disputaPrefeito, escolherAno, nomeDoGrupo, parteDoEleito, resumoEstado,
   tabelaMunicipios, valorEstado, valorMunicipio,
   type CandidatoLocal, type Eleito, type LinhaEstado, type LinhaMunicipio, type LinhaResumo,
 } from "../src/lib/territorio";
@@ -136,5 +136,46 @@ describe("disputaPrefeito", () => {
     expect(disputaPrefeito([c({ id_candidatura: 1, gasto: 90 }), c({ id_candidatura: 2, prestou: false })]).candidatos.some((x) => x.maisGastou)).toBe(false);
     expect(disputaPrefeito([c({ gasto: 0, votos: 0 })]).candidatos[0]).toMatchObject({ maisGastou: false, parteVotos: null });
     expect(disputaPrefeito([]).todosPrestaram).toBe(false);
+  });
+});
+
+describe("porteDe e PORTES", () => {
+  it("põe cada cidade na faixa de eleitorado", () => {
+    expect(porteDe(4_999)?.chave).toBe("ate5");
+    expect(porteDe(5_000)?.chave).toBe("ate10");
+    expect(porteDe(1_040_000)?.chave).toBe("mais200");
+    expect(porteDe(null)).toBeNull();
+    expect(porteDe(0)).toBeNull();
+    expect(PORTES.map((p) => p.chave)).toHaveLength(6);
+  });
+});
+
+describe("mediana e referenciaPorte", () => {
+  it("calcula a mediana (par e ímpar) e null sem valores", () => {
+    expect(mediana([3, 1, 2])).toBe(2);
+    expect(mediana([4, 1, 3, 2])).toBe(2.5);
+    expect(mediana([])).toBeNull();
+  });
+  it("compara só com cidades do mesmo porte e ano (e estado, se pedido)", () => {
+    const linhas = [
+      r({ id_municipio: 1, eleitorado: 3_000, vereador_gasto: 100_000 }), r({ id_municipio: 2, eleitorado: 4_000, vereador_gasto: 300_000 }),
+      r({ id_municipio: 3, eleitorado: 900_000, vereador_gasto: 9_000_000 }), r({ id_municipio: 4, eleitorado: 4_500, vereador_gasto: 200_000, uf: "RJ" }),
+      r({ ano: 2020, id_municipio: 5, eleitorado: 4_000, vereador_gasto: 1 }),
+    ];
+    expect(referenciaPorte(linhas, 2024, "ate5", "custo")).toEqual({ valor: 20_000, n: 3 });
+    expect(referenciaPorte(linhas, 2024, "ate5", "custo", "PE")).toEqual({ valor: 20_000, n: 2 });
+    expect(referenciaPorte(linhas, 2024, "ate5", "maior").valor).toBe(1);
+    expect(referenciaPorte(linhas, 2024, "ate10", "custo")).toEqual({ valor: null, n: 0 });
+  });
+});
+
+describe("situacaoDado", () => {
+  it("separa zero declarado, ausente e não se aplica", () => {
+    expect(situacaoDado(0)).toBe("zero");
+    expect(situacaoDado(null)).toBe("ausente");
+    expect(situacaoDado(NaN)).toBe("ausente");
+    expect(situacaoDado(5, false)).toBe("nao_se_aplica");
+    expect(situacaoDado(5)).toBe("valor");
+    expect(TEXTO_SITUACAO.ausente).toBe("Não informado");
   });
 });

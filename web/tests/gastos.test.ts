@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, grupo, maiorGastador, respostaGasto, respostaMaior, sucessoPorGasto,
+  coberturaDisputas, correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, grupo, maiorGastador, respostaGasto, respostaMaior, sucessoPorGasto,
   type LinhaCorrelacao, type LinhaGastoFaixa, type LinhaMaiorGasto,
 } from "../src/lib/gastos";
 import { semPrestacao } from "../src/lib/financiamento";
@@ -112,5 +112,17 @@ describe("correlacaoDe e forcaCorrelacao", () => {
     expect(forcaCorrelacao(0.46)).toBe("relação moderada");
     expect(forcaCorrelacao(0.75)).toBe("relação muito forte");
     expect(forcaCorrelacao(-0.4)).toBe("relação moderada, inversa");
+  });
+});
+
+describe("coberturaDisputas", () => {
+  const mg = (o: Partial<LinhaMaiorGasto>): LinhaMaiorGasto => ({ medida: "recursos", ano: 2024, cargo: "Prefeito", uf: "PE", disputas: 100, maior_venceu: 60, maior_tinha_cargo: 30, chance_sorteio: 40, var_sorteio: 20, ...o });
+  it("soma as disputas analisadas e as excluídas por motivo, sem os motivos zerados", () => {
+    const m = maiorGastador([mg({ excl_um_candidato: 5, excl_empate: 1 }), mg({ uf: "RJ", disputas: 20, excl_sem_prestacao: 3 })], { ano: 2024, cargo: "Prefeito" });
+    expect(coberturaDisputas(m)).toEqual({
+      analisadas: 120, excluidas: 9,
+      motivos: [{ motivo: "só um candidato", n: 5 }, { motivo: "prestação de contas incompleta", n: 3 }, { motivo: "empate no maior valor", n: 1 }],
+    });
+    expect(coberturaDisputas(maiorGastador([mg({})], {})).motivos).toEqual([]);
   });
 });
