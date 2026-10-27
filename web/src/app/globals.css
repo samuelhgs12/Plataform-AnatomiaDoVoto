@@ -1814,3 +1814,51 @@ a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 
   .grades.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .grade-cem { gap: 2px; }
 }
+
+/* Pergunta 9, visão geral (aba Propaganda de /analises/dinheiro): as abas da área, o gráfico de linhas pelos cargos (SVG),
+   as setas de "como mudou" e a tabela de números. A manchete, os dois números, a nuvem e as linhas por tipo usam as classes
+   .pp-* do perfil; as cores dos tipos vêm de --cor-pp, que as classes .pp-fis/.pp-av/.pp-dig definem */
+.p9g-abas { margin: 4px 0 var(--gap); }
+/* linhas por tipo: a coluna da direita com "X% usaram" numa linha só */
+.p9g .pp-tipo { grid-template-columns: 172px minmax(0, 1fr) 150px; }
+.p9g .pp-tipo-num span { white-space: nowrap; }
+/* "como cada cargo dividiu": o texto à esquerda, o gráfico à direita */
+.p9g-lado { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr); gap: calc(var(--gap) * 4); align-items: start; }
+.p9g-grafico { margin: 0; min-width: 0; }
+.p9g-svg { display: block; width: 100%; height: auto; overflow: visible; font-size: 12px; }
+.p9g-svg .pp-fis, .p9g-svg .pp-av, .p9g-svg .pp-dig { background: none; }
+.p9g-faixa { fill: var(--bg); }
+.p9g-grade line { stroke: var(--line); stroke-width: 1; }
+.p9g-grade text { fill: var(--muted); font-size: 11px; }
+.p9g-serie { fill: none; stroke: var(--cor-pp); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.p9g-serie.tracejada { stroke-dasharray: 6 4; }
+.p9g-ponto { fill: var(--cor-pp); stroke: var(--panel); stroke-width: 1.5; }
+.p9g-nome-tipo { fill: var(--cor-pp); font-weight: 600; }
+.p9g-valor-ponto { fill: var(--cor-pp); font-weight: 700; }
+.p9g-cargo text { fill: var(--muted); font-size: 12px; }
+.p9g-cargo.atual text { fill: var(--fg); font-weight: 700; }
+.p9g-cargo .p9g-campanhas { font-size: 10px; font-weight: 400; }
+@media (hover: hover) and (pointer: fine) { .p9g-cargo:hover text { fill: var(--fg); text-decoration: underline; } }
+.p9g-cargo:focus-visible { outline: 2px solid var(--accent); }
+/* "como mudou": uma seta por tipo, numa trilha de 0 a 100% */
+.p9g-setas { margin: 8px 0 0; }
+.p9g-seta { display: grid; grid-template-columns: 172px minmax(0, 1fr) 110px; grid-template-areas: "nome meio dif"; column-gap: 16px; align-items: end; margin-top: 10px; }
+.p9g-seta .pp-tipo-nome { grid-area: nome; min-height: 0; padding-bottom: 2px; }
+.p9g-seta-meio { grid-area: meio; position: relative; height: 44px; margin: 0 28px; background: none; }
+.p9g-seta-valor { position: absolute; top: 0; font-size: 13px; line-height: 18px; white-space: nowrap; color: var(--muted); }
+.p9g-seta-valor.depois { color: var(--cor-pp); font-weight: 700; }
+.p9g-seta-trilha { position: absolute; left: 0; right: 0; bottom: 8px; height: 2px; background: var(--line); }
+.p9g-seta-corpo { position: absolute; top: -1px; height: 4px; background: var(--cor-pp); }
+.p9g-seta-ponta { position: absolute; top: -5px; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; }
+.p9g-seta-ponta.sobe { border-left: 9px solid var(--cor-pp); }
+.p9g-seta-ponta.desce { border-right: 9px solid var(--cor-pp); }
+.p9g-seta-circulo { position: absolute; top: -5px; width: 12px; height: 12px; margin-left: -6px; box-sizing: border-box; border: 2.5px solid var(--cor-pp);
+  border-radius: 50%; background: var(--panel); }
+.p9g-seta-dif { grid-area: dif; margin: 0; padding-bottom: 2px; font-size: 14px; font-weight: 600; text-align: right; white-space: nowrap; }
+.p9g-numeros { width: 100%; }
+.p9g-numeros tr[aria-current] th, .p9g-numeros tr[aria-current] td { color: var(--fg); font-weight: 600; }
+@media (max-width: 1000px) {
+  .p9g .pp-tipo { grid-template-columns: minmax(0, 1fr) auto; }
+  .p9g-lado { grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
+  .p9g-seta { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nome dif" "meio meio"; row-gap: 4px; margin-top: 16px; }
+}

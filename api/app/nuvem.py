@@ -188,23 +188,35 @@ def nuvem(linhas: list[dict]) -> list[dict]:
     """
     acc: dict[str, dict] = {}
     for linha in linhas:
-        ps = pecas(linha["descricao"], linha["origem"])
-        if not ps:
-            continue
-        base, resto = divmod(int(linha["centavos"] or 0), len(ps))
-        for i, (peca, formato) in enumerate(ps):
-            parte = base + (1 if i < resto else 0)
-            item = acc.setdefault(peca, {"termo": peca, "centavos": 0, "despesas": 0, "pela_categoria_centavos": 0,
-                                         "grupos": {}, "despesas_grupo": {}, "formatos": {}})
-            item["centavos"] += parte
-            item["despesas"] += int(linha["despesas"])
-            item["pela_categoria_centavos"] += parte if formato == SEM_DETALHE else 0
-            item["grupos"][linha["grupo"]] = item["grupos"].get(linha["grupo"], 0) + parte
-            item["despesas_grupo"][linha["grupo"]] = item["despesas_grupo"].get(linha["grupo"], 0) + int(linha["despesas"])
-            item["formatos"][formato] = item["formatos"].get(formato, 0) + parte
+        acumular(acc, linha, pecas(linha["descricao"], linha["origem"]))
+    return finalizar(acc)
+
+
+def acumular(acc: dict[str, dict], linha: dict, ps: list[tuple[str, str]]) -> None:
+    """Soma uma linha (despesas, centavos e grupo de uma descrição), já classificada em `ps` = pecas(...), no acumulador
+    de uma nuvem. Separado de nuvem() para o pré-cálculo dos recortes (app/pecas_geral.py) classificar cada descrição uma
+    vez só e somá-la em mais de um acumulador."""
+    if not ps:
+        return
+    base, resto = divmod(int(linha["centavos"] or 0), len(ps))
+    for i, (peca, formato) in enumerate(ps):
+        parte = base + (1 if i < resto else 0)
+        item = acc.setdefault(peca, {"termo": peca, "centavos": 0, "despesas": 0, "pela_categoria_centavos": 0,
+                                     "grupos": {}, "despesas_grupo": {}, "formatos": {}})
+        item["centavos"] += parte
+        item["despesas"] += int(linha["despesas"])
+        item["pela_categoria_centavos"] += parte if formato == SEM_DETALHE else 0
+        item["grupos"][linha["grupo"]] = item["grupos"].get(linha["grupo"], 0) + parte
+        item["despesas_grupo"][linha["grupo"]] = item["despesas_grupo"].get(linha["grupo"], 0) + int(linha["despesas"])
+        item["formatos"][formato] = item["formatos"].get(formato, 0) + parte
+
+
+def finalizar(acc: dict[str, dict]) -> list[dict]:
+    """O acumulador de uma nuvem -> as palavras, do maior para o menor valor (não altera o acumulador)."""
     saida = []
-    for item in acc.values():
-        grupos, despesas_grupo, formatos = item.pop("grupos"), item.pop("despesas_grupo"), item.pop("formatos")
+    for bruto in acc.values():
+        item = {k: v for k, v in bruto.items() if k not in ("grupos", "despesas_grupo", "formatos")}
+        grupos, despesas_grupo, formatos = bruto["grupos"], bruto["despesas_grupo"], bruto["formatos"]
         item["grupo"] = max(sorted(grupos), key=lambda g: grupos[g])
         # valor (e número de despesas) da peça em cada tipo (grupo da categoria do TSE): somado por tipo, o valor bate
         # com o total oficial do tipo

@@ -46,6 +46,7 @@ def client(banco, banco_fotos, monkeypatch):
     monkeypatch.setenv("DATABASE", banco)
     monkeypatch.setenv("FOTOS_DATABASE", banco_fotos)
     monkeypatch.delenv("MOTHERDUCK_TOKEN", raising=False)
+    monkeypatch.setenv("PECAS_AO_SUBIR", "false")   # o pré-cálculo das peças roda nos testes que o pedem
     db.reiniciar()
     from app.main import app
 
