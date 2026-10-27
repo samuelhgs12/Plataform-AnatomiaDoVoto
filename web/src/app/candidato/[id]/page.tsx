@@ -10,6 +10,8 @@ import { Timeline } from "@/components/Timeline";
 import { DinheiroCampanha } from "@/components/DinheiroCampanha";
 import { PropagandaCampanha } from "@/components/PropagandaCampanha";
 import { grupoPequeno, type LinhaParcelas, type LinhaReferencia, type Propaganda } from "@/lib/propaganda";
+import { ehProporcional, ehUmaVaga, type CandidatoDisputa } from "@/lib/dinheiro-perfil";
+import type { LinhaMediana } from "@/lib/financiamento";
 import { naLinhaDoTempo } from "@/lib/carreira";
 import { fotoDoPerfil } from "@/lib/foto-candidato";
 import { Rolar } from "@/components/Rolar";
@@ -53,8 +55,15 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
   const referencias = q9?.referencia ? comoObjetos<LinhaReferencia>(q9.referencia) : null;
   // tirar a própria campanha da típica só importa nos grupos pequenos: só então busca a tabela "parcelas" da q9
   const escolhida = comContas.find((c) => c.id_candidatura === pedida) ?? comContas[0];
-  const q9Parcelas = escolhida && grupoPequeno(referencias, escolhida) ? await lerAnalise("q9", ["parcelas"]) : null;
+  // pergunta 8: a comparação da campanha escolhida, pela mediana de eleitos e não eleitos (q8, cargos proporcionais) ou
+  // pelos adversários da mesma disputa (cargos de uma vaga)
+  const [q9Parcelas, q8, disputa] = await Promise.all([
+    escolhida && grupoPequeno(referencias, escolhida) ? lerAnalise("q9", ["parcelas"]) : Promise.resolve(null),
+    escolhida && ehProporcional(escolhida.cargo) ? lerAnalise("q8", ["medianas"]) : Promise.resolve(null),
+    escolhida && ehUmaVaga(escolhida.cargo) ? apiGetOpcional<CandidatoDisputa[]>(`/candidaturas/${escolhida.id_candidatura}/disputa`) : Promise.resolve(null),
+  ]);
   const parcelas = q9Parcelas?.parcelas ? comoObjetos<LinhaParcelas>(q9Parcelas.parcelas) : null;
+  const medianas = q8?.medianas ? comoObjetos<LinhaMediana>(q8.medianas) : null;
 
   return (
     <>
@@ -96,7 +105,8 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
         )}
       </section>
 
-      <DinheiroCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#dinheiro`} />
+      <DinheiroCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#dinheiro`}
+        medianas={medianas} disputa={disputa} />
       <PropagandaCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#propaganda`}
         referencias={referencias} parcelas={parcelas} />
     </>
