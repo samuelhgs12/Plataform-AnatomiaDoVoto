@@ -20,8 +20,10 @@ interface Props {
   c: CandidaturaMapa;
   /** votos e válidos do 1º turno somados nos municípios do mapa (para presidente, só os seis estados) */
   noMapa: { votos: number; validos: number };
-  /** "em MG" ou "nos seis estados" */
+  /** de onde vêm os votos da ficha: "de todos os municípios de MG" ou, em prefeito e vereador, "de Recife" */
   onde: string;
+  /** prefeito e vereador: o município da disputa, no lugar do estado */
+  municipio?: string;
   /** a foto mais recente da pessoa (fotoDaPessoa), a mesma em todos os anos; null sem candidatura de 2018 em diante */
   foto: string | null;
 }
@@ -34,12 +36,12 @@ interface Props {
  * em 3 × 4 e emoldurado como uma foto colada na ficha, a mesma em todos os anos; sem ela, ficam as iniciais. O cartão
  * inteiro vira ao clique (VirarFicha). Sem prestação de contas, o verso diz por quê em vez de mostrar casas vazias.
  */
-export function FichaCandidato({ c, noMapa, onde, foto }: Props) {
+export function FichaCandidato({ c, noMapa, onde, municipio, foto }: Props) {
   const nome = nomeProprio(c.nome_urna);
   const r = resumoCandidatura(c);
   const presidente = c.cargo === "Presidente";
-  const lugar = presidente ? "Brasil" : c.uf;
-  const lugarLongo = presidente ? "Brasil" : NOME_UF[c.uf] ?? c.uf;
+  const lugar = presidente ? "Brasil" : municipio ? `${municipio} (${c.uf})` : c.uf;
+  const lugarLongo = presidente ? "Brasil" : municipio ? `${municipio} (${c.uf})` : NOME_UF[c.uf] ?? c.uf;
   const semCampanha = semDadosDeCampanha(c);
   const fonte = <p className="ficha-fonte">Dados{foto ? " e foto" : ""} do TSE{foto ? " (CC BY)" : ""} · projeto acadêmico UFPI · não é fonte oficial</p>;
   const parte = (v: number, t: number) => (t > 0 ? `${pct(v / t, 1)} dos votos válidos` : null);
@@ -124,7 +126,7 @@ export function FichaCandidato({ c, noMapa, onde, foto }: Props) {
           </div>
         )}
       </dl>
-      <p className="ficha-nota">{presidente ? "O mapa mostra só os votos dos seis estados; o resultado é o da eleição nacional." : `Votos de todos os municípios ${onde}.`} Disputas e mandatos contam até {c.ano}.</p>
+      <p className="ficha-nota">{presidente ? "O mapa mostra só os votos dos seis estados; o resultado é o da eleição nacional." : `Votos ${onde}.`} Disputas e mandatos contam até {c.ano}.</p>
       <Link className="ficha-mais" href={`/candidato/${c.id_candidato}?campanha=${c.id_candidatura}`}>
         Ver mais detalhes
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>

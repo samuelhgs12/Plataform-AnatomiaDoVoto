@@ -41,6 +41,8 @@ export interface CandidaturaMapa {
 export interface VotoMunicipio {
   id_candidatura: number;
   id_municipio: number;
+  /** a chave que casa com o mapa estático (mapa.json), cujo id_municipio é de outra carga */
+  cod_ibge: string | null;
   uf: string;
   turno: number;
   votos: number;
@@ -49,14 +51,32 @@ export interface VotoMunicipio {
   posicao: number;
 }
 
-/** Cargos que o mapa por município desenha; prefeito e vereador ainda ficam de fora. */
+/** Cargos que o mapa pinta município a município, pela parte dos votos válidos em cada um. */
 export const CARGOS_ESTADUAIS = ["Deputado federal", "Deputado estadual", "Senador", "Governador"];
+/** Cargos disputados num município só: sem votos por bairro ou seção, o mapa só destaca o município da disputa. */
+export const CARGOS_MUNICIPAIS = ["Prefeito", "Vereador"];
 export const UFS_PROJETO = ["AP", "ES", "MG", "PE", "RJ", "RR"];
 
-/** O que o mapa mostra para o cargo: os municípios da UF, os seis estados (presidente) ou nada (municipais). */
-export function abrangencia(cargo: string): "uf" | "seis" | "fora" {
+/**
+ * O que o mapa mostra para o cargo: os municípios da UF, os seis estados (presidente), o município da disputa em
+ * destaque no estado (prefeito e vereador) ou nada (os demais, como vices e suplentes).
+ */
+export function abrangencia(cargo: string): "uf" | "seis" | "municipio" | "fora" {
   if (cargo === "Presidente") return "seis";
+  if (CARGOS_MUNICIPAIS.includes(cargo)) return "municipio";
   return CARGOS_ESTADUAIS.includes(cargo) ? "uf" : "fora";
+}
+
+/**
+ * Os votos da API com o id_municipio do mapa estático (web/public/data/mapa.json), casados pelo código IBGE: o
+ * id_municipio muda a cada carga do banco, e o JSON e a API podem vir de cargas diferentes. Sem par, ficam de fora.
+ */
+export function noMapaEstatico(votos: VotoMunicipio[], municipios: { id_municipio: number; cod_ibge: string }[]): VotoMunicipio[] {
+  const id = new Map(municipios.map((m) => [m.cod_ibge, m.id_municipio]));
+  return votos.flatMap((v) => {
+    const m = v.cod_ibge ? id.get(v.cod_ibge) : undefined;
+    return m === undefined ? [] : [{ ...v, id_municipio: m }];
+  });
 }
 
 /** A parte dos votos válidos do cargo que foi para o candidato; null sem votos válidos. */
@@ -197,6 +217,13 @@ export function fraseResumo(linhas: Pick<VotoMunicipio, "id_municipio" | "votos"
   }, null);
   const metade = `Metade dos votos veio de ${k.toLocaleString("pt-BR")} ${k === 1 ? "município" : "municípios"} entre os ${n.toLocaleString("pt-BR")} ${onde}`;
   return maior ? `${metade}; a maior proporção foi em ${nomes.get(maior.id) ?? "um município"} (${pct(maior.p, 1)}).` : `${metade}.`;
+}
+
+/** O resumo de uma disputa municipal, que acontece num município só: "Disputou só em Alfa: 30,0% dos votos válidos para prefeito, 1º lugar." */
+export function fraseMunicipal(l: Pick<VotoMunicipio, "votos" | "validos_cargo" | "posicao">, municipio: string, cargo: string): string {
+  const p = proporcaoNoMunicipio(l.votos, l.validos_cargo);
+  if (p == null || !l.votos) return `Disputou só em ${municipio}, sem votos registrados neste turno.`;
+  return `Disputou só em ${municipio}: ${pct(p, 1)} dos votos válidos para ${cargo.toLowerCase()}, ${l.posicao}º lugar.`;
 }
 
 /**

@@ -115,7 +115,7 @@ export function dinheiroTotal(linhas: LinhaFontes[]): { total: number; publico: 
  * município, em terços dentro do estado). `motivo` diz ao leitor por que ela não pinta.
  */
 export function situacaoComparativo({ ano, anosCenso, uf }: { ano: number; anosCenso: number[]; uf?: string }): { disponivel: boolean; pinta: boolean; motivo: string | null } {
-  if (!anosCenso.includes(ano)) return { disponivel: false, pinta: false, motivo: `O Censo 2010 só é comparado com as eleições de ${anosCenso.join(" e ")}.` };
+  if (!anosCenso.includes(ano)) return { disponivel: false, pinta: false, motivo: `O Censo 2010 só é comparado com as eleições de ${new Intl.ListFormat("pt-BR").format(anosCenso.map(String))}.` };
   if (!uf) return { disponivel: true, pinta: false, motivo: "Abra um estado no mapa para pintar os municípios com o cruzamento." };
   return { disponivel: true, pinta: true, motivo: null };
 }

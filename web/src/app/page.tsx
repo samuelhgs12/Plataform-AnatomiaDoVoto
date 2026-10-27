@@ -39,7 +39,7 @@ import { ComparaReferencia } from "@/components/ComparaReferencia";
 import { IndicadoresCenso, type LinhaIndicadorCenso } from "@/components/IndicadoresCenso";
 import { SerieLegenda } from "@/components/SerieLegenda";
 import { ComparaCiclos } from "@/components/ComparaCiclos";
-import { abrangencia, candidaturasDe, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
+import { abrangencia, candidaturasDe, noMapaEstatico, sugestoesDe, turnosDe, type CandidaturaMapa, type VotoMunicipio } from "@/lib/candidato-mapa";
 
 export const dynamic = "force-dynamic";
 
@@ -244,13 +244,13 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const { padrao: campanhaPadrao, lista: campanhas } = candidaturasDe(candidaturasMapa, idCand ?? 0);
   const campanha = campanhas.find((c) => String(c.id_candidatura) === um(sp.campanha)) ?? campanhaPadrao;
   const votosCand = campanha && abrangencia(campanha.cargo) !== "fora"
-    ? (await apiGetOpcional<VotoMunicipio[]>(`/candidaturas/${campanha.id_candidatura}/votos-municipio`)) ?? [] : [];
+    ? noMapaEstatico((await apiGetOpcional<VotoMunicipio[]>(`/candidaturas/${campanha.id_candidatura}/votos-municipio`)) ?? [], municipios) : [];
   const turnosCand = turnosDe(votosCand);
   const turnoCand = turnosCand.includes(Number(um(sp.turno))) ? Number(um(sp.turno)) : 1;
   const alcanceCand = campanha ? abrangencia(campanha.cargo) : "fora";
   // sem candidato, o estado clicado no mapa dá zoom nele e filtra a busca e as sugestões do menu (?uf=)
   const ufBusca = naCandidato && !campanha ? uf : undefined;
-  const ufCand = alcanceCand === "uf" ? campanha!.uf : alcanceCand === "seis" ? uf : ufBusca;
+  const ufCand = alcanceCand === "uf" || alcanceCand === "municipio" ? campanha!.uf : alcanceCand === "seis" ? uf : ufBusca;
   const munCand = ufCand ? votosCand.find((v) => v.uf === ufCand && String(v.id_municipio) === um(sp.mun))?.id_municipio : undefined;
   // sugestões sem candidato escolhido: governadores eleitos na última eleição geral (id_cargo 3); com um estado,
   // os mais votados entre os eleitos dele nessa eleição (governador, senador e deputados)

@@ -475,9 +475,9 @@ describe("paleta (busca rápida)", () => {
 });
 
 describe("situacaoComparativo", () => {
-  const anosCenso = [2008, 2012];
+  const anosCenso = [2008, 2010, 2012];
   it("fora dos anos do Censo, a camada não existe", () => {
-    expect(situacaoComparativo({ ano: 2022, anosCenso, uf: "PE" })).toEqual({ disponivel: false, pinta: false, motivo: "O Censo 2010 só é comparado com as eleições de 2008 e 2012." });
+    expect(situacaoComparativo({ ano: 2022, anosCenso, uf: "PE" })).toEqual({ disponivel: false, pinta: false, motivo: "O Censo 2010 só é comparado com as eleições de 2008, 2010 e 2012." });
   });
   it("sem estado aberto, guarda a escolha mas não pinta; com estado, pinta", () => {
     expect(situacaoComparativo({ ano: 2012, anosCenso })).toMatchObject({ disponivel: true, pinta: false });

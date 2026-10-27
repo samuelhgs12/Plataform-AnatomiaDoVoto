@@ -42,7 +42,7 @@ abstenção municipal é cruzada com o Censo. Não é fonte oficial; é um proje
 
 - Análises usam só titulares e eleições ordinárias; "eleito" vem de `rotulo_resultado`; gastos só da prestação final ou
   regularização, sem transferências.
-- Indicadores do Censo 2010 só são comparados com a abstenção de 2008 e 2012.
+- Indicadores do Censo 2010 só são comparados com a abstenção de 2008, 2010 e 2012.
 - Sem foto de candidato (não há nos dados); avatar por iniciais.
 - O mapa é o centro da página inicial (decisão 9 em `docs/DECISOES.md`), a única decisão de desenho fechada.
 - Em aberto pela equipe: identidade visual, slug público, inclusão de vereador na listagem, biblioteca de gráficos,

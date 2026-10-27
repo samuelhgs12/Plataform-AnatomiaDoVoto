@@ -1106,10 +1106,12 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
 .mapa-abst .c0 { fill: var(--c0); } .mapa-abst .c1 { fill: var(--c1); } .mapa-abst .c2 { fill: var(--c2); }
 .mapa-abst .c3 { fill: var(--c3); } .mapa-abst .c4 { fill: var(--c4); } .mapa-abst .neutro { fill: var(--neutro); }
 .legenda-q .c0 { background: var(--c0); box-shadow: inset 0 0 0 1px var(--noite-linha); } .legenda-q .c1 { background: var(--c1); } .legenda-q .c2 { background: var(--c2); }
-.legenda-q .c3 { background: var(--c3); } .legenda-q .c4 { background: var(--c4); }
+.legenda-q .c3 { background: var(--c3); } .legenda-q .c4 { background: var(--c4); } .legenda-q .neutro { background: var(--neutro); }
 .legenda-cand { gap: 3px; }
 .legenda-cand li { min-width: 62px; }
 .legenda-cand li:first-child { min-width: 92px; }
+.legenda-mun { gap: 24px; }   /* prefeito e vereador: duas categorias, não uma escala; cada amostra solta */
+.legenda-mun li i, .legenda-mun li:first-child i, .legenda-mun li:last-child i { width: 44px; border-radius: 3px; }
 .trilha [aria-current] { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* município de nome longo não empurra o título */
 .palco.cand .mapa-abst .uf-fora { fill: var(--noite2); }   /* o resto do país desce um degrau: o estado com menos votos ainda se separa dele */
 .palco-aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30ch, 80%); margin: 0; padding: 14px 18px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); font-size: 16px; text-align: center; text-wrap: balance; }

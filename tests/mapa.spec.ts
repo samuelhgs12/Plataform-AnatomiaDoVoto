@@ -140,10 +140,10 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
   await expect(submenu.getByRole('combobox', { name: 'Partido' })).toBeVisible();
 });
 
-test('menu do mapa: fora dos anos do Censo, Comparativos explica e leva a 2008 ou 2012', async ({ page }) => {
+test('menu do mapa: fora dos anos do Censo, Comparativos explica e leva a um ano do Censo', async ({ page }) => {
   await page.goto('/?ano=2022', { waitUntil: 'networkidle' });
   await page.locator('.submenu').getByRole('link', { name: 'Comparar' }).click();
-  await expect(page.getByText('O Censo 2010 só é comparado com as eleições de 2008 e 2012.')).toBeVisible();
+  await expect(page.getByText('O Censo 2010 só é comparado com as eleições de 2008, 2010 e 2012.')).toBeVisible();
   await page.locator('.submenu').getByRole('link', { name: 'Ver 2012' }).click();
   await expect(page.getByRole('heading', { name: 'Quem não foi votar em 2012' })).toBeVisible();
 });
