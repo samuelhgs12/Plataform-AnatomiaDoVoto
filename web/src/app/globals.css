@@ -817,6 +817,9 @@ a.linha:hover { background: var(--panel2); }
 .radios a[aria-current] { background: var(--noite3); font-weight: 600; }
 .radios a[aria-current] .radio { border-color: var(--brilho); }
 .radios a[aria-current] .radio::after { transform: scale(1); }
+/* marca: o mesmo controle, quadrado, para o que liga e desliga (juntar partidos que se fundiram) */
+.radio.marca { border-radius: 4px; }
+.radio.marca::after { border-radius: 2px; }
 .camada-aviso { margin: 0 6px; font-size: 13px; line-height: 1.45; color: var(--noite-muted); }
 .camada-aviso p { margin: 0 0 8px; }
 .tirar-partido { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 7px 12px; border-radius: 6px; background: var(--brilho); color: var(--noite); font-size: 14px; font-weight: 600; text-decoration: none; transition: transform var(--t-press) var(--ease-out), filter var(--t-hover) ease; }
