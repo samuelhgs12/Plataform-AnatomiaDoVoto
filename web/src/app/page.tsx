@@ -22,7 +22,7 @@ import {
   anoNaLegenda, casasDosCortes, doCargo, escalaDoMaior, faixasFixas, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo, type Visao,
 } from "@/lib/mapa";
 import {
-  ANOS_CENSO, INDICADORES_CENSO, anosDe, classe, compararComReferencia, composicaoEleitorado, corMunicipio, distribuicao, extremosAbstencao, reguaIndicador, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
+  ANOS_CENSO, ANOS_POR_CENSO, INDICADORES_CENSO, anosDe, censoDoAno, indicadorNoCenso, indicadoresDoCenso, classe, compararComReferencia, composicaoEleitorado, corMunicipio, distribuicao, extremosAbstencao, reguaIndicador, correlacao, enquadrar, formatarIndicador, indicadoresPorMunicipio, lerCorrelacao,
   mediaPonderada, nomeProprio, quantis, rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia,
   type ChaveIndicador, type LinhaIndicador, type LinhaMunicipio, type LinhaParticipacao,
 } from "@/lib/abstencao";
@@ -55,7 +55,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const eventosLeg = comoObjetos<EventoPartido>(q5?.eventos);
   const municipios = comoObjetos<LinhaMunicipio>(dados?.municipios);
   const participacao = comoObjetos<LinhaParticipacao>(dados?.participacao);
-  const indicadores = indicadoresPorMunicipio(comoObjetos<LinhaIndicador>(dados?.indicadores));
+  const linhasInd = comoObjetos<LinhaIndicador>(dados?.indicadores);
 
   // filtros da URL, validados contra os dados: ano, estado, município, indicador e modo de cor
   const anos = anosDe(participacao);
@@ -77,16 +77,23 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const partido = legenda.some((l) => l.partido === um(sp.p)) ? um(sp.p) : undefined;
 
   const mun = uf && !naLegenda ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
-  const comCenso = ANOS_CENSO.includes(ano);
-  const ind: ChaveIndicador = INDICADORES_CENSO.find((i) => i.chave === um(sp.ind))?.chave ?? "idhm";
-  const infoInd = INDICADORES_CENSO.find((i) => i.chave === ind)!;
+  // cada eleição em volta de um Censo usa os indicadores dele (2008 a 2012: Censo 2010; 2020 a 2024: Censo 2022). O
+  // indicador pedido fica na URL mesmo quando o Censo do ano não o tem (o IDHM em 2022): volta ao trocar de ano
+  const censo = censoDoAno(ano);
+  const comCenso = censo !== undefined;
+  const censoUsado = censo ?? 2010;
+  const indicadores = indicadoresPorMunicipio(linhasInd, censoUsado);
+  const indPedido: ChaveIndicador = INDICADORES_CENSO.find((i) => i.chave === um(sp.ind))?.chave ?? "idhm";
+  const ind = indicadorNoCenso(indPedido, censoUsado);
+  const listaInd = indicadoresDoCenso(censoUsado);
+  const infoInd = listaInd.find((i) => i.chave === ind)!;
   // a camada Comparativos ligada (cor=cruzar) fica na URL mesmo sem estado aberto; só pinta com um estado em zoom
   const pediuCruzar = um(sp.cor) === "cruzar";
   const cruzar = comCenso && !!uf && !naLegenda && pediuCruzar;
 
   type Estado = { ver?: Visao; ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null; p?: string | null; cargo?: CargoCiclo };
   const params = (nova: Estado) => {
-    const n = { ver: ver === "candidato" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind, cor: pediuCruzar && !naLegenda ? "cruzar" : null, p: partido, cargo, ...nova };
+    const n = { ver: ver === "candidato" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind: indPedido, cor: pediuCruzar && !naLegenda ? "cruzar" : null, p: partido, cargo, ...nova };
     if (nova.uf !== undefined && nova.mun === undefined) n.mun = null;   // trocar de estado solta o município
     const leg = n.ver === "legenda";
     const p = new URLSearchParams();
@@ -177,7 +184,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   // réguas do Censo: a unidade entre os municípios do recorte e a média de cima (do estado, para o município; dos seis
   // estados, para o estado), as duas ponderadas pela população
   const refCenso = mun ? { ids: idsUf, rotulo: `Média de ${NOME_UF[uf!]}` } : uf ? { ids: idsTodos, rotulo: "Média dos seis estados" } : null;
-  const linhasCenso: LinhaIndicadorCenso[] = INDICADORES_CENSO.map((i) => {
+  const linhasCenso: LinhaIndicadorCenso[] = listaInd.map((i) => {
     const v = valorInd(i.chave);
     const todos = universo.flatMap((id) => indicadores.get(id)?.[i.chave] ?? []);
     const media = refCenso ? mediaPonderada(refCenso.ids, indicadores, i.chave) : null;
@@ -263,7 +270,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
 
   // submenu do mapa: abas Candidato e Camadas; a abstenção é o mapa base, e as camadas vêm por cima dela
   const anoBase = naLegenda && anos.includes(anoLeg!) ? anoLeg! : ano;   // o ano da abstenção ao sair da legenda
-  const comparativo = situacaoComparativo({ ano: anoBase, anosCenso: ANOS_CENSO, uf });
+  const comparativo = situacaoComparativo({ ano: anoBase, anosPorCenso: ANOS_POR_CENSO, uf });
+  const censoBase = censoDoAno(anoBase) ?? 2010;
+  const indBase = indicadorNoCenso(indPedido, censoBase);
   const comparativoLigado = !naLegenda && pediuCruzar;
   const camadas = (
     <CamadasMapa
@@ -280,8 +289,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       }}
       comparativos={{
         disponivel: comparativo.disponivel, motivo: comparativo.motivo,
-        itens: INDICADORES_CENSO.map((i) => {
-          const on = comparativoLigado && i.chave === ind;
+        censo: censoDoAno(anoBase),
+        itens: indicadoresDoCenso(censoBase).map((i) => {
+          const on = comparativoLigado && i.chave === indBase;
           return { chave: i.chave, rotulo: i.rotulo, on, href: href({ ver: "abstencao", ano: anoBase, ind: i.chave, cor: "cruzar" }) };
         }),
         anos: ANOS_CENSO.map((a) => ({ ano: a, href: href({ ver: "abstencao", ano: a }) })),
@@ -350,7 +360,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         <Dispersao
           pontos={pontos} tendencia={tendencia(pontos)} rotuloX={infoInd.rotulo}
           formatoX={(v) => formatarIndicador(ind, v)}
-          descricao={`Cada ponto é um município ${uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}: ${infoInd.rotulo} em 2010 no eixo horizontal, abstenção em ${ano} no vertical.${r != null ? ` Correlação ${r.toFixed(2)}.` : ""}`}
+          descricao={`Cada ponto é um município ${uf ? `de ${NOME_UF[uf]}` : "dos seis estados"}: ${infoInd.rotulo} no Censo ${censoUsado} no eixo horizontal, abstenção em ${ano} no vertical.${r != null ? ` Correlação ${r.toFixed(2)}.` : ""}`}
         />
       )}
     </div>
@@ -417,7 +427,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                 ) : (
                   <>
                     <h1 id="h-mapa">Quem não foi votar em {ano}</h1>
-                    <p className="palco-sobre">1º turno{cruzar && ` · cruzada com ${infoInd.rotulo.toLowerCase()} (Censo 2010)`}</p>
+                    <p className="palco-sobre">1º turno{cruzar && ` · cruzada com ${infoInd.rotulo.toLowerCase()} (Censo ${censoUsado})`}</p>
                   </>
                 )}
               </div>
@@ -594,7 +604,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                   </li>
                 ))}
               </ol>
-              <p className="muted pequeno">Anos gerais: governador; municipais: prefeito. As barras marcadas são as eleições comparadas com o Censo 2010.</p>
+              <p className="muted pequeno">Anos gerais: governador; municipais: prefeito. As barras marcadas são as eleições comparadas com um Censo: 2008 a 2012 com o de 2010, 2020 a 2024 com o de 2022.</p>
             </div>
 
             {/* embaixo da série, ao lado do cabeçalho (mais alto): a ficha do município, ou, no estado, a dispersão
@@ -604,8 +614,9 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             {comCenso ? (
               <>
                 <div className="bloco noite s4">
-                  <h3>Censo 2010</h3>
+                  <h3>Censo {censoUsado}</h3>
                   <p className="muted pequeno">{mun ? `O município entre os ${universo.length} de ${NOME_UF[uf!]}; a média do estado é ponderada pela população` : uf ? `O estado (média ponderada pela população) entre os ${universo.length} municípios dele` : "Os seis estados juntos (média ponderada pela população) entre os municípios deles"}. Para pintar o mapa com um deles, escolha-o em Camadas › Comparar, no menu do mapa.</p>
+                  {censo === 2022 && <p className="muted pequeno">IBGE: os equivalentes aos do Atlas de 2010, com diferenças (renda em reais de 2022, pobres até ¼ de salário mínimo, analfabetismo desde os 15 anos, desocupação desde os 14). IDHM, Gini e outros não saem por município.</p>}
                   <IndicadoresCenso
                     destaque={linhasCenso.find((l) => l.chave === ind)!} outros={linhasCenso.filter((l) => l.chave !== ind)}
                     legenda={{ unidade: nomeUnidade, media: refCenso?.rotulo }}
@@ -615,7 +626,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             ) : (
               <div className="bloco noite censo-aviso s12">
                 <h3>E os indicadores sociais?</h3>
-                <p>Os indicadores do Censo 2010 (renda, escolaridade, IDHM) só são comparados com a eleição de 2010 e com as municipais em volta dela.</p>
+                <p>Os indicadores do Censo (renda, escolaridade, pobreza) só são comparados com a eleição do ano de cada Censo e com as municipais em volta dela: 2008, 2010 e 2012 com o Censo 2010; 2020, 2022 e 2024 com o Censo 2022.</p>
                 <div className="chips">{ANOS_CENSO.map((a) => <Link key={a} scroll={false} className="chip" href={href({ ano: a })}>Ver {a}</Link>)}</div>
               </div>
             )}

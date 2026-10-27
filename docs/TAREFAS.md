@@ -5,7 +5,7 @@
 - API com busca, listagem, perfil, gastos por categoria (com mediana do cargo), palavras e receitas, 16 testes e teste de privacidade.
 - Front com início, listagem com filtros, perfil (linha do tempo, dinheiro da campanha e propaganda, com nuvem de palavras e comparação com a campanha típica), análises agregadas e página "Sobre".
 - Análises agregadas (perguntas 1, 2, 5, 8, 9 e 10) servidas pela API em `/api/analises/<nome>`; a da pergunta 9 (q9) é lida pelo perfil; o mapa da página inicial é exportado para JSON.
-- Página inicial com o mapa da abstenção (estados e municípios, 2008 a 2024) e os indicadores do Censo 2010.
+- Página inicial com o mapa da abstenção (estados e municípios, 2008 a 2024) e os indicadores dos Censos 2010 (Atlas) e 2022 (IBGE).
 - CI (testes da API; lint, tipos, testes e build do front), Docker e `.env.example`.
 
 ## Fases (cerca de 6 semanas)

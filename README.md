@@ -1,6 +1,6 @@
 # Anatomia do Voto (BDR / UFPI)
 
-Plataforma web sobre os dados eleitorais do TSE (1998–2024) de AP, ES, MG, PE, RJ e RR: **carreira** de cada político (pergunta 10), **gastos de campanha** por categoria (pergunta 9), votos de legenda (pergunta 5), recursos públicos × sucesso eleitoral (pergunta 8) e mais. A página inicial é um mapa da abstenção por estado e município, com indicadores do Censo 2010.
+Plataforma web sobre os dados eleitorais do TSE (1998–2024) de AP, ES, MG, PE, RJ e RR: **carreira** de cada político (pergunta 10), **gastos de campanha** por categoria (pergunta 9), votos de legenda (pergunta 5), recursos públicos × sucesso eleitoral (pergunta 8) e mais. A página inicial é um mapa da abstenção por estado e município, com indicadores dos Censos 2010 (Atlas) e 2022 (IBGE).
 
 Os dados vêm do banco `bdr_final` (DuckDB / MotherDuck), carregado e validado no **repositório de carga**. Este repositório só lê.
 

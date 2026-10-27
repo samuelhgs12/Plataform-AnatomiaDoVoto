@@ -19,7 +19,7 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
   se a API não responder) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
 - Se a tabela faltar, mostre o `card aviso` dizendo que a API não respondeu (veja `analises/legenda`).
 - Exceção provisória: o mapa da página inicial ainda é JSON estático (`pipeline/export_static.py` → `web/public/data/mapa.json`,
-  lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`,
+  lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`, as duas últimas com a coluna `censo` (2010 ou 2022: `censoDoAno`),
   tipos em `src/lib/abstencao.ts`), porque parte dos dados ainda vem do TSE, fora do banco (decisão 10).
 - O que é **por candidatura** não é análise: fica no perfil (`candidato/[id]`), com um endpoint por bloco em
   `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. P8:

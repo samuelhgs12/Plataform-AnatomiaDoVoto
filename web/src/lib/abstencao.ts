@@ -1,29 +1,62 @@
-// Abstenção por município e indicadores do Censo 2010, para o mapa da página inicial (web/public/data/mapa.json,
-// gerado por pipeline/sql/mapa.sql). Puro: recebe linhas e devolve números.
+// Abstenção por município e indicadores dos Censos 2010 (Atlas do Desenvolvimento Humano) e 2022 (IBGE), para o mapa
+// da página inicial (web/public/data/mapa.json, gerado por pipeline/sql/mapa.sql). Puro: recebe linhas e devolve números.
 
 export interface LinhaMunicipio { id_municipio: number; cod_ibge: string; nome: string; uf: string }
 export interface LinhaParticipacao { id_municipio: number; ano: number; aptos: number; comparecimento: number; abstencoes: number; brancos: number; nulos: number }
-export interface LinhaIndicador { id_municipio: number; indicador: string; valor: number }
+export interface LinhaIndicador { id_municipio: number; censo: number; indicador: string; valor: number }
 
 /**
- * Eleições comparadas com os indicadores do Censo 2010: a do próprio ano do Censo (geral, governador) e as municipais
- * em volta dele (prefeito). Nos outros anos o mapa mostra só a abstenção.
+ * Eleições comparadas com cada Censo: a do próprio ano do Censo (geral, governador) e as municipais em volta dele
+ * (prefeito). Nos outros anos o mapa mostra só a abstenção.
  */
-export const ANOS_CENSO = [2008, 2010, 2012];
+export const ANOS_POR_CENSO = { 2010: [2008, 2010, 2012], 2022: [2020, 2022, 2024] } as const;
+export type Censo = keyof typeof ANOS_POR_CENSO;
+export const ANOS_CENSO: number[] = Object.values(ANOS_POR_CENSO).flat();
 
-export const INDICADORES_CENSO = [
-  { chave: "idhm", rotulo: "IDHM", formato: "indice" },
-  { chave: "rdpc", rotulo: "Renda por pessoa", formato: "reais" },
-  { chave: "pmpob", rotulo: "Pobres", formato: "pct" },
-  { chave: "t_analf18m", rotulo: "Analfabetismo (18 anos ou mais)", formato: "pct" },
-  { chave: "t_med18m", rotulo: "Ensino médio completo (18 ou mais)", formato: "pct" },
-  { chave: "gini", rotulo: "Desigualdade de renda (Gini)", formato: "indice" },
-  { chave: "espvida", rotulo: "Esperança de vida", formato: "anos" },
-  { chave: "t_des18m", rotulo: "Desocupação (18 ou mais)", formato: "pct" },
-  { chave: "p_formal", rotulo: "Trabalho formal", formato: "pct" },
-  { chave: "t_agua", rotulo: "Água encanada", formato: "pct" },
-] as const;
-export type ChaveIndicador = (typeof INDICADORES_CENSO)[number]["chave"];
+/** O Censo comparado com a eleição do ano; undefined nos anos sem Censo. */
+export function censoDoAno(ano: number): Censo | undefined {
+  return (Object.keys(ANOS_POR_CENSO).map(Number) as Censo[]).find((c) => (ANOS_POR_CENSO[c] as readonly number[]).includes(ano));
+}
+
+interface IndicadorCenso {
+  chave: string;
+  rotulo: string;
+  /** quando a definição do IBGE difere da do Atlas no que o rótulo diz (a idade mínima) */
+  rotulo2022?: string;
+  formato: "indice" | "reais" | "pct" | "anos";
+  censos: readonly Censo[];
+}
+
+/**
+ * Indicadores com a chave do Atlas. No Censo 2022 são os equivalentes do IBGE (pipeline/sql/mapa.sql): a mesma ideia,
+ * nem sempre a mesma definição (idade mínima, linha de pobreza). IDHM, Gini, esperança de vida, trabalho formal e água
+ * encanada não existem por município no Censo 2022.
+ */
+const LISTA_INDICADORES = [
+  { chave: "idhm", rotulo: "IDHM", formato: "indice", censos: [2010] },
+  { chave: "rdpc", rotulo: "Renda por pessoa", formato: "reais", censos: [2010, 2022] },
+  { chave: "pmpob", rotulo: "Pobres", formato: "pct", censos: [2010, 2022] },
+  { chave: "t_analf18m", rotulo: "Analfabetismo (18 anos ou mais)", rotulo2022: "Analfabetismo (15 anos ou mais)", formato: "pct", censos: [2010, 2022] },
+  { chave: "t_med18m", rotulo: "Ensino médio completo (18 ou mais)", formato: "pct", censos: [2010, 2022] },
+  { chave: "gini", rotulo: "Desigualdade de renda (Gini)", formato: "indice", censos: [2010] },
+  { chave: "espvida", rotulo: "Esperança de vida", formato: "anos", censos: [2010] },
+  { chave: "t_des18m", rotulo: "Desocupação (18 ou mais)", rotulo2022: "Desocupação (14 ou mais)", formato: "pct", censos: [2010, 2022] },
+  { chave: "p_formal", rotulo: "Trabalho formal", formato: "pct", censos: [2010] },
+  { chave: "t_agua", rotulo: "Água encanada", formato: "pct", censos: [2010] },
+] as const satisfies readonly IndicadorCenso[];
+export type ChaveIndicador = (typeof LISTA_INDICADORES)[number]["chave"];
+export const INDICADORES_CENSO: readonly (IndicadorCenso & { chave: ChaveIndicador })[] = LISTA_INDICADORES;
+
+/** Os indicadores que existem no Censo, com o rótulo dele. */
+export function indicadoresDoCenso(censo: Censo): { chave: ChaveIndicador; rotulo: string }[] {
+  return INDICADORES_CENSO.filter((i) => i.censos.includes(censo)).map((i) => ({ chave: i.chave, rotulo: (censo === 2022 && i.rotulo2022) || i.rotulo }));
+}
+
+/** O indicador pedido, se o Censo o tem; senão o primeiro dele (IDHM no Censo 2010, renda no 2022). */
+export function indicadorNoCenso(pedido: ChaveIndicador, censo: Censo): ChaveIndicador {
+  const lista = indicadoresDoCenso(censo);
+  return lista.some((i) => i.chave === pedido) ? pedido : lista[0].chave;
+}
 
 /** Indicador do Atlas no formato de leitura: índices com 3 casas, porcentagens (já em 0–100) com 1, renda em reais. */
 export function formatarIndicador(chave: ChaveIndicador, v: number): string {
@@ -78,14 +111,14 @@ export function serieAbstencao(linhas: LinhaParticipacao[], ids: Set<number> | n
   return anosDe(linhas).map((ano) => ({ ano, taxa: somarParticipacao(linhas.filter((l) => l.ano === ano && (!ids || ids.has(l.id_municipio)))).taxa }));
 }
 
-/** Valores dos indicadores por município: id → { idhm: 0.7, ... }. */
-export function indicadoresPorMunicipio(linhas: LinhaIndicador[]): Map<number, Record<string, number>> {
+/** Valores dos indicadores de um Censo por município: id → { idhm: 0.7, ... }. */
+export function indicadoresPorMunicipio(linhas: LinhaIndicador[], censo: Censo): Map<number, Record<string, number>> {
   const m = new Map<number, Record<string, number>>();
-  for (const l of linhas) m.set(l.id_municipio, { ...m.get(l.id_municipio), [l.indicador]: l.valor });
+  for (const l of linhas) if (l.censo === censo) m.set(l.id_municipio, { ...m.get(l.id_municipio), [l.indicador]: l.valor });
   return m;
 }
 
-/** Média de um indicador nos municípios, ponderada pela população de 2010 (pesotot): um retrato do estado, não o índice oficial dele. */
+/** Média de um indicador nos municípios, ponderada pela população do mesmo Censo (pesotot): um retrato do estado, não o índice oficial dele. */
 export function mediaPonderada(ids: number[], ind: Map<number, Record<string, number>>, chave: string): number | null {
   let soma = 0, peso = 0;
   for (const id of ids) {

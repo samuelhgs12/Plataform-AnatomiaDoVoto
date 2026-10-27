@@ -13,6 +13,8 @@ export interface CamadaLegenda {
 }
 
 export interface CamadaComparativos {
+  /** o Censo do ano mostrado; undefined fora dos anos de Censo */
+  censo?: number;
   itens: { chave: string; rotulo: string; href: string; on: boolean }[];
   disponivel: boolean;
   /** por que a camada não pinta o mapa agora (ano sem Censo, nenhum estado aberto) */
@@ -66,10 +68,10 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: Modo
 
       {modo === "comparar" && (
         <div className="camadas-opcoes">
-          <p className="camadas-apoio">A abstenção cruzada com um indicador do Censo 2010, em 3 × 3 cores. Escolha o indicador:</p>
+          <p className="camadas-apoio">A abstenção cruzada com um indicador do Censo{comparativos.censo ? ` ${comparativos.censo}` : ""}, em 3 × 3 cores. Escolha o indicador:</p>
           {comparativos.disponivel ? (
             <>
-              <nav className="radios" aria-label="Indicador do Censo 2010">
+              <nav className="radios" aria-label={`Indicador do Censo ${comparativos.censo}`}>
                 {comparativos.itens.map((i) => (
                   <a key={i.chave} href={i.href} data-mapa="" aria-current={i.on ? "true" : undefined}>
                     <span className="radio" aria-hidden="true" />{i.rotulo}

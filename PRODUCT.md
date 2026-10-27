@@ -18,7 +18,7 @@ As duas audiências usam as mesmas páginas: o rigor que convence a banca não p
 ## Product Purpose
 
 Tornar legíveis os dados eleitorais abertos do TSE de 1998 a 2024 para AP, ES, MG, PE, RJ e RR. A pessoa entra pelo
-**mapa da abstenção** (estados e, com zoom, municípios, com indicadores do Censo 2010) e dele chega às pessoas (perfil de
+**mapa da abstenção** (estados e, com zoom, municípios, com indicadores dos Censos 2010 e 2022) e dele chega às pessoas (perfil de
 cada candidato) e às análises agregadas, que respondem às perguntas de pesquisa do projeto: voto de legenda (P5),
 recursos públicos × sucesso eleitoral (P8), gastos de propaganda (P9) e carreira, retenção e trocas de partido (P10).
 
@@ -42,7 +42,8 @@ abstenção municipal é cruzada com o Censo. Não é fonte oficial; é um proje
 
 - Análises usam só titulares e eleições ordinárias; "eleito" vem de `rotulo_resultado`; gastos só da prestação final ou
   regularização, sem transferências.
-- Indicadores do Censo 2010 só são comparados com a abstenção de 2008, 2010 e 2012.
+- Indicadores de cada Censo só são comparados com a eleição do ano dele e as municipais em volta: Censo 2010 (Atlas)
+  com 2008, 2010 e 2012; Censo 2022 (IBGE, só os equivalentes aos do Atlas) com 2020, 2022 e 2024.
 - Sem foto de candidato (não há nos dados); avatar por iniciais.
 - O mapa é o centro da página inicial (decisão 9 em `docs/DECISOES.md`), a única decisão de desenho fechada.
 - Em aberto pela equipe: identidade visual, slug público, inclusão de vereador na listagem, biblioteca de gráficos,
