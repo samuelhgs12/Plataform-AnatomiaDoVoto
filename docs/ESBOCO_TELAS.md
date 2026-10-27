@@ -14,7 +14,7 @@ Estado: ✅ implementado no esqueleto · 🔲 a fazer.
 | `/analises/legenda` | Voto de legenda (P5): série histórica por partido e UF, comparação entre ciclos, mudanças nos partidos e tabela | ✅ · 🔲 mapa por município |
 | `/analises/retencao` | Retenção por turma de estreia (P10) | 🔲 (dados já em `/api/analises/q10`: `permanencia`) |
 | `/analises/trocas` | Trocas de partido por ano e matriz origem × destino (P10) | 🔲 (`/api/analises/q10`: `trocas`) |
-| `/sobre` | Fonte, escopo, como lemos os dados, privacidade | ✅ |
+| `/sobre` | Cada pergunta respondida e a metodologia dela, em camadas (frase simples, "Como calculamos", "O que isso não mostra", detalhe técnico recolhido com tabelas e SQL); caminho dos dados, matriz anos × dado, regras gerais, o que ficou fora, qualidade, privacidade e fotos. Texto em `src/lib/metodologia.ts` | ✅ |
 
 ## Perfil do candidato
 

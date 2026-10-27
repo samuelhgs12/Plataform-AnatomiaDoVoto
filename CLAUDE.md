@@ -18,6 +18,8 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 - Na página (componente de servidor, `async`): `await lerAnalise("q5", ["legenda"])` (`src/lib/api.ts`, devolve `null`
   se a API não responder) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
 - Se a tabela faltar, mostre o `card aviso` dizendo que a API não respondeu (veja `analises/legenda`).
+- O texto de metodologia ("Como calculamos", fonte, limites) mora só em `src/lib/metodologia.ts`: a página da análise e a
+  `/sobre` leem de lá (`METODOLOGIA.<id>.calculo`). Mudou a regra no `.sql`? Mude o texto ali, não na página.
 - Exceção provisória: o mapa da página inicial ainda é JSON estático (`pipeline/export_static.py` → `web/public/data/mapa.json`,
   lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`,
   tipos em `src/lib/abstencao.ts`), porque parte dos dados ainda vem do TSE, fora do banco (decisão 10).

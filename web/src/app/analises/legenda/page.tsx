@@ -13,6 +13,7 @@ import { ComparaCiclos } from "@/components/ComparaCiclos";
 import { SerieLegenda, corSerie } from "@/components/SerieLegenda";
 import { Cabecalho } from "@/components/Cabecalho";
 import { FOTOS } from "@/lib/fotos";
+import { METODOLOGIA } from "@/lib/metodologia";
 
 export const metadata: Metadata = { title: "Voto de legenda" };
 export const dynamic = "force-dynamic";
@@ -148,12 +149,7 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
         <p className="muted" style={{ fontSize: 14 }}>Em cada célula: proporção e votos de legenda{par.juntar ? ", com os partidos que se fundiram somados ao atual" : ""}.</p>
       </details>
 
-      <p className="muted nota-fonte">
-        Fonte: TSE, dados abertos; banco do projeto BDR. Cargos proporcionais, 1º turno, eleições ordinárias, em AP, ES, MG, PE, RJ e RR.
-        Siglas renomeadas aparecem com o nome atual (PRB → REPUBLICANOS, PR → PL, PPS → CIDADANIA, PTC → AGIR, PMN → MOBILIZA).
-        Com “Juntar partidos que se fundiram”, os votos dos antigos passam para o atual: DEM e PSL → UNIÃO; PTB, PATRIOTA e PRP → PRD;
-        PSC e PHS → PODEMOS; PROS → SOLIDARIEDADE; PPL → PCdoB. Datas das mudanças: ano da aprovação pelo TSE.
-      </p>
+      <p className="muted nota-fonte">{[METODOLOGIA.p5.fonte, ...METODOLOGIA.p5.calculo].join(" ")}</p>
     </>
   );
 }

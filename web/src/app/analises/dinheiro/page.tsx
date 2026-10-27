@@ -22,6 +22,7 @@ import { FiltrosDinheiro } from "@/components/FiltrosDinheiro";
 import { LinhasCandidatos, type LinhaCandidato } from "@/components/LinhasCandidatos";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "@/components/MapaAbstencao";
 import { MapaVivo } from "@/components/MapaVivo";
+import { METODOLOGIA } from "@/lib/metodologia";
 
 export const metadata: Metadata = { title: "Dinheiro nas eleições" };
 export const dynamic = "force-dynamic";
@@ -397,12 +398,10 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
       <details className="card analise-metodo">
         <summary>Como calculamos</summary>
         <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-          <li>Gasto por vaga: soma dos gastos declarados por todas as campanhas ao cargo, inclusive as derrotadas, ÷ número de vagas. Não é salário nem o custo do mandato. Cidades de porte semelhante: a mediana das cidades com eleitorado parecido; estado: soma de todos os gastos ÷ soma de todas as vagas.</li>
-          <li>Todo o dinheiro de campanha (P2): o maior valor entre receitas e despesas declaradas, para considerar também campanhas que receberam material. Só o dinheiro público (P8): o que veio do Fundo Eleitoral e do Fundo Partidário, inclusive por meio de outro candidato.</li>
-          <li>Prefeito, governador e senador: se quem teve o maior gasto declarado venceu. Ficam de fora disputas com um só candidato, prestação de contas incompleta, sem gasto ou com empate no maior gasto.</li>
-          <li>Teste estatístico: comparação de duas proporções com 95% de confiança; o projeto só destaca diferenças de pelo menos 20% (regra do projeto). Sem diferença estatística não quer dizer sem relação; com diferença, não quer dizer causa.</li>
-          <li>Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não entregou a prestação final aparece como “Não informado”. Valores sem correção pela inflação: compare eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).</li>
-          <li>Análises completas: <Link href="/analises/custo-cadeira">pergunta 1</Link>, <Link href="/analises/gastos">pergunta 2</Link> e <Link href="/analises/financiamento">pergunta 8</Link>.</li>
+          {METODOLOGIA.dinheiro.calculo.map((t) => <li key={t}>{t}</li>)}
+          <li>Análises completas: {METODOLOGIA.dinheiro.ondeVer.slice(1).map((o, i, l) => (
+            <span key={o.href}>{i ? (i === l.length - 1 ? " e " : ", ") : ""}<Link href={o.href}>{o.rotulo.toLowerCase()}</Link></span>
+          ))}.</li>
         </ul>
       </details>
     </>
