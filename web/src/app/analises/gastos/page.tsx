@@ -2,17 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
-import { NOME_UF, ordenarCargos, TIPO_ELEICAO, type Filtros } from "@/lib/financiamento";
+import { NOME_UF, ordenarCargos, semPrestacao, TIPO_ELEICAO, type Filtros } from "@/lib/financiamento";
 import {
   correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, maiorGastador, MEDIDAS, respostaGasto, respostaMaior, sucessoPorGasto,
   type LinhaCorrelacao, type LinhaGastoFaixa, type LinhaMaiorGasto, type Medida,
 } from "@/lib/gastos";
 import { inteiro, pct } from "@/lib/format";
 import { BarrasH } from "@/components/BarrasH";
+import { AvisoApi } from "@/components/AvisoApi";
 import { Cabecalho } from "@/components/Cabecalho";
 import { Colunas } from "@/components/Colunas";
 import { Rolar } from "@/components/Rolar";
 import { FOTOS } from "@/lib/fotos";
+import { explicacao } from "@/lib/estatistica";
 
 export const metadata: Metadata = { title: "Recursos de campanha e sucesso eleitoral" };
 export const dynamic = "force-dynamic";
@@ -31,7 +33,6 @@ const TEXTO: Record<Medida, { muito: string; pouco: string; nada: string; muitos
   gasto: { muito: "gastou muito", pouco: "gastou pouco", nada: "não declarou gasto", muitosPl: "gastaram muito", poucosPl: "gastaram pouco", nadaPl: "não declararam gasto", comMais: "que mais gastou", nome: "gasto" },
   receita: { muito: "recebeu muito", pouco: "recebeu pouco", nada: "não declarou receita", muitosPl: "receberam muito", poucosPl: "receberam pouco", nadaPl: "não declararam receita", comMais: "que mais recebeu", nome: "receita" },
 };
-const ACASO = "Com tão poucos candidatos, essa diferença pode ser acaso.";
 
 export default async function Gastos({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
@@ -40,10 +41,7 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
     return (
       <>
         <Cabecalho titulo="Recursos de campanha e sucesso eleitoral" foto={FOTOS.confirma} />
-        <div className="card aviso">
-          <h2>Dados indisponíveis</h2>
-          <p>A API não respondeu. Confira se ela está rodando (na pasta <code>api/</code>, <code>uvicorn app.main:app</code>).</p>
-        </div>
+        <AvisoApi voltar="/analises/gastos" />
       </>
     );
   }
@@ -80,6 +78,7 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
   const cargosColunas = cargo ? undefined : proporcionais;
   const grupos = sucessoPorGasto(faixas, f, { cargos: cargosColunas });
   const r = respostaGasto(grupos);
+  const fora = semPrestacao(faixas, f, cargosColunas);
   const maior = maiorGastador(maiores, f);
   const maioresDoAno = maiorGastador(maiores.filter((l) => majoritariosDoAno.includes(l.cargo)), { ano, uf });
   const tetoColunas = Math.min(1, Math.max(0.2, Math.ceil(Math.max(...grupos.map((g) => g.taxa)) * 5) / 5));
@@ -132,14 +131,14 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
           {majoritario ? (
             maior.disputas === 0 ? <p className="muted">Sem disputas com recursos declarados para essa combinação.</p> : (
               <>
-                <p className="resposta-curta">{respostaMaior(maior)}</p>
+                <p className={`resposta-curta${explicacao(respostaMaior(maior)) ? " longa" : ""}`}>{respostaMaior(maior)}</p>
                 <p className="manchete pequena">
                   Nas {inteiro(maior.disputas)} {maior.disputas === 1 ? "disputa" : "disputas"} para {cargo!.toLowerCase()}{onde} em {ano}, o candidato {t.comMais}
                   {" "}venceu em <b>{pct(maior.pct, 0)}</b> ({inteiro(maior.venceu)} {maior.venceu === 1 ? "vez" : "vezes"}).
                   {" "}Se o dinheiro não importasse, venceria em cerca de {pct(maior.pctSorteio, 0)}.
                 </p>
-                {respostaMaior(maior) === "Não dá para afirmar." && <p className="escala">Com tão poucas disputas, essa diferença pode ser acaso.</p>}
-                <p className="escala">Barra cheia = 100% das disputas. O sorteio considera quantos candidatos e quantas vagas havia em cada disputa.</p>
+                {explicacao(respostaMaior(maior)) && <p className="escala">{explicacao(respostaMaior(maior))}</p>}
+                <p className="escala">Barra cheia = 100% das disputas. O sorteio considera quantos candidatos e quantas vagas havia em cada disputa. Só entram disputas em que todos os candidatos entregaram a prestação de contas final.</p>
                 <BarrasH compacto max={1} titulo={`O candidato ${t.comMais} venceu, comparado com um sorteio`}
                   linhas={[
                     { chave: "real", rotulo: `O ${t.comMais} venceu`, valor: maior.pct, classe: "pub", trilhoCheio: true, texto: pct(maior.pct, 0), subtexto: `${inteiro(maior.venceu)} de ${inteiro(maior.disputas)} disputas` },
@@ -150,7 +149,7 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
             )
           ) : r.curta === null ? <p className="muted">Sem dados para essa combinação.</p> : (
             <>
-              <p className="resposta-curta">{r.curta}</p>
+              <p className={`resposta-curta${explicacao(r.curta) ? " longa" : ""}`}>{r.curta}</p>
               <p className="manchete pequena">
                 {r.vezes !== null && r.vezes < 1 ? (
                   <>Quem {t.muito} se elegeu <b>menos</b> do que quem {r.base.chave === "pouco" ? t.pouco : t.nada}:
@@ -162,9 +161,10 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
                   <>De cada 100 candidatos que {t.muitosPl}, <b>{emCada100(r.muito.taxa)} se elegeram</b>. Entre os que {r.base.chave === "pouco" ? t.poucosPl : t.nadaPl}, quase ninguém.</>
                 )}
               </p>
-              {r.curta === "Não dá para afirmar." && <p className="escala">{ACASO}</p>}
+              {explicacao(r.curta) && <p className="escala">{explicacao(r.curta)}</p>}
               <p className="escala">
                 {quem}{onde} em {ano}. Cada coluna mostra quantos candidatos do grupo se elegeram.
+                {fora > 0 && ` ${inteiro(fora)} ${fora === 1 ? "candidato não entregou" : "candidatos não entregaram"} a prestação de contas final e ${fora === 1 ? "ficou" : "ficaram"} de fora: não se sabe quanto tiveram (não é o mesmo que "nada declarado").`}
                 {!cargo && majoritariosDoAno.length > 0 && ` ${lista(majoritariosDoAno)} ${majoritariosDoAno.length === 1 ? "tem" : "têm"} poucos candidatos por disputa e ${majoritariosDoAno.length === 1 ? "aparece" : "aparecem"} no quadro ao lado.`}
               </p>
               <Colunas titulo={`Parte dos candidatos que se elegeu, por ${t.nome}`} max={tetoColunas} casas={(p) => (p > 0 && p < 0.01 ? 1 : 0)}

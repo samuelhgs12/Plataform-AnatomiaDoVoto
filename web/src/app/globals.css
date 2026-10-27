@@ -1520,3 +1520,217 @@ kbd { font: 500 12px/1 var(--fonte), system-ui, sans-serif; padding: 4px 6px; bo
   .carreira-passo { font-size: 16px; }
   .palco-base { padding: 0 16px 20px; }
 }
+
+/* /municipios: eleitos de uma cidade ou estado no painel (ListaEleitos) e o prefeito eleito */
+.eleitos { display: grid; gap: 10px; margin-top: 12px; }
+.eleitos details { border-top: 1px solid var(--noite2); padding-top: 8px; }
+.eleitos summary { cursor: pointer; font-weight: 600; color: var(--sobre-noite); }
+.eleitos ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.eleito-linha { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 10px; row-gap: 2px; align-items: center; }
+.eleito-linha .avatar { width: 40px; height: 40px; font-size: 14px; grid-row: span 2; align-self: start; }
+.eleito-nome { min-width: 0; line-height: 1.25; }
+.eleito-nome a, .prefeito-nome a { font-weight: 600; color: var(--sobre-noite); text-decoration: none; overflow-wrap: break-word; }
+.eleito-nome small, .eleito-dinheiro small { display: block; font-size: 12px; color: var(--noite-muted); }
+.eleito-dinheiro { grid-column: 2; font-size: 14px; font-variant-numeric: tabular-nums; }
+.eleito-dinheiro small { display: inline; margin-left: 6px; }
+.prefeito { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: start; }
+.prefeito-nome { font-weight: 700; font-size: 18px; margin: 0 0 4px; }
+.prefeito-nome a:hover, .eleito-nome a:hover { text-decoration: underline; }
+.painel-num.longo { font-size: clamp(34px, 2.6vw + 10px, 52px); }
+.avatar.retrato { object-fit: cover; }
+.painel-mini dd small { display: block; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--noite-muted); }
+.candidatos-cidade { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: var(--gap); align-items: start; }
+
+/* Dinheiro nas eleições (/analises/dinheiro): um recorte (eleição, cargo, lugar) e três abas */
+/* painel ao lado do mapa (aqui e em /municipios): o .painel da página inicial agora é uma faixa de 12 colunas embaixo do mapa */
+.area-painel { display: grid; gap: var(--gap); align-content: start; min-width: 0; }
+.area-cab { padding: 8px 0 16px; }
+.area-cab h1 { font-size: clamp(32px, 2vw + 20px, 52px); letter-spacing: -0.035em; line-height: 1.05; margin: 4px 0 8px; }
+.area-cab p { max-width: 65ch; margin: 0; color: var(--muted); }
+.area-cab .rotulo { margin: 0; }
+.filtros-dinheiro { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; padding: 16px; margin: 0 0 var(--gap); border-radius: var(--raio); background: var(--panel); }
+.filtros-dinheiro label { display: grid; gap: 4px; min-width: 150px; flex: 1 1 150px; font-size: 14px; color: var(--muted); }
+.filtros-dinheiro select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font-size: 16px; }
+.filtros-dinheiro select:disabled { opacity: 0.6; }
+.filtros-dinheiro[aria-busy="true"] { cursor: progress; opacity: 0.8; }
+.filtros-nota { flex-basis: 100%; margin: 0; font-size: 14px; color: var(--muted); }
+.aviso-linha { margin: -8px 0 var(--gap); padding-left: 12px; box-shadow: inset 3px 0 0 var(--warn); font-size: 16px; }
+.palco-area { position: relative; top: auto; height: min(76svh, 720px); min-height: 520px; }
+.palco-area h2 { font-size: clamp(22px, 1vw + 16px, 32px); line-height: 1.1; margin: 4px 0 0; }
+.palco-lista { overflow: auto; padding: 0 30px; min-height: 0; }
+.palco-lista table { color: var(--sobre-noite); }
+.palco-lista th { color: var(--noite-muted); }
+.palco-lista td, .palco-lista th { border-color: var(--noite-linha); }
+.palco-lista a { color: var(--sobre-noite); }
+.palco-lista tr[aria-current] td { background: var(--noite2); }
+.painel-resumo { font-size: 17px; line-height: 1.35; margin: 4px 0 10px; }
+.painel-resumo b { display: block; font-size: clamp(30px, 1.4vw + 18px, 42px); line-height: 1.05; letter-spacing: -0.03em; color: var(--brilho); }
+.muted-noite { color: var(--noite-muted); }
+.portes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; }
+.portes .palco-sobre { flex-basis: 100%; margin: 0; }
+.portes a { padding: 5px 9px; border-radius: 6px; background: var(--noite2); color: var(--sobre-noite); font-size: 13px; text-decoration: none; }
+.portes a.on { background: var(--sobre-noite); color: var(--noite); font-weight: 600; }
+.painel-mini.tres { grid-template-columns: 1fr; }
+.mapa-abst .mun.apagado { opacity: 0.18; }
+.area-comparacao, .area-candidatos { margin-bottom: var(--gap); }
+.area-comparacao h2, .area-candidatos h2 { font-size: 22px; margin: 0 0 12px; }
+.area-candidatos details > summary { cursor: pointer; font-weight: 600; margin-top: 12px; }
+.linhas-cand { list-style: none; margin: 0; padding: 0; }
+.linhas-foto .avatar, .linhas-foto .foto-cand { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; font-size: 15px; }
+.linhas-nome, .linhas-resultado, .linhas-valor { display: grid; min-width: 0; }
+.linhas-nome a { font-weight: 600; color: var(--fg); }
+.linhas-nome small, .linhas-resultado small, .linhas-valor small { font-size: 13px; color: var(--muted); }
+.linhas-resultado b.eleito { color: var(--accent); }
+.linhas-valor { text-align: right; font-variant-numeric: tabular-nums; }
+.linhas-valores { display: contents; }   /* no computador, os três valores são colunas da própria linha */
+.selo { margin-left: 6px; padding: 1px 6px; border-radius: 4px; background: var(--panel); font-size: 12px; }
+details.mais > summary, .analise-metodo > summary { cursor: pointer; font-size: 18px; font-weight: 600; }
+details.mais { margin-bottom: var(--gap); }
+details.mais[open] > summary, .analise-metodo[open] > summary { margin-bottom: 12px; }
+@media (max-width: 600px) {
+  .filtros-dinheiro label { flex-basis: 100%; min-width: 0; }
+  .palco-area { height: auto; min-height: 0; }
+  .palco-area .palco-mapa { height: 62svh; min-height: 340px; }
+  .palco-area .lupa-dica { display: none; }
+  /* no celular: foto, nome e resultado em cima; os três valores lado a lado embaixo, cada um com o rótulo */
+  ul.linhas-cand li { grid-template-columns: 40px minmax(0, 1fr); gap: 6px 10px; }
+  .linhas-cand .linhas-cab { display: none; }
+  .linhas-cand .linhas-resultado { grid-column: 2; display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }   /* embaixo do nome, que fica com a linha toda */
+  .linhas-valores { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .linhas-valores .linhas-valor { text-align: left; }
+  .linhas-valores .mini-divisao { justify-self: start; }
+  .linhas-valor b { font-size: 14px; }
+  .resumo-tres, .comparacao-duas { grid-template-columns: 1fr; }
+}
+
+/* camadas do mapa (aqui e em /municipios): botões segmentados no topo do palco; o .visoes da página inicial saiu */
+.camadas-mapa { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 4px; margin-bottom: 14px; border-radius: 8px; background: var(--noite2); }
+.camadas-mapa a { padding: 8px 14px; border-radius: 6px; color: var(--noite-muted); font-size: 15px; font-weight: 600; text-decoration: none; }
+.camadas-mapa a:hover { background: var(--noite3); color: var(--sobre-noite); }
+.camadas-mapa a[aria-current] { background: var(--sobre-noite); color: var(--noite); }
+.camadas-mapa a:focus-visible { outline: 3px solid var(--brilho); outline-offset: 2px; }
+
+/* Dinheiro nas eleições: as três respostas juntas */
+.resumo-recorte { margin: 0 0 var(--gap); }
+.resumo-recorte > .rotulo { margin: 0 0 6px; }
+.resumo-frase { font-size: clamp(20px, 0.9vw + 15px, 28px); font-weight: 500; line-height: 1.35; letter-spacing: -0.01em; max-width: 60ch; margin: 0 0 18px; }
+.resumo-frase b { font-weight: 700; }
+.resumo-tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); margin-bottom: 10px; }
+.resumo-item { display: flex; flex-direction: column; gap: 6px; padding: 20px; border-radius: var(--raio); background: var(--panel); }
+.resumo-pergunta { margin: 0; font-weight: 600; font-size: 17px; }
+.resumo-pergunta span { margin-right: 6px; padding: 2px 6px; border-radius: 4px; background: var(--bg); color: var(--muted); font-size: 12px; font-weight: 600; }
+.resumo-num { margin: 4px 0 0; font-size: clamp(28px, 1.4vw + 18px, 40px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+.resumo-unidade { margin: 0; font-size: 15px; color: var(--muted); }
+.resumo-ref { margin: 4px 0 0; font-size: 15px; }
+.resumo-ver { margin-top: auto; padding-top: 6px; font-size: 15px; color: var(--fg); }
+.mini-divisao { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 4px 0; }
+.mini-divisao i { display: block; height: 100%; }
+.mini-divisao .pub, .mini-trilho .pub { background: var(--pub); }
+.mini-divisao .priv { background: var(--priv); }
+.mini-trilho .fx2 { background: var(--fx2); }
+.mini-taxa { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 14px; }
+.mini-trilho { height: 8px; border-radius: 4px; background: var(--bg); overflow: hidden; }
+.mini-trilho i { display: block; height: 100%; }
+.mini-taxa b { font-size: 14px; white-space: nowrap; }
+.painel-tres { display: grid; gap: 6px; margin: 14px 0 0; }
+.painel-tres div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 10px; border-radius: 8px; }
+.painel-tres dt { color: var(--noite-muted); font-size: 14px; }
+.painel-tres dd { margin: 0; font-weight: 600; text-align: right; }
+.painel-tres div.ativo { background: var(--noite2); }
+.painel-tres div.ativo dt { color: var(--sobre-noite); }
+.painel-tres div.ativo dd { color: var(--brilho); font-size: 22px; }
+.comparacao-duas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.comparacao-duas h3 { font-size: 18px; margin: 0 0 6px; }
+.comparacao-duas h3 small { margin-left: 6px; color: var(--muted); font-weight: 500; font-size: 13px; }
+.linhas-cand li { display: grid; grid-template-columns: 44px minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.linhas-valor .mini-divisao { height: 6px; width: 100%; max-width: 160px; margin: 4px 0 2px; justify-self: end; }
+.linhas-nome a { overflow-wrap: anywhere; }
+.ver-todos { margin: 6px 0 0; }
+.ver-todos > summary { cursor: pointer; font-weight: 600; font-size: 15px; padding: 8px 0; }
+.mais-filtros { flex-basis: 100%; }
+.mais-filtros > summary { cursor: pointer; font-size: 15px; color: var(--muted); }
+.mais-filtros[open] { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 16px; }
+.mais-filtros[open] > summary { flex-basis: 100%; }
+.mais-filtros label { max-width: 320px; }
+.mais-filtros .filtros-nota { flex: 1 1 260px; }
+.area-candidatos h3 { font-size: 17px; margin: 18px 0 6px; }
+.area-medias { margin-bottom: var(--gap); }
+.area-medias h2 { font-size: 22px; margin: 0 0 4px; }
+.area-comparacao > details > summary { cursor: pointer; list-style-position: outside; }
+.area-comparacao > details > summary h2 { display: inline; }
+.area-comparacao > details[open] > summary { margin-bottom: 8px; }
+.linhas-cand .linhas-cab { padding: 0 0 6px; font-size: 13px; color: var(--muted); }
+.linhas-cand .linhas-cab span:nth-child(n + 4) { text-align: right; }
+@media (max-width: 900px) { .resumo-tres { grid-template-columns: 1fr; } .comparacao-duas { grid-template-columns: 1fr; } }
+/* resumo curto: os três cartões também escolhem o assunto (o ativo fica marcado) */
+.resumo-titulo { font-size: clamp(22px, 1vw + 16px, 30px); margin: 0 0 4px; letter-spacing: -0.02em; }
+.resumo-recorte > .rotulo { margin: 0 0 14px; }
+a.resumo-item { color: var(--fg); text-decoration: none; border: 2px solid transparent; transition: border-color var(--t-hover) ease; }
+a.resumo-item:hover { border-color: var(--line); }
+a.resumo-item[aria-current] { border-color: var(--accent); background: var(--bg); }
+a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.resumo-item .resumo-num { display: block; }
+/* o assunto escolhido: o número, o que significa, a conta e as referências */
+.assunto { margin-bottom: var(--gap); }
+.assunto > .rotulo { margin: 0 0 6px; }
+.assunto h2 { margin: 0 0 8px; }
+.assunto p { max-width: 70ch; }
+.assunto .destaque { font-size: clamp(24px, 1.4vw + 16px, 36px); font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 8px; }
+.assunto .destaque b { color: var(--accent); font-weight: 700; }
+.conta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 8px 0; padding: 12px 16px; border-radius: var(--raio); background: var(--bg); }
+.conta span { display: grid; }
+.conta b { font-size: 20px; }
+.conta small { font-size: 13px; color: var(--muted); }
+.conta i { font-style: normal; font-size: 22px; color: var(--muted); }
+.referencias { display: grid; gap: 6px; margin: 14px 0 0; max-width: 70ch; }
+.referencias div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 8px 0; border-top: 1px solid var(--line); }
+.referencias dt { font-size: 15px; }
+.referencias dt small { color: var(--muted); font-size: 13px; }
+.referencias dd { margin: 0; font-weight: 700; white-space: nowrap; }
+.referencias.grandes dd { font-size: 22px; }
+.mais-dentro { margin-top: 14px; }
+.mais-dentro > summary { cursor: pointer; font-weight: 600; }
+.mais-dentro p { margin: 8px 0 0; color: var(--muted); }
+.comparacao-sub { margin: -4px 0 12px; color: var(--muted); }
+/* versão enxuta: painel curto da P1, lista ordenável e as perguntas 2 e 8 num bloco só */
+.painel-links { display: grid; gap: 6px; margin: 14px 0 0; }
+.painel-links a { color: var(--sobre-noite); font-weight: 600; }
+.portes-det { margin-top: 12px; }
+.portes-det > summary { cursor: pointer; color: var(--noite-muted); font-size: 14px; }
+.portes-det .portes { margin-top: 8px; }
+.lista-ordem { margin: 0 0 8px; font-size: 14px; color: var(--noite-muted); }
+.lista-ordem a { color: var(--noite-muted); }
+.lista-ordem a[aria-current] { color: var(--sobre-noite); font-weight: 700; text-decoration: none; }
+.area-comparacao .chips { margin: 0 0 14px; }
+.frase-comp { font-size: 18px; max-width: 70ch; margin: 0 0 10px; }
+.origem { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); max-width: 70ch; }
+.origem p { margin: 0 0 6px; }
+.area-comparacao h3 { font-size: 18px; margin: 12px 0 6px; }
+
+/* Gastou × recebeu nas linhas de candidatos: o verbo acima do valor e pontos de cor no lugar de porcentagens */
+.linhas-verbo { display: none; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }  /* no computador, o cabeçalho da coluna já diz */
+@media (max-width: 600px) { .linhas-valores .linhas-verbo { display: block; } .linhas-valores { align-items: start; } }
+.linhas-valor .ponto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: 0; }
+.linhas-valor .ponto.pub { background: var(--pub); } .linhas-valor .ponto.priv { background: var(--priv); }
+
+/* Comparar os estados */
+.area-estados { margin-top: 24px; }
+.area-estados h3 { font-size: 16px; }
+
+/* Grades de 100 (quem teve mais dinheiro se elegeu mais?) */
+.grades { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 28px; margin: 16px 0 12px; }
+.grades.tres { grid-template-columns: repeat(3, minmax(0, 220px)); }
+.grades figure { margin: 0; display: grid; gap: 8px; align-content: start; }
+.grades.tres figure { grid-row: span 3; grid-template-rows: subgrid; }   /* títulos de alturas diferentes não desalinham as grades */
+.grades figcaption { font-size: 14px; }
+.grades figcaption small { display: block; color: var(--muted); font-size: 12px; }
+.grade-titulo b { font-size: 15px; }
+.grade-cem { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; width: 100%; max-width: 200px; aspect-ratio: 1; }
+.grade-cem i { display: block; border-radius: 2px; background: var(--line); }
+.grade-cem i.on { background: var(--fx2); }
+.grade-cem.destaque i.on { background: var(--pub); }
+@media (max-width: 640px) {
+  .grades { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .grades.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .grade-cem { gap: 2px; }
+}

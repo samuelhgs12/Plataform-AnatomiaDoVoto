@@ -282,7 +282,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["q1", "q10", "q2", "q5", "q8", "q9"]
+    assert client.get("/api/analises").json() == ["municipios", "q1", "q10", "q2", "q5", "q8", "q9"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -305,6 +305,49 @@ def test_analise_ou_tabela_inexistente(client):
     assert client.get("/api/analises/q8?tabela=nao_existe").status_code == 404
 
 
+def test_eleitos_do_municipio_so_ordinaria(client):
+    r = client.get("/api/municipios/2/eleitos?ano=2020")
+    assert r.status_code == 200
+    eleitos = r.json()
+    # João foi eleito prefeito na ordinária de 2020; a suplementar de 2021 (candidatura 9) não entra
+    assert [(e["cargo"], e["nome_urna"], e["id_candidatura"]) for e in eleitos] == [("Prefeito", "JOÃO DO COMERCIO", 5)]
+    assert eleitos[0]["votos"] == 11000 and eleitos[0]["partido"] == "PT"
+    assert client.get("/api/municipios/2/eleitos?ano=2024").json() == []
+    assert client.get("/api/municipios/2/eleitos").status_code == 422   # o ano é obrigatório
+
+
+def test_candidatos_do_municipio(client):
+    todos = client.get("/api/municipios/2/candidatos?ano=2020&cargo=Prefeito").json()
+    # só a ordinária (a suplementar de 2021 não entra); resultado e prestação de contas vêm junto
+    assert [(c["nome_urna"], c["eleito"], c["resultado"], c["prestou"], c["votos"]) for c in todos] == [("JOÃO DO COMERCIO", True, "ELEITO", True, 11000)]
+    assert client.get("/api/municipios/2/candidatos?ano=2020&cargo=Vereador").json() == []
+    assert "cpf" not in todos[0] and "titulo_eleitoral" not in todos[0]
+    assert client.get("/api/municipios/2/candidatos?ano=2020&cargo=Governador").status_code == 422   # só prefeito e vereador
+
+
+def test_eleitos_do_estado(client):
+    eleitos = client.get("/api/estados/rj/eleitos?ano=2022").json()
+    assert [(e["cargo"], e["nome_urna"], e["votos"]) for e in eleitos] == [("Deputado federal", "ANA ADVOGADA", 120000)]
+    assert client.get("/api/estados/MG/eleitos?ano=2022").json() == []   # Maria disputou e não se elegeu
+
+
+def test_analise_municipios(client):
+    dados = client.get("/api/analises/municipios").json()
+    assert set(dados) == {"municipios", "resumo", "estados"}
+    resumo = [dict(zip(dados["resumo"]["colunas"], l)) for l in dados["resumo"]["linhas"]]
+    # Alvorada (MG) 2020: Maria eleita vereadora; gasto sem a transferência de 700 nem a prestação parcial
+    alvorada = next(r for r in resumo if r["id_municipio"] == 1 and r["ano"] == 2020)
+    assert alvorada["vereador_eleitos"] == 1 and alvorada["vereador_gasto"] == 5500
+    estados = [dict(zip(dados["estados"]["colunas"], l)) for l in dados["estados"]["linhas"]]
+    assert any(e["uf"] == "RJ" and e["cargo"] == "Deputado federal" and e["ano"] == 2022 and e["eleitos"] == 1 for e in estados)
+    # porte e cobertura: toda linha do resumo traz o eleitorado e, se a disputa para prefeito ficou de fora, o motivo
+    assert {"eleitorado", "maior_excluida"} <= set(dados["resumo"]["colunas"])
+    assert alvorada["eleitorado"] is None   # sem participação eleitoral na massa de teste: fica nulo, não zero
+    # a única disputa para prefeito de PE em 2020 tem um candidato: sai da comparação e é contada pelo motivo
+    pe = next(e for e in estados if e["cargo"] == "Prefeito" and e["uf"] == "PE" and e["ano"] == 2020)
+    assert (pe["disputas_maior"], pe["maior_venceu"], pe["excl_um_candidato"], pe["excl_sem_prestacao"], pe["excl_empate"]) == (0, 0, 1, 0, 0)
+
+
 def test_cabecalho_de_cache_nos_dados_historicos(client):
     assert "max-age" in client.get("/api/meta").headers["cache-control"]
     assert "cache-control" not in client.get("/api/health").headers
@@ -314,7 +357,9 @@ def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
              "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
-             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10"]
+             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10",
+             "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022",
+             "/api/municipios/2/candidatos?ano=2020&cargo=Prefeito"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]
     for rota in rotas:
         texto = json.dumps(client.get(rota).json(), ensure_ascii=False).lower()

@@ -9,6 +9,7 @@
 --   * POR CANDIDATO (dependência, medianas e a resposta da pergunta, em "sucesso"): o que cada um RECEBEU, inclusive de
 --     outros candidatos. Muitos vereadores recebem dinheiro do Fundo Eleitoral por meio do candidato a prefeito; sem
 --     isso, cerca de 20 mil deles apareceriam como "sem dinheiro público" em 2020 e em 2024.
+-- Quem não entregou a prestação final fica na faixa -1 em "sucesso" (não se sabe se recebeu dinheiro público).
 -- As 5 fontes abaixo são as mesmas de api/app/queries/receitas.sql: se mudar aqui, mude lá.
 
 CREATE OR REPLACE TEMP TABLE receita_fonte AS
@@ -37,10 +38,18 @@ LEFT JOIN fonte_recurso f ON f.id_fonte_recurso = r.id_fonte_recurso
 WHERE r.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')
 GROUP BY r.id_candidatura;
 
+-- Quem entregou a prestação de contas final (mesmo "sem movimentação", que vem como um lançamento de valor zero).
+-- Quem não entregou não "gastou zero": o valor é desconhecido.
+CREATE OR REPLACE TEMP TABLE prestou AS
+SELECT id_candidatura FROM despesa_campanha WHERE tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')
+UNION
+SELECT id_candidatura FROM receita_campanha WHERE tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO');
+
 -- Uma linha por candidatura (inclusive as que não receberam nada: também é informação).
 -- disputa = onde o candidato concorre: o município (prefeito e vereador) ou a UF (os demais; presidente: o país).
 CREATE OR REPLACE TEMP TABLE cand AS
 SELECT c.id_candidatura, c.ano, g.nome AS cargo, c.uf, coalesce(p.sigla, '?') AS partido, rr.eleito,
+       c.id_candidatura IN (SELECT id_candidatura FROM prestou) AS prestou,
        CASE WHEN g.nome IN ('Prefeito', 'Vereador') THEN 'M' || c.id_municipio::VARCHAR ELSE coalesce(c.uf, 'BR') END AS disputa,
        coalesce(rec.publico_rec, 0) AS publico_rec, coalesce(rec.total_rec, 0) AS total_rec,
        coalesce(sum(x.valor) FILTER (WHERE x.fonte = 'fundo_eleitoral'), 0)   AS fundo_eleitoral,
@@ -110,7 +119,7 @@ COPY (
 -------------------------------------------------------------------------------
 -- 4. Pergunta 8 propriamente: taxa de eleição por faixa de dinheiro público recebido.
 --    Medida por candidato: o dinheiro público que recebeu, inclusive por meio de outros candidatos.
---    faixa 0 = não recebeu dinheiro público; 1 a 4 = cerca de um quarto cada de quem recebeu, comparando cada candidato
+--    faixa -1 = sem prestação final (valor desconhecido); 0 = não recebeu dinheiro público; 1 a 4 = cerca de um quarto cada de quem recebeu, comparando cada candidato
 --    só com os concorrentes da mesma disputa (o município para prefeito e vereador; a UF para os demais).
 --    percent_rank dá a mesma posição a valores iguais: empates caem sempre no mesmo grupo (resultado estável), por isso
 --    os grupos têm tamanho aproximado, e não exatamente 25%.
@@ -120,7 +129,8 @@ COPY (
            round(min(publico_rec), 2) AS publico_min, round(max(publico_rec), 2) AS publico_max
     FROM (
         SELECT ano, cargo, uf, eleito, publico_rec,
-               CASE WHEN publico_rec <= 0 THEN 0
+               CASE WHEN NOT prestou THEN -1
+                    WHEN publico_rec <= 0 THEN 0
                     ELSE least(4, 1 + floor(4 * percent_rank() OVER (PARTITION BY ano, cargo, disputa, publico_rec > 0 ORDER BY publico_rec)))::INTEGER
                END AS faixa
         FROM cand_pct

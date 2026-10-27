@@ -10,6 +10,8 @@ export interface LinhaCusto {
   /** Gasto só de quem disputou (base do gasto por candidato). */
   gasto_disputou: number;
   gasto_nao_disputou: number; nao_disputou_com_gasto: number; gasto_eleitos: number;
+  /** Quem disputou sem entregar a prestação final: entra na conta com gasto zero (o valor real é desconhecido). */
+  sem_prestacao: number;
 }
 
 /**
@@ -18,18 +20,19 @@ export interface LinhaCusto {
  */
 export interface Custo {
   ano: number; cargo: string; candidatos: number; eleitos: number; vagas: number;
-  gasto: number; gastoDisputou: number; gastoNaoDisputou: number; naoDisputouComGasto: number; gastoEleitos: number;
+  gasto: number; gastoDisputou: number; gastoNaoDisputou: number; naoDisputouComGasto: number; gastoEleitos: number; semPrestacao: number;
   porCadeira: number | null; porCandidato: number | null; parteEleitos: number | null; candidatosPorVaga: number | null;
 }
 
 function somar(linhas: LinhaCusto[], ano: number, cargo: string): Custo {
-  let candidatos = 0, eleitos = 0, vagas = 0, gasto = 0, gastoDisputou = 0, gastoNaoDisputou = 0, naoDisputouComGasto = 0, gastoEleitos = 0;
+  let candidatos = 0, eleitos = 0, vagas = 0, gasto = 0, gastoDisputou = 0, gastoNaoDisputou = 0, naoDisputouComGasto = 0, gastoEleitos = 0, semPrestacao = 0;
   for (const l of linhas) {
     candidatos += l.candidatos; eleitos += l.eleitos; vagas += l.vagas; gasto += l.gasto_total; gastoDisputou += l.gasto_disputou;
     gastoNaoDisputou += l.gasto_nao_disputou; naoDisputouComGasto += l.nao_disputou_com_gasto; gastoEleitos += l.gasto_eleitos;
+    semPrestacao += l.sem_prestacao ?? 0;
   }
   return {
-    ano, cargo, candidatos, eleitos, vagas, gasto, gastoDisputou, gastoNaoDisputou, naoDisputouComGasto, gastoEleitos,
+    ano, cargo, candidatos, eleitos, vagas, gasto, gastoDisputou, gastoNaoDisputou, naoDisputouComGasto, gastoEleitos, semPrestacao,
     porCadeira: vagas > 0 ? gasto / vagas : null,
     porCandidato: candidatos > 0 ? gastoDisputou / candidatos : null,
     parteEleitos: gasto > 0 ? gastoEleitos / gasto : null,

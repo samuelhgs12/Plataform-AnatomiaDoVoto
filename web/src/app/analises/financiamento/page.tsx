@@ -4,16 +4,18 @@ import { lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
 import {
   contarFaixas, deCada100, descreverMudancas, emCada10, FAIXAS, FONTES, ordenarPartidos, NOME_UF, ordenarCargos,
-  parteDosEleitos, porAno, porPartido, porUf, respostaSucesso, somar, sucessoTresGrupos, textoDe100, TIPO_ELEICAO,
+  parteDosEleitos, porAno, porPartido, porUf, respostaSucesso, semPrestacao, somar, sucessoTresGrupos, textoDe100, TIPO_ELEICAO,
   type Filtros, type LinhaFaixa, type LinhaFontes, type LinhaSucesso,
 } from "@/lib/financiamento";
 import { brl, inteiro, pct, reais } from "@/lib/format";
 import { BarrasH } from "@/components/BarrasH";
 import { Colunas } from "@/components/Colunas";
 import { Donut } from "@/components/Donut";
+import { AvisoApi } from "@/components/AvisoApi";
 import { Cabecalho } from "@/components/Cabecalho";
 import { Rolar } from "@/components/Rolar";
 import { FOTOS } from "@/lib/fotos";
+import { explicacao } from "@/lib/estatistica";
 
 export const metadata: Metadata = { title: "Dinheiro público e sucesso eleitoral" };
 export const dynamic = "force-dynamic";
@@ -42,10 +44,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
     return (
       <>
         <Cabecalho titulo="Dinheiro público e sucesso eleitoral" foto={FOTOS.urna} />
-        <div className="card aviso">
-          <h2>Dados indisponíveis</h2>
-          <p>A API não respondeu. Confira se ela está rodando (na pasta <code>api/</code>, <code>uvicorn app.main:app</code>).</p>
-        </div>
+        <AvisoApi voltar="/analises/financiamento" />
       </>
     );
   }
@@ -96,6 +95,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
   // pergunta 8: três grupos (nada / pouco / muito dinheiro público) e quantos de cada um se elegeram
   const g = sucessoTresGrupos(sucessoLinhas, f);
   const { base, curta: respostaCurta } = respostaSucesso(g);
+  const fora = semPrestacao(sucessoLinhas, f);
   // topo da régua em 20%, 40%, 60%... para as marcas de 1/4 caírem em números redondos (5%, 10%, 15%...)
   const tetoColunas = Math.min(1, Math.max(0.2, Math.ceil(Math.max(g.nada.taxa, g.pouco.taxa, g.muito.taxa) * 5) / 5));
   const eleitos = parteDosEleitos(fontes, f);
@@ -137,7 +137,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
         <h2 id="h-suc">A resposta</h2>
         {g.muito.candidaturas === 0 ? <p className="muted">Sem dados para essa combinação.</p> : (
           <>
-            <p className="resposta-curta">{respostaCurta}</p>
+            <p className={`resposta-curta${explicacao(respostaCurta) ? " longa" : ""}`}>{respostaCurta}</p>
             <p className="manchete pequena">
               {base.taxa > 0 && g.muito.taxa < base.taxa ? (
                 <>Quem recebeu muito dinheiro público se elegeu <b>menos</b> do que quem {base === g.nada ? "não recebeu nada" : "recebeu pouco"}:
@@ -150,8 +150,9 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
                   {" "}Entre os que {base === g.nada ? "não receberam nada" : "receberam pouco"}, quase ninguém.</>
               )}
             </p>
-            {respostaCurta === "Não dá para afirmar." && <p className="escala">Com tão poucos candidatos, essa diferença pode ser acaso.</p>}
-            <p className="escala">{cargo ? `Candidatos a ${cargo.toLowerCase()}` : "Todos os candidatos"}{onde} em {ano}. Cada coluna mostra quantos candidatos do grupo se elegeram.</p>
+            {explicacao(respostaCurta) && <p className="escala">{explicacao(respostaCurta)}</p>}
+            <p className="escala">{cargo ? `Candidatos a ${cargo.toLowerCase()}` : "Todos os candidatos"}{onde} em {ano}. Cada coluna mostra quantos candidatos do grupo se elegeram.
+              {fora > 0 && ` ${inteiro(fora)} ${fora === 1 ? "candidato não entregou" : "candidatos não entregaram"} a prestação de contas final e ${fora === 1 ? "ficou" : "ficaram"} de fora: não se sabe se receberam dinheiro público.`}</p>
             <Colunas titulo="Parte dos candidatos que se elegeu, por quanto dinheiro público receberam" max={tetoColunas} casas={(p) => (p > 0 && p < 0.01 ? 1 : 0)}
               colunas={[
                 { chave: "nada", rotulo: "Não recebeu", linhas: ["nenhum dinheiro público", `${inteiro(g.nada.eleitos)} eleitos de ${inteiro(g.nada.candidaturas)}`],
@@ -230,7 +231,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
       <div className="quadro">
       <section className="bloco s6" aria-labelledby="h-evo">
         <h2 id="h-evo">Como isso mudou de 2018 a 2024</h2>
-        <p className="muted">Quanto do dinheiro de cada eleição veio de fonte pública{cargo ? ` (${cargo.toLowerCase()})` : ""}{uf ? ` em ${uf}` : ""}. Quanto mais alta a coluna, mais as campanhas dependeram de dinheiro público. Clique em uma coluna para ver aquele ano.</p>
+        <p className="muted">Quanto do dinheiro de cada eleição veio de fonte pública{cargo ? ` (${cargo.toLowerCase()})` : ""}{uf ? ` em ${uf}` : ""}. Quanto mais alta a coluna, mais as campanhas dependeram de dinheiro público. Clique em uma coluna para ver aquele ano. Valores em reais da época, sem correção pela inflação.</p>
         {mudancas.length > 0 && (
           <ul className="manchete pequena mudancas">
             {mudancas.map((m) => <li key={m.tipo}>Nas eleições <b>{m.tipo}</b>, {m.texto}</li>)}

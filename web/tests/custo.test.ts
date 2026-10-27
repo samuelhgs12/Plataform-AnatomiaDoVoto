@@ -3,7 +3,7 @@ import { cargoPadrao, custoDoCargo, custoPorAno, custoPorCargo, custoPorUf, vari
 
 const l = (o: Partial<LinhaCusto>): LinhaCusto => ({
   ano: 2022, cargo: "Deputado federal", uf: "MG", candidatos: 100, com_gasto: 90, eleitos: 10, vagas: 10,
-  gasto_total: 1_000_000, gasto_disputou: 1_000_000, gasto_nao_disputou: 0, nao_disputou_com_gasto: 0, gasto_eleitos: 400_000, ...o,
+  gasto_total: 1_000_000, gasto_disputou: 1_000_000, gasto_nao_disputou: 0, nao_disputou_com_gasto: 0, gasto_eleitos: 400_000, sem_prestacao: 0, ...o,
 });
 const linhas = [
   l({}), l({ uf: "PE", candidatos: 50, eleitos: 5, vagas: 5, gasto_total: 1_000_000, gasto_disputou: 1_000_000, gasto_eleitos: 600_000 }),
@@ -27,6 +27,11 @@ describe("custoDoCargo", () => {
     expect(c.porCandidato).toBe(10_000);
     expect(c.gastoNaoDisputou).toBe(200_000);
     expect(c.naoDisputouComGasto).toBe(2);
+  });
+  it("soma quem disputou sem prestação final (a página avisa que entrou com gasto zero)", () => {
+    const c = custoDoCargo([l({ sem_prestacao: 3 }), l({ uf: "PE", sem_prestacao: 2 })], { ano: 2022, cargo: "Deputado federal" })!;
+    expect(c.semPrestacao).toBe(5);
+    expect(custoDoCargo([l({})], { ano: 2022, cargo: "Deputado federal" })!.semPrestacao).toBe(0);
   });
   it("filtra a UF e devolve null sem dados", () => {
     expect(custoDoCargo(linhas, { ano: 2022, cargo: "Deputado federal", uf: "PE" })!.porCadeira).toBe(200_000);
