@@ -253,3 +253,31 @@ export function ordenarLinhas<T extends { nome: string; valor: number | null }>(
   if (por === "nome") return [...linhas].sort(porNome);
   return [...linhas].sort((a, b) => (a.valor === null ? 1 : 0) - (b.valor === null ? 1 : 0) || (b.valor ?? 0) - (a.valor ?? 0) || porNome(a, b));
 }
+
+/**
+ * O valor de um estado (ou dos seis, sem uf) contando só as cidades de um porte, com a mesma conta do estado:
+ * gasto = soma dos gastos ÷ soma das vagas dessas cidades (prefeito: 1 vaga por cidade); público = soma das receitas
+ * públicas ÷ soma das receitas; resultado = vereador: eleitos ÷ candidatos do grupo com mais recursos, somados;
+ * prefeito: parte das cidades comparáveis em que quem mais gastou venceu. `n` = cidades do porte com o dado.
+ */
+export function valorDoPorte(resumo: LinhaResumo[], ano: number, uf: string | undefined, porte: Porte, aba: Aba, cargo: string): { valor: number | null; n: number; conta: { gasto: number; vagas: number } | null } {
+  const sel = resumo.filter((r) => r.ano === ano && (!uf || r.uf === uf) && porteDe(r.eleitorado)?.chave === porte);
+  const soma = (f: (r: LinhaResumo) => number) => sel.reduce((a, r) => a + f(r), 0);
+  const prefeito = cargo === "Prefeito";
+  if (aba === "gasto") {
+    const comDado = sel.filter((r) => (prefeito ? r.prefeito_candidatos > 0 : r.vereador_vagas > 0));
+    const gasto = comDado.reduce((a, r) => a + (prefeito ? r.prefeito_gasto : r.vereador_gasto), 0);
+    const vagas = prefeito ? comDado.length : comDado.reduce((a, r) => a + r.vereador_vagas, 0);
+    return { valor: vagas > 0 ? gasto / vagas : null, n: comDado.length, conta: vagas > 0 ? { gasto, vagas } : null };
+  }
+  if (aba === "publico") {
+    const rec = soma((r) => (prefeito ? r.prefeito_receita : r.vereador_receita)), pub = soma((r) => (prefeito ? r.prefeito_publica : r.vereador_publica));
+    return { valor: rec > 0 ? pub / rec : null, n: sel.length, conta: null };
+  }
+  if (prefeito) {
+    const comp = sel.filter((r) => r.maior_venceu != null);
+    return { valor: comp.length ? comp.filter((r) => r.maior_venceu).length / comp.length : null, n: comp.length, conta: null };
+  }
+  const cand = soma((r) => r.rec_mais_cand ?? 0), ele = soma((r) => r.rec_mais_eleitos ?? 0);
+  return { valor: cand > 0 ? ele / cand : null, n: sel.length, conta: null };
+}

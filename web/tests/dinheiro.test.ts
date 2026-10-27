@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  cargosDoAno, classeComPorte, contaGasto, ordenarLinhas, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
+  cargosDoAno, classeComPorte, contaGasto, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
@@ -164,5 +164,23 @@ describe("ordenarLinhas", () => {
   it("ordena por valor (maior primeiro, empate pelo nome, não informado no fim) ou por nome", () => {
     expect(ordenarLinhas(ls, "valor").map((l) => l.nome)).toEqual(["Recife", "Caruaru", "Olinda", "Arcoverde"]);
     expect(ordenarLinhas(ls, "nome").map((l) => l.nome)).toEqual(["Arcoverde", "Caruaru", "Olinda", "Recife"]);
+  });
+});
+
+describe("valorDoPorte", () => {
+  const linhas = [
+    r({ id_municipio: 1, eleitorado: 3_000, vereador_gasto: 100, vereador_vagas: 9 }), r({ id_municipio: 2, eleitorado: 4_000, vereador_gasto: 200, vereador_vagas: 11 }),
+    r({ id_municipio: 3, eleitorado: 900_000, vereador_gasto: 9_000_000, vereador_vagas: 40 }), r({ id_municipio: 4, eleitorado: 4_500, uf: "RJ", vereador_gasto: 1_000, vereador_vagas: 10 }),
+  ];
+  it("soma gasto e vagas só das cidades do porte (no estado ou nos seis)", () => {
+    expect(valorDoPorte(linhas, 2024, "PE", "ate5", "gasto", "Vereador")).toEqual({ valor: 15, n: 2, conta: { gasto: 300, vagas: 20 } });
+    expect(valorDoPorte(linhas, 2024, undefined, "ate5", "gasto", "Vereador").conta).toEqual({ gasto: 1_300, vagas: 30 });
+    expect(valorDoPorte(linhas, 2024, "PE", "ate10", "gasto", "Vereador")).toEqual({ valor: null, n: 0, conta: null });
+  });
+  it("prefeito: 1 vaga por cidade; resultado e público pelas somas", () => {
+    expect(valorDoPorte(linhas, 2024, "PE", "ate5", "gasto", "Prefeito").valor).toBe(900_000);
+    expect(valorDoPorte(linhas, 2024, "PE", "ate5", "resultado", "Prefeito").valor).toBe(1);
+    expect(valorDoPorte(linhas, 2024, "PE", "ate5", "resultado", "Vereador").valor).toBeCloseTo(0.3);
+    expect(valorDoPorte(linhas, 2024, "PE", "ate5", "publico", "Vereador").valor).toBeCloseTo(0.5);
   });
 });

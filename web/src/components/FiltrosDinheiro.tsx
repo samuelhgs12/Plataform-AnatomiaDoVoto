@@ -11,11 +11,13 @@ type Opcao = [string, string];
  * de municípios traz todas as cidades, agrupadas por estado (dá para achar a sua direto); com estado, só as dele.
  * Trocar o estado solta o município; escolher um município define o estado (o estado vem da cidade).
  */
-export function FiltrosDinheiro({ anos, cargos, ufs, cidades, atual, fixos }: {
+export function FiltrosDinheiro({ anos, cargos, ufs, cidades, portes, atual, fixos }: {
   anos: Opcao[]; cargos: string[]; ufs: Opcao[];
   /** null = eleição geral: não há dados por município */
   cidades: { uf: string; nome: string; opcoes: Opcao[] }[] | null;
-  atual: { ano: string; cargo: string; uf: string; mun: string };
+  /** porte das cidades (eleitorado); null = eleição geral */
+  portes: Opcao[] | null;
+  atual: { ano: string; cargo: string; uf: string; mun: string; porte: string };
   /** parâmetros que a lista não muda (aba, vista) */
   fixos: Record<string, string>;
 }) {
@@ -24,6 +26,7 @@ export function FiltrosDinheiro({ anos, cargos, ufs, cidades, atual, fixos }: {
   const ir = (campo: string, valor: string) => {
     const p = new URLSearchParams({ ...fixos, ...atual, [campo]: valor });
     if (campo === "uf" || campo === "ano") p.delete("mun");
+    if (campo === "ano" && Number(valor) % 4 !== 0) p.delete("porte");   // numa eleição geral não há porte de cidade
     if (campo === "mun" && valor) p.delete("uf");   // a página tira o estado da cidade: nunca fica um par incompatível
     for (const [k, v] of [...p.entries()]) if (!v) p.delete(k);
     iniciar(() => router.push(`/analises/dinheiro?${p}`, { scroll: false }));
@@ -58,6 +61,14 @@ export function FiltrosDinheiro({ anos, cargos, ufs, cidades, atual, fixos }: {
             ))}
           </select>
         ) : <select disabled aria-describedby="mun-geral"><option>Não se aplica</option></select>}
+      </label>
+      <label><span>Porte da cidade</span>
+        {portes ? (
+          <select name="porte" value={atual.porte} onChange={(e) => ir("porte", e.target.value)}>
+            <option value="">Todos os portes</option>
+            {portes.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+          </select>
+        ) : <select disabled><option>Não se aplica</option></select>}
       </label>
       {!cidades && <p id="mun-geral" className="filtros-nota">Nas eleições gerais não há dados por município.</p>}
       <noscript><button type="submit">Aplicar</button></noscript>

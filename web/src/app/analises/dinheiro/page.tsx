@@ -7,7 +7,7 @@ import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import {
   cargosDoAno, classeComPorte, contaGasto, contaGastoEstado, corCidade, corPorFaixas, ehMajoritario, ehMunicipal, emCada100, legendaCidade,
-  legendaPorFaixas, lerRecorte, ordenarLinhas, qualificacao, referenciaDoPorte, textoValor, tresGrupos, valorCidade, valorDoEstado, type GrupoTaxa,
+  legendaPorFaixas, lerRecorte, ordenarLinhas, qualificacao, referenciaDoPorte, textoValor, tresGrupos, valorCidade, valorDoEstado, valorDoPorte, type GrupoTaxa,
 } from "@/lib/dinheiro";
 import { compararGrupos, pontosPercentuais } from "@/lib/estatistica";
 import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaSucesso } from "@/lib/financiamento";
@@ -73,7 +73,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const majoritario = ehMajoritario(cargo);
   const ver = um(sp.ver) === "publico" ? "publico" : "recursos";          // P2 (todo o dinheiro) ou P8 (só o público)
   const ordem = um(sp.ordem) === "nome" ? "nome" : "valor";
-  const porteFiltro = municipal && PORTES.some((p) => p.chave === um(sp.porte)) ? um(sp.porte) : undefined;
+  const porteFiltro = municipal ? PORTES.find((p) => p.chave === um(sp.porte)) : undefined;   // recorte por porte da cidade
   const nomeMun = new Map(municipios.map((m) => [m.id_municipio, nomeProprio(m.nome)]));
   const lugar = mun ? nomeMun.get(mun.id_municipio)! : uf ? NOME_UF[uf] ?? uf : "Seis estados";
   const emLugar = mun || uf ? `em ${lugar}` : "nos seis estados";
@@ -85,7 +85,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   // o recorte na URL: trocar o estado solta a cidade
   const estado: Record<string, string | number | undefined> = {
     ano, cargo, uf, mun: mun?.id_municipio, vista: r.vista === "lista" ? "lista" : undefined,
-    ordem: ordem === "nome" ? "nome" : undefined, ver: ver === "publico" ? "publico" : undefined, porte: porteFiltro,
+    ordem: ordem === "nome" ? "nome" : undefined, ver: ver === "publico" ? "publico" : undefined, porte: porteFiltro?.chave,
   };
   const href = (novo: Record<string, string | number | null> = {}, ancora?: string) => {
     const atual = { ...estado, ...("uf" in novo ? { mun: undefined } : {}) };
@@ -96,13 +96,17 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const f = { ano, cargo, uf };
 
   // ---------- P1: o gasto por vaga do lugar ----------
-  const custo = mun ? valorCidade(linhaMun, "gasto", cargo) : valorDoEstado(estados, ano, uf, "gasto", cargo);
-  const conta = mun ? contaGasto(linhaMun, cargo) : contaGastoEstado(estados, ano, uf, cargo);
+  // um estado (ou os seis): com um porte escolhido, só as cidades daquele porte (soma dos gastos ÷ soma das vagas)
+  const gastoEm = (u: string | undefined) => (porteFiltro ? valorDoPorte(resumo, ano, u, porteFiltro.chave, "gasto", cargo) : null);
+  const valorEstadoGasto = (u: string | undefined) => (porteFiltro ? gastoEm(u)!.valor : valorDoEstado(estados, ano, u, "gasto", cargo));
+  const custo = mun ? valorCidade(linhaMun, "gasto", cargo) : valorEstadoGasto(uf);
+  const conta = mun ? contaGasto(linhaMun, cargo) : porteFiltro ? gastoEm(uf)!.conta : contaGastoEstado(estados, ano, uf, cargo);
   const refPorte = mun && porte ? referenciaDoPorte(resumo, ano, porte.chave, "gasto", cargo) : null;
-  const custoUf = mun ? valorDoEstado(estados, ano, uf, "gasto", cargo) : uf ? valorDoEstado(estados, ano, undefined, "gasto", cargo) : null;
+  const custoUf = mun ? valorEstadoGasto(uf) : uf ? valorEstadoGasto(undefined) : null;
+  const comPorte = porteFiltro ? ` (cidades de ${porteFiltro.rotulo})` : "";
 
-  // mapa e lista: sempre o gasto por vaga, do cargo escolhido
-  const valoresUf = ufs.map((u) => valorDoEstado(estados, ano, u, "gasto", cargo));
+  // mapa e lista: sempre o gasto por vaga, do cargo escolhido (e do porte, se escolhido)
+  const valoresUf = ufs.map((u) => valorEstadoGasto(u));
   const faixasUf = quantis(valoresUf.flatMap((v) => v ?? []), 5);
   const noMapaUf: EstadoNoMapa[] = ufs.map((u, i) => ({
     uf: u, classe: corPorFaixas(valoresUf[i], faixasUf), href: href({ uf: u === uf ? null : u }, "mapa"), sigla: u,
@@ -112,18 +116,18 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const noMapaMun: MunicipioNoMapa[] = !municipal || !uf || !caixa ? [] : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
     const linha = doAno.get(m.id_municipio);
     const v = valorCidade(linha, "gasto", cargo);
-    return { ibge: m.cod_ibge, classe: classeComPorte(corCidade(v, "gasto", cargo), porteDe(linha?.eleitorado)?.chave, porteFiltro),
+    return { ibge: m.cod_ibge, classe: classeComPorte(corCidade(v, "gasto", cargo), porteDe(linha?.eleitorado)?.chave, porteFiltro?.chave),
       href: href({ mun: m.id_municipio === mun?.id_municipio ? null : m.id_municipio }, "mapa"),
       dica: `${nomeMun.get(m.id_municipio)}: ${textoValor(v, "gasto", cargo)} por vaga`, atraso: Math.round(((CENTRO_MUNICIPIO[m.cod_ibge][0] - caixa[0]) / (caixa[2] - caixa[0])) * 100) / 100 };
   });
   const centro = mun ? CENTRO_MUNICIPIO[mun.cod_ibge] : undefined;
   const legenda = uf && municipal ? legendaCidade("gasto", cargo) : legendaPorFaixas(faixasUf, (v) => reais(v));
   const linhasLista = municipal && uf
-    ? ordenarLinhas(municipios.filter((m) => m.uf === uf).map((m) => {
+    ? ordenarLinhas(municipios.filter((m) => m.uf === uf && (!porteFiltro || porteDe(doAno.get(m.id_municipio)?.eleitorado)?.chave === porteFiltro.chave)).map((m) => {
       const linha = doAno.get(m.id_municipio);
       return { id: m.id_municipio, nome: nomeMun.get(m.id_municipio)!, valor: valorCidade(linha, "gasto", cargo), conta: contaGasto(linha, cargo), porte: porteDe(linha?.eleitorado)?.rotulo };
     }), ordem)
-    : ordenarLinhas(ufs.map((u, i) => ({ id: u, nome: NOME_UF[u] ?? u, valor: valoresUf[i], conta: contaGastoEstado(estados, ano, u, cargo), porte: undefined as string | undefined })), ordem);
+    : ordenarLinhas(ufs.map((u, i) => ({ id: u, nome: NOME_UF[u] ?? u, valor: valoresUf[i], conta: porteFiltro ? gastoEm(u)!.conta : contaGastoEstado(estados, ano, u, cargo), porte: undefined as string | undefined })), ordem);
 
   // ---------- P2 e P8, juntas: quem teve mais dinheiro se elegeu mais? ----------
   const faixasQ2 = q2?.faixas ? daMedida(comoObjetos<LinhaGastoFaixa>(q2.faixas), "recursos") : [];
@@ -170,7 +174,8 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
         cargos={cargosDoAno(ano)} ufs={ufs.map((u) => [u, NOME_UF[u] ?? u])}
         // com um estado escolhido, só as cidades dele; sem estado, todas, agrupadas por estado
         cidades={municipal ? ufs.filter((u) => !uf || u === uf).map((u) => ({ uf: u, nome: NOME_UF[u] ?? u, opcoes: municipios.filter((m) => m.uf === u).map((m) => [String(m.id_municipio), nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR")) })) : null}
-        atual={{ ano: String(ano), cargo, uf: uf ?? "", mun: mun ? String(mun.id_municipio) : "" }}
+        portes={municipal ? PORTES.map((p) => [p.chave, p.rotulo] as [string, string]) : null}
+        atual={{ ano: String(ano), cargo, uf: uf ?? "", mun: mun ? String(mun.id_municipio) : "", porte: porteFiltro?.chave ?? "" }}
         fixos={Object.fromEntries(Object.entries({ vista: estado.vista, ordem: estado.ordem, ver: estado.ver }).filter(([, v]) => v)) as Record<string, string>}
       />
       {(r.cargoTrocado || r.munIgnorado) && (
@@ -187,7 +192,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
           <div className="palco-topo">
             <div>
               <h2 id="h-mapa">Onde as campanhas registraram mais gastos por vaga?</h2>
-              <p className="palco-sobre">{cargo} · {municipal ? `eleição municipal de ${ano}` : `eleição geral de ${ano}, por estado`}</p>
+              <p className="palco-sobre">{cargo} · {municipal ? `eleição municipal de ${ano}` : `eleição geral de ${ano}, por estado`}{porteFiltro ? ` · só cidades de ${porteFiltro.rotulo}` : ""}</p>
             </div>
             <nav className="trilha" aria-label="Onde você está">
               <a href={href({ uf: null }, "mapa")} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>
@@ -238,26 +243,18 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
 
         <div className="area-painel s4" key={`${uf}-${mun?.id_municipio}-${ano}-${cargo}`}>
           <div className="bloco noite painel-cab">
-            <p className="palco-sobre">{cargo} · {ano}{porte ? ` · ${porte.rotulo}` : ""}</p>
+            <p className="palco-sobre">{cargo} · {ano}{mun ? (porte ? ` · ${porte.rotulo}` : "") : porteFiltro ? ` · cidades de ${porteFiltro.rotulo}` : ""}</p>
             <h3>{lugar}</h3>
             <p className="painel-resumo"><b>{custo === null ? "Não informado" : reais(custo)}</b> por vaga de {cargo.toLowerCase()}</p>
             <p className="pequeno">Gastos das campanhas divididos pelas vagas disponíveis{conta ? `: ${reais(conta.gasto)} ÷ ${inteiro(conta.vagas)} ${conta.vagas === 1 ? "vaga" : "vagas"}` : ""}.
               {cargo === "Prefeito" && mun && " Com uma vaga, é o total gasto na disputa, não o gasto do eleito."}</p>
             {refPorte?.valor != null && <p className="pequeno">Cidades de porte semelhante: <b>{reais(refPorte.valor)}</b> <span className="muted-noite">(valor central de {inteiro(refPorte.n)})</span></p>}
-            {custoUf !== null && <p className="pequeno">{mun ? NOME_UF[uf!] : "Seis estados"}: <b>{reais(custoUf)}</b> <span className="muted-noite">(gasto total ÷ total de vagas)</span></p>}
+            {custoUf !== null && <p className="pequeno">{mun ? NOME_UF[uf!] : "Seis estados"}{comPorte}: <b>{reais(custoUf)}</b> <span className="muted-noite">(gasto total ÷ total de vagas)</span></p>}
+            {!mun && porteFiltro && gastoEm(uf) && <p className="pequeno muted-noite">Soma de {inteiro(gastoEm(uf)!.n)} {gastoEm(uf)!.n === 1 ? "cidade" : "cidades"} deste porte.</p>}
             <p className="painel-links">
               {temCandidatos && <a href="#candidatos">Ver candidatos ↓</a>}
               <a href="#resultado">Quem teve mais dinheiro se elegeu mais? ↓</a>
             </p>
-            {municipal && uf && (
-              <details className="portes-det">
-                <summary>Destacar cidades de um porte</summary>
-                <div className="portes" role="group" aria-label="Destacar cidades de um porte no mapa">
-                  <Link href={href({ porte: null }, "mapa")} scroll={false} className={!porteFiltro ? "on" : undefined}>Todas</Link>
-                  {PORTES.map((p) => <Link key={p.chave} href={href({ porte: p.chave }, "mapa")} scroll={false} className={porteFiltro === p.chave ? "on" : undefined}>{p.rotulo.replace(" eleitores", "")}</Link>)}
-                </div>
-              </details>
-            )}
           </div>
         </div>
       </section>
@@ -265,7 +262,8 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
       {/* 2. Perguntas 2 e 8 juntas: o mesmo gráfico, medindo por todo o dinheiro ou só pelo público */}
       <section id="resultado" className="card area-comparacao" aria-labelledby="h-res">
         <h2 id="h-res">Quem teve mais dinheiro se elegeu mais?</h2>
-        <p className="comparacao-sub">Comparação {uf ? `em ${nomeUf}` : "nos seis estados"} · {cargo.toLowerCase()} · {ano}{mun ? `. Os candidatos de ${lugar} estão na lista abaixo.` : ""}</p>
+        <p className="comparacao-sub">Comparação {uf ? `em ${nomeUf}` : "nos seis estados"} · {cargo.toLowerCase()} · {ano}{mun ? `. Os candidatos de ${lugar} estão na lista abaixo.` : ""}
+          {porteFiltro && " O filtro de porte vale para o gasto por vaga; esta comparação usa todas as cidades (a análise estatística não separa por porte)."}</p>
         <div className="chips" role="group" aria-label="Medir pelo">
           <Link href={href({ ver: null }, "resultado")} scroll={false} className={`chip${ver === "recursos" ? " on" : ""}`} aria-current={ver === "recursos" ? "true" : undefined}>Todo o dinheiro de campanha <small>P2</small></Link>
           <Link href={href({ ver: "publico" }, "resultado")} scroll={false} className={`chip${ver === "publico" ? " on" : ""}`} aria-current={ver === "publico" ? "true" : undefined}>Só o dinheiro público <small>P8</small></Link>
