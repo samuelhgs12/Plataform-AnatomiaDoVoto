@@ -44,6 +44,18 @@ def test_falsos_positivos_conhecidos_nao_casam():
     assert so("MARIA DA SILVA") == []                            # nome de pessoa nunca vira termo
 
 
+def test_propaganda_com_numero_so_vira_santinho_com_tamanho_ou_quantidade():
+    assert pecas("CARRO E SOM PARA PROPAGANDA POLITICA 2020") == [("som", "carro de som")]    # o ano não é tamanho
+    for d in ("PROPAGANDA ELEITORAL 7X10", "PROPAGANDA ELEITORAL 10 X 15", "PROPAGANDA ELEITORAL 5000 UN",
+              "PROPAGANDA ELEITORAL MIL UNIDADES", "PROPAGANDA ELEITORAL 10.000", "PROPAGANDA ELEITORAL 500"):
+        assert so(d) == ["santinho"], d
+    assert so("PROPAGANDA POLITICA 2022") == []                                               # sem a categoria: nada
+    assert termos("PROPAGANDA POLITICA 2022", "Publicidade por materiais impressos") == (["impressos"], True)
+    assert so("PROPAGANDA POLITICA 1998") == []
+    assert so("PROPAGANDA ELEITORAL ADESIVO 7X10") == ["adesivo"]                             # o específico vem antes
+    assert so("PROPAGANDA POLITICA 2022 IMPULSIONAMENTO") == ["impulsionamento"]
+
+
 def test_reserva_pela_categoria_do_tse():
     assert termos("PROPAGANDA E PUBLICIDADE", "Publicidade por jornais e revistas") == (["jornal e revista"], True)
     assert termos("SANTINHOS", "Publicidade por jornais e revistas") == (["santinho"], False)
