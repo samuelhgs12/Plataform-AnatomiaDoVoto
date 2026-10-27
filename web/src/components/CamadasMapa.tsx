@@ -1,8 +1,8 @@
 import { EscolhaMunicipio } from "./EscolhaMunicipio";
 import { Icone, type NomeIcone } from "./Icone";
 
-/** O que pinta o mapa: só a abstenção (base), o voto de legenda ou a abstenção cruzada com um indicador do Censo. */
-export type ModoCamada = "abstencao" | "legenda" | "comparar";
+/** O que pinta o mapa: o voto de legenda ou a abstenção, sozinha ou cruzada com um indicador do Censo (Comparar). */
+export type ModoCamada = "legenda" | "comparar";
 
 export interface CamadaLegenda {
   /** anos em que a camada existe, para a linha de apoio ("2018 a 2024") */
@@ -15,6 +15,7 @@ export interface CamadaLegenda {
 export interface CamadaComparativos {
   /** o Censo do ano mostrado; undefined fora dos anos de Censo */
   censo?: number;
+  /** o indicador escolhido tem `on`; o href dele desmarca (volta à abstenção sozinha) */
   itens: { chave: string; rotulo: string; href: string; on: boolean }[];
   disponivel: boolean;
   /** por que a camada não pinta o mapa agora (ano sem Censo, nenhum estado aberto) */
@@ -24,16 +25,16 @@ export interface CamadaComparativos {
 }
 
 const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
-  { chave: "abstencao", rotulo: "Abstenção", icone: "mapa" },
   { chave: "legenda", rotulo: "Legenda", icone: "legenda" },
   { chave: "comparar", rotulo: "Comparar", icone: "comparar" },
 ];
 
 /**
  * Conteúdo da aba Camadas do submenu. O mapa pinta uma coisa de cada vez, então a escolha é única nos dois níveis: um
- * controle segmentado escolhe o modo (abstenção, legenda ou comparação com o Censo) e, dentro dele, segmentos (cargo)
- * ou uma lista de rádio (indicador) escolhem a variante. Tudo é link `data-mapa` (escolher é navegar, sem JavaScript);
- * a opção escolhida tem `aria-current`. Só desenha: os links e as situações chegam prontos da página.
+ * controle segmentado escolhe o modo (legenda ou comparação) e, dentro dele, segmentos (cargo) ou uma lista de rádio
+ * (indicador) escolhem a variante. Comparar começa sem indicador, com a abstenção sozinha; clicar de novo no indicador
+ * escolhido o desmarca. Tudo é link `data-mapa` (escolher é navegar, sem JavaScript); a opção escolhida tem
+ * `aria-current`. Só desenha: os links e as situações chegam prontos da página.
  */
 export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: ModoCamada; hrefs: Record<ModoCamada, string>; legenda: CamadaLegenda; comparativos: CamadaComparativos }) {
   return (
@@ -45,10 +46,6 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: Modo
           </a>
         ))}
       </nav>
-
-      {modo === "abstencao" && (
-        <p className="camadas-apoio">Cada município pintado pela parte dos eleitores que não foi votar. Escolha <b>Legenda</b> ou <b>Comparar</b> para pintar o mapa com outra coisa.</p>
-      )}
 
       {modo === "legenda" && (
         <div className="camadas-opcoes">
@@ -68,9 +65,13 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: Modo
 
       {modo === "comparar" && (
         <div className="camadas-opcoes">
-          <p className="camadas-apoio">A abstenção cruzada com um indicador do Censo{comparativos.censo ? ` ${comparativos.censo}` : ""}, em 3 × 3 cores. Escolha o indicador:</p>
           {comparativos.disponivel ? (
             <>
+              <p className="camadas-apoio">
+                {comparativos.itens.some((i) => i.on)
+                  ? `A abstenção cruzada com um indicador do Censo ${comparativos.censo}, em 3 × 3 cores. Clique de novo nele para ver só a abstenção.`
+                  : `O mapa mostra a abstenção. Escolha um indicador do Censo ${comparativos.censo} para cruzar com ela, em 3 × 3 cores:`}
+              </p>
               <nav className="radios" aria-label={`Indicador do Censo ${comparativos.censo}`}>
                 {comparativos.itens.map((i) => (
                   <a key={i.chave} href={i.href} data-mapa="" aria-current={i.on ? "true" : undefined}>
@@ -78,13 +79,16 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: Modo
                   </a>
                 ))}
               </nav>
-              {comparativos.motivo && <p className="camada-aviso">{comparativos.motivo}</p>}
+              {comparativos.motivo && comparativos.itens.some((i) => i.on) && <p className="camada-aviso">{comparativos.motivo}</p>}
             </>
           ) : (
-            <div className="camada-aviso">
-              <p>{comparativos.motivo}</p>
-              <div className="chips">{comparativos.anos.map((a) => <a key={a.ano} className="chip" href={a.href} data-mapa="">Ver {a.ano}</a>)}</div>
-            </div>
+            <>
+              <p className="camadas-apoio">O mapa mostra a abstenção.</p>
+              <div className="camada-aviso">
+                <p>{comparativos.motivo}</p>
+                <div className="chips">{comparativos.anos.map((a) => <a key={a.ano} className="chip" href={a.href} data-mapa="">Ver {a.ano}</a>)}</div>
+              </div>
+            </>
           )}
         </div>
       )}

@@ -17,8 +17,8 @@ test('mapa da abstenção: estado, município, indicador e ano', async ({ page }
 
   // o indicador se escolhe no menu do mapa, encaixado ao lado dele: Camadas › Comparar
   await page.locator('.submenu').getByRole('link', { name: 'Comparar' }).click();
-  await expect(page).toHaveURL(/cor=cruzar/);
   await page.locator('.submenu').getByRole('link', { name: 'Renda por pessoa' }).click();
+  await expect(page).toHaveURL(/cor=cruzar/);
   await expect(page.getByRole('heading', { name: 'Abstenção × Renda por pessoa' })).toBeVisible();
   await expect(page).toHaveURL(/uf=PE.*mun=\d+/); // trocar o indicador mantém estado e município
 
@@ -128,16 +128,21 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
   await expect(submenu).toHaveAttribute('open', ''); // no computador, o menu já vem aberto ao lado do mapa
   await expect(submenu.getByRole('navigation', { name: 'O que o mapa mostra' }).getByRole('link', { name: 'Camadas' })).toHaveAttribute('aria-current', 'true');
 
-  // o modo é escolha única: Abstenção vem marcada; Comparar mostra os indicadores, também de escolha única
+  // o modo é escolha única: Comparar vem marcado, com a abstenção sozinha e nenhum indicador escolhido
   const modos = submenu.getByRole('navigation', { name: 'O que pinta o mapa' });
-  await expect(modos.getByRole('link', { name: 'Abstenção' })).toHaveAttribute('aria-current', 'true');
-  await modos.getByRole('link', { name: 'Comparar' }).click();
-  await expect(page).toHaveURL(/cor=cruzar/);
+  await expect(modos.getByRole('link')).toHaveCount(2);
+  await expect(modos.getByRole('link', { name: 'Comparar' })).toHaveAttribute('aria-current', 'true');
   const indicadores = submenu.getByRole('navigation', { name: 'Indicador do Censo 2010' });
-  await expect(indicadores.getByRole('link', { name: 'IDHM' })).toHaveAttribute('aria-current', 'true');
+  await expect(indicadores.locator('[aria-current]')).toHaveCount(0);
+  await expect(page.locator('.palco .mapa-abst .mun[class*=" q"]').first()).toBeVisible();
+
+  // escolher um indicador cruza; clicar de novo nele desmarca e volta à abstenção sozinha
   await indicadores.getByRole('link', { name: 'Pobres' }).click();
-  await expect(page).toHaveURL(/ind=pmpob/);
-  await expect(indicadores.getByRole('link', { name: 'IDHM' })).not.toHaveAttribute('aria-current', 'true');
+  await expect(page).toHaveURL(/ind=pmpob.*cor=cruzar/);
+  await expect(indicadores.getByRole('link', { name: 'Pobres' })).toHaveAttribute('aria-current', 'true');
+  await indicadores.getByRole('link', { name: 'Pobres' }).click();
+  await expect(page).not.toHaveURL(/cor=cruzar/);
+  await expect(indicadores.locator('[aria-current]')).toHaveCount(0);
   await indicadores.getByRole('link', { name: 'IDHM' }).click();
   await expect(page).toHaveURL(/cor=cruzar/);
   await expect(page.locator('.palco .mapa-abst .mun[class*=" b"]').first()).toBeVisible();
@@ -146,7 +151,7 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
   await expect(submenu.locator('.submenu-resumo')).toBeVisible();
   await submenu.locator(':scope > summary').click();
   await expect(submenu).toHaveAttribute('open', '');
-  await modos.getByRole('link', { name: 'Abstenção' }).click(); // voltar à base é escolher outro modo
+  await modos.getByRole('link', { name: 'Comparar' }).click(); // Comparar de novo também volta à abstenção sozinha
   await expect(page).not.toHaveURL(/cor=cruzar/);
 
   // Legenda: o modo troca a visão; o partido aparece nele

@@ -268,11 +268,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const comparativoLigado = !naLegenda && pediuCruzar;
   const camadas = (
     <CamadasMapa
-      modo={naLegenda ? "legenda" : comparativoLigado ? "comparar" : "abstencao"}
+      modo={naLegenda ? "legenda" : "comparar"}
       hrefs={{
-        abstencao: href({ ver: "abstencao", ano: anoBase, cor: null }),
         legenda: hrefLeg,
-        comparar: href({ ver: "abstencao", ano: anoBase, cor: "cruzar" }),
+        comparar: href({ ver: "abstencao", ano: anoBase, cor: null }),   // sem indicador: a abstenção sozinha
       }}
       legenda={{
         anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",
@@ -284,7 +283,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         censo: censoDoAno(anoBase),
         itens: indicadoresDoCenso(censoBase).map((i) => {
           const on = comparativoLigado && i.chave === indBase;
-          return { chave: i.chave, rotulo: i.rotulo, on, href: href({ ver: "abstencao", ano: anoBase, ind: i.chave, cor: "cruzar" }) };
+          // clicar de novo no escolhido desmarca: volta à abstenção sozinha
+          return { chave: i.chave, rotulo: i.rotulo, on, href: href(on ? { ver: "abstencao", ano: anoBase, cor: null } : { ver: "abstencao", ano: anoBase, ind: i.chave, cor: "cruzar" }) };
         }),
         anos: ANOS_CENSO.map((a) => ({ ano: a, href: href({ ver: "abstencao", ano: a }) })),
       }}
