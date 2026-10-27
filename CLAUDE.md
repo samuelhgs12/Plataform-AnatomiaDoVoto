@@ -18,8 +18,10 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 - Na página (componente de servidor, `async`): `await lerAnalise("q5", ["legenda"])` (`src/lib/api.ts`, devolve `null`
   se a API não responder) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
 - Se a tabela faltar, mostre o `card aviso` dizendo que a API não respondeu (veja `analises/legenda`).
+- O texto de metodologia ("Como calculamos", fonte, limites) mora só em `src/lib/metodologia.ts`: a página da análise e a
+  `/sobre` leem de lá (`METODOLOGIA.<id>.calculo`). Mudou a regra no `.sql`? Mude o texto ali, não na página.
 - Exceção provisória: o mapa da página inicial ainda é JSON estático (`pipeline/export_static.py` → `web/public/data/mapa.json`,
-  lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`,
+  lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`, as duas últimas com a coluna `censo` (2010 ou 2022: `censoDoAno`),
   tipos em `src/lib/abstencao.ts`), porque parte dos dados ainda vem do TSE, fora do banco (decisão 10).
 - O que é **por candidatura** não é análise: fica no perfil (`candidato/[id]`), com um endpoint por bloco em
   `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. P8:
@@ -29,7 +31,9 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
   própria campanha da típica.
 - Visão Candidato do mapa (página inicial, `?ver=candidato&cand=<id_candidato>`): `/api/candidatos/<id>/mapa` (candidaturas
   e números da ficha) e `/api/candidaturas/<id>/votos-municipio` (tabela `votos_candidatura_municipio`, da carga)
-  → `VisaoCandidato`; lógica em `src/lib/candidato-mapa.ts`.
+  → `VisaoCandidato`; lógica em `src/lib/candidato-mapa.ts`. Os votos casam com o `mapa.json` pelo `cod_ibge`
+  (`noMapaEstatico`), nunca pelo `id_municipio`, que muda a cada carga. Prefeito e vereador (`abrangencia` = `"municipio"`)
+  não têm votos por bairro: o mapa abre no estado e só destaca o município da disputa.
 
 ## Como filtros viram searchParams
 

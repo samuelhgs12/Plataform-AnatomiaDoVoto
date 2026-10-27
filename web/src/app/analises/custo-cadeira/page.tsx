@@ -10,6 +10,7 @@ import { AvisoApi } from "@/components/AvisoApi";
 import { Cabecalho } from "@/components/Cabecalho";
 import { Rolar } from "@/components/Rolar";
 import { FOTOS } from "@/lib/fotos";
+import { METODOLOGIA } from "@/lib/metodologia";
 
 export const metadata: Metadata = { title: "Quanto custa uma cadeira" };
 export const dynamic = "force-dynamic";
@@ -162,11 +163,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
       <section className="card" aria-labelledby="h-met">
         <h2 id="h-met">Como calculamos</h2>
         <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-          <li>Gasto: despesas da prestação de contas final entregue ao TSE (ou a regularização), somando os dois turnos, sem as transferências para outros candidatos ou partidos. É o valor contratado, como o TSE divulga.</li>
-          <li>Custo da cadeira = gasto de todos que fizeram campanha para o cargo ÷ número de vagas. Entra também quem gastou mas não chegou a disputar (candidatura barrada, renúncia ou substituição): esse dinheiro também foi gasto na disputa.</li>
-          <li>Gasto por candidato (a fórmula do enunciado) = gasto de quem disputou ÷ número de candidatos que disputaram. Só titulares e eleições ordinárias; vagas conforme o TSE.</li>
-          <li>Candidato que não entregou a prestação final conta com gasto zero (são poucos: cerca de 1% do valor). Não há dados de despesas antes de 2018 na base.</li>
-          <li>Valores exatamente como declarados ao TSE em cada eleição, sem nenhum ajuste.</li>
+          {METODOLOGIA.p1.calculo.map((t) => <li key={t}>{t}</li>)}
         </ul>
       </section>
     </>

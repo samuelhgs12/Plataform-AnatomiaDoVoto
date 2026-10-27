@@ -7,7 +7,7 @@ import { MiniMapa } from "./MiniMapa";
 import { VariacaoTurnos } from "./VariacaoTurnos";
 import { classe, enquadrar, nomeProprio, type LinhaMunicipio } from "@/lib/abstencao";
 import {
-  abrangencia, corCandidato, cortesCandidato, doTurno, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato, trechosDaCarreira, variacaoTurnos,
+  abrangencia, corCandidato, cortesCandidato, doTurno, fraseMunicipal, fraseResumo, notaValidos, proporcaoPorUf, rotulosCandidato, trechosDaCarreira, variacaoTurnos,
   type CandidaturaMapa, type VotoMunicipio,
 } from "@/lib/candidato-mapa";
 import { fotoDaPessoa } from "@/lib/foto-candidato";
@@ -43,6 +43,7 @@ const SEIS = "AP, ES, MG, PE, RJ e RR";
 /**
  * Visão "Candidato" do mapa da página inicial: onde a candidatura teve votos, com a
  * ficha e os números embaixo do mapa. Cargos estaduais abrem no estado; presidente abre nos seis estados e o clique dá zoom.
+ * Prefeito e vereador também abrem no estado, mas, sem votos por bairro, só o município da disputa ganha cor e nome.
  * Sem candidato, o clique num estado dá zoom nele e o menu passa a buscar só quem disputou ali (a página filtra). Só
  * desenha: as contas são de src/lib/candidato-mapa.ts.
  */
@@ -50,6 +51,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   const { campanha: c, lista, turno, turnos, uf, mun } = escolha;
   const alcance = c ? abrangencia(c.cargo) : "fora";
   const seis = alcance === "seis";
+  const municipal = alcance === "municipio";
   const comUf = !c || seis;   // o estado vem da URL (?uf=): sem candidato ou com presidente
 
   const href = (nova: { campanha?: number; turno?: number; uf?: string | null; mun?: number | null }) => {
@@ -75,6 +77,10 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   const linhas1 = turno === 1 ? linhas : doTurno(votos, 1);
   const naUf = uf ? linhas.filter((l) => l.uf === uf) : [];
   const nome = c ? nomeProprio(c.nome_urna) : "";
+  // prefeito e vereador: a disputa tem uma linha só, a do município
+  const linhaMun = municipal ? naUf[0] : undefined;
+  const munDisputa = linhaMun ? doMun.get(linhaMun.id_municipio) : undefined;
+  const nomeMun = munDisputa ? nomes.get(munDisputa.id_municipio)! : "";
 
   // cores: municípios em faixas de cortesCandidato (no presidente, as mesmas para os seis estados); estados em faixas fixas
   const cortes = cortesCandidato((seis ? linhas : naUf).flatMap((l) => l.p ?? []));
@@ -100,9 +106,16 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   const caixa = comMunicipios ? CAIXA_UF[uf!] : undefined;
   const atrasoDe = (centro: [number, number]) => Math.round(((centro[0] - caixa![0]) / (caixa![2] - caixa![0])) * 100) / 100;
   // sem candidato, os municípios do estado aparecem sem cor: o zoom mostra onde a busca vai procurar
-  const noMapa: MunicipioNoMapa[] = !caixa ? [] : !c ? municipios.flatMap((m) => {
+  // prefeito e vereador: os municípios do estado sem cor e o da disputa no tom mais claro
+  const noMapa: MunicipioNoMapa[] = !caixa ? [] : !c || municipal ? municipios.flatMap((m) => {
     const centro = m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge];
-    return centro ? [{ ibge: m.cod_ibge, classe: "neutro", href: href({}), dica: nomes.get(m.id_municipio)!, atraso: atrasoDe(centro) }] : [];
+    if (!centro) return [];
+    const nomeM = nomes.get(m.id_municipio)!;
+    if (!c) return [{ ibge: m.cod_ibge, classe: "neutro", href: href({}), dica: nomeM, atraso: atrasoDe(centro) }];
+    if (m.id_municipio !== munDisputa?.id_municipio) return [{ ibge: m.cod_ibge, classe: "neutro", href: href({}), dica: `${nomeM}: fora da disputa de ${nome}`, atraso: atrasoDe(centro) }];
+    const l = linhaMun!;
+    const dica = l.p == null ? `${nomeM}: sem votos válidos` : `${nomeM}: ${pct(l.p, 1)} (${inteiro(l.votos)} ${l.votos === 1 ? "voto" : "votos"}), ${l.posicao}º lugar`;
+    return [{ ibge: m.cod_ibge, classe: "c4", href: href({}), dica, atraso: atrasoDe(centro) }];
   }) : naUf.flatMap((l) => {
     const m = doMun.get(l.id_municipio);
     const centro = m && CENTRO_MUNICIPIO[m.cod_ibge];
@@ -112,16 +125,16 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
     return [{ ibge: m.cod_ibge, classe: corCandidato(l.p, cortes), href: href({ mun: l.id_municipio === mun ? null : l.id_municipio }), dica, atraso: atrasoDe(centro) }];
   });
   const camera = enquadrar(caixa ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA], TELA.larg, TELA.alt, caixa ? 0.1 : 0.02);   // folga maior que na abstenção: o título é mais alto e os botões de zoom ficam à direita
-  const munSel = mun ? doMun.get(mun) : undefined;
+  const munSel = municipal ? munDisputa : mun ? doMun.get(mun) : undefined;
   const centroSel = munSel ? CENTRO_MUNICIPIO[munSel.cod_ibge] : undefined;
-  const linhaSel = mun ? linhas.find((l) => l.id_municipio === mun) : undefined;
+  const linhaSel = municipal ? linhaMun : mun ? linhas.find((l) => l.id_municipio === mun) : undefined;
 
   // textos
   const onde = seis ? (uf ? `de ${uf}` : "dos seis estados") : c ? `de ${c.uf}` : "";
-  const frase = c && alcance !== "fora" ? fraseResumo(seis && !uf ? linhas : naUf, nomes, onde) : "";
+  const frase = !c || alcance === "fora" ? "" : municipal ? (linhaMun ? fraseMunicipal(linhaMun, nomeMun, c.cargo) : "") : fraseResumo(seis && !uf ? linhas : naUf, nomes, onde);
   const turnoTexto = `${turno}º turno`;
-  const sub = c ? `${c.cargo} · ${seis ? `só ${SEIS}` : c.uf} · ${turnoTexto}` : "";
-  const legenda = comMunicipios ? rotulosCandidato(cortes) : seis ? rotulosCandidato(cortesUf).map((t) => t.replace("menos de", "até")) : [];
+  const sub = c ? `${c.cargo} · ${seis ? `só ${SEIS}` : nomeMun ? `${nomeMun} (${c.uf})` : c.uf} · ${turnoTexto}` : "";
+  const legenda = municipal ? [] : comMunicipios ? rotulosCandidato(cortes) : seis ? rotulosCandidato(cortesUf).map((t) => t.replace("menos de", "até")) : [];
   const algumSem = (comMunicipios ? naUf : porUf).some((l) => ("p" in l ? l.p : l.valor) == null);
   const tabela = seis && !uf
     ? porUf.map((u) => ({ id: u.uf, nome: NOME_UF[u.uf], votos: u.votos, p: u.valor, posicao: null as number | null }))
@@ -133,12 +146,13 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
   // a carreira da esquerda (a mais antiga) para a direita, com os anos seguidos no mesmo cargo num trecho só
   const trechos = trechosDaCarreira([...lista].reverse());
   const turnos2 = c && turnos.length > 1 ? variacaoTurnos(seis && uf ? votos.filter((l) => l.uf === uf) : votos) : null;
-  const ondeTurnos = seis && !uf ? "nos seis estados" : `em ${NOME_UF[uf ?? c?.uf ?? ""] ?? ""}`;
+  const ondeTurnos = seis && !uf ? "nos seis estados" : nomeMun ? `em ${nomeMun}` : `em ${NOME_UF[uf ?? c?.uf ?? ""] ?? ""}`;
 
   // o mapa do palco, repetido pequeno no mini-mapa que acompanha a rolagem
   const mapa = (
     <MapaAbstencao
-      titulo={c ? `${nome}, ${cargoMin} em ${c.ano}, ${turnoTexto}: votos ${comMunicipios ? `nos municípios de ${NOME_UF[uf!]}` : "nos seis estados"}. ${frase}` : uf ? `Municípios de ${NOME_UF[uf]}, à espera de um candidato` : "Os seis estados, à espera de um candidato"}
+      titulo={c && municipal ? `${nome}, ${cargoMin} em ${c.ano}, ${turnoTexto}: ${nomeMun ? `${nomeMun} em destaque entre os municípios de ${NOME_UF[uf!]}` : `municípios de ${NOME_UF[uf!]}`}. ${frase}`
+        : c ? `${nome}, ${cargoMin} em ${c.ano}, ${turnoTexto}: votos ${comMunicipios ? `nos municípios de ${NOME_UF[uf!]}` : "nos seis estados"}. ${frase}` : uf ? `Municípios de ${NOME_UF[uf]}, à espera de um candidato` : "Os seis estados, à espera de um candidato"}
       camera={camera} estados={estados} uf={comMunicipios ? uf : undefined} municipios={noMapa}
       destaque={munSel && centroSel ? { ibge: munSel.cod_ibge, nome: nomes.get(munSel.id_municipio)!, x: centroSel[0], y: centroSel[1] } : undefined}
     />
@@ -196,7 +210,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
           {((c && alcance !== "fora") || (!c && uf)) && (
             <nav className="trilha" aria-label="Onde você está no mapa">
               {comUf && <a href={href({ uf: null })} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>}
-              {uf && <>{comUf && <span aria-hidden="true">/</span>}<a href={href({ mun: null })} data-mapa="" aria-current={!mun ? "true" : undefined}>{NOME_UF[uf]}</a></>}
+              {uf && <>{comUf && <span aria-hidden="true">/</span>}{municipal ? <span>{NOME_UF[uf]}</span> : <a href={href({ mun: null })} data-mapa="" aria-current={!mun ? "true" : undefined}>{NOME_UF[uf]}</a>}</>}
               {munSel && <><span aria-hidden="true">/</span><span aria-current="true">{nomes.get(munSel.id_municipio)}</span></>}
             </nav>
           )}
@@ -210,7 +224,12 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
         </div>
 
         <div className="palco-base">
-          {legenda.length > 0 ? (
+          {municipal && munDisputa ? (
+            <ul className="legenda-q legenda-mun" aria-label={`Cores: em destaque, o município da disputa; os demais de ${NOME_UF[uf!]} sem cor`}>
+              <li><i className="c4" />{nomeMun}, onde disputou</li>
+              <li><i className="neutro" />outros municípios</li>
+            </ul>
+          ) : legenda.length > 0 ? (
             <ul className="legenda-q legenda-cand" aria-label={comMunicipios ? "Cores: parte dos votos válidos do cargo em cada município; a primeira faixa reúne quem ficou perto de zero" : "Cores: faixas iguais da parte dos votos válidos em cada estado"}>
               {legenda.map((t, i) => <li key={i}><i className={`c${i}`} />{t}</li>)}
               {algumSem && <li className="legenda-sem"><i className="sem" />sem votos válidos</li>}
@@ -230,7 +249,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
         <div className="painel painel-cand s12" key={`cand-${c.id_candidatura}`}>
           <div className="s4">
             <FichaCandidato
-              c={c} noMapa={noMapaT1} onde={seis ? "dos seis estados" : `de ${c.uf}`}
+              c={c} noMapa={noMapaT1} municipio={nomeMun || undefined} onde={municipal ? `de ${nomeMun || c.uf}` : seis ? "de todos os municípios dos seis estados" : `de todos os municípios de ${c.uf}`}
               foto={fotoDaPessoa({ id_candidato: c.id_candidato, ultimo_ano: lista[0]?.ano }, "ficha")}
             />
           </div>
@@ -250,11 +269,14 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
                     </dl>
                   </>
                 ) : <p>Sem votos válidos para {cargoMin} no {turnoTexto}.</p>}
-                <Link scroll={false} className="chip" href={href({ mun: null })}>Ver o estado inteiro</Link>
+                {municipal ? <>
+                  <p className="r-texto">Sem votos por bairro ou seção nos dados, o mapa só marca o município da disputa.</p>
+                  {notaValidos(c) && <p className="r-texto">{notaValidos(c)}</p>}
+                </> : <Link scroll={false} className="chip" href={href({ mun: null })}>Ver o estado inteiro</Link>}
               </div>
             )}
 
-            {alcance !== "fora" && tabela.length > 0 && (
+            {alcance !== "fora" && !municipal && tabela.length > 0 && (
               <div className="bloco noite">
                 <h3>Onde estão os votos</h3>
                 <p className="r-texto">{frase}</p>
@@ -278,7 +300,7 @@ export function VisaoCandidato({ menu, escolha, votos, municipios, ufs }: Props)
           </div>
         </div>
       )}
-      {c && <MiniMapa recorte={`${nome} · ${c.cargo} · ${comMunicipios ? uf : "seis estados"} · ${c.ano}`}>{mapa}</MiniMapa>}
+      {c && <MiniMapa recorte={`${nome} · ${c.cargo} · ${nomeMun ? `${nomeMun} (${uf})` : comMunicipios ? uf : "seis estados"} · ${c.ano}`}>{mapa}</MiniMapa>}
     </>
   );
 }

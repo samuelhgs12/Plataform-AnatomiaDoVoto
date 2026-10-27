@@ -10,6 +10,7 @@ import { montarNuvem, type Nuvem } from "@/lib/nuvem";
 import { BarrasH } from "./BarrasH";
 import { BarraPecas } from "./BarraPecas";
 import { NuvemPalavras } from "./NuvemPalavras";
+import { METODOLOGIA } from "@/lib/metodologia";
 
 const r$ = (centavos: number) => reais(centavos / 100);
 
@@ -144,13 +145,7 @@ function ComPropaganda({ c, a, nuvem, referencias, parcelas }: {
       <details>
         <summary>Sobre estes valores</summary>
         <div className="pp-sobre">
-          <p>Os valores são o que foi contratado e declarado ao TSE na prestação de contas final, não necessariamente o que foi pago.
-            Não há correção pela inflação, e as doações a outros candidatos ficam de fora.</p>
-          <p>Impresso e de rua reúne impressos, adesivos, jornais e carros de som; rádio, TV e vídeo reúne programas, vídeos e
-            jingles; internet reúne impulsionamento e páginas. Os tipos e as categorias são oficiais. As peças são estimadas a partir
-            da descrição de cada despesa.</p>
-          <p>Material recebido pronto do partido, como programas de rádio e TV, não entra nesta conta. Gastar mais não diz quantas
-            pessoas a propaganda alcançou nem se ajudou a eleger.</p>
+          {METODOLOGIA.p9.calculo.map((t) => <p key={t}>{t}</p>)}
         </div>
       </details>
     </>

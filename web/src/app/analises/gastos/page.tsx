@@ -15,6 +15,7 @@ import { Colunas } from "@/components/Colunas";
 import { Rolar } from "@/components/Rolar";
 import { FOTOS } from "@/lib/fotos";
 import { explicacao } from "@/lib/estatistica";
+import { METODOLOGIA } from "@/lib/metodologia";
 
 export const metadata: Metadata = { title: "Recursos de campanha e sucesso eleitoral" };
 export const dynamic = "force-dynamic";
@@ -240,14 +241,7 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
       <section className="card" aria-labelledby="h-met">
         <h2 id="h-met">Como calculamos</h2>
         <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-          <li>Três medidas, da prestação de contas entregue ao TSE (versão final ou regularização): o gasto (despesas, sem as transferências para outros candidatos ou partidos); a receita (tudo o que recebeu, inclusive material de campanha doado por outros candidatos, comum entre vereadores); e os recursos, o maior dos dois. As conclusões são as mesmas nas três.</li>
-          <li>Os recursos existem porque muitos candidatos declaram despesas com valor zero (material doado) e recebem o material de outro candidato: só pelo gasto, eles pareceriam campanhas sem dinheiro.</li>
-          <li>Cada candidato é comparado só com os concorrentes da mesma disputa: o município (prefeito e vereador), o estado (deputados, senador e governador) ou o país (presidente).</li>
-          <li>“Muito” é cerca de 1/4 de quem declarou algo, os que mais têm na disputa; “pouco”, cerca de 1/4, os que menos têm; “médio”, o meio. Valores iguais ficam sempre no mesmo grupo, por isso os grupos têm tamanho aproximado. “Nada declarado” = valor zero na prestação final.</li>
-          <li>Em prefeito, governador, senador e presidente há poucos candidatos por disputa, então a pergunta vira “o que tinha mais dinheiro venceu?”, comparada com a chance de um sorteio.</li>
-          <li>A resposta “Sim” ou “Não” só aparece quando a diferença é grande demais para ser acaso (teste estatístico, 95% de confiança) e de pelo menos 20%; com poucos casos, a página diz que não dá para afirmar.</li>
-          <li>Correlação: cada candidato recebe sua posição no dinheiro e nos votos (1º turno) dentro da disputa, com a média das posições em caso de empate (como no Spearman), dividida pelo número de candidatos; as posições de todas as disputas do cargo são reunidas numa só correlação.</li>
-          <li>Sucesso eleitoral = ter sido eleito, conforme o resultado do TSE. Só titulares, eleições ordinárias e quem de fato disputou; não há receitas nem despesas antes de 2018.</li>
+          {METODOLOGIA.p2.calculo.map((t) => <li key={t}>{t}</li>)}
         </ul>
       </section>
     </>

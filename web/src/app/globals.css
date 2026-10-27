@@ -678,7 +678,8 @@ a.linha:hover { background: var(--panel2); }
 /* ---------- Observatório: o mapa da abstenção ----------
    Palco noturno nos dois temas: a escala da abstenção (magma, do violeta ao pêssego: mais claro = mais gente faltou)
    e a grade 3 × 3 do cruzamento (abstenção em rosa, indicador em ciano) foram escolhidas sobre esse fundo. */
-.observatorio {
+/* .paleta-mapa: as mesmas cores fora do mapa (as ilustrações da /sobre) */
+.observatorio, .paleta-mapa {
   /* Três degraus de marinho: o palco é o mais fundo (o mapa é o centro), os blocos do painel e os controles ficam acima.
      A escala é do tipo cividis: sobe em claridade do azul ao amarelo passando por um cinza neutro, sem verde, que é a
      cor da ação e soaria como "bom". O destaque (ano, unidade e partido escolhidos) é o laranja corrige da urna. */
@@ -694,8 +695,8 @@ a.linha:hover { background: var(--panel2); }
   --ficha-faixa-2: color-mix(in srgb, var(--marinho-700) 72%, var(--gelo));   /* a onda de trás, que aparece como faixa */
   --ficha-fundo: var(--bg); --ficha-avesso: color-mix(in srgb, var(--marinho-900) 16%, var(--branco-urna));   /* o canto dobrado: o buraco e o avesso do papel */
   --b00: #2e2b4f; --b01: #7c2f6c; --b02: #e0457b; --b10: #2c5d84; --b11: #775a8f; --b12: #e27798; --b20: #2fb0c8; --b21: #8cb5d2; --b22: #f2d3e4;
-  scroll-margin-top: var(--gap); align-items: start; margin-bottom: 120px;
 }
+.observatorio { scroll-margin-top: var(--gap); align-items: start; margin-bottom: 120px; }
 /* no tema escuro o fundo da página já é marinho fundo: o palco desce mais um degrau para continuar o mais fundo */
 :root[data-theme="dark"] .observatorio { --noite: #050a13; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .observatorio { --noite: #050a13; } }
@@ -770,10 +771,6 @@ a.linha:hover { background: var(--panel2); }
 .aba-candidato { padding: 0 4px; }
 .aba-candidato .busca-cand label { color: var(--noite-muted); }
 .aba-candidato .rotulo { margin: 20px 0 8px; font-size: 14px; }
-.aba-candidato .sugestoes-cand { display: grid; gap: 2px; }
-.aba-candidato .sugestoes-cand a { display: grid; gap: 1px; padding: 9px 10px; border-radius: 7px; font-size: 15px; font-weight: 600; color: var(--sobre-noite); text-decoration: none; transition: background-color var(--t-hover) ease; }
-.aba-candidato .sugestoes-cand a:hover { background: var(--noite3); }
-.aba-candidato .sugestoes-cand small { font-size: 13px; font-weight: 400; color: var(--noite-muted); }
 /* o estado clicado no mapa filtra a busca: uma etiqueta com o nome dele e o × que volta aos seis estados */
 .filtro-uf { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 14px; padding: 6px 6px 6px 12px; border-radius: 8px;
   background: color-mix(in srgb, var(--brilho) 16%, var(--noite2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brilho) 45%, transparent); font-size: 14px; color: var(--sobre-noite); }
@@ -786,9 +783,7 @@ a.linha:hover { background: var(--panel2); }
   /* ao mesmo tempo que o mapa dá zoom no estado, a etiqueta se desenha da esquerda (como o filtro de partido) e as
      sugestões do estado entram uma a uma, de cima para baixo */
   .js .filtro-uf { animation: filtro-entra 460ms var(--ease-expo) both; }
-  .js .aba-candidato .sugestoes-cand li { animation: sugestao-entra 520ms var(--ease-expo) both; animation-delay: calc(120ms + var(--i, 0) * 45ms); }
 }
-@keyframes sugestao-entra { from { opacity: 0; transform: translateY(8px); filter: blur(3px); } }
 
 /* camadas: o mapa pinta uma coisa de cada vez. Escolha única em dois níveis: segmentos para o modo (ícone sobre o
    nome, mais altos que as abas de cima, para não parecerem o mesmo controle), e dentro do modo segmentos menores
@@ -1189,10 +1184,12 @@ a.linha:hover { background: var(--panel2); }
 .mapa-abst .c0 { fill: var(--c0); } .mapa-abst .c1 { fill: var(--c1); } .mapa-abst .c2 { fill: var(--c2); }
 .mapa-abst .c3 { fill: var(--c3); } .mapa-abst .c4 { fill: var(--c4); } .mapa-abst .neutro { fill: var(--neutro); }
 .legenda-q .c0 { background: var(--c0); box-shadow: inset 0 0 0 1px var(--noite-linha); } .legenda-q .c1 { background: var(--c1); } .legenda-q .c2 { background: var(--c2); }
-.legenda-q .c3 { background: var(--c3); } .legenda-q .c4 { background: var(--c4); }
+.legenda-q .c3 { background: var(--c3); } .legenda-q .c4 { background: var(--c4); } .legenda-q .neutro { background: var(--neutro); }
 .legenda-cand { gap: 3px; }
 .legenda-cand li { min-width: 62px; }
 .legenda-cand li:first-child { min-width: 92px; }
+.legenda-mun { gap: 24px; }   /* prefeito e vereador: duas categorias, não uma escala; cada amostra solta */
+.legenda-mun li i, .legenda-mun li:first-child i, .legenda-mun li:last-child i { width: 44px; border-radius: 3px; }
 .trilha [aria-current] { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* município de nome longo não empurra o título */
 .palco.cand .mapa-abst .uf-fora { fill: var(--noite2); }   /* o resto do país desce um degrau: o estado com menos votos ainda se separa dele */
 .palco-aviso { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(30ch, 80%); margin: 0; padding: 14px 18px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); font-size: 16px; text-align: center; text-wrap: balance; }
@@ -1254,7 +1251,6 @@ a.linha:hover { background: var(--panel2); }
 /* a ficha não estica com a pilha ao lado: o cartão tem a altura dele */
 .painel-cand > .s4 { align-self: start; }
 
-.sugestoes-cand { list-style: none; padding: 0; margin: 0; }
 .busca-cand { max-width: none; }
 .busca-cand-campo { position: relative; }
 .busca-cand-campo svg { position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%); fill: none; stroke: var(--noite-muted); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
@@ -1323,8 +1319,6 @@ a.linha:hover { background: var(--panel2); }
 .ficha-iniciais { font-size: min(76px, 22cqi); font-weight: 700; letter-spacing: -0.04em; color: var(--ficha-sobre-campo); }
 .ficha-base { position: relative; z-index: 2; display: grid; gap: 4px; padding: 6px 24px 12px; background: var(--ficha-base); color: var(--ficha-sobre-campo); }
 .ficha-numero { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.ficha-base .ficha-fonte { color: color-mix(in srgb, var(--ficha-sobre-campo) 70%, var(--ficha-base)); }
-.ficha-fonte { font-size: 12px; line-height: 1.4; color: var(--ficha-muted); }
 
 /* verso: o número de votos em destaque e a grade de casas (as casas do santinho, aqui com os números) */
 .ficha-verso { gap: 14px; padding: 22px 22px 20px; }
@@ -1865,3 +1859,165 @@ a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 
   .p9g-lado { grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
   .p9g-seta { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nome dif" "meio meio"; row-gap: 4px; margin-top: 16px; }
 }
+/* =====================================================================================================
+   /sobre: as dez perguntas em ordem; a respondida abre (details) com a metodologia e o caminho da resposta.
+   O diagrama e a matriz se ajustam à largura do conteúdo (container query), não à da janela.
+   ===================================================================================================== */
+.sobre-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 24px; padding: 32px; container: numeros / inline-size; }
+.sobre-numeros p { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.sobre-numeros b { font-size: clamp(64px, 5.6vw, 112px); font-weight: 600; line-height: 0.9; letter-spacing: -0.045em; }
+.sobre-numeros span { font-size: 17px; max-width: 24ch; color: color-mix(in srgb, var(--sobre-tinta) 82%, transparent); }
+.sobre-escopo-texto { padding: 20px 32px; }
+.sobre-escopo-texto p:first-child { font-size: 19px; }
+
+.sobre-nav ul { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sobre-nav a { display: block; font-size: 15px; font-weight: 500; padding: 8px 12px; border-radius: 6px; background: var(--panel); text-decoration: none; transition: background-color var(--t-hover) ease; }
+@media (hover: hover) and (pointer: fine) { .sobre-nav a:hover { background: var(--panel2); } }
+
+.sobre-secao { margin-top: 88px; scroll-margin-top: var(--gap); container: secao / inline-size; }
+.sobre-titulo { font-size: clamp(36px, 2.6vw + 12px, 60px); letter-spacing: -0.035em; line-height: 1; margin: 0 0 14px; }
+.sobre-intro { font-size: var(--t-lead); line-height: 1.35; max-width: 52ch; margin: 0 0 28px; text-wrap: pretty; }
+
+/* ---------- As perguntas ----------
+   Três papéis de texto: o número (grande, cifras tabulares), a pergunta (o título do cartão) e o corpo (16–19 px).
+   A respondida é um bloco que abre; a que falta é só uma linha, sem fundo, com o selo "Em breve". */
+.perguntas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.q { border-radius: var(--raio); scroll-margin-top: var(--gap); }
+details.q { background: var(--panel); transition: background-color var(--t-hover) ease; }
+.q > summary, .q.breve { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 20px 24px; }
+.q > summary { cursor: pointer; list-style: none; margin: 0; color: var(--fg); border-radius: var(--raio); }
+.q > summary::-webkit-details-marker { display: none; }
+@media (hover: hover) and (pointer: fine) { details.q:not([open]) > summary:hover { background: var(--panel2); } }
+.q-marca { display: flex; }
+.q-n { font-size: 44px; font-weight: 600; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.icone.q-n { width: 40px; height: 40px; stroke-width: 1.5; }
+.q-texto { font-size: clamp(19px, 0.5vw + 15px, 23px); line-height: 1.3; letter-spacing: -0.015em; font-weight: 600; margin: 0; max-width: 58ch; text-wrap: balance; }
+.q-abre { width: 22px; height: 22px; color: var(--muted); }
+details.q[open] .q-abre { transform: rotate(90deg); color: var(--fg); }
+@media (prefers-reduced-motion: no-preference) { .q-abre { transition: transform var(--t-ui) var(--ease-out), color var(--t-hover) ease; } }
+.q.breve { color: var(--muted); padding-top: 14px; padding-bottom: 14px; }
+.q.breve .q-texto { font-weight: 500; }
+.q-selo { font-size: 14px; font-weight: 500; padding: 5px 10px; border-radius: 6px; background: var(--panel); white-space: nowrap; }
+
+.q-corpo { padding: 4px 24px 28px calc(24px + 64px + 20px); }
+.q-resposta { font-size: 19px; line-height: 1.45; max-width: 62ch; margin-bottom: 14px; text-wrap: pretty; }
+.q-recorte { list-style: none; padding: 0; margin: 0 0 28px; }
+.q-recorte .chip { font-size: 14px; padding: 6px 12px; }
+.q-colunas { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px 40px; }
+.q-lado { display: grid; gap: 28px; align-content: start; }
+.q h4 { font-size: 17px; line-height: 1.3; margin: 0 0 10px; }
+.q .lista { font-size: 16px; gap: 10px; }
+.q .lista li { max-width: 70ch; }
+.q-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin: 28px 0 0; }
+.q-acoes a { color: var(--brand); font-weight: 500; text-underline-offset: 0.2em; }
+.q-acoes a.q-ver { display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; transition: filter var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.q-ver .icone { width: 18px; height: 18px; stroke-width: 2.25; }
+@media (hover: hover) and (pointer: fine) { .q-acoes a.q-ver:hover { filter: brightness(1.08); } }
+a.q-ver:active { transform: scale(0.98); }
+@media (prefers-reduced-motion: no-preference) {
+  .q-ver .icone { transition: transform var(--t-ui) var(--ease-out); }
+  .q-acoes a.q-ver:hover .icone { transform: translateX(3px); }
+}
+.q-tecnico { margin-top: 20px; }
+.q-tecnico > summary { font-size: 15px; font-weight: 600; margin: 0; }
+.q h5 { font-size: 15px; margin: 0 0 8px; }
+.q .sobre-tecnico-corpo .lista + h5 { margin-top: 18px; }
+.q .sobre-tecnico-corpo .lista { font-size: 15px; }
+.q-sql a { color: var(--brand); }
+.q-sql code { background: none; padding: 0; font-size: 14px; word-break: break-all; }
+.perguntas-tambem { font-size: 17px; color: var(--muted); font-weight: 500; margin: 28px 0 10px; }
+
+/* ilustrações: a ideia de cada medida, sem dados */
+.formula { margin: 0 0 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.formula-resultado { font-size: 17px; font-weight: 600; }
+.formula-fracao { display: inline-grid; gap: 6px; text-align: center; font-size: 16px; line-height: 1.25; max-width: 30ch; }
+.formula-fracao i { display: block; height: 2px; background: currentColor; border-radius: 1px; }
+.ideia-mapa { display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: end; }
+.ideia-mapa figure, .ideia-propaganda, .ideia-carreira { margin: 0; }
+.ideia-mapa figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.ideia-quintos { display: flex; gap: 3px; }
+.ideia-quintos i { width: 34px; height: 26px; border-radius: 3px; }
+.ideia-grade { display: grid; grid-template-columns: repeat(3, 30px); gap: 3px; }
+.ideia-grade i { height: 30px; border-radius: 3px; }
+.ideia-barra { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; margin-bottom: 10px; }
+.ideia-barra span { display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.25; }
+.ideia-barra i { display: block; height: 22px; border-radius: 3px; }
+.ideia-carreira svg { display: block; width: 100%; max-width: 320px; height: auto; }
+.ideia-carreira path { fill: none; stroke: var(--muted); stroke-width: 2; }
+.ideia-carreira circle.cheio { fill: var(--fg); }
+.ideia-carreira circle.vazado { fill: var(--panel); stroke: var(--fg); stroke-width: 2.5; }
+.ideia-carreira figcaption { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.ideia-carreira figcaption span { display: inline-flex; align-items: center; gap: 6px; }
+.ideia-carreira i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.ideia-carreira i.cheio { background: var(--fg); }
+.ideia-carreira i.vazado { box-shadow: inset 0 0 0 2px var(--fg); }
+
+/* ---------- Do dado à tela ---------- */
+.caminho { display: block; width: 100%; height: auto; margin: 0 0 8px; }
+.caminho.estreito { display: none; max-width: 400px; }
+.cd-caixa rect { fill: var(--panel2); }
+.cd-caixa.fraca rect { fill: var(--bg); }
+.cd-caixa.destino rect { fill: var(--tinta); }
+.cd-titulo { font: 600 17px var(--fonte), system-ui, sans-serif; fill: var(--fg); letter-spacing: -0.01em; }
+.cd-sub { font: 400 14px var(--fonte), system-ui, sans-serif; fill: var(--muted); }
+.cd-caixa.destino .cd-titulo, .cd-caixa.destino .cd-sub { fill: var(--sobre-tinta); }
+.cd-seta { fill: none; stroke: var(--muted); stroke-width: 1.75; }
+.cd-ponta { fill: var(--muted); }
+
+.sobre-tecnico > summary { font-size: 16px; font-weight: 600; margin: 0; }
+.sobre-tecnico { margin-top: 16px; }
+.sobre-tecnico-corpo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 40px; margin-top: 18px; }
+.sobre-tecnico-corpo h3 { font-size: 17px; margin: 0 0 10px; }
+.sobre-tecnico-corpo .lista { font-size: 16px; }
+.sobre-def { margin: 0; display: grid; gap: 4px; font-size: 16px; }
+.sobre-def dt { font-weight: 600; margin-top: 8px; }
+.sobre-def dd { margin: 0; }
+
+/* ---------- O que existe em cada ano: cheio = no banco, vazado = fora, círculo = Censo ---------- */
+.matriz-legenda { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 15px; }
+.matriz-legenda li { display: flex; align-items: center; gap: 8px; }
+.matriz-grade { display: grid; gap: 4px; margin-bottom: 16px; }
+.matriz-linha { display: grid; grid-template-columns: minmax(200px, 1.6fr) repeat(14, minmax(0, 1fr)); gap: 3px; align-items: stretch; }
+.matriz-anos span { font-size: 12px; color: var(--muted); text-align: center; align-self: end; padding-bottom: 4px; }
+.matriz-dado { margin: 0; padding: 8px 14px 8px 0; display: flex; flex-direction: column; line-height: 1.3; }
+.matriz-dado b { font-size: 16px; font-weight: 600; }
+.matriz-dado span { font-size: 14px; }
+.matriz-dado small { font-size: 13px; color: var(--muted); }
+.matriz-cel { display: grid; place-items: center; min-height: 40px; border-radius: 3px; background: color-mix(in srgb, var(--fg) 5%, transparent); }
+.cob { display: inline-block; flex: none; width: 16px; height: 16px; border-radius: 3px; }
+.cob.dado { background: var(--tinta); }
+.cob.censo { background: var(--tinta); border-radius: 50%; }
+.matriz-cel .cob.dado { width: 100%; height: 100%; }
+
+/* ---------- Regras e qualidade ---------- */
+.sobre-regras { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 48px; }
+.sobre-regras li { position: relative; padding-left: 22px; font-size: 18px; line-height: 1.45; max-width: 46ch; }
+.sobre-regras li::before { content: ""; position: absolute; left: 0; top: 0.5em; width: 9px; height: 9px; border-radius: 2px; background: color-mix(in srgb, var(--sobre-tinta) 55%, transparent); }
+#regras .bloco { padding: 32px; }
+.sobre-qualidade { max-width: 72ch; }
+
+@container numeros (max-width: 640px) {
+  .sobre-numeros p { flex-direction: row; align-items: baseline; gap: 14px; }
+  .sobre-numeros b { font-size: 64px; min-width: 1.4ch; }
+}
+@container secao (max-width: 760px) {
+  .caminho.largo { display: none; }
+  .caminho.estreito { display: block; }
+  .sobre-tecnico-corpo, .sobre-regras, .q-colunas { grid-template-columns: minmax(0, 1fr); }
+  #regras .bloco { padding: 24px; }
+  .q > summary, .q.breve { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; padding: 16px; }
+  .q.breve { grid-template-columns: 40px minmax(0, 1fr); }
+  .q.breve .q-selo { grid-column: 2; justify-self: start; }
+  .q-n { font-size: 32px; }
+  .icone.q-n { width: 30px; height: 30px; }
+  .q-corpo { padding: 0 16px 22px; }
+}
+@container secao (max-width: 620px) {
+  .matriz-anos { display: none; }
+  .matriz-grade { gap: 6px; }
+  .matriz-linha { grid-template-columns: minmax(0, 1fr); }
+  .matriz-cel { display: none; }
+  .matriz-dado { padding: 12px 14px; border-radius: 6px; background: var(--panel); }
+  .matriz-dado span { font-size: 16px; font-weight: 500; }
+}
+@media (max-width: 1000px) { .sobre-secao { margin-top: 56px; } .sobre-escopo-texto { padding: 20px 24px; } }

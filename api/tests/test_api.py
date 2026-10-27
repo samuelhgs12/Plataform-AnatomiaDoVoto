@@ -568,6 +568,7 @@ def test_votos_por_municipio(client):
     # Alvorada: Maria 30000 + rival 3000 nominais + 70 de legenda; Serra Azul: só o rival votado, ela com 0
     assert [(x["id_municipio"], x["votos"], x["validos_cargo"], x["posicao"]) for x in v] == [(1, 30000, 33070, 1), (4, 0, 2000, 2)]
     assert {x["turno"] for x in v} == {1} and {x["uf"] for x in v} == {"MG"}
+    assert [x["cod_ibge"] for x in v] == ["3100001", None]               # a chave do mapa estático; sem de-para, null
     r = client.get("/api/candidaturas/10/votos-municipio").json()
     assert [(x["id_municipio"], x["votos"], x["posicao"]) for x in r] == [(1, 3000, 2), (4, 2000, 1)]
     assert client.get("/api/candidaturas/999/votos-municipio").status_code == 404

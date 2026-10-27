@@ -4,7 +4,6 @@
 
 import { classe, quantis } from "./abstencao";
 import { pct } from "./format";
-import type { CandidaturaItem } from "./types";
 
 /** Uma candidatura (pessoa × eleição × cargo), com os números do verso da ficha. */
 export interface CandidaturaMapa {
@@ -41,6 +40,8 @@ export interface CandidaturaMapa {
 export interface VotoMunicipio {
   id_candidatura: number;
   id_municipio: number;
+  /** a chave que casa com o mapa estático (mapa.json), cujo id_municipio é de outra carga */
+  cod_ibge: string | null;
   uf: string;
   turno: number;
   votos: number;
@@ -49,14 +50,32 @@ export interface VotoMunicipio {
   posicao: number;
 }
 
-/** Cargos que o mapa por município desenha; prefeito e vereador ainda ficam de fora. */
+/** Cargos que o mapa pinta município a município, pela parte dos votos válidos em cada um. */
 export const CARGOS_ESTADUAIS = ["Deputado federal", "Deputado estadual", "Senador", "Governador"];
+/** Cargos disputados num município só: sem votos por bairro ou seção, o mapa só destaca o município da disputa. */
+export const CARGOS_MUNICIPAIS = ["Prefeito", "Vereador"];
 export const UFS_PROJETO = ["AP", "ES", "MG", "PE", "RJ", "RR"];
 
-/** O que o mapa mostra para o cargo: os municípios da UF, os seis estados (presidente) ou nada (municipais). */
-export function abrangencia(cargo: string): "uf" | "seis" | "fora" {
+/**
+ * O que o mapa mostra para o cargo: os municípios da UF, os seis estados (presidente), o município da disputa em
+ * destaque no estado (prefeito e vereador) ou nada (os demais, como vices e suplentes).
+ */
+export function abrangencia(cargo: string): "uf" | "seis" | "municipio" | "fora" {
   if (cargo === "Presidente") return "seis";
+  if (CARGOS_MUNICIPAIS.includes(cargo)) return "municipio";
   return CARGOS_ESTADUAIS.includes(cargo) ? "uf" : "fora";
+}
+
+/**
+ * Os votos da API com o id_municipio do mapa estático (web/public/data/mapa.json), casados pelo código IBGE: o
+ * id_municipio muda a cada carga do banco, e o JSON e a API podem vir de cargas diferentes. Sem par, ficam de fora.
+ */
+export function noMapaEstatico(votos: VotoMunicipio[], municipios: { id_municipio: number; cod_ibge: string }[]): VotoMunicipio[] {
+  const id = new Map(municipios.map((m) => [m.cod_ibge, m.id_municipio]));
+  return votos.flatMap((v) => {
+    const m = v.cod_ibge ? id.get(v.cod_ibge) : undefined;
+    return m === undefined ? [] : [{ ...v, id_municipio: m }];
+  });
 }
 
 /** A parte dos votos válidos do cargo que foi para o candidato; null sem votos válidos. */
@@ -199,6 +218,13 @@ export function fraseResumo(linhas: Pick<VotoMunicipio, "id_municipio" | "votos"
   return maior ? `${metade}; a maior proporção foi em ${nomes.get(maior.id) ?? "um município"} (${pct(maior.p, 1)}).` : `${metade}.`;
 }
 
+/** O resumo de uma disputa municipal, que acontece num município só: "Disputou só em Alfa: 30,0% dos votos válidos para prefeito, 1º lugar." */
+export function fraseMunicipal(l: Pick<VotoMunicipio, "votos" | "validos_cargo" | "posicao">, municipio: string, cargo: string): string {
+  const p = proporcaoNoMunicipio(l.votos, l.validos_cargo);
+  if (p == null || !l.votos) return `Disputou só em ${municipio}, sem votos registrados neste turno.`;
+  return `Disputou só em ${municipio}: ${pct(p, 1)} dos votos válidos para ${cargo.toLowerCase()}, ${l.posicao}º lugar.`;
+}
+
 /**
  * O nome de urna dividido como no santinho: a última palavra em destaque, o resto numa linha menor acima
  * ("Otávio" / "Cerejeira"; "Ana da" / "Silva"). Um nome de uma palavra só fica todo em destaque.
@@ -229,20 +255,10 @@ export function trechosDaCarreira<T extends Pick<CandidaturaMapa, "cargo" | "uf"
   return trechos;
 }
 
-/** Uma pessoa na busca do mapa e nas sugestões (mesmo formato de /api/busca). */
+/** Uma pessoa na busca do mapa (mesmo formato de /api/busca). */
 export interface EntradaCandidato {
   id_candidato: number; nome_urna: string | null; partido: string | null; uf: string | null; ultimo_ano: number; ultimo_cargo: string;
   ultimo_ue?: string | null; ultimo_sequencial?: string | null;
-}
-
-/** Sugestões a partir de uma listagem de /api/candidaturas: uma por pessoa, na ordem da listagem. */
-export function sugestoesDe(itens: CandidaturaItem[], n = 4): EntradaCandidato[] {
-  const vistos = new Set<number>();
-  return itens.flatMap((c) => {
-    if (c.id_candidato == null || vistos.has(c.id_candidato)) return [];
-    vistos.add(c.id_candidato);
-    return [{ id_candidato: c.id_candidato, nome_urna: c.nome_urna, partido: c.partido, uf: c.uf, ultimo_ano: c.ano, ultimo_cargo: c.cargo, ultimo_ue: c.ue, ultimo_sequencial: c.sequencial }];
-  }).slice(0, n);
 }
 
 /** Cargos com voto de legenda: os válidos somam os votos no partido, que o TSE só publica por município de 2018 em diante. */
