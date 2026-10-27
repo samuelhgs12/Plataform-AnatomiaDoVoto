@@ -218,6 +218,14 @@ class Receitas(BaseModel):
     outros_privados: float = 0
 
 
+class CandidatoDisputa(BaseModel):
+    """Um candidato da mesma disputa (cargos de uma vaga, pergunta 8 no perfil). pct_publica nulo = não declarou receitas."""
+    id_candidatura: int
+    nome_urna: str | None
+    eleito: bool
+    pct_publica: float | None
+
+
 class Eleito(BaseModel):
     """Um eleito de um município ou estado (página /municipios). Só dados públicos da candidatura."""
     cargo: str

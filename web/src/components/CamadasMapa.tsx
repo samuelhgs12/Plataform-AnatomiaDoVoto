@@ -10,6 +10,8 @@ export interface CamadaLegenda {
   /** só com a legenda escolhida: o cargo (nos anos gerais) e o partido */
   cargos: { rotulo: string; href: string; on: boolean }[];
   partido?: { opcoes: [string, string][]; atual?: string; params: Record<string, string> };
+  /** somar os partidos que se fundiram ao atual (DEM e PSL → UNIÃO); o link liga ou desliga */
+  juntar?: { on: boolean; href: string };
 }
 
 export interface CamadaComparativos {
@@ -55,6 +57,13 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: Modo
               {legenda.cargos.map((c) => (
                 <a key={c.rotulo} href={c.href} data-mapa="" aria-current={c.on ? "true" : undefined}>{c.rotulo}</a>
               ))}
+            </nav>
+          )}
+          {legenda.juntar && (
+            <nav className="radios" aria-label="Fusões de partidos">
+              <a href={legenda.juntar.href} data-mapa="" aria-current={legenda.juntar.on ? "true" : undefined}>
+                <span className="radio marca" aria-hidden="true" />Juntar partidos que se fundiram
+              </a>
             </nav>
           )}
           {legenda.partido && (

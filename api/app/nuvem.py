@@ -8,10 +8,12 @@ Duas camadas:
     adesivo). É o rótulo que vai para a nuvem: assim uma peça comprada em vários formatos não se espalha em várias
     palavras pequenas, e o tamanho de cada palavra compara peças. Os formatos seguem em `detalhes` (dica e tabela).
 
-Três passadas por descrição para achar o formato:
+Quatro passadas por descrição para achar o formato:
   1. termos específicos: dentro de uma família vale só o primeiro que casar (o específico vem antes do genérico);
-  2. termos genéricos (impulsionamento, marketing, anúncio, lona, impressos): só se a passada 1 não achou nada;
-  3. reserva pela categoria do TSE (origem_despesa): só se o texto não disse nada ("propaganda e publicidade").
+  2. específicos fracos ("propaganda eleitoral 7x10" é santinho): só se a passada 1 não achou nada, para que carro de
+     som, adesivo, faixa etc. tenham prioridade;
+  3. termos genéricos (impulsionamento, marketing, anúncio, lona, impressos): só se as passadas 1 e 2 não acharam nada;
+  4. reserva pela categoria do TSE (origem_despesa): só se o texto não disse nada ("propaganda e publicidade").
 A plataforma, quando dita, substitui "impulsionamento" ("impulsionamento facebook" -> Facebook).
 Padrões sem lookahead/lookbehind, para poderem ir para o RE2 do DuckDB sem mudança.
 
@@ -28,7 +30,7 @@ ESPECIFICOS = [
     ("mao", "mosquitinho", r"mosquitinh"),
     ("mao", "colinha", r"colinh|colnh|cedula"),
     ("mao", "cartão de visita", r"cart(ao|oes) (de )?visitas?"),
-    ("mao", "santinho", r"santinh|satinh|santnh|santihos|santinos|\bsant\b|propagandas? (eleitora|politic)\w* \d"),
+    ("mao", "santinho", r"santinh|satinh|santnh|santihos|santinos|\bsant\b"),
     ("mao", "cartão", r"\bcart(ao|oes)\b"),
     # adesivos
     ("adesivo", "adesivo perfurado", r"perfur|pefurad|prefurad|citru|citro|cithru|sitru|setru|see ?th?ru|seetrhu"),
@@ -50,7 +52,7 @@ ESPECIFICOS = [
     ("plano", "plano de governo", r"(planos?|programas?) de governo"),
     ("vestivel", "camiseta", r"camis"),
     ("vestivel", "mochila e pirulito", r"mochila|pirulito"),
-    ("som", "carro de som", r"carros? (de )?som|minitrio|trio eletrico|paredao|som automotivo|bicicleta de som|moto ?som|"
+    ("som", "carro de som", r"carros? (de |e )?som|minitrio|trio eletrico|paredao|som automotivo|bicicleta de som|moto ?som|"
                             r"sonoriza|som volante|volante de som|propaganda volante|carro volante"),
     # audiovisual
     ("jingle", "jingle", r"jingl|jungle|jigle|jimgle|jngle|vinheta|musica"),
@@ -66,6 +68,14 @@ ESPECIFICOS = [
     ("redes", "redes sociais", r"redes? socia|midias? socia|social media"),
     ("site", "site", r"\bsite|website|dominio|hospedagem|paginas? (na|da|de) internet|pagina web"),
     ("mensagem", "SMS", r"mensagens? de texto|\bsms\b|disparo"),
+]
+# "propaganda eleitoral/política" seguida de tamanho ou quantidade é santinho: "7x10", "10 x 15", "5000 un", "mil unidades"
+# ou um número que não é ano (até 3 dígitos, 4 dígitos fora de 1900-2099, 5 ou mais, ou com ponto de milhar). Um ano
+# isolado ("propaganda política 2020") não diz a peça.
+_TAMANHO = (r"(\d+ ?x ?\d+|\d+ ?(mil\b|milheiros?|un\b|und|unid|pcs|pecas|cm\b)|mil unidades|"
+            r"(\d{1,3}|(0\d|1[0-8]|2[1-9]|[3-9]\d)\d\d|\d{5,}|\d{1,3}\.\d{3})\b)")
+ESPECIFICOS_FRACOS = [
+    ("mao", "santinho", r"propagandas? (eleitora|politic)\w* " + _TAMANHO),
 ]
 GENERICOS = [
     ("impuls", "impulsionamento", r"impul|impusion|implusion|trafego pago"),
@@ -124,6 +134,7 @@ EXPLICACAO = {
     "marketing": "marketing, criação e design",
 }
 _ESPECIFICOS = [(f, t, re.compile(p)) for f, t, p in ESPECIFICOS]
+_FRACOS = [(f, t, re.compile(p)) for f, t, p in ESPECIFICOS_FRACOS]
 _GENERICOS = [(f, t, re.compile(p)) for f, t, p in GENERICOS]
 
 
@@ -140,7 +151,7 @@ def _passar(lista, texto: str) -> list[str]:
 def termos(descricao: str | None, origem: str | None = None) -> tuple[list[str], bool]:
     """Formatos de uma descrição e se vieram da categoria do TSE (reserva) em vez do texto."""
     texto = sem_acento(descricao or "").lower()
-    achados = _passar(_ESPECIFICOS, texto) or _passar(_GENERICOS, texto)
+    achados = _passar(_ESPECIFICOS, texto) or _passar(_FRACOS, texto) or _passar(_GENERICOS, texto)
     if achados:
         return achados, False
     reserva = POR_CATEGORIA.get(origem or "")
@@ -177,23 +188,35 @@ def nuvem(linhas: list[dict]) -> list[dict]:
     """
     acc: dict[str, dict] = {}
     for linha in linhas:
-        ps = pecas(linha["descricao"], linha["origem"])
-        if not ps:
-            continue
-        base, resto = divmod(int(linha["centavos"] or 0), len(ps))
-        for i, (peca, formato) in enumerate(ps):
-            parte = base + (1 if i < resto else 0)
-            item = acc.setdefault(peca, {"termo": peca, "centavos": 0, "despesas": 0, "pela_categoria_centavos": 0,
-                                         "grupos": {}, "despesas_grupo": {}, "formatos": {}})
-            item["centavos"] += parte
-            item["despesas"] += int(linha["despesas"])
-            item["pela_categoria_centavos"] += parte if formato == SEM_DETALHE else 0
-            item["grupos"][linha["grupo"]] = item["grupos"].get(linha["grupo"], 0) + parte
-            item["despesas_grupo"][linha["grupo"]] = item["despesas_grupo"].get(linha["grupo"], 0) + int(linha["despesas"])
-            item["formatos"][formato] = item["formatos"].get(formato, 0) + parte
+        acumular(acc, linha, pecas(linha["descricao"], linha["origem"]))
+    return finalizar(acc)
+
+
+def acumular(acc: dict[str, dict], linha: dict, ps: list[tuple[str, str]]) -> None:
+    """Soma uma linha (despesas, centavos e grupo de uma descrição), já classificada em `ps` = pecas(...), no acumulador
+    de uma nuvem. Separado de nuvem() para o pré-cálculo dos recortes (app/pecas_geral.py) classificar cada descrição uma
+    vez só e somá-la em mais de um acumulador."""
+    if not ps:
+        return
+    base, resto = divmod(int(linha["centavos"] or 0), len(ps))
+    for i, (peca, formato) in enumerate(ps):
+        parte = base + (1 if i < resto else 0)
+        item = acc.setdefault(peca, {"termo": peca, "centavos": 0, "despesas": 0, "pela_categoria_centavos": 0,
+                                     "grupos": {}, "despesas_grupo": {}, "formatos": {}})
+        item["centavos"] += parte
+        item["despesas"] += int(linha["despesas"])
+        item["pela_categoria_centavos"] += parte if formato == SEM_DETALHE else 0
+        item["grupos"][linha["grupo"]] = item["grupos"].get(linha["grupo"], 0) + parte
+        item["despesas_grupo"][linha["grupo"]] = item["despesas_grupo"].get(linha["grupo"], 0) + int(linha["despesas"])
+        item["formatos"][formato] = item["formatos"].get(formato, 0) + parte
+
+
+def finalizar(acc: dict[str, dict]) -> list[dict]:
+    """O acumulador de uma nuvem -> as palavras, do maior para o menor valor (não altera o acumulador)."""
     saida = []
-    for item in acc.values():
-        grupos, despesas_grupo, formatos = item.pop("grupos"), item.pop("despesas_grupo"), item.pop("formatos")
+    for bruto in acc.values():
+        item = {k: v for k, v in bruto.items() if k not in ("grupos", "despesas_grupo", "formatos")}
+        grupos, despesas_grupo, formatos = bruto["grupos"], bruto["despesas_grupo"], bruto["formatos"]
         item["grupo"] = max(sorted(grupos), key=lambda g: grupos[g])
         # valor (e número de despesas) da peça em cada tipo (grupo da categoria do TSE): somado por tipo, o valor bate
         # com o total oficial do tipo

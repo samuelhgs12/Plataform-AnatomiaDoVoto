@@ -22,6 +22,9 @@ import { FiltrosDinheiro } from "@/components/FiltrosDinheiro";
 import { LinhasCandidatos, type LinhaCandidato } from "@/components/LinhasCandidatos";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "@/components/MapaAbstencao";
 import { MapaVivo } from "@/components/MapaVivo";
+import { AbasDinheiro } from "@/components/AbasDinheiro";
+import { PropagandaGeral } from "@/components/PropagandaGeral";
+import { ABA_PROPAGANDA, cargosPropaganda, recortePropaganda } from "@/lib/propaganda-geral";
 import { METODOLOGIA } from "@/lib/metodologia";
 
 export const metadata: Metadata = { title: "Dinheiro nas eleições" };
@@ -41,10 +44,11 @@ const INICIO_LISTA = 8;
  */
 export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
+  const abaPropaganda = um(sp.aba) === ABA_PROPAGANDA;   // aba Propaganda (pergunta 9): src/components/PropagandaGeral.tsx
   const [dados, q2, q8] = await Promise.all([
     lerAnalise("municipios", ["municipios", "resumo", "estados"]),
-    lerAnalise("q2", ["faixas", "maior_gasto"]),
-    lerAnalise("q8", ["sucesso", "fontes"]),
+    abaPropaganda ? Promise.resolve(null) : lerAnalise("q2", ["faixas", "maior_gasto"]),
+    abaPropaganda ? Promise.resolve(null) : lerAnalise("q8", ["sucesso", "fontes"]),
   ]);
   if (!dados?.resumo || !dados.estados || !dados.municipios) {
     return (
@@ -61,6 +65,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const ufs = [...new Set(municipios.map((m) => m.uf))].sort();
   const r = lerRecorte(sp, { anos, ufs, municipios });
   const { ano, cargo, uf, mun } = r;
+  const prop = abaPropaganda ? recortePropaganda({ ...r, mun: mun && { nome: nomeProprio(mun.nome) } }, { cargo: um(sp.cargo), porte: um(sp.porte), nomeUf: (u) => NOME_UF[u] ?? u }) : null;
   const municipal = ehMunicipal(ano);
   const majoritario = ehMajoritario(cargo);
   const ver = um(sp.ver) === "publico" ? "publico" : "recursos";          // P2 (todo o dinheiro) ou P8 (só o público)
@@ -162,26 +167,30 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
     <>
       <header className="area-cab">
         <p className="rotulo">Dinheiro nas eleições · AP, ES, MG, PE, RJ e RR</p>
-        <h1>Quanto as campanhas gastaram por vaga?</h1>
-        <p>Escolha um estado no mapa ou busque o município.</p>
+        <h1>{prop ? "Onde os candidatos investem em propaganda?" : "Quanto as campanhas gastaram por vaga?"}</h1>
+        <p>{prop ? "Escolha a eleição, o cargo e o estado." : "Escolha um estado no mapa ou busque o município."}</p>
       </header>
 
       <FiltrosDinheiro
         anos={anos.map((a) => [String(a), `${a} · ${ehMunicipal(a) ? "municipal" : "geral"}`])}
-        cargos={cargosDoAno(ano)} ufs={ufs.map((u) => [u, NOME_UF[u] ?? u])}
+        cargos={prop ? cargosPropaganda(ano, cargosDoAno(ano)) : cargosDoAno(ano)} ufs={ufs.map((u) => [u, NOME_UF[u] ?? u])}
         // com um estado escolhido, só as cidades dele; sem estado, todas, agrupadas por estado
         cidades={municipal ? ufs.filter((u) => !uf || u === uf).map((u) => ({ uf: u, nome: NOME_UF[u] ?? u, opcoes: municipios.filter((m) => m.uf === u).map((m) => [String(m.id_municipio), nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR")) })) : null}
         portes={municipal ? PORTES.map((p) => [p.chave, p.rotulo] as [string, string]) : null}
-        atual={{ ano: String(ano), cargo, uf: uf ?? "", mun: mun ? String(mun.id_municipio) : "", porte: porteFiltro?.chave ?? "" }}
-        fixos={Object.fromEntries(Object.entries({ vista: estado.vista, ordem: estado.ordem, ver: estado.ver }).filter(([, v]) => v)) as Record<string, string>}
+        atual={{ ano: String(ano), cargo: prop?.cargo ?? cargo, uf: uf ?? "", mun: mun ? String(mun.id_municipio) : "", porte: porteFiltro?.chave ?? "" }}
+        fixos={Object.fromEntries(Object.entries({ vista: estado.vista, ordem: estado.ordem, ver: estado.ver, aba: prop ? ABA_PROPAGANDA : undefined }).filter(([, v]) => v)) as Record<string, string>}
       />
-      {(r.cargoTrocado || r.munIgnorado) && (
+      {!prop && (r.cargoTrocado || r.munIgnorado) && (
         <p className="aviso-linha">
           {r.cargoTrocado && `${r.cargoTrocado} não é eleito em ${ano}: mostrando ${cargo.toLowerCase()}. `}
           {r.munIgnorado && `Nas eleições gerais não há dados por município: mostrando ${lugar}.`}
         </p>
       )}
+      <AbasDinheiro filtros={{ ano, cargo: prop?.cargo ?? cargo, uf: uf ?? null }} atual={prop ? "propaganda" : "gasto"} />
+      {prop && prop.avisos.length > 0 && <p className="aviso-linha">{prop.avisos.join(" ")}</p>}
 
+      {/* aba Propaganda (pergunta 9): o corpo troca; as seções abaixo são da aba padrão, "Gasto por vaga" */}
+      {prop ? <PropagandaGeral ano={prop.ano} cargo={prop.cargo} uf={prop.uf} nomeUf={prop.uf ? NOME_UF[prop.uf] ?? prop.uf : null} ufNaUrl={uf ?? null} /> : (<>
       {/* 1. Pergunta 1: o mapa (ou a lista) e um painel curto do lugar */}
       <section id="mapa" className="quadro observatorio area-mapa" aria-labelledby="h-mapa">
         {/* na lista não há zoom: sem estado, o MapaVivo não põe os botões da lupa por cima da tabela */}
@@ -404,6 +413,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
           ))}.</li>
         </ul>
       </details>
+      </>)}
     </>
   );
 }

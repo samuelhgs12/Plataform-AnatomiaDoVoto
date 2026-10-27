@@ -4,8 +4,8 @@ import { normalizarTermo, type PorTipo, type TermoNuvem } from "../src/lib/nuvem
 import {
   analisar, barraPecas, comparacao, composicaoPorTipo, DEGRAUS_BARRA, descricaoBarra, fraseComparacao, larguraParaRotulo, linhaNada,
   manchetePecas, mostrarBarra, mostrarNuvem, noEstado, numerosDestaque, parteDosGastos, parteTabela, PECA_MANCHETE, pecaManchete,
-  pecasDaManchete, tabelaCategorias, tabelaPecas, TIPO_COMUM, tipoComum, tipoDominante, tiposPorValor, tiposSemNome, totalTabela, UF_COM_PREPOSICAO, LIMIAR_GRUPO_MINIMO, LIMIAR_GRUPO_PEQUENO,
-  grupoPequeno, mediana, NOTA_DESPESA_DUPLA, reguaTipica, temDespesaDupla, tipica, type LinhaParcelas,
+  pecasDaManchete, tabelaCategorias, tabelaPecas, TIPO_COMUM, tipoComum, tipoDominante, tiposPorValor, totalTabela, UF_COM_PREPOSICAO, LIMIAR_GRUPO_MINIMO, LIMIAR_GRUPO_PEQUENO,
+  grupoPequeno, legendaTipica, mediana, NOTA_DESPESA_DUPLA, temDespesaDupla, tipica, tipicasPorTipo, type LinhaParcelas,
   type Categoria, type LinhaReferencia,
 } from "../src/lib/propaganda";
 
@@ -190,12 +190,9 @@ describe("larguraParaRotulo", () => {
   });
   it("todo degrau tem a regra de container query no globals.css", () => {
     const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf-8");
-    // cada degrau: a mesma consulta de contêiner esconde o nome na chave e mostra o tipo na linha de baixo
     for (const d of DEGRAUS_BARRA.slice(1)) {
-      expect(css, `degrau ${d}`).toContain(`@container barra-pp (max-width: ${d - 0.02}px) { .pp-cabe-${d} { display: none; } `
-        + `.pp-tipos-sem-nome > .pp-falta-${d} { display: inline-flex; } }`);
+      expect(css, `degrau ${d}`).toContain(`@container barra-pp (max-width: ${d - 0.02}px) { .pp-cabe-${d} { display: none; } }`);
     }
-    expect(css).toContain('.pp-tipos-sem-nome > [class*="pp-falta-"] { display: none; }');
   });
 });
 
@@ -221,10 +218,19 @@ describe("barraPecas", () => {
     const gen = barra(caso([peca("impressos", [[FIS, 70_000]], g), peca("santinho", [[FIS, 30_000]])]));
     expect(gen.tipos[0].segmentos.map((s) => [s.rotulo, s.generico])).toEqual([["impressos", true], ["santinho", false]]);
   });
-  it("chaves dos tipos: a classe do degrau pelo texto 'Tipo 84%'", () => {
-    expect(barra(governador()).tipos.map((t) => [t.rotulo, t.de100, t.cabe])).toEqual([
-      ["Rádio, TV e vídeo", 68, 280], ["Impresso e de rua", 25, 720], ["Internet", 7, 1600]]);
-    expect(barra(dilma()).tipos.map((t) => t.cabe)).toEqual([0, 720]);
+  it("uma linha por tipo, da maior parcela para a menor, com o percentual desta campanha", () => {
+    expect(barra(governador()).tipos.map((t) => [t.rotulo, t.pct])).toEqual([
+      ["Rádio, TV e vídeo", "68%"], ["Impresso e de rua", "25%"], ["Internet", "7%"]]);
+    expect(barra(dilma()).tipos.map((t) => [t.rotulo, t.pct])).toEqual([["Impresso e de rua", "84%"], ["Internet", "16%"]]);
+    const minusculo = barra(caso([peca("santinho", [[FIS, 998]]), peca("site", [[DIG, 2]])]));
+    expect(minusculo.tipos.map((t) => t.pct)).toEqual(["100%", "menos de 1%"]);           // de100 = 0, mas existe
+  });
+  it("tipos com 0% não ganham linha", () => {
+    expect(barra(dilma()).tipos.map((t) => t.grupo)).toEqual([FIS, DIG]);                 // nada em rádio, TV e vídeo
+    expect(barra(caso([peca("santinho", [[FIS, 60]]), peca("adesivo", [[FIS, 40]])])).tipos.map((t) => t.grupo)).toEqual([FIS]);
+  });
+  it("rótulo das peças numa linha só ('adesivo 32%'): o degrau sai desse texto", () => {
+    for (const s of barra(dilma()).tipos.flatMap((t) => t.segmentos)) expect(s.cabe).toBe(larguraParaRotulo(`${s.rotulo} ${s.pct}`, s.parte));
   });
   it("sem peças (API antiga): um segmento 'sem detalhe' por tipo, com o total oficial", () => {
     const d = dilma();
@@ -238,25 +244,69 @@ describe("barraPecas", () => {
     expect(mostrarBarra(barra(caso([peca("santinho", [[FIS, 90]]), peca("adesivo", [[FIS, 10]])])))).toBe(true);
     expect(mostrarBarra(barra(caso([peca("impressos", [[FIS, 100]], g)])))).toBe(true);
   });
-  it("descrição para leitor de tela: tipos, peças com percentual e a típica", () => {
+  it("aria-label: cada tipo com esta, a típica e as peças", () => {
     const d = dilma();
-    const cmp = comparacao([ref({})], senadorMG, d.tipos, true);
-    expect(descricaoBarra(barra(d), cmp.marca)).toBe("Propaganda por tipo e por peça. Impresso e de rua, 84%: adesivo 32%, panfleto 22%, "
-      + "santinho 20%, bóton 9%, outras (som e faixa) 1%; Internet, 16%: Facebook 16%. "
-      + "Típica entre as 12 campanhas a senador em Minas Gerais em 2018: 68% em impresso e de rua; esta: 84%.");
+    const t = tipicasPorTipo([ref({ mediana: 0.67 }), ref({ grupo: DIG, mediana: 0.17 })], senadorMG);
+    expect(descricaoBarra(barraPecas(d.tipos, d.pecas, d.total, t))).toBe("Impresso e de rua: esta 84%, típica 67%; adesivo 32%, panfleto 22%, "
+      + "santinho 20%, bóton 9%, outras (som e faixa) 1%. Internet: esta 16%, típica 17%; Facebook 16%.");
+    expect(descricaoBarra(barra(d))).toBe("Impresso e de rua: esta 84%; adesivo 32%, panfleto 22%, santinho 20%, bóton 9%, "
+      + "outras (som e faixa) 1%. Internet: esta 16%; Facebook 16%.");                     // sem referência: sem típica
   });
 });
 
-describe("tiposSemNome", () => {
-  it("só os tipos cujo nome pode não caber, com a classe do mesmo degrau da chave; null = sempre na legenda", () => {
-    expect(tiposSemNome(barra(governador()))).toEqual([
-      { grupo: AV, rotulo: "Rádio, TV e vídeo", de100: 68, classe: "pp-falta-280" },
-      { grupo: FIS, rotulo: "Impresso e de rua", de100: 25, classe: "pp-falta-720" },
-      { grupo: DIG, rotulo: "Internet", de100: 7, classe: "pp-falta-1600" }]);
-    expect(tiposSemNome(barra(dilma())).map((t) => t.classe)).toEqual(["pp-falta-720"]);           // o físico cabe sempre
-    const minusculo = caso([peca("santinho", [[FIS, 997]]), peca("adesivo", [[FIS, 1]]), peca("site", [[DIG, 2]])]);
-    expect(tiposSemNome(barra(minusculo)).map((t) => [t.rotulo, t.classe])).toEqual([["Internet", null]]);
-    expect(barra(minusculo).tipos[1].cabe).toBeNull();
+describe("a típica em cada linha", () => {
+  const refs = [ref({ mediana: 0.67 }), ref({ grupo: DIG, mediana: 0.17 }), ref({ grupo: AV, mediana: 0.09 })];
+  const linhas = (b: ReturnType<typeof barra>) => b.tipos.map((t) => [t.grupo, t.tipica, t.pctTipica]);
+  it("cada tipo com a típica daquele tipo; o tipo com 0% não tem linha", () => {
+    const d = dilma();
+    expect(linhas(barraPecas(d.tipos, d.pecas, d.total, tipicasPorTipo(refs, senadorMG)))).toEqual([[FIS, 0.67, "67%"], [DIG, 0.17, "17%"]]);
+  });
+  it("grupo pequeno: a típica de cada tipo sem a própria campanha (parcela daquele tipo em 'parcelas')", () => {
+    const ps: LinhaParcelas[] = [[0.84, 0, 0.16], [0.5, 0.1, 0.4], [0.6, 0.2, 0.2], [0.7, 0, 0.3], [0.9, 0.1, 0]].map(([f, a, dg], i) => ({
+      id_candidatura: i + 1, ano: 2018, id_cargo: 5, cargo: "Senador", uf: "MG", propaganda_fisica: f, propaganda_audiovisual: a, propaganda_digital: dg }));
+    const r5 = refs.map((x) => ({ ...x, campanhas: 5 }));
+    const d = dilma();
+    const t = tipicasPorTipo(r5, { ...senadorMG, id_candidatura: 1 }, ps);              // sem a 1: fís 0,5 0,6 0,7 0,9; dig 0 0,2 0,3 0,4
+    const b = barraPecas(d.tipos, d.pecas, d.total, t);
+    expect(b.tipos.map((x) => x.grupo)).toEqual([FIS, DIG]);
+    expect(b.tipos[0].tipica).toBeCloseTo(0.65, 12);
+    expect(b.tipos[1].tipica).toBeCloseTo(0.25, 12);
+    expect(b.tipos.map((x) => x.pctTipica)).toEqual(["65%", "25%"]);
+    expect([t[FIS]?.semAPropria, t[FIS]?.campanhas]).toEqual([true, 4]);
+    expect(t[AV]?.mediana).toBeCloseTo(0.1, 12);                                         // audiovisual: 0 0,1 0,1 0,2
+    expect(legendaTipica(b, t, senadorMG)).toBe("Típica entre as outras 4 campanhas a senador em Minas Gerais em 2018, em cada tipo. "
+      + "Cada barra vai de 0 a 100% da propaganda.");
+    const semExcluir = tipicasPorTipo(r5, { ...senadorMG, id_candidatura: 99 }, ps);      // ausente de "parcelas": o grupo inteiro
+    expect(barraPecas(d.tipos, d.pecas, d.total, semExcluir).tipos.map((x) => x.tipica)).toEqual([0.67, 0.17]);
+    expect(legendaTipica(barraPecas(d.tipos, d.pecas, d.total, semExcluir), semExcluir, senadorMG)).toMatch(/^Típica entre as 5 campanhas a senador/);
+  });
+  it("grupo grande: 'Típica das campanhas a …'; presidente sem estado", () => {
+    const d = dilma();
+    const t = tipicasPorTipo(refs.map((x) => ({ ...x, campanhas: 30 })), senadorMG);
+    expect(legendaTipica(barraPecas(d.tipos, d.pecas, d.total, t), t, senadorMG))
+      .toBe("Típica das campanhas a senador em Minas Gerais em 2018, em cada tipo. Cada barra vai de 0 a 100% da propaganda.");
+    const p = { id_cargo: 1, cargo: "Presidente", ano: 2022, uf: null };
+    const tp = tipicasPorTipo(refs.map((x) => ({ ...x, id_cargo: 1, ano: 2022, uf: "BR", campanhas: 11 })), p);
+    expect(legendaTipica(barraPecas(d.tipos, d.pecas, d.total, tp), tp, p))
+      .toBe("Típica entre as 11 campanhas a presidente em 2022, em cada tipo. Cada barra vai de 0 a 100% da propaganda.");
+  });
+  it("sem referência: sem traço, sem 'típica X%' e sem legenda", () => {
+    const d = dilma();
+    for (const t of [tipicasPorTipo(null, senadorMG), tipicasPorTipo([ref({ uf: "RJ" })], senadorMG), {}]) {
+      const b = barraPecas(d.tipos, d.pecas, d.total, t);
+      expect(linhas(b)).toEqual([[FIS, null, null], [DIG, null, null]]);
+      expect(legendaTipica(b, t, senadorMG)).toBeNull();
+    }
+  });
+  it("menos de 3 outras campanhas: nenhuma linha tem traço", () => {
+    const ps: LinhaParcelas[] = [0.84, 0.5, 0.6].map((f, i) => ({
+      id_candidatura: i + 1, ano: 2018, id_cargo: 5, cargo: "Senador", uf: "MG", propaganda_fisica: f, propaganda_audiovisual: 0, propaganda_digital: 1 - f }));
+    const d = dilma();
+    const t = tipicasPorTipo(refs.map((x) => ({ ...x, campanhas: 3 })), { ...senadorMG, id_candidatura: 1 }, ps);
+    const b = barraPecas(d.tipos, d.pecas, d.total, t);
+    expect(linhas(b)).toEqual([[FIS, null, null], [DIG, null, null]]);
+    expect(legendaTipica(b, t, senadorMG)).toBeNull();
+    expect(tipicasPorTipo(refs.map((x) => ({ ...x, campanhas: 2 })), senadorMG)).toEqual({ [FIS]: null, [AV]: null, [DIG]: null });
   });
 });
 
@@ -268,21 +318,24 @@ describe("comparacao: tamanho do grupo", () => {
     expect(frase(29)).toBe("Típica entre as 29 campanhas a senador em Minas Gerais em 2018: 68% em impresso e de rua; esta: 84%.");
     expect(frase(3)).toBe("Típica entre as 3 campanhas a senador em Minas Gerais em 2018: 68% em impresso e de rua; esta: 84%.");
     expect(frase(2)).toBeNull();
-    expect(comparacao([ref({ campanhas: 2 })], senadorMG, dilma().tipos, true)).toEqual({ marca: null, texto: null });
-    expect(comparacao([ref({ campanhas: 2 })], senadorMG, dilma().tipos, false)).toEqual({ marca: null, texto: null });
+    expect(comparacao([ref({ campanhas: 2 })], senadorMG, dilma().tipos, true)).toBeNull();
+    expect(comparacao([ref({ campanhas: 2 })], senadorMG, dilma().tipos, false)).toBeNull();
     expect(fraseComparacao(r(1).map((x) => ({ ...x, campanhas: 2 })), vereadorMG, vereador().tipos)).toBeNull();   // nem "Como a maioria…"
     expect(fraseComparacao(r(1).map((x) => ({ ...x, campanhas: 3 })), vereadorMG, vereador().tipos))
       .toBe("Como a maioria dos candidatos a vereador em Minas Gerais em 2024.");                               // quase total não muda
     expect(frase(1_234)).toMatch(/^Típica campanha a senador/);
   });
-  it("Lula 2022 com os números do MotherDuck (43,1%, 11 campanhas): presidente sem estado; a mesma frase na marca e no aria-label", () => {
+  it("Lula 2022 com os números do MotherDuck (43,1%, 11 campanhas): presidente sem estado; o mesmo valor no traço e no aria-label", () => {
     const lula = caso([peca("rádio/TV", [[AV, 3_789_900_000]]), peca("jingle", [[AV, 123_880_000]]), peca("Google", [[DIG, 2_518_993_688]]),
       peca("site", [[DIG, 37_500_000]]), peca("adesivo", [[FIS, 1_322_877_220]]), peca("impressos", [[FIS, 1_289_222_838]], g)]);
     const p = { id_cargo: 1, cargo: "Presidente", ano: 2022, uf: null };
     const refs = [ref({ id_cargo: 1, ano: 2022, uf: "BR", grupo: AV, mediana: 0.43085, campanhas: 11 })];
-    const cmp = comparacao(refs, p, lula.tipos, true);
-    expect(cmp.marca?.legenda).toBe("Típica entre as 11 campanhas a presidente em 2022: 43% em rádio, TV e vídeo; esta: 43%.");
-    expect(descricaoBarra(barra(lula), cmp.marca)).toMatch(/\. Típica entre as 11 campanhas a presidente em 2022: 43% em rádio, TV e vídeo; esta: 43%\.$/);
+    expect(comparacao(refs, p, lula.tipos, true)).toBeNull();                              // com o gráfico, a típica fica nas linhas
+    const t = tipicasPorTipo(refs, p);
+    const b = barraPecas(lula.tipos, lula.pecas, lula.total, t);
+    expect(b.tipos.map((x) => [x.grupo, x.pct, x.pctTipica])).toEqual([[AV, "43%", "43%"], [FIS, "29%", null], [DIG, "28%", null]]);
+    expect(descricaoBarra(b)).toMatch(/^Rádio, TV e vídeo: esta 43%, típica 43%; /);
+    expect(legendaTipica(b, t, p)).toBe("Típica entre as 11 campanhas a presidente em 2022, em cada tipo. Cada barra vai de 0 a 100% da propaganda.");
   });
 });
 
@@ -321,7 +374,7 @@ describe("tipica: sem a própria campanha nos grupos pequenos", () => {
     const quatro = parcelas([0.9, 0.2, 0.6, 0.4]), tres = parcelas([0.9, 0.2, 0.6]);
     expect(tipica(refDe(quatro), dilma1, FIS, quatro)?.campanhas).toBe(3);
     expect(tipica(refDe(tres), dilma1, FIS, tres)).toBeNull();
-    expect(comparacao(refDe(tres), dilma1, dilma().tipos, true, tres)).toEqual({ marca: null, texto: null });
+    expect(comparacao(refDe(tres), dilma1, dilma().tipos, false, tres)).toBeNull();
     expect(tipica(refDe(tres), { ...senadorMG, id_candidatura: 99 }, FIS, tres)?.campanhas).toBe(3);   // ausente: grupo inteiro
   });
   it("grupos de 30 ou mais ficam com a referencia, mesmo com a campanha em 'parcelas'", () => {
@@ -329,14 +382,17 @@ describe("tipica: sem a própria campanha nos grupos pequenos", () => {
     expect(tipica(refDe(ps), dilma1, FIS, ps)).toEqual({ mediana: 0.7, campanhas: 30, semAPropria: false });
     expect([grupoPequeno(refDe(ps), senadorMG), grupoPequeno(refDe(ps.slice(1)), senadorMG), grupoPequeno(null, senadorMG)]).toEqual([false, true, false]);
   });
-  it("presidente sem estado; a marca e o aria-label com o mesmo valor e o mesmo texto", () => {
+  it("presidente sem estado; o traço e o aria-label com o mesmo valor", () => {
     const p = { id_cargo: 1, cargo: "Presidente", ano: 2022, uf: null, id_candidatura: 1 };
     const ps = parcelas([0.1, 0.3, 0.5, 0.2, 0.6], { ano: 2022, id_cargo: 1, cargo: "Presidente", uf: "BR" });
     const refs = [ref({ id_cargo: 1, ano: 2022, uf: "BR", grupo: FIS, mediana: 0.3, campanhas: 5 })];
     const c = caso([peca("santinho", [[FIS, 60]]), peca("site", [[DIG, 40]])]);
-    const cmp = comparacao(refs, p, c.tipos, true, ps);                  // sem a 1: 0,2 0,3 0,5 0,6 -> 0,4
-    expect(cmp.marca).toEqual({ parte: 0.4, legenda: "Típica entre as outras 4 campanhas a presidente em 2022: 40% em impresso e de rua; esta: 60%." });
-    expect(descricaoBarra(barra(c), cmp.marca).endsWith(` ${cmp.marca!.legenda}`)).toBe(true);
+    const t = tipicasPorTipo(refs, p, ps);                               // sem a 1: 0,2 0,3 0,5 0,6 -> 0,4
+    const b = barraPecas(c.tipos, c.pecas, c.total, t);
+    expect(b.tipos[0].tipica).toBeCloseTo(0.4, 12);
+    expect(descricaoBarra(b)).toBe("Impresso e de rua: esta 60%, típica 40%; santinho 60%. Internet: esta 40%; site 40%.");
+    expect(legendaTipica(b, t, p)).toBe("Típica entre as outras 4 campanhas a presidente em 2022, em cada tipo. Cada barra vai de 0 a 100% da propaganda.");
+    expect(fraseComparacao(refs, p, c.tipos, ps)).toBe("Típica entre as outras 4 campanhas a presidente em 2022: 40% em impresso e de rua; esta: 60%.");
   });
   it("o limite de grupo pequeno é o mesmo na q9.sql e na lib", () => {
     const sql = readFileSync(new URL("../../api/app/analises/q9.sql", import.meta.url), "utf-8");
@@ -359,40 +415,45 @@ describe("temDespesaDupla", () => {
   });
 });
 
-describe("reguaTipica", () => {
-  it("da borda esquerda até a típica; 0% = só o traço; pode passar da parcela desta campanha; limitada a 100%", () => {
-    const d = dilma();
-    expect(reguaTipica(comparacao([ref({})], senadorMG, d.tipos, true).marca)).toEqual({ largura: 0.68 });
-    expect(reguaTipica({ parte: 0, legenda: "x" })).toEqual({ largura: 0 });
-    const acima = comparacao([ref({ mediana: 0.9 })], senadorMG, d.tipos, true).marca;      // típica 90%, esta 84%
-    expect(reguaTipica(acima)).toEqual({ largura: 0.9 });
-    expect(reguaTipica({ parte: 1.2, legenda: "x" })).toEqual({ largura: 1 });
+describe("comparacao (texto no topo)", () => {
+  it("com o gráfico e referência: nenhum texto (a típica fica nas linhas)", () => {
+    expect(comparacao([ref({ grupo: DIG, mediana: 0.1 }), ref({})], senadorMG, dilma().tipos, true)).toBeNull();
   });
-  it("sem comparação, sem régua", () => {
-    expect(reguaTipica(comparacao(null, senadorMG, dilma().tipos, true).marca)).toBeNull();
-    expect(reguaTipica(null)).toBeNull();
+  it("padrão quase total: 'Como a maioria…', com ou sem o gráfico", () => {
+    const c = caso([peca("santinho", [[FIS, 90]]), peca("adesivo", [[FIS, 10]])]);
+    expect(comparacao(r(1), vereadorMG, c.tipos, true)).toBe("Como a maioria dos candidatos a vereador em Minas Gerais em 2024.");
+    expect(comparacao(r(1), vereadorMG, vereador().tipos, false)).toBe("Como a maioria dos candidatos a vereador em Minas Gerais em 2024.");
+  });
+  it("sem o gráfico (um tipo e uma peça): a frase de comparação, em texto", () => {
+    expect(comparacao(r(0.68), vereadorMG, vereador().tipos, false))
+      .toBe("Típica campanha a vereador em Minas Gerais em 2024: 68% em impresso e de rua; esta: 100%.");
+  });
+  it("sem referência: nenhum texto", () => {
+    expect(comparacao(null, senadorMG, dilma().tipos, false)).toBeNull();
+    expect(comparacao([ref({ uf: "RJ" })], senadorMG, dilma().tipos, false)).toBeNull();
   });
 });
 
-describe("comparacao (marca na barra ou texto no topo)", () => {
-  it("com barra e referência: marca na mediana do tipo de maior valor, com a legenda", () => {
-    expect(comparacao([ref({ grupo: DIG, mediana: 0.1 }), ref({})], senadorMG, dilma().tipos, true)).toEqual({
-      marca: { parte: 0.68, legenda: "Típica entre as 12 campanhas a senador em Minas Gerais em 2018: 68% em impresso e de rua; esta: 84%." }, texto: null });
-    const p = { id_cargo: 1, cargo: "Presidente", ano: 2022, uf: null };
-    expect(comparacao([ref({ id_cargo: 1, ano: 2022, uf: "BR", grupo: AV, mediana: 0.31 })], p, governador().tipos, true).marca?.legenda)
-      .toBe("Típica entre as 12 campanhas a presidente em 2022: 31% em rádio, TV e vídeo; esta: 68%.");
+describe("linhaNada com a típica", () => {
+  const nada = (c: Caso, refs: LinhaReferencia[] | null, quem = senadorMG) => sp(linhaNada(c.tipos, c.total, c.pecas, tipicasPorTipo(refs, quem)));
+  it("um tipo zerado com típica acima de zero: 'onde a típica põe X%'", () => {
+    expect(nada(dilma(), [ref({ grupo: AV, mediana: 0.09 })])).toBe("Nada em rádio, TV e vídeo, onde a típica põe 9%.");
   });
-  it("padrão quase total: texto 'Como a maioria…', sem marca", () => {
-    const c = caso([peca("santinho", [[FIS, 90]]), peca("adesivo", [[FIS, 10]])]);
-    expect(comparacao(r(1), vereadorMG, c.tipos, true)).toEqual({ marca: null, texto: "Como a maioria dos candidatos a vereador em Minas Gerais em 2024." });
+  it("dois tipos zerados: entre parênteses, com 'nem'; o que tem típica 0% fica sem ela", () => {
+    const refs = (av: number, dig: number) => [ref({ id_cargo: 13, ano: 2024, grupo: AV, mediana: av, campanhas: 500 }),
+      ref({ id_cargo: 13, ano: 2024, grupo: DIG, mediana: dig, campanhas: 500 })];
+    expect(nada(vereador(), refs(0.09, 0.06), vereadorMG)).toBe("Nada em rádio, TV e vídeo (a típica põe 9%), nem na internet (a típica põe 6%).");
+    expect(nada(vereador(), refs(0, 0.06), vereadorMG)).toBe("Nada em rádio, TV e vídeo, nem na internet (a típica põe 6%).");
+    expect(nada(vereador(), refs(0, 0), vereadorMG)).toBe("Nada em rádio, TV e vídeo, nem na internet.");
   });
-  it("sem barra: a mesma frase de comparação, em texto", () => {
-    expect(comparacao(r(0.68), vereadorMG, vereador().tipos, false)).toEqual({ marca: null,
-      texto: "Típica campanha a vereador em Minas Gerais em 2024: 68% em impresso e de rua; esta: 100%." });
+  it("típica 0% ou sem referência: como antes", () => {
+    expect(nada(dilma(), [ref({ grupo: AV, mediana: 0 })])).toBe("Nada em rádio, TV e vídeo.");
+    expect(nada(dilma(), null)).toBe("Nada em rádio, TV e vídeo.");
+    expect(nada(dilma(), [ref({ grupo: AV, mediana: 0.09, campanhas: 2 })])).toBe("Nada em rádio, TV e vídeo.");   // grupo pequeno demais
   });
-  it("sem referência: nem marca nem texto", () => {
-    expect(comparacao(null, senadorMG, dilma().tipos, true)).toEqual({ marca: null, texto: null });
-    expect(comparacao([ref({ uf: "RJ" })], senadorMG, dilma().tipos, false)).toEqual({ marca: null, texto: null });
+  it("com o genérico acima de 30%, a frase do genérico continua depois", () => {
+    const c = caso([peca("impressos", [[FIS, 40_000]], g), peca("santinho", [[FIS, 60_000]]), peca("site", [[DIG, 1]])]);
+    expect(nada(c, [ref({ grupo: AV, mediana: 0.2 })])).toBe("Nada em rádio, TV e vídeo, onde a típica põe 20%. R$ 40 de cada R$ 100 não dizem a peça.");
   });
 });
 
@@ -464,16 +525,20 @@ describe("tabelaCategorias e totalTabela", () => {
 });
 
 describe("Dilma 2018 de ponta a ponta", () => {
-  it("manchete, R$ 444 mil, 11%, 'Nada em rádio, TV e vídeo.', marca em 68%", () => {
+  it("manchete, R$ 444 mil, 11%; impresso 84% com típica 67%, internet 16%, sem linha de rádio, TV e vídeo", () => {
     const d = dilma();
-    const b = barra(d);
-    const cmp = comparacao([ref({})], senadorMG, d.tipos, mostrarBarra(b));
+    const t = tipicasPorTipo([ref({ mediana: 0.67 }), ref({ grupo: DIG, mediana: 0.17 }), ref({ grupo: AV, mediana: 0 })], senadorMG);
+    const b = barraPecas(d.tipos, d.pecas, d.total, t);
     expect({
-      manchete: manchete(d), numeros: numerosDestaque(d.tipos, d.total, d.despesas), nada: linhaNada(d.tipos, d.total, d.pecas),
-      marca: cmp.marca?.parte, texto: cmp.texto, nuvem: mostrarNuvem(d.pecas),
+      manchete: manchete(d), numeros: numerosDestaque(d.tipos, d.total, d.despesas), nada: linhaNada(d.tipos, d.total, d.pecas, t),
+      linhas: b.tipos.map((x) => [x.rotulo, x.pct, x.pctTipica, x.segmentos.map((s) => `${s.rotulo} ${s.pct}`)]),
+      grafico: mostrarBarra(b), texto: comparacao([ref({ mediana: 0.67 })], senadorMG, d.tipos, mostrarBarra(b)), nuvem: mostrarNuvem(d.pecas),
     }).toEqual({
       manchete: "Adesivos, panfletos e santinhos.", numeros: { total: "R$ 444 mil", parte: "11%", grupo: FIS },
-      nada: "Nada em rádio, TV e vídeo.", marca: 0.68, texto: null, nuvem: true,
+      nada: "Nada em rádio, TV e vídeo.",
+      linhas: [["Impresso e de rua", "84%", "67%", ["adesivo 32%", "panfleto 22%", "santinho 20%", "bóton 9%", "outras 1%"]],
+        ["Internet", "16%", "17%", ["Facebook 16%"]]],
+      grafico: true, texto: null, nuvem: true,
     });
   });
 });

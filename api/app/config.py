@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     fotos_database_local: str = str(BANCO_DAS_FOTOS)   # fallback das fotos; vazio desliga
     cors_origins: str = "http://localhost:3000"
     cache_ttl_segundos: int = 3600
+    pecas_ao_subir: bool = True                  # pré-calcula as peças da visão geral da P9 ao subir (app/pecas_geral.py)
 
     @property
     def origens(self) -> list[str]:

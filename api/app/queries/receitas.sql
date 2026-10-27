@@ -1,5 +1,7 @@
 -- Receita da candidatura nas 5 fontes da pergunta 8 (mesma classificação de pipeline/sql/q8.sql: se mudar lá, mude aqui).
--- Regras: prestação FINAL ou REGULARIZACAO_OMISSAO, sem repasses entre candidatos.
+-- Regras: prestação FINAL ou REGULARIZACAO_OMISSAO. Conta o que a campanha RECEBEU, inclusive repasses de outros candidatos,
+-- pela fonte de origem (como as medianas e o "sucesso" de q8.sql): muito vereador recebe o Fundo Eleitoral pela campanha
+-- do prefeito.
 WITH r AS (
     SELECT CASE
                WHEN f.tipo = 'publico' AND upper(f.nome_fonte) LIKE '%ESPECIAL%' THEN 'fundo_eleitoral'
@@ -14,7 +16,6 @@ WITH r AS (
     LEFT JOIN fonte_recurso f ON f.id_fonte_recurso = r.id_fonte_recurso
     WHERE r.id_candidatura = ?
       AND r.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')
-      AND NOT r.repasse_entre_candidatos
 )
 SELECT coalesce(sum(valor) FILTER (WHERE tipo = 'publico'), 0)            AS publica,
        coalesce(sum(valor) FILTER (WHERE tipo IS DISTINCT FROM 'publico'), 0) AS privada,

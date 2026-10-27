@@ -11,24 +11,27 @@
 -- propaganda (publicidade), sem transferências; valor contratado; só campanhas com propaganda > 0.
 -- Vereador e prefeito também por UF (como a referência da seção de dinheiro), não por município.
 
+-- Na mesma varredura, o total de TODAS as despesas da campanha (sem transferências, como no perfil: propaganda_totais.sql),
+-- para a visão geral dizer que parte do gasto foi propaganda.
 CREATE OR REPLACE TEMP TABLE campanha_q9 AS
 SELECT c.id_candidatura, c.ano, g.id_cargo, g.nome AS cargo, coalesce(c.uf, 'BR') AS uf,
-       CAST(sum(d.valor_despesa) AS DOUBLE) AS propaganda,
-       CAST(coalesce(sum(d.valor_despesa) FILTER (WHERE k.grupo_classificacao = 'propaganda_fisica'), 0) AS DOUBLE) AS fisica,
-       CAST(coalesce(sum(d.valor_despesa) FILTER (WHERE k.grupo_classificacao = 'propaganda_audiovisual'), 0) AS DOUBLE) AS audiovisual,
-       CAST(coalesce(sum(d.valor_despesa) FILTER (WHERE k.grupo_classificacao = 'propaganda_digital'), 0) AS DOUBLE) AS digital
+       CAST(sum(d.valor_despesa) FILTER (WHERE k.publicidade) AS DOUBLE) AS propaganda,
+       CAST(coalesce(sum(d.valor_despesa) FILTER (WHERE k.publicidade AND k.grupo_classificacao = 'propaganda_fisica'), 0) AS DOUBLE) AS fisica,
+       CAST(coalesce(sum(d.valor_despesa) FILTER (WHERE k.publicidade AND k.grupo_classificacao = 'propaganda_audiovisual'), 0) AS DOUBLE) AS audiovisual,
+       CAST(coalesce(sum(d.valor_despesa) FILTER (WHERE k.publicidade AND k.grupo_classificacao = 'propaganda_digital'), 0) AS DOUBLE) AS digital,
+       CAST(sum(d.valor_despesa) AS DOUBLE) AS despesas
 FROM despesa_campanha d
-JOIN categoria_despesa k  ON k.id_categoria_despesa = d.id_categoria_despesa
+LEFT JOIN categoria_despesa k ON k.id_categoria_despesa = d.id_categoria_despesa
 JOIN candidatura c        ON c.id_candidatura = d.id_candidatura
 JOIN eleicao e            ON e.id_eleicao = c.id_eleicao
 JOIN cargo g              ON g.id_cargo = e.id_cargo
 JOIN rotulo_resultado rr  ON rr.id_rotulo = c.id_rotulo_final
 WHERE d.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')
-  AND k.publicidade AND NOT k.transferencia
+  AND NOT coalesce(k.transferencia, false)
   AND c.ano >= 2018 AND g.eh_titular AND e.tipo_eleicao = 'ORDINARIA'
   AND coalesce(c.disputou, rr.disputou, false)
 GROUP BY ALL
-HAVING sum(d.valor_despesa) > 0;
+HAVING sum(d.valor_despesa) FILTER (WHERE k.publicidade) > 0;
 
 -- referencia: uma linha por cargo + ano + UF + tipo, com a mediana da parcela (0 a 1) e o número de campanhas.
 -- "campanhas" é o tamanho do grupo (cargo + ano + UF): toda campanha entra uma vez em cada tipo (com parcela 0 quando não
@@ -60,3 +63,26 @@ COPY (
     QUALIFY count(*) OVER (PARTITION BY ano, id_cargo, uf) < 30
     ORDER BY ano, id_cargo, uf, id_candidatura
 ) TO 'painel_q9/parcelas.csv' (HEADER);
+
+-- geral: a visão geral da página "Dinheiro nas eleições" (aba Propaganda), por ano + cargo + UF e por ano + cargo em todos
+-- os estados (uf nulo), em cada tipo: a média da parcela (cada campanha conta igual; as médias dos três tipos somam 1), a
+-- parte das campanhas que gastou algo no tipo, a soma em centavos, o número de campanhas e o total de todas as despesas
+-- dessas campanhas (despesas_centavos, o mesmo nas três linhas do recorte). Presidente (UF 'BR') só no
+-- recorte sem UF. Lida da tabela temporária acima: nenhuma nova varredura das despesas.
+COPY (
+    WITH t AS (
+        SELECT ano, id_cargo, cargo, uf, 'propaganda_fisica' AS grupo, fisica AS valor, fisica / propaganda AS parte, despesas FROM campanha_q9
+        UNION ALL
+        SELECT ano, id_cargo, cargo, uf, 'propaganda_audiovisual', audiovisual, audiovisual / propaganda, despesas FROM campanha_q9
+        UNION ALL
+        SELECT ano, id_cargo, cargo, uf, 'propaganda_digital', digital, digital / propaganda, despesas FROM campanha_q9
+    )
+    SELECT ano, id_cargo, cargo, uf, grupo, count(*) AS campanhas, avg(parte) AS media,
+           avg(CASE WHEN valor > 0 THEN 1.0 ELSE 0.0 END) AS parte_com_gasto,
+           CAST(round(sum(valor) * 100) AS BIGINT) AS soma_centavos,
+           CAST(round(sum(despesas) * 100) AS BIGINT) AS despesas_centavos
+    FROM t
+    GROUP BY GROUPING SETS ((ano, id_cargo, cargo, uf, grupo), (ano, id_cargo, cargo, grupo))
+    HAVING uf IS NULL OR uf <> 'BR'
+    ORDER BY ano, id_cargo, uf NULLS FIRST, grupo
+) TO 'painel_q9/geral.csv' (HEADER);

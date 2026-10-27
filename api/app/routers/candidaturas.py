@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from .. import db
 from ..nuvem import nuvem
-from ..schemas import CategoriaGasto, Despesas, Listagem, Palavra, Propaganda, Receitas, VotoMunicipio
+from ..schemas import CandidatoDisputa, CategoriaGasto, Despesas, Listagem, Palavra, Propaganda, Receitas, VotoMunicipio
 from .util import contar_palavras
 
 router = APIRouter(tags=["candidaturas"])
@@ -90,7 +90,7 @@ def palavras(id_candidatura: int, limite: int = Query(50, ge=1, le=100)):
 
 @router.get("/candidaturas/{id_candidatura}/receitas", response_model=Receitas)
 def receitas(id_candidatura: int):
-    """Receita pública x privada e por fonte (pergunta 8), sem repasses entre candidatos."""
+    """Receita pública x privada e por fonte (pergunta 8): o que a campanha recebeu, inclusive de outros candidatos."""
     _contexto(id_candidatura)
     r = {k: float(v or 0) for k, v in (db.um("receitas", (id_candidatura,)) or {}).items()}
     ref = db.um("receitas_referencia", (id_candidatura,))
@@ -98,6 +98,18 @@ def receitas(id_candidatura: int):
     return Receitas(id_candidatura=id_candidatura, **{k: v for k, v in r.items() if k != "total"}, total=total,
                     pct_publica=(r["publica"] / total) if total else None,
                     mediana_pct_publica_cargo=float(ref["mediana_pct_publica"]) if ref and ref["mediana_pct_publica"] is not None else None)
+
+
+CARGOS_UMA_VAGA = {"Presidente", "Governador", "Senador", "Prefeito"}
+
+
+@router.get("/candidaturas/{id_candidatura}/disputa", response_model=list[CandidatoDisputa])
+def disputa(id_candidatura: int):
+    """Os candidatos da mesma disputa, com o % de dinheiro público de cada um (pergunta 8 no perfil): presidente, o país;
+    governador e senador, a UF; prefeito, o município. Nos cargos proporcionais, lista vazia (a comparação é pela mediana)."""
+    if _contexto(id_candidatura)["cargo"] not in CARGOS_UMA_VAGA:
+        return []
+    return db.consultar("disputa_receitas", (id_candidatura,))
 
 
 @router.get("/candidaturas/{id_candidatura}/votos-municipio", response_model=list[VotoMunicipio])

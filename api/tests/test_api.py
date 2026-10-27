@@ -1,5 +1,8 @@
 import json
 
+import pytest
+from fastapi.testclient import TestClient
+
 
 def test_health(client):
     r = client.get("/api/health")
@@ -252,6 +255,58 @@ def test_q9_parcelas_de_cada_campanha_dos_grupos_pequenos(client):
         assert abs(esperado - mediana) < 1e-9
 
 
+def test_q9_geral_media_parte_com_gasto_e_soma_por_uf_e_todos_os_estados(client):
+    """Visão geral da P9: por ano + cargo + UF e por ano + cargo em todos os estados (uf nulo), em cada tipo."""
+    t = client.get("/api/analises/q9?tabela=geral").json()["geral"]
+    assert t["colunas"] == ["ano", "id_cargo", "cargo", "uf", "grupo", "campanhas", "media", "parte_com_gasto", "soma_centavos", "despesas_centavos"]
+    linhas = [dict(zip(t["colunas"], l)) for l in t["linhas"]]
+    recortes = {(l["ano"], l["cargo"], l["uf"]) for l in linhas}
+    # os dois níveis do GROUPING SETS: a UF e todos os estados
+    assert recortes == {(2020, "Vereador", "MG"), (2020, "Vereador", None), (2020, "Prefeito", "PE"), (2020, "Prefeito", None)}
+    for r in recortes:   # as médias dos três tipos somam 1 em cada recorte
+        assert abs(sum(l["media"] for l in linhas if (l["ano"], l["cargo"], l["uf"]) == r) - 1) < 1e-9
+    ver = {l["grupo"]: l for l in linhas if l["cargo"] == "Vereador" and l["uf"] is None}
+    # candidatura 2: física 3000 e digital 1500 (a parcial de 500 não entra)
+    assert [round(ver[g]["media"], 4) for g in ("propaganda_fisica", "propaganda_audiovisual", "propaganda_digital")] == [0.6667, 0.0, 0.3333]
+    assert [ver[g]["parte_com_gasto"] for g in ("propaganda_fisica", "propaganda_audiovisual", "propaganda_digital")] == [1, 0, 1]
+    assert (ver["propaganda_fisica"]["soma_centavos"], ver["propaganda_fisica"]["campanhas"]) == (300000, 1)
+    assert all(l["uf"] != "BR" for l in linhas)                        # presidente só no recorte sem UF
+    # total de TODAS as despesas das campanhas do recorte (o mesmo nas três linhas): candidatura 2 = 3000 + 1500 de propaganda
+    # + 1000 de advogado; a transferência de 700 e a parcial de 500 não entram. A propaganda é 4500/5500 = 82% do gasto
+    assert {l["despesas_centavos"] for l in linhas if l["cargo"] == "Vereador"} == {550000}
+    assert {l["despesas_centavos"] for l in linhas if l["cargo"] == "Prefeito"} == {500000}
+    assert sum(ver[g]["soma_centavos"] for g in ver) == 450000
+
+
+def test_pecas_do_recorte_em_preparacao_e_prontas(client):
+    from app import pecas_geral
+
+    pecas_geral.reiniciar()
+    r = client.get("/api/propaganda/pecas?ano=2020&cargo=Vereador")
+    assert r.status_code == 202 and r.json() == {"estado": "preparando"} and "cache-control" not in r.headers
+    pecas_geral.preparar()
+    todos = client.get("/api/propaganda/pecas?ano=2020&cargo=Vereador").json()
+    mg = client.get("/api/propaganda/pecas?ano=2020&cargo=Vereador&uf=mg").json()
+    assert todos == mg and {p["termo"] for p in todos} == {"santinho", "adesivo", "redes"}   # só peças, nunca a descrição
+    assert sum(p["centavos"] for p in todos) == 450000                              # a parcial de 500 não entra
+    assert "Impressão" not in str(todos)
+    assert client.get("/api/propaganda/pecas?ano=2020&cargo=Vereador&uf=RJ").json() == []
+    assert {p["termo"] for p in client.get("/api/propaganda/pecas?ano=2020&cargo=Prefeito&uf=PE").json()} == {"anúncios", "santinho", "adesivo"}
+    pecas_geral.reiniciar()
+
+
+def test_pecas_calcular_uf_e_todos_os_estados_presidente_so_sem_uf():
+    from app.pecas_geral import calcular
+
+    linha = lambda ano, cargo, uf, d, c: {"ano": ano, "cargo": cargo, "uf": uf, "descricao": d, "origem": None,
+                                          "grupo": "propaganda_fisica", "despesas": 1, "centavos": c}
+    r = calcular([linha(2022, "Deputado federal", "MG", "ADESIVO", 100), linha(2022, "Deputado federal", "RJ", "ADESIVO", 50),
+                  linha(2022, "Deputado federal", "RJ", "SANTINHOS", 30), linha(2022, "Presidente", "BR", "SANTINHOS", 7)])
+    assert set(r) == {(2022, "Deputado federal", None), (2022, "Deputado federal", "MG"), (2022, "Deputado federal", "RJ"), (2022, "Presidente", None)}
+    assert [(p["termo"], p["centavos"]) for p in r[(2022, "Deputado federal", None)]] == [("adesivo", 150), ("santinho", 30)]
+    assert [(p["termo"], p["centavos"]) for p in r[(2022, "Presidente", None)]] == [("santinho", 7)]
+
+
 def test_propaganda_candidatura_sem_despesa(client):
     p = client.get("/api/candidaturas/1/propaganda").json()
     assert (p["lancamentos"], p["total_centavos"], p["propaganda_centavos"], p["categorias"], p["termos"]) == (0, 0, 0, [], [])
@@ -263,17 +318,71 @@ def test_palavras_sem_palavras_vazias(client):
     assert "para" not in termos and "campanha" not in termos and "advocaticios" not in termos
 
 
-def test_receitas_publica_x_privada_sem_repasses(client):
+def test_receitas_publica_x_privada_com_repasses(client):
     r = client.get("/api/candidaturas/2/receitas").json()
-    assert (r["publica"], r["privada"], r["total"]) == (4000, 1500, 5500)      # o repasse de 300 não entra
-    assert round(r["pct_publica"], 3) == 0.727
+    assert (r["publica"], r["privada"], r["total"]) == (4000, 1800, 5800)      # o repasse de 300 entra, pela fonte de origem
+    assert round(r["pct_publica"], 3) == 0.69
     fontes = {k: r[k] for k in ("fundo_eleitoral", "fundo_partidario", "doacoes_pessoas", "recursos_proprios", "outros_privados")}
-    assert fontes == {"fundo_eleitoral": 4000, "fundo_partidario": 0, "doacoes_pessoas": 1000, "recursos_proprios": 500, "outros_privados": 0}
+    assert fontes == {"fundo_eleitoral": 4000, "fundo_partidario": 0, "doacoes_pessoas": 1000, "recursos_proprios": 500, "outros_privados": 300}
 
 
 def test_receitas_candidatura_sem_receita(client):
     r = client.get("/api/candidaturas/1/receitas").json()
     assert r["total"] == 0 and r["pct_publica"] is None and r["fundo_eleitoral"] == 0
+
+
+@pytest.fixture()
+def client_disputa(banco, banco_fotos, tmp_path, monkeypatch):
+    """O banco de teste com uma disputa para prefeito em Serra Azul (MG), 2020: eleito com 80% público, um só com dinheiro
+    privado, um sem receita, um que não disputou; e um candidato da eleição suplementar (fica de fora)."""
+    import shutil
+
+    import duckdb
+    from app import db
+
+    caminho = tmp_path / "disputa.duckdb"
+    shutil.copy(banco, caminho)
+    con = duckdb.connect(str(caminho))
+    con.execute("""
+        INSERT INTO candidatura (id_candidatura, ano, ue, sequencial, id_eleicao, id_candidato, id_partido, id_municipio, uf, nome_urna, numero_urna, idade_eleicao, id_rotulo_final, disputou) VALUES
+          (20, 2020, '44444', 'S20', 5, NULL, 1, 4, 'MG', 'PREFEITA A', '40', 50, 1, true),
+          (21, 2020, '44444', 'S21', 5, NULL, 2, 4, 'MG', 'PREFEITO B', '55', 50, 5, true),
+          (22, 2020, '44444', 'S22', 5, NULL, 3, 4, 'MG', 'PREFEITO C', '13', 50, 5, true),
+          (23, 2020, '44444', 'S23', 5, NULL, 4, 4, 'MG', 'PREFEITO D', '22', 50, 11, false),
+          (24, 2020, '44444', 'S24', 9, NULL, 4, 4, 'MG', 'PREFEITO E', '22', 50, 1, true);
+        INSERT INTO receita_campanha (id_receita, id_candidatura, id_fonte_recurso, origem_receita, valor_receita, repasse_entre_candidatos, tipo_prestacao_contas) VALUES
+          (20, 20, 1, 'Recursos de partido político', 600, false, 'FINAL'), (21, 20, 1, 'Recursos de outros candidatos', 200, true, 'FINAL'),
+          (22, 20, 2, 'Recursos de pessoas físicas', 200, false, 'FINAL'), (23, 21, 2, 'Recursos de pessoas físicas', 1000, false, 'FINAL'),
+          (24, 21, 1, 'Recursos de partido político', 900, false, 'PARCIAL'), (25, 24, 1, 'Recursos de partido político', 100, false, 'FINAL');
+    """)
+    con.close()
+    monkeypatch.setenv("DATABASE", str(caminho))
+    monkeypatch.setenv("FOTOS_DATABASE", banco_fotos)
+    monkeypatch.delenv("MOTHERDUCK_TOKEN", raising=False)
+    monkeypatch.setenv("PECAS_AO_SUBIR", "false")   # o pré-cálculo das peças roda nos testes que o pedem
+    db.reiniciar()
+    from app.main import app
+
+    with TestClient(app) as c:
+        yield c
+    db.reiniciar()
+
+
+def test_disputa_prefeito_com_percentual_publico(client_disputa):
+    linhas = client_disputa.get("/api/candidaturas/21/disputa").json()
+    assert linhas == [
+        {"id_candidatura": 20, "nome_urna": "PREFEITA A", "eleito": True, "pct_publica": 0.8},   # o repasse público conta
+        {"id_candidatura": 21, "nome_urna": "PREFEITO B", "eleito": False, "pct_publica": 0.0},  # a parcial não entra
+        {"id_candidatura": 22, "nome_urna": "PREFEITO C", "eleito": False, "pct_publica": None},
+    ]   # sem quem não disputou (23) e sem a eleição suplementar (24)
+    assert {k for l in linhas for k in l} == {"id_candidatura", "nome_urna", "eleito", "pct_publica"}
+
+
+def test_disputa_vazia_nos_cargos_proporcionais_e_404(client):
+    assert client.get("/api/candidaturas/2/disputa").json() == []      # vereador: a comparação é pela mediana
+    assert client.get("/api/candidaturas/5/disputa").json() == [        # prefeito sozinho na disputa
+        {"id_candidatura": 5, "nome_urna": "JOÃO DO COMERCIO", "eleito": True, "pct_publica": 0.0}]
+    assert client.get("/api/candidaturas/9999/disputa").status_code == 404
 
 
 def test_candidatura_inexistente(client):
@@ -356,7 +465,7 @@ def test_cabecalho_de_cache_nos_dados_historicos(client):
 def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
-             "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
+             "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/api/candidaturas/5/disputa", "/openapi.json",
              "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10",
              "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022",
              "/api/municipios/2/candidatos?ano=2020&cargo=Prefeito"]
