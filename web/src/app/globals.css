@@ -452,55 +452,57 @@ a.linha:hover { background: var(--panel2); }
 .pp-resposta.com-nuvem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: calc(var(--gap) * 3); align-items: center; }
 .pp-nuvem .escala { text-align: center; margin: 0; }
 /* as classes .pp-* também levam --cor-pp: aqui elas dão a cor ao texto e às bordas, não ao fundo */
-.pp-numeros, .pp-chave { background: none; }
+.pp-numeros, .pp-tipo-num { background: none; }
 .pp-numeros { display: flex; flex-wrap: wrap; gap: 8px 40px; margin: 20px 0 0; }
 .pp-numeros p { margin: 0; }
 .pp-numeros b { display: block; font-size: 38px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; color: var(--cor-pp, var(--fg)); }
 .pp-numeros span { display: block; font-size: var(--t-pequeno); color: var(--muted); }
 .pp-linha { font-size: 15px; color: var(--muted); margin: 12px 0 0; }
 .pp-separador { border: 0; border-top: 1px solid var(--line); margin: calc(var(--gap) * 3) 0 calc(var(--gap) * 2); }
-/* barra única: chaves dos tipos em cima, um segmento por peça, rótulos das peças embaixo; as três faixas têm as mesmas colunas */
-.barra-pp { container: barra-pp / inline-size; margin: 8px 0 12px; }
+/* uma linha por tipo: nome à esquerda, a barra no meio (0 a 100% da propaganda: as peças do tipo e o resto na trilha), o
+   percentual e a típica à direita; o traço branco na barra é a típica daquele tipo */
+.barra-pp { margin: 8px 0 12px; }
+.pp-tipo { display: grid; grid-template-columns: 172px minmax(0, 1fr) 96px; grid-template-areas: "nome barra num"; column-gap: 16px;
+  align-items: start; margin-top: 14px; }
+.pp-tipo:first-child { margin-top: 0; }
+.pp-tipo-nome { grid-area: nome; display: flex; align-items: center; gap: 8px; margin: 0; min-height: 28px; font-size: 15px; font-weight: 600; line-height: 1.2; }
+.pp-tipo-nome i { flex: none; width: 12px; height: 12px; border-radius: 3px; }
+.pp-tipo-barra { grid-area: barra; container: barra-pp / inline-size; min-width: 0; }
+.pp-tipo-num { grid-area: num; margin: 0; text-align: right; line-height: 1.1; }
+.pp-tipo-num b { display: block; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: var(--cor-pp, var(--fg)); }
+.pp-tipo-num span { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
 .pp-faixa { display: grid; column-gap: 2px; }
-.pp-chaves { align-items: end; margin-bottom: 4px; }
-.pp-chave { min-width: 0; font-size: 13px; line-height: 1.3; white-space: nowrap; color: var(--muted); }
-.pp-chave b { color: var(--fg); font-weight: 600; }
-.pp-chave::after { content: ""; display: block; height: 8px; margin-top: 4px; border: 2px solid var(--cor-pp, var(--pp-outra)); border-bottom: 0; }
-.pp-seg { height: 40px; min-width: 0; }
-.pp-seg:first-child { border-radius: 4px 0 0 4px; }
-div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
-/* régua da típica, abaixo da barra: da borda esquerda até a típica (faixa de 6px), com um traço de 2px no ponto exato */
-.pp-regua { position: relative; height: 12px; margin-top: 4px; }
-.pp-regua i { position: absolute; left: 0; top: 3px; height: 6px; max-width: 100%; background: var(--fg); border-radius: 0 3px 3px 0; }
-.pp-regua i::after { content: ""; position: absolute; right: -1px; top: -3px; bottom: -3px; width: 2px; background: var(--fg); }
+.pp-trilha { position: relative; }
+.pp-seg, .pp-resto { height: 28px; min-width: 0; }
+.pp-resto { background: var(--panel2); }
+.pp-barra > :first-child { border-radius: 4px 0 0 4px; }
+.pp-barra > :last-child { border-radius: 0 4px 4px 0; }
+.pp-barra > :only-child { border-radius: 4px; }
+/* a típica: traço branco com contorno fino escuro, passando um pouco acima e abaixo da barra */
+.pp-tipica { position: absolute; top: -5px; bottom: -5px; width: 6px; margin-left: -3px; border-radius: 3px; background: var(--on-dark);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--fg) 60%, transparent); }
 .pp-rotulos { margin-top: 6px; font-size: 13px; line-height: 1.3; white-space: nowrap; color: var(--muted); }
 .pp-rotulos > div { min-width: 0; }
 .pp-rotulos b { color: var(--fg); font-weight: 600; }
-.pp-legenda-marca { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: var(--t-pequeno); color: var(--muted); }
-.pp-legenda-marca i { flex: none; width: 18px; height: 5px; background: var(--fg); border-radius: 0 3px 3px 0; }
-/* tipos cujo nome não coube na chave, numa linha abaixo dos rótulos; sem nenhum, a linha não ocupa espaço */
-.pp-tipos-sem-nome { display: flex; flex-wrap: wrap; gap: 0 16px; font-size: 13px; color: var(--muted); }
-.pp-tipos-sem-nome > span { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
-.pp-tipos-sem-nome > [class*="pp-falta-"] { display: none; }
-.pp-tipos-sem-nome i { width: 10px; height: 10px; border-radius: 2px; }
-.pp-tipos-sem-nome b { color: var(--fg); font-weight: 600; }
-/* texto que só cabe a partir de uma largura da barra (larguraParaRotulo, em src/lib/propaganda.ts): some abaixo dela; o item
-   do mesmo tipo na linha acima (pp-falta-<px>) aparece exatamente nessas larguras */
-@container barra-pp (max-width: 279.98px) { .pp-cabe-280 { display: none; } .pp-tipos-sem-nome > .pp-falta-280 { display: inline-flex; } }
-@container barra-pp (max-width: 319.98px) { .pp-cabe-320 { display: none; } .pp-tipos-sem-nome > .pp-falta-320 { display: inline-flex; } }
-@container barra-pp (max-width: 359.98px) { .pp-cabe-360 { display: none; } .pp-tipos-sem-nome > .pp-falta-360 { display: inline-flex; } }
-@container barra-pp (max-width: 399.98px) { .pp-cabe-400 { display: none; } .pp-tipos-sem-nome > .pp-falta-400 { display: inline-flex; } }
-@container barra-pp (max-width: 439.98px) { .pp-cabe-440 { display: none; } .pp-tipos-sem-nome > .pp-falta-440 { display: inline-flex; } }
-@container barra-pp (max-width: 479.98px) { .pp-cabe-480 { display: none; } .pp-tipos-sem-nome > .pp-falta-480 { display: inline-flex; } }
-@container barra-pp (max-width: 559.98px) { .pp-cabe-560 { display: none; } .pp-tipos-sem-nome > .pp-falta-560 { display: inline-flex; } }
-@container barra-pp (max-width: 639.98px) { .pp-cabe-640 { display: none; } .pp-tipos-sem-nome > .pp-falta-640 { display: inline-flex; } }
-@container barra-pp (max-width: 719.98px) { .pp-cabe-720 { display: none; } .pp-tipos-sem-nome > .pp-falta-720 { display: inline-flex; } }
-@container barra-pp (max-width: 799.98px) { .pp-cabe-800 { display: none; } .pp-tipos-sem-nome > .pp-falta-800 { display: inline-flex; } }
-@container barra-pp (max-width: 899.98px) { .pp-cabe-900 { display: none; } .pp-tipos-sem-nome > .pp-falta-900 { display: inline-flex; } }
-@container barra-pp (max-width: 999.98px) { .pp-cabe-1000 { display: none; } .pp-tipos-sem-nome > .pp-falta-1000 { display: inline-flex; } }
-@container barra-pp (max-width: 1199.98px) { .pp-cabe-1200 { display: none; } .pp-tipos-sem-nome > .pp-falta-1200 { display: inline-flex; } }
-@container barra-pp (max-width: 1399.98px) { .pp-cabe-1400 { display: none; } .pp-tipos-sem-nome > .pp-falta-1400 { display: inline-flex; } }
-@container barra-pp (max-width: 1599.98px) { .pp-cabe-1600 { display: none; } .pp-tipos-sem-nome > .pp-falta-1600 { display: inline-flex; } }
+.pp-legenda-tipica { display: flex; align-items: center; gap: 10px; margin-top: 16px; font-size: var(--t-pequeno); color: var(--muted); }
+.pp-legenda-tipica i { flex: none; width: 6px; height: 16px; border-radius: 3px; background: var(--on-dark);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--fg) 60%, transparent); }
+/* rótulo que só cabe a partir de uma largura da barra (larguraParaRotulo, em src/lib/propaganda.ts): some abaixo dela */
+@container barra-pp (max-width: 279.98px) { .pp-cabe-280 { display: none; } }
+@container barra-pp (max-width: 319.98px) { .pp-cabe-320 { display: none; } }
+@container barra-pp (max-width: 359.98px) { .pp-cabe-360 { display: none; } }
+@container barra-pp (max-width: 399.98px) { .pp-cabe-400 { display: none; } }
+@container barra-pp (max-width: 439.98px) { .pp-cabe-440 { display: none; } }
+@container barra-pp (max-width: 479.98px) { .pp-cabe-480 { display: none; } }
+@container barra-pp (max-width: 559.98px) { .pp-cabe-560 { display: none; } }
+@container barra-pp (max-width: 639.98px) { .pp-cabe-640 { display: none; } }
+@container barra-pp (max-width: 719.98px) { .pp-cabe-720 { display: none; } }
+@container barra-pp (max-width: 799.98px) { .pp-cabe-800 { display: none; } }
+@container barra-pp (max-width: 899.98px) { .pp-cabe-900 { display: none; } }
+@container barra-pp (max-width: 999.98px) { .pp-cabe-1000 { display: none; } }
+@container barra-pp (max-width: 1199.98px) { .pp-cabe-1200 { display: none; } }
+@container barra-pp (max-width: 1399.98px) { .pp-cabe-1400 { display: none; } }
+@container barra-pp (max-width: 1599.98px) { .pp-cabe-1600 { display: none; } }
 .pp-nota { font-size: 15px; margin: 12px 0; }
 /* tabelas recolhidas, agrupadas por tipo: cabeçalho do grupo em cor cheia, linhas com a barra mais clara */
 .pp-tabela { width: 100%; }
@@ -522,6 +524,12 @@ div.pp-seg:last-of-type { border-radius: 0 4px 4px 0; }
   .pp-nuvem { display: none; }
   .pp-numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
   .pp-numeros b { font-size: 27px; }
+  /* cada tipo: nome e percentual numa linha em cima, a barra com a largura toda embaixo */
+  .pp-tipo { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nome num" "barra barra"; row-gap: 8px; margin-top: 20px; }
+  .pp-tipo-nome { min-height: 0; }
+  .pp-tipo-num { display: flex; align-items: baseline; gap: 8px; }
+  .pp-tipo-num b { font-size: 22px; }
+  .pp-tipo-num span { margin: 0; }
 }
 
 /* ---------- Rodapé: o nome em teclas ---------- */

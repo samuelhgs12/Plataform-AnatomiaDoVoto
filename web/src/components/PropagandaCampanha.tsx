@@ -1,9 +1,9 @@
 import type { CarreiraItem } from "@/lib/types";
 import { inteiro, reais } from "@/lib/format";
 import {
-  analisar, barraPecas, comparacao, composicaoPorTipo, grupo, linhaNada, manchetePecas, mostrarBarra, mostrarNuvem,
+  analisar, barraPecas, comparacao, composicaoPorTipo, grupo, legendaTipica, linhaNada, manchetePecas, mostrarBarra, mostrarNuvem,
   nomearPredominantes, numerosDestaque, parteTabela, parteTexto, reaisCentavos, resumoPropaganda, tabelaCategorias, tabelaPecas,
-  NOTA_DESPESA_DUPLA, temDespesaDupla, totalTabela, type Analise, type GrupoTabela, type LinhaParcelas, type LinhaReferencia,
+  tipicasPorTipo, NOTA_DESPESA_DUPLA, temDespesaDupla, totalTabela, type Analise, type GrupoTabela, type LinhaParcelas, type LinhaReferencia,
   type Propaganda, type TotalTabela,
 } from "@/lib/propaganda";
 import { montarNuvem, type Nuvem } from "@/lib/nuvem";
@@ -21,7 +21,7 @@ const r$ = (centavos: number) => reais(centavos / 100);
  * grupo da campanha escolhida é pequeno) permite tirar a própria campanha da típica.
  *
  * Ordem: resposta (manchete pelas peças, os dois números, o que ficou de fora e, às vezes, a comparação em texto; nuvem ao
- * lado); separador e barra das peças por tipo, com a marca da campanha típica; nota curta; três detalhes recolhidos.
+ * lado); separador e uma linha por tipo, cada uma com a sua típica; nota curta; três detalhes recolhidos.
  */
 export function PropagandaCampanha({ campanhas, escolhida, hrefDe, referencias = null, parcelas = null }: {
   campanhas: { c: CarreiraItem; p: Propaganda | null }[]; escolhida: number | undefined; hrefDe: (id: number) => string;
@@ -93,8 +93,9 @@ function ComPropaganda({ c, a, nuvem, referencias, parcelas }: {
   // sem peças (API anterior à nuvem), a manchete volta a ser a categoria do TSE de maior valor
   const manchete = manchetePecas(pecas, tipos, a.propagandaCentavos) ?? `${nomearPredominantes(a.predominantes)}.`;
   const numeros = numerosDestaque(tipos, a.propagandaCentavos, a.totalCentavos);
-  const nada = linhaNada(tipos, a.propagandaCentavos, pecas);
-  const barra = barraPecas(tipos, pecas, a.propagandaCentavos);
+  const tipicas = tipicasPorTipo(referencias, c, parcelas);
+  const nada = linhaNada(tipos, a.propagandaCentavos, pecas, tipicas);
+  const barra = barraPecas(tipos, pecas, a.propagandaCentavos, tipicas);
   const comBarra = mostrarBarra(barra);
   const cmp = comparacao(referencias, c, tipos, comBarra, parcelas);
   const comNuvem = mostrarNuvem(pecas);
@@ -110,7 +111,7 @@ function ComPropaganda({ c, a, nuvem, referencias, parcelas }: {
             {numeros.parte && <p><b>{numeros.parte}</b><span>de tudo que a campanha gastou</span></p>}
           </div>
           {nada && <p className="pp-linha">{nada}</p>}
-          {cmp.texto && <p className="pp-linha">{cmp.texto}</p>}
+          {cmp && <p className="pp-linha">{cmp}</p>}
         </div>
         {comNuvem && (
           <div className="pp-nuvem">
@@ -122,7 +123,7 @@ function ComPropaganda({ c, a, nuvem, referencias, parcelas }: {
       {comBarra && (
         <>
           <hr className="pp-separador" />
-          <BarraPecas barra={barra} marca={cmp.marca} />
+          <BarraPecas barra={barra} legenda={legendaTipica(barra, tipicas, c)} />
         </>
       )}
       <p className="muted pp-nota">Valor contratado declarado ao TSE; não inclui material recebido pronto do partido.</p>

@@ -122,8 +122,8 @@ export function composicaoPorTipo(a: Extract<Analise, { estado: "com_propaganda"
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Resposta da seção: manchete pelas PEÇAS (o que foi comprado, pela descrição), dois números (total de propaganda e
-// parte nos gastos), a barra das peças agrupadas por tipo (totais oficiais das categorias do TSE) com a marca da
-// campanha típica, e as tabelas recolhidas. As peças vêm de `termos` da API (api/app/nuvem.py), já normalizados.
+// parte nos gastos), uma barra por tipo com as suas peças (totais oficiais das categorias do TSE) e a típica daquele
+// tipo, e as tabelas recolhidas. As peças vêm de `termos` da API (api/app/nuvem.py), já normalizados.
 // ---------------------------------------------------------------------------------------------------------------------
 
 /** Tamanho do grupo da comparação com a típica (campanhas do mesmo cargo, ano e UF, a própria incluída). */
@@ -233,12 +233,19 @@ export const numerosDestaque = (tipos: TipoComposto[], propagandaCentavos: numbe
 /**
  * Linha pequena abaixo dos números: os tipos sem nenhuma despesa, com "nem" a partir do segundo ("Nada em rádio, TV e
  * vídeo, nem na internet."), e, com genérico acima de LIMIAR_GENERICO_FRASE, "R$ X de cada R$ 100 não dizem a peça.".
- * null quando não há nada a dizer.
+ * Tipo ausente com típica acima de zero (`tipicas`, de tipicasPorTipo) leva a típica: "Nada em rádio, TV e vídeo, onde a
+ * típica põe 9%."; com mais de um ausente, entre parênteses: "Nada em rádio, TV e vídeo (a típica põe 9%), nem na internet
+ * (a típica põe 6%).". null quando não há nada a dizer.
  */
-export function linhaNada(tipos: TipoComposto[], propagandaCentavos: number, termos: TermoNuvem[]): string | null {
-  const ausentes = tipos.filter((t) => t.centavos <= 0 && t.grupo in GRUPOS).map((t) => tipoComum(t.grupo).em);
+export function linhaNada(tipos: TipoComposto[], propagandaCentavos: number, termos: TermoNuvem[], tipicas: TipicasPorTipo = {}): string | null {
+  const ausentes = tipos.filter((t) => t.centavos <= 0 && t.grupo in GRUPOS)
+    .map((t) => ({ em: tipoComum(t.grupo).em, tipica: tipicas[t.grupo]?.mediana ?? 0 }));
   const partes: string[] = [];
-  if (ausentes.length) partes.push(`Nada ${ausentes[0]}${ausentes.slice(1).map((a) => `, nem ${a}`).join("")}.`);
+  if (ausentes.length === 1 && ausentes[0].tipica > 0) partes.push(`Nada ${ausentes[0].em}, onde a típica põe ${pctInteiro(ausentes[0].tipica)}.`);
+  else if (ausentes.length) {
+    const comTipica = ausentes.map((a) => (a.tipica > 0 ? `${a.em} (a típica põe ${pctInteiro(a.tipica)})` : a.em));
+    partes.push(`Nada ${comTipica[0]}${comTipica.slice(1).map((a) => `, nem ${a}`).join("")}.`);
+  }
   const generico = centavosGenericos(termos);
   if (propagandaCentavos > 0 && generico / propagandaCentavos > LIMIAR_GENERICO_FRASE) {
     const [g] = deCada100([generico, Math.max(propagandaCentavos - generico, 0)]);
@@ -253,7 +260,7 @@ export function linhaNada(tipos: TipoComposto[], propagandaCentavos: number, ter
  */
 export const DEGRAUS_BARRA = [240, 280, 320, 360, 400, 440, 480, 560, 640, 720, 800, 900, 1000, 1200, 1400, 1600];
 const FONTE_ROTULO_BARRA = 13;   // px, como nos rótulos da barra
-const FOLGA_ROTULO_BARRA = 12;   // px: bordas e recuo da chave, intervalo entre segmentos
+const FOLGA_ROTULO_BARRA = 12;   // px: intervalo entre segmentos e respiro entre rótulos vizinhos
 
 /**
  * Menor largura da barra (um dos DEGRAUS_BARRA) em que o texto cabe numa fatia `parte` dela: 0 = cabe em qualquer barra;
@@ -270,22 +277,29 @@ export function larguraParaRotulo(texto: string, parte: number): number | null {
 export interface SegmentoBarra {
   chave: string; grupo: string; rotulo: string; centavos: number; parte: number; pct: string; generico: boolean; outras: boolean;
   /** As peças que o segmento junta (uma, salvo "outras"), do maior para o menor valor. */ membros: { rotulo: string; centavos: number; generico: boolean }[];
-  /** Largura mínima da barra para o rótulo (nome e percentual) caber embaixo do segmento; null = nunca. */ cabe: number | null;
+  /** Largura mínima da barra para o rótulo ("adesivo 32%", numa linha) caber embaixo do segmento; null = nunca. */ cabe: number | null;
 }
-/** Um tipo da barra: a chave acima dos seus segmentos ("Impresso e de rua 84%"). */
-export interface TipoBarra { grupo: string; rotulo: string; centavos: number; parte: number; de100: number; segmentos: SegmentoBarra[]; cabe: number | null }
+/**
+ * Uma linha do gráfico: um tipo, com a parte desta campanha ("84%"; um valor que arredonda para zero, "menos de 1%"), os
+ * segmentos das suas peças e a típica daquele tipo (0 a 1; null = sem traço nem "típica X%").
+ */
+export interface TipoBarra {
+  grupo: string; rotulo: string; centavos: number; parte: number; de100: number; pct: string; segmentos: SegmentoBarra[];
+  tipica: number | null; /** "67%" (null sem típica). */ pctTipica: string | null;
+}
 export interface BarraPecas { tipos: TipoBarra[]; totalCentavos: number }
 
 /**
- * Barra única: um segmento por peça, agrupado por tipo; o tipo de maior valor primeiro, à esquerda, e dentro dele as peças
- * do maior para o menor. O total de cada tipo é o oficial (categorias do TSE); as peças vêm do por_tipo (uma peça em dois
- * tipos aparece nos dois). Peças abaixo de LIMIAR_OUTRAS do total viram um segmento "outras" do tipo (se for uma só, fica
- * com o próprio nome). Se as peças não somarem o total do tipo (API anterior ao por_tipo), a diferença vira "sem detalhe".
+ * Uma linha por tipo com valor, do maior para o menor (tipo com 0% não tem linha). Cada barra vai de 0 a 100% da propaganda:
+ * os segmentos são as peças daquele tipo, do maior para o menor, e o resto da barra fica vazio. O total de cada tipo é o
+ * oficial (categorias do TSE); as peças vêm do por_tipo (uma peça em dois tipos aparece nos dois). Peças abaixo de
+ * LIMIAR_OUTRAS do total viram um segmento "outras" do tipo (se for uma só, fica com o próprio nome). Se as peças não somarem
+ * o total do tipo (API anterior ao por_tipo), a diferença vira "sem detalhe". `tipicas` (de tipicasPorTipo) dá a típica de
+ * cada linha.
  */
-export function barraPecas(tipos: TipoComposto[], termos: TermoNuvem[], propagandaCentavos: number): BarraPecas {
+export function barraPecas(tipos: TipoComposto[], termos: TermoNuvem[], propagandaCentavos: number, tipicas: TipicasPorTipo = {}): BarraPecas {
   const total = propagandaCentavos;
   const parte = (c: number) => (total > 0 ? c / total : 0);
-  const maisLongo = (a: string, b: string) => (a.length >= b.length ? a : b);
   return {
     totalCentavos: total,
     tipos: tiposPorValor(tipos).map((t) => {
@@ -297,30 +311,20 @@ export function barraPecas(tipos: TipoComposto[], termos: TermoNuvem[], propagan
       const segmento = (rotulo: string, membros: typeof itens, outras: boolean): SegmentoBarra => {
         const c = membros.reduce((s, x) => s + x.centavos, 0), pct = pctInteiro(parte(c));
         return { chave: `${t.grupo}:${rotulo}`, grupo: t.grupo, rotulo, centavos: c, parte: parte(c), pct, outras, membros,
-          generico: membros.every((x) => x.generico), cabe: larguraParaRotulo(maisLongo(rotulo, pct), parte(c)) };
+          generico: membros.every((x) => x.generico), cabe: larguraParaRotulo(`${rotulo} ${pct}`, parte(c)) };
       };
       const grandes = itens.filter((x) => parte(x.centavos) >= LIMIAR_OUTRAS);
       const pequenas = itens.filter((x) => parte(x.centavos) < LIMIAR_OUTRAS);
       const segmentos = grandes.map((x) => segmento(x.rotulo, [x], false));
       if (pequenas.length === 1) segmentos.push(segmento(pequenas[0].rotulo, pequenas, false));
       else if (pequenas.length > 1) segmentos.push(segmento("outras", pequenas, true));
-      const rotulo = tipoComum(t.grupo).legenda;
-      return { grupo: t.grupo, rotulo, centavos: t.centavos, parte: parte(t.centavos), de100: t.de100, segmentos,
-        cabe: larguraParaRotulo(`${rotulo} ${t.de100}%`, parte(t.centavos)) };
+      const tip = tipicas[t.grupo];
+      const tipica = tip && Number.isFinite(tip.mediana) ? Math.min(Math.max(tip.mediana, 0), 1) : null;
+      return { grupo: t.grupo, rotulo: tipoComum(t.grupo).legenda, centavos: t.centavos, parte: parte(t.centavos), de100: t.de100,
+        pct: t.de100 > 0 ? `${t.de100}%` : pctInteiro(parte(t.centavos)), segmentos, tipica, pctTipica: tipica === null ? null : pctInteiro(tipica) };
     }),
   };
 }
-
-/** Um tipo na legenda abaixo da barra: aparece só quando o nome da sua chave está escondido. */
-export interface TipoSemNome { grupo: string; rotulo: string; de100: number; classe: string | null }
-
-/**
- * Tipos cujo nome pode não caber na chave: os mesmos degraus da chave, com a regra invertida (pp-falta-<px> só aparece
- * quando a barra é mais estreita que isso; null = a chave nunca tem nome, o item aparece sempre). Tipo cujo nome cabe em
- * qualquer largura não entra.
- */
-export const tiposSemNome = (b: BarraPecas): TipoSemNome[] => b.tipos.filter((t) => t.cabe !== 0)
-  .map((t) => ({ grupo: t.grupo, rotulo: t.rotulo, de100: t.de100, classe: t.cabe === null ? null : `pp-falta-${t.cabe}` }));
 
 /** A barra só faz sentido com mais de um tipo ou mais de uma peça: com um tipo e uma peça específica, não. */
 export function mostrarBarra(b: BarraPecas): boolean {
@@ -391,12 +395,17 @@ export function tipica(refs: LinhaReferencia[] | null, c: CampanhaRef, grupo: st
   return t.campanhas >= LIMIAR_GRUPO_MINIMO ? t : null;
 }
 
+/** A típica de cada um dos três tipos para a campanha (null = sem comparação naquele tipo). */
+export type TipicasPorTipo = Partial<Record<string, Tipica | null>>;
+export const tipicasPorTipo = (refs: LinhaReferencia[] | null, c: CampanhaRef, parcelas: LinhaParcelas[] | null = null): TipicasPorTipo =>
+  Object.fromEntries(ORDEM_TIPOS.map((g) => [g, tipica(refs, c, g, parcelas)]));
+
 const quemCompara = (c: CampanhaRef) => `candidatos a ${c.cargo.toLowerCase()}${noEstado(c.uf ?? "BR")} em ${c.ano}`;
 const quaseTotal = (mediana: number, esta: number) => mediana >= LIMIAR_PADRAO_QUASE_TOTAL && esta >= LIMIAR_PADRAO_QUASE_TOTAL;
 
 /**
  * Comparação com a típica, pelo tipo de maior valor desta campanha: "Típica campanha a senador em Minas Gerais em 2018: 68%
- * em impresso e de rua; esta: 84%." (esta = o percentual da chave do tipo). Grupo pequeno sem a própria campanha: "Típica
+ * em impresso e de rua; esta: 84%." (esta = o percentual da linha do tipo). Grupo pequeno sem a própria campanha: "Típica
  * entre as outras 11 campanhas a senador em Minas Gerais em 2018: …" (sem "parcelas": "Típica entre as 12 campanhas…").
  * Com o padrão quase total (típica e esta com LIMIAR_PADRAO_QUASE_TOTAL ou mais nesse tipo), "Como a maioria dos candidatos
  * a vereador em Minas Gerais em 2024.". Presidente: sem estado. null quando `tipica` é null.
@@ -413,40 +422,39 @@ export function fraseComparacao(refs: LinhaReferencia[] | null, c: CampanhaRef, 
     + `${minuscula(tipoComum(dom.grupo).legenda)}; esta: ${dom.de100}%.`;
 }
 
-/** A comparação com a típica: como marca na barra (com a legenda) ou como texto no topo; os dois null sem referência. */
-export interface Comparacao { marca: { parte: number; legenda: string } | null; texto: string | null }
-
 /**
- * Marca × texto: com dado de referência, a regra é a marca tracejada na barra, na posição da típica do tipo dominante desta
- * campanha (que vem primeiro, à esquerda), com a frase de fraseComparacao como legenda (o mesmo valor da frase). Vira texto
- * no topo quando vale o padrão quase total ("Como a maioria…") ou quando a barra não é mostrada (a mesma frase da legenda).
+ * A comparação em texto, no topo: a frase de fraseComparacao quando o gráfico não aparece, ou "Como a maioria…" quando vale
+ * o padrão quase total. Com o gráfico, a típica fica nas linhas (o traço e "típica X%"). null sem referência.
  */
 export function comparacao(refs: LinhaReferencia[] | null, c: CampanhaRef, tipos: TipoComposto[], barraVisivel: boolean,
-  parcelas: LinhaParcelas[] | null = null): Comparacao {
+  parcelas: LinhaParcelas[] | null = null): string | null {
   const dom = tipos.find((t) => t.grupo === tipoDominante(tipos));
   const t = tipica(refs, c, dom?.grupo ?? null, parcelas);
   const frase = fraseComparacao(refs, c, tipos, parcelas);
-  if (!t || !dom || !frase) return { marca: null, texto: null };
-  if (!barraVisivel || quaseTotal(t.mediana, dom.parte)) return { marca: null, texto: frase };
-  return { marca: { parte: Math.min(Math.max(t.mediana, 0), 1), legenda: frase }, texto: null };
+  if (!t || !dom || !frase) return null;
+  return !barraVisivel || quaseTotal(t.mediana, dom.parte) ? frase : null;
 }
 
-/** Texto para leitor de tela da barra: tipos, peças com percentual e a típica. */
 /**
- * Régua da típica, logo abaixo da barra: começa na borda esquerda (onde começa o tipo comparado, sempre o primeiro) e vai
- * até a típica. `largura` é a fração da barra, limitada a 0–1; com 0 sobra só o traço do fim, na borda esquerda. Pode
- * passar do fim do tipo, quando a típica é maior que a parcela desta campanha. null sem comparação (a régua não ocupa
- * espaço).
+ * Legenda do traço da típica, abaixo das linhas: "Típica entre as outras 11 campanhas a senador em Minas Gerais em 2018, em
+ * cada tipo. Cada barra vai de 0 a 100% da propaganda."; grupo de 30 ou mais: "Típica das campanhas a …"; grupo pequeno sem
+ * "parcelas": "Típica entre as 12 campanhas a …". Presidente: sem estado. null quando nenhuma linha tem típica.
  */
-export function reguaTipica(marca: Comparacao["marca"]): { largura: number } | null {
-  if (!marca || !Number.isFinite(marca.parte)) return null;
-  return { largura: Math.min(Math.max(marca.parte, 0), 1) };
+export function legendaTipica(b: BarraPecas, tipicas: TipicasPorTipo, c: CampanhaRef): string | null {
+  const t = b.tipos.filter((x) => x.tipica !== null).map((x) => tipicas[x.grupo]).find((x) => x);
+  if (!t) return null;
+  const quem = t.semAPropria ? `Típica entre as outras ${inteiro(t.campanhas)} campanhas`
+    : t.campanhas < LIMIAR_GRUPO_PEQUENO ? `Típica entre as ${inteiro(t.campanhas)} campanhas` : "Típica das campanhas";
+  return `${quem} a ${c.cargo.toLowerCase()}${noEstado(c.uf ?? "BR")} em ${c.ano}, em cada tipo. Cada barra vai de 0 a 100% da propaganda.`;
 }
 
-export function descricaoBarra(b: BarraPecas, marca: Comparacao["marca"]): string {
-  const tipos = b.tipos.map((t) => `${t.rotulo}, ${t.de100}%: `
-    + t.segmentos.map((s) => `${s.outras ? `outras (${juntar(s.membros.map((m) => m.rotulo))})` : s.rotulo} ${s.pct}`).join(", "));
-  return `Propaganda por tipo e por peça. ${tipos.join("; ")}.${marca ? ` ${marca.legenda}` : ""}`;
+/**
+ * Texto para leitor de tela do gráfico, um tipo por vez: "Impresso e de rua: esta 84%, típica 67%; adesivo 32%, panfleto
+ * 22%, …. Internet: esta 16%, típica 17%; Facebook 16%." (sem típica, só "esta").
+ */
+export function descricaoBarra(b: BarraPecas): string {
+  return b.tipos.map((t) => `${t.rotulo}: esta ${t.pct}${t.pctTipica === null ? "" : `, típica ${t.pctTipica}`}; `
+    + t.segmentos.map((s) => `${s.outras ? `outras (${juntar(s.membros.map((m) => m.rotulo))})` : s.rotulo} ${s.pct}`).join(", ") + ".").join(" ");
 }
 
 /** Percentual das tabelas, com uma casa: "21,6%"; abaixo de 0,1%, "< 0,1%". */
