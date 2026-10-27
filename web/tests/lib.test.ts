@@ -604,6 +604,8 @@ describe("escalaDoMaior", () => {
   it("o maior vale 1 e os outros, a fração dele", () => {
     expect(escalaDoMaior([{ valor: 0.26 }, { valor: 0.13 }]).map((x) => x.p)).toEqual([1, 0.5]);
     expect(escalaDoMaior([{ valor: 0 }]).map((x) => x.p)).toEqual([0]);
+  });
+});
 
 describe("semPrestacao (pergunta 8)", () => {
   const su = (o: Partial<LinhaSucesso>): LinhaSucesso => ({ ano: 2022, cargo: "Deputado federal", uf: "MG", faixa: 0, candidaturas: 10, eleitos: 1, publico_min: 0, publico_max: 0, ...o });
