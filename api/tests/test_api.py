@@ -1,5 +1,8 @@
 import json
 
+import pytest
+from fastapi.testclient import TestClient
+
 
 def test_health(client):
     r = client.get("/api/health")
@@ -263,17 +266,70 @@ def test_palavras_sem_palavras_vazias(client):
     assert "para" not in termos and "campanha" not in termos and "advocaticios" not in termos
 
 
-def test_receitas_publica_x_privada_sem_repasses(client):
+def test_receitas_publica_x_privada_com_repasses(client):
     r = client.get("/api/candidaturas/2/receitas").json()
-    assert (r["publica"], r["privada"], r["total"]) == (4000, 1500, 5500)      # o repasse de 300 não entra
-    assert round(r["pct_publica"], 3) == 0.727
+    assert (r["publica"], r["privada"], r["total"]) == (4000, 1800, 5800)      # o repasse de 300 entra, pela fonte de origem
+    assert round(r["pct_publica"], 3) == 0.69
     fontes = {k: r[k] for k in ("fundo_eleitoral", "fundo_partidario", "doacoes_pessoas", "recursos_proprios", "outros_privados")}
-    assert fontes == {"fundo_eleitoral": 4000, "fundo_partidario": 0, "doacoes_pessoas": 1000, "recursos_proprios": 500, "outros_privados": 0}
+    assert fontes == {"fundo_eleitoral": 4000, "fundo_partidario": 0, "doacoes_pessoas": 1000, "recursos_proprios": 500, "outros_privados": 300}
 
 
 def test_receitas_candidatura_sem_receita(client):
     r = client.get("/api/candidaturas/1/receitas").json()
     assert r["total"] == 0 and r["pct_publica"] is None and r["fundo_eleitoral"] == 0
+
+
+@pytest.fixture()
+def client_disputa(banco, banco_fotos, tmp_path, monkeypatch):
+    """O banco de teste com uma disputa para prefeito em Serra Azul (MG), 2020: eleito com 80% público, um só com dinheiro
+    privado, um sem receita, um que não disputou; e um candidato da eleição suplementar (fica de fora)."""
+    import shutil
+
+    import duckdb
+    from app import db
+
+    caminho = tmp_path / "disputa.duckdb"
+    shutil.copy(banco, caminho)
+    con = duckdb.connect(str(caminho))
+    con.execute("""
+        INSERT INTO candidatura (id_candidatura, ano, ue, sequencial, id_eleicao, id_candidato, id_partido, id_municipio, uf, nome_urna, numero_urna, idade_eleicao, id_rotulo_final, disputou) VALUES
+          (20, 2020, '44444', 'S20', 5, NULL, 1, 4, 'MG', 'PREFEITA A', '40', 50, 1, true),
+          (21, 2020, '44444', 'S21', 5, NULL, 2, 4, 'MG', 'PREFEITO B', '55', 50, 5, true),
+          (22, 2020, '44444', 'S22', 5, NULL, 3, 4, 'MG', 'PREFEITO C', '13', 50, 5, true),
+          (23, 2020, '44444', 'S23', 5, NULL, 4, 4, 'MG', 'PREFEITO D', '22', 50, 11, false),
+          (24, 2020, '44444', 'S24', 9, NULL, 4, 4, 'MG', 'PREFEITO E', '22', 50, 1, true);
+        INSERT INTO receita_campanha (id_receita, id_candidatura, id_fonte_recurso, origem_receita, valor_receita, repasse_entre_candidatos, tipo_prestacao_contas) VALUES
+          (20, 20, 1, 'Recursos de partido político', 600, false, 'FINAL'), (21, 20, 1, 'Recursos de outros candidatos', 200, true, 'FINAL'),
+          (22, 20, 2, 'Recursos de pessoas físicas', 200, false, 'FINAL'), (23, 21, 2, 'Recursos de pessoas físicas', 1000, false, 'FINAL'),
+          (24, 21, 1, 'Recursos de partido político', 900, false, 'PARCIAL'), (25, 24, 1, 'Recursos de partido político', 100, false, 'FINAL');
+    """)
+    con.close()
+    monkeypatch.setenv("DATABASE", str(caminho))
+    monkeypatch.setenv("FOTOS_DATABASE", banco_fotos)
+    monkeypatch.delenv("MOTHERDUCK_TOKEN", raising=False)
+    db.reiniciar()
+    from app.main import app
+
+    with TestClient(app) as c:
+        yield c
+    db.reiniciar()
+
+
+def test_disputa_prefeito_com_percentual_publico(client_disputa):
+    linhas = client_disputa.get("/api/candidaturas/21/disputa").json()
+    assert linhas == [
+        {"id_candidatura": 20, "nome_urna": "PREFEITA A", "eleito": True, "pct_publica": 0.8},   # o repasse público conta
+        {"id_candidatura": 21, "nome_urna": "PREFEITO B", "eleito": False, "pct_publica": 0.0},  # a parcial não entra
+        {"id_candidatura": 22, "nome_urna": "PREFEITO C", "eleito": False, "pct_publica": None},
+    ]   # sem quem não disputou (23) e sem a eleição suplementar (24)
+    assert {k for l in linhas for k in l} == {"id_candidatura", "nome_urna", "eleito", "pct_publica"}
+
+
+def test_disputa_vazia_nos_cargos_proporcionais_e_404(client):
+    assert client.get("/api/candidaturas/2/disputa").json() == []      # vereador: a comparação é pela mediana
+    assert client.get("/api/candidaturas/5/disputa").json() == [        # prefeito sozinho na disputa
+        {"id_candidatura": 5, "nome_urna": "JOÃO DO COMERCIO", "eleito": True, "pct_publica": 0.0}]
+    assert client.get("/api/candidaturas/9999/disputa").status_code == 404
 
 
 def test_candidatura_inexistente(client):
@@ -356,7 +412,7 @@ def test_cabecalho_de_cache_nos_dados_historicos(client):
 def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
-             "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/openapi.json",
+             "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/api/candidaturas/5/disputa", "/openapi.json",
              "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10",
              "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022",
              "/api/municipios/2/candidatos?ano=2020&cargo=Prefeito"]
