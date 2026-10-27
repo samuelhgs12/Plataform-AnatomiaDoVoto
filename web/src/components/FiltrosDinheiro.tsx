@@ -7,8 +7,9 @@ type Opcao = [string, string];
 
 /**
  * O recorte da área "Dinheiro nas eleições": eleição, cargo, estado e município, escolhidos uma vez para as três abas.
- * Cada lista aplica na hora (router.push); sem JavaScript, o formulário é um GET comum. O município não depende do
- * estado: as cidades vêm agrupadas por estado, para achar a sua direto. Trocar o estado solta o município.
+ * Cada lista aplica na hora (router.push); sem JavaScript, o formulário é um GET comum. Sem estado escolhido, a lista
+ * de municípios traz todas as cidades, agrupadas por estado (dá para achar a sua direto); com estado, só as dele.
+ * Trocar o estado solta o município; escolher um município define o estado (o estado vem da cidade).
  */
 export function FiltrosDinheiro({ anos, cargos, ufs, cidades, atual, fixos }: {
   anos: Opcao[]; cargos: string[]; ufs: Opcao[];
@@ -23,6 +24,7 @@ export function FiltrosDinheiro({ anos, cargos, ufs, cidades, atual, fixos }: {
   const ir = (campo: string, valor: string) => {
     const p = new URLSearchParams({ ...fixos, ...atual, [campo]: valor });
     if (campo === "uf" || campo === "ano") p.delete("mun");
+    if (campo === "mun" && valor) p.delete("uf");   // a página tira o estado da cidade: nunca fica um par incompatível
     for (const [k, v] of [...p.entries()]) if (!v) p.delete(k);
     iniciar(() => router.push(`/analises/dinheiro?${p}`, { scroll: false }));
   };

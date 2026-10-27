@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  cargosDoAno, classeComPorte, corCidade, corPorFaixas, ehMunicipal, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
+  cargosDoAno, classeComPorte, contaGasto, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
@@ -93,7 +93,7 @@ describe("fraseTaxas e qualificacao", () => {
     expect(fraseTaxas(0.002, 0)).toMatch(/^menos de 1 em cada 100.*contra 0 em cada 100 — sem diferença$/);
   });
   it("trata a falta de significância sem dizer que não há relação", () => {
-    expect(qualificacao("Sim.")).toMatch(/grande demais para ser acaso/);
+    expect(qualificacao("Sim.")).toMatch(/identificou diferença estatística.*não demonstra que o dinheiro causou/);
     expect(qualificacao("Sem diferença clara.")).toMatch(/não quer dizer que não haja relação/);
     expect(qualificacao("Diferença pequena.")).toMatch(/menor que 20%/);
     expect(qualificacao(null)).toMatch(/Poucos casos/);
@@ -118,5 +118,43 @@ describe("valorDoEstado, corPorFaixas e classeComPorte", () => {
     expect(classeComPorte("q2", "ate10", "ate50")).toBe("q2 apagado");
     expect(classeComPorte("q2", "ate50", "ate50")).toBe("q2");
     expect(classeComPorte("q2", "ate10", undefined)).toBe("q2");
+  });
+});
+
+describe("tresGrupos e maisRecebeuPublico", () => {
+  it("junta pouco e médio em 'menos' e mantém nada e muito", () => {
+    const g = tresGrupos([{ chave: "nada", candidaturas: 10, eleitos: 0 }, { chave: "pouco", candidaturas: 10, eleitos: 1 }, { chave: "medio", candidaturas: 30, eleitos: 4 }, { chave: "muito", candidaturas: 20, eleitos: 10 }]);
+    expect(g.menos).toEqual({ candidaturas: 40, eleitos: 5, taxa: 0.125 });
+    expect(g.mais.taxa).toBe(0.5);
+    expect(tresGrupos([]).mais).toEqual({ candidaturas: 0, eleitos: 0, taxa: 0 });
+  });
+  it("aponta quem mais recebeu dinheiro público só sem empate, sem falta de prestação e com valor", () => {
+    const c = (receita_publica: number, prestou = true) => ({ receita_publica, prestou });
+    expect(maisRecebeuPublico([c(10), c(30)])).toEqual(c(30));
+    expect(maisRecebeuPublico([c(30), c(30)])).toBeNull();
+    expect(maisRecebeuPublico([c(10), c(30, false)])).toBeNull();
+    expect(maisRecebeuPublico([c(0), c(0)])).toBeNull();
+    expect(maisRecebeuPublico([c(5)])).toBeNull();
+  });
+});
+
+describe("contaGasto, contaGastoEstado e legendaPorFaixas", () => {
+  it("dá o gasto e as vagas da conta (prefeito: 1 vaga)", () => {
+    expect(contaGasto(r({}), "Vereador")).toEqual({ gasto: 500_000, vagas: 10 });
+    expect(contaGasto(r({}), "Prefeito")).toEqual({ gasto: 900_000, vagas: 1 });
+    expect(contaGasto(r({ vereador_vagas: 0 }), "Vereador")).toBeNull();
+    expect(contaGasto(undefined, "Vereador")).toBeNull();
+  });
+  it("soma gasto e vagas do estado ou dos seis, sem a linha BR", () => {
+    const e = (uf: string, vagas: number, gasto: number) => ({ ano: 2024, uf, cargo: "Vereador", vagas, gasto });
+    const linhas = [e("PE", 10, 100), e("RJ", 30, 900), e("BR", 999, 1)];
+    expect(contaGastoEstado(linhas, 2024, "PE", "Vereador")).toEqual({ gasto: 100, vagas: 10 });
+    expect(contaGastoEstado(linhas, 2024, undefined, "Vereador")).toEqual({ gasto: 1000, vagas: 40 });
+    expect(contaGastoEstado(linhas, 2020, "PE", "Vereador")).toBeNull();
+  });
+  it("escreve os limites das faixas na legenda", () => {
+    const l = legendaPorFaixas([10, 20], (v) => `${v}%`);
+    expect(l.map((x) => x.texto)).toEqual(["até 10%", "10%–20%", "20% ou mais", "Não informado"]);
+    expect(legendaPorFaixas([], String)).toEqual([{ classe: "sem", texto: "Não informado" }]);
   });
 });

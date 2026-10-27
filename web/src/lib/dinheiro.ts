@@ -1,7 +1,7 @@
 // Lógica da área "Dinheiro nas eleições" (/analises/dinheiro): as perguntas 1, 2 e 8 num mesmo recorte de eleição,
 // cargo e lugar, sem React. Os dados vêm de /api/analises/municipios (cidades e estados), q1, q2 e q8.
 
-import { explicacao, pontosPercentuais, type Resposta } from "./estatistica";
+import { pontosPercentuais, type Resposta } from "./estatistica";
 import { reais } from "./format";
 import { mediana, porteDe, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
 
@@ -151,12 +151,15 @@ export function fraseTaxas(maior: number, menor: number): string {
   return `${emCada100(maior)} em cada 100 se elegeram, contra ${emCada100(menor)} em cada 100 — ${dif}`;
 }
 
-/** A qualificação estatística, secundária: nunca transforma "sem significância" em "não há relação". */
+/**
+ * A qualificação estatística, secundária e sem tom conclusivo: nunca transforma "sem significância" em "não há
+ * relação" nem "significância" em causa. O mínimo de 20% é uma regra do projeto, dita como tal.
+ */
 export function qualificacao(r: Resposta | null): string {
   if (r === null || r === "Sem dados suficientes.") return "Poucos casos para um teste estatístico.";
-  if (r === "Sim." || r === "Não.") return "A diferença é grande demais para ser acaso (teste estatístico, 95% de confiança).";
-  if (r === "Diferença pequena.") return explicacao(r)!;
-  return "Neste recorte, a diferença pode ser acaso. Isso não quer dizer que não haja relação.";
+  if (r === "Sim." || r === "Não.") return "O teste identificou diferença estatística neste recorte (95% de confiança). Isso não demonstra que o dinheiro causou a vitória.";
+  if (r === "Diferença pequena.") return "O teste identificou diferença estatística, mas menor que 20%, o mínimo que o projeto adota para destacá-la.";
+  return "Neste recorte, o teste não identificou diferença estatística. Isso não quer dizer que não haja relação.";
 }
 
 /** Classe de cor por faixas dadas (para os estados, cuja escala é outra: soma de muitas campanhas). */
@@ -183,3 +186,60 @@ export function valorDoEstado(estados: { ano: number; uf: string; cargo: string;
 /** Filtro de porte do mapa: as cidades de outro porte ficam apagadas (continuam clicáveis), para comparar parecidas. */
 export const classeComPorte = (classe: string, porteCidade: string | undefined, porteFiltro: string | undefined) =>
   porteFiltro && porteCidade !== porteFiltro ? `${classe} apagado` : classe;
+
+/** Um grupo de candidatos e quantos se elegeram. */
+export interface GrupoTaxa { candidaturas: number; eleitos: number; taxa: number }
+const juntar = (gs: { candidaturas: number; eleitos: number }[]): GrupoTaxa => {
+  const candidaturas = gs.reduce((a, g) => a + g.candidaturas, 0), eleitos = gs.reduce((a, g) => a + g.eleitos, 0);
+  return { candidaturas, eleitos, taxa: candidaturas ? eleitos / candidaturas : 0 };
+};
+
+/**
+ * Os 4 grupos de recursos da P2 (nada, pouco, médio, muito) nos mesmos 3 da P8 (nada, menos, mais), para as duas
+ * comparações ficarem lado a lado com os mesmos rótulos: "mais" = cerca de 1/4 de maior valor na disputa.
+ */
+export function tresGrupos(grupos: { chave: string; candidaturas: number; eleitos: number }[]): { nada: GrupoTaxa; menos: GrupoTaxa; mais: GrupoTaxa } {
+  const de = (...ch: string[]) => juntar(grupos.filter((g) => ch.includes(g.chave)));
+  return { nada: de("nada"), menos: de("pouco", "medio"), mais: de("muito") };
+}
+
+/**
+ * Numa disputa (ex.: prefeito de uma cidade), o candidato que mais recebeu dinheiro público, com as mesmas regras de
+ * "quem mais gastou": null se alguém não entregou a prestação final, se ninguém recebeu ou se há empate no topo.
+ */
+export function maisRecebeuPublico<T extends { prestou?: boolean | null; receita_publica: number }>(cands: T[]): T | null {
+  if (cands.length < 2 || cands.some((c) => c.prestou === false)) return null;
+  const maior = Math.max(...cands.map((c) => c.receita_publica));
+  const topo = cands.filter((c) => c.receita_publica === maior);
+  return maior > 0 && topo.length === 1 ? topo[0] : null;
+}
+
+/**
+ * A conta do gasto por vaga, para mostrar por extenso ("R$ 32 milhões ÷ 37 vagas"): o gasto das campanhas ao cargo e o
+ * número de vagas. Na cidade, prefeito tem 1 vaga (o gasto por vaga é o total gasto na disputa, não o do eleito);
+ * no estado ou nos seis, somas de todas as campanhas e de todas as vagas. null sem dado.
+ */
+export function contaGasto(r: LinhaResumo | undefined, cargo: string): { gasto: number; vagas: number } | null {
+  if (!r) return null;
+  if (cargo === "Prefeito") return r.prefeito_candidatos > 0 ? { gasto: r.prefeito_gasto, vagas: 1 } : null;
+  return r.vereador_vagas > 0 ? { gasto: r.vereador_gasto, vagas: r.vereador_vagas } : null;
+}
+export function contaGastoEstado(estados: { ano: number; uf: string; cargo: string; vagas: number; gasto: number }[], ano: number, uf: string | undefined, cargo: string): { gasto: number; vagas: number } | null {
+  const sel = estados.filter((e) => e.ano === ano && e.cargo === cargo && e.uf !== "BR" && (!uf || e.uf === uf));
+  const vagas = sel.reduce((a, e) => a + e.vagas, 0), gasto = sel.reduce((a, e) => a + e.gasto, 0);
+  return vagas > 0 ? { gasto, vagas } : null;
+}
+
+/**
+ * Legenda com os limites escritos (para as faixas dos estados, que vêm da distribuição dos seis): "até R$ 40 mil",
+ * "R$ 40 mil–R$ 60 mil"... e "Não informado". `fmt` escreve um valor da camada.
+ */
+export function legendaPorFaixas(faixas: number[], fmt: (v: number) => string): { classe: string; texto: string }[] {
+  if (!faixas.length) return [{ classe: "sem", texto: "Não informado" }];
+  return [
+    { classe: "q0", texto: `até ${fmt(faixas[0])}` },
+    ...faixas.slice(1).map((v, i) => ({ classe: `q${i + 1}`, texto: `${fmt(faixas[i])}–${fmt(v)}` })),
+    { classe: `q${faixas.length}`, texto: `${fmt(faixas[faixas.length - 1])} ou mais` },
+    { classe: "sem", texto: "Não informado" },
+  ];
+}

@@ -137,7 +137,7 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
         <MapaVivo className="palco s8" estado={uf}>
           <div className="palco-topo">
             <div>
-              <nav className="visoes" aria-label="O que o mapa mostra">
+              <nav className="camadas-mapa" aria-label="O que o mapa mostra">
                 {INDICADORES.map((i) => (
                   <a key={i.chave} href={href({ ver: i.chave === "custo" ? null : i.chave })} data-mapa="" aria-current={i.chave === ind ? "true" : undefined}>
                     {i.chave === "custo" ? "Custo da cadeira" : i.chave === "publico" ? "Dinheiro público" : "Quem gastou mais"}

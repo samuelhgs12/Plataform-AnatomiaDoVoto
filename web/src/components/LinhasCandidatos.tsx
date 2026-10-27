@@ -12,14 +12,15 @@ export interface LinhaCandidato {
 }
 
 /**
- * Candidatos em linhas regulares (como nas listas de apuração): foto | nome e partido | resultado | o valor da aba,
- * alinhado à direita. `valor`: "gasto" (gasto declarado) ou "publico" (dinheiro público recebido e a parte pública).
+ * Candidatos em linhas regulares (como nas listas de apuração): foto | nome e partido | resultado | gasto declarado |
+ * dinheiro público (valor e parte do que recebeu), os dois alinhados à direita: as três perguntas na mesma linha.
  * Sem prestação de contas final, o valor é "Não informado", e não R$ 0. Componente de servidor (a foto é cliente).
  */
-export function LinhasCandidatos({ linhas, ano, valor, vazio }: { linhas: LinhaCandidato[]; ano: number; valor: "gasto" | "publico"; vazio: string }) {
+export function LinhasCandidatos({ linhas, ano, vazio }: { linhas: LinhaCandidato[]; ano: number; vazio: string }) {
   if (!linhas.length) return <p className="muted pequeno">{vazio}</p>;
   return (
     <ul className="linhas-cand">
+      <li className="linhas-cab" aria-hidden="true"><span /><span>Candidato</span><span>Resultado</span><span>Gasto declarado</span><span>Dinheiro público</span></li>
       {linhas.map((c) => {
         const semDado = c.prestou === false;
         const nome = c.nome_urna ?? "Sem nome";
@@ -39,8 +40,10 @@ export function LinhasCandidatos({ linhas, ano, valor, vazio }: { linhas: LinhaC
               <small>{c.votos > 0 ? `${inteiro(c.votos)} votos${c.parteVotos != null ? ` (${pct(c.parteVotos, 0)})` : ""}` : "votos não informados"}</small>
             </span>
             <span className="linhas-valor">
-              {semDado ? <><b>Não informado</b><small>sem prestação de contas final</small></>
-                : valor === "gasto" ? <><b>{reais(c.gasto)}</b><small>gasto declarado</small></>
+              {semDado ? <><b>Não informado</b><small>sem prestação final</small></> : <><b>{reais(c.gasto)}</b><small>gasto declarado</small></>}
+            </span>
+            <span className="linhas-valor">
+              {semDado ? <b>Não informado</b>
                 : <><b>{reais(c.receita_publica)}</b><small>{c.receita > 0 ? `${pct(c.receita_publica / c.receita, 0)} do que recebeu` : "nada recebido"}</small></>}
             </span>
           </li>
