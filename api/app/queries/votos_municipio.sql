@@ -2,6 +2,7 @@
 -- Disputa = mesma eleição e mesma unidade (UF ou BR). Os municípios são os dos estados do projeto onde a disputa teve
 -- voto; onde a candidatura não teve, vem com 0 (a tabela só guarda municípios com voto).
 -- Válidos do cargo = nominais de todas as candidaturas da disputa + votos de legenda (estes só existem de 2018 em diante).
+-- cod_ibge: a chave para casar com o mapa estático (web/public/data/mapa.json), cujo id_municipio muda a cada carga.
 WITH alvo AS (
     SELECT id_candidatura, id_eleicao, ue FROM candidatura WHERE id_candidatura = $1
 ),
@@ -27,7 +28,7 @@ legenda AS (
     FROM votos_partido_municipio p JOIN alvo a ON a.id_eleicao = p.id_eleicao
     GROUP BY p.id_municipio, p.turno
 )
-SELECT a.id_candidatura, t.id_municipio, m.uf, t.turno,
+SELECT a.id_candidatura, t.id_municipio, m.cod_ibge, m.uf, t.turno,
        coalesce(x.votos, 0) AS votos,
        t.nominais + coalesce(l.legenda, 0) AS validos_cargo,
        coalesce(x.posicao, t.com_voto + 1) AS posicao      -- sem voto: depois de todos que tiveram

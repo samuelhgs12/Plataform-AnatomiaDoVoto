@@ -56,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/candidatos" className="k-confirma">Buscar um candidato</Link>
             </nav>
             <p className="creditos">
-              Anatomia do Voto: projeto acadêmico da disciplina de Banco de Dados (UFPI) com dados abertos do TSE. Malhas de estados e municípios: IBGE. Indicadores sociais: Atlas do Desenvolvimento Humano no Brasil (PNUD, Ipea e FJP), Censo 2010.
+              Anatomia do Voto: projeto acadêmico da disciplina de Banco de Dados (UFPI) com dados abertos do TSE. Malhas de estados e municípios: IBGE. Indicadores sociais: Atlas do Desenvolvimento Humano no Brasil (PNUD, Ipea e FJP), Censo 2010, e IBGE, Censo Demográfico 2022.
               Fotos via Wikimedia Commons:{" "}
               {Object.values(FOTOS).map((f, i, todas) => (
                 <span key={f.src}>

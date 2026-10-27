@@ -110,12 +110,16 @@ export function dinheiroTotal(linhas: LinhaFontes[]): { total: number; publico: 
 }
 
 /**
- * A camada "Comparativos" (abstenção × um indicador do Censo 2010) no ano e recorte do mapa: só existe nos anos
- * comparados com o Censo; ligada sem um estado aberto, guarda a escolha mas ainda não pinta (o cruzamento é por
- * município, em terços dentro do estado). `motivo` diz ao leitor por que ela não pinta.
+ * A camada "Comparativos" (abstenção × um indicador do Censo) no ano e recorte do mapa: só existe nos anos comparados
+ * com um Censo (`anosPorCenso`: Censo → eleições); ligada sem um estado aberto, guarda a escolha mas ainda não pinta (o
+ * cruzamento é por município, em terços dentro do estado). `motivo` diz ao leitor por que ela não pinta.
  */
-export function situacaoComparativo({ ano, anosCenso, uf }: { ano: number; anosCenso: number[]; uf?: string }): { disponivel: boolean; pinta: boolean; motivo: string | null } {
-  if (!anosCenso.includes(ano)) return { disponivel: false, pinta: false, motivo: `O Censo 2010 só é comparado com as eleições de ${anosCenso.join(" e ")}.` };
+export function situacaoComparativo({ ano, anosPorCenso, uf }: { ano: number; anosPorCenso: Record<number, readonly number[]>; uf?: string }): { disponivel: boolean; pinta: boolean; motivo: string | null } {
+  const grupos = Object.entries(anosPorCenso);
+  if (!grupos.some(([, anos]) => anos.includes(ano))) {
+    const lista = (xs: string[]) => new Intl.ListFormat("pt-BR").format(xs);
+    return { disponivel: false, pinta: false, motivo: `Os indicadores do Censo só são comparados com as eleições em volta dele: ${lista(grupos.map(([c, anos]) => `${lista(anos.map(String))} (Censo ${c})`))}.` };
+  }
   if (!uf) return { disponivel: true, pinta: false, motivo: "Abra um estado no mapa para pintar os municípios com o cruzamento." };
   return { disponivel: true, pinta: true, motivo: null };
 }
