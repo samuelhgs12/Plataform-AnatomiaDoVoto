@@ -29,6 +29,7 @@ export const GRUPOS: { tipo: TipoItem; rotulo: string }[] = [
 const PAGINAS: ItemPaleta[] = [
   { tipo: "pagina", titulo: "Mapa da abstenção", detalhe: "Página inicial", href: "/#mapa" },
   { tipo: "pagina", titulo: "Mapa do voto de legenda", detalhe: "Página inicial", href: "/?ver=legenda#mapa" },
+  { tipo: "pagina", titulo: "Mapa do gasto por vaga", detalhe: "Página inicial · dinheiro das campanhas", href: "/?ver=dinheiro#mapa" },
   { tipo: "pagina", titulo: "Candidatos", detalhe: "Listagem por eleição", href: "/candidatos" },
   ...ANALISES.filter((a) => a.href.startsWith("/analises/")).map((a): ItemPaleta => ({ tipo: "pagina", titulo: a.titulo, detalhe: `Análise · ${a.pergunta}`, href: a.href })),
   { tipo: "pagina", titulo: "Todas as análises", detalhe: "Análises", href: "/analises" },

@@ -130,7 +130,7 @@ test('menu do mapa: camadas de legenda e de comparação', async ({ page }) => {
 
   // o modo é escolha única: Comparar vem marcado, com a abstenção sozinha e nenhum indicador escolhido
   const modos = submenu.getByRole('navigation', { name: 'O que pinta o mapa' });
-  await expect(modos.getByRole('link')).toHaveCount(2);
+  await expect(modos.getByRole('link')).toHaveCount(3); // Legenda, Comparar e Dinheiro
   await expect(modos.getByRole('link', { name: 'Comparar' })).toHaveAttribute('aria-current', 'true');
   const indicadores = submenu.getByRole('navigation', { name: 'Indicador do Censo 2010' });
   await expect(indicadores.locator('[aria-current]')).toHaveCount(0);

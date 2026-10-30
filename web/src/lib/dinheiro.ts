@@ -53,6 +53,36 @@ export function lerRecorte(sp: SP, op: { anos: number[]; ufs: string[]; municipi
   };
 }
 
+/** Eleições com prestação de contas no banco (não há receitas nem despesas antes de 2018). */
+export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
+
+/** Camada Dinheiro do mapa da página inicial: o ano (padrão: o último) e um cargo que exista nele. */
+export function escolhaMapaDinheiro(sp: SP): { ano: number; cargo: string } {
+  const pedido = Number(um(sp.ano));
+  const ano = ANOS_DINHEIRO.includes(pedido) ? pedido : ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1];
+  const cargos = cargosDoAno(ano);
+  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0] };
+}
+
+/**
+ * Endereço da camada Dinheiro no mapa da página inicial, com o recorte atual e as mudanças (null apaga). Trocar o
+ * estado solta a cidade; trocar o ano solta o cargo que não existe nele (volta ao primeiro do ano).
+ */
+export function hrefMapaDinheiro(
+  atual: { ano: number; cargo: string; uf?: string; mun?: number },
+  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun", string | number | null>> = {},
+): string {
+  const n = { ...atual, ...("uf" in novo ? { mun: undefined } : {}), ...novo };
+  const ano = Number(n.ano);
+  const p = new URLSearchParams({ ver: "dinheiro" });
+  if (ano !== ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1]) p.set("ano", String(ano));
+  const cargos = cargosDoAno(ano);
+  if (n.cargo && cargos.includes(String(n.cargo)) && n.cargo !== cargos[0]) p.set("cargo", String(n.cargo));
+  if (n.uf) p.set("uf", String(n.uf));
+  if (n.uf && n.mun && ehMunicipal(ano)) p.set("mun", String(n.mun));
+  return `/?${p}#mapa`;
+}
+
 /** Endereço da área com o recorte atual e as mudanças (null apaga). Trocar o estado solta a cidade. */
 export function hrefDinheiro(r: Recorte, novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "aba" | "vista", string | number | null>> = {}, ancora?: string): string {
   const atual: Record<string, string | number | null | undefined> = {

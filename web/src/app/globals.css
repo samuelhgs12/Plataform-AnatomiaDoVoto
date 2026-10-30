@@ -2021,3 +2021,17 @@ a.q-ver:active { transform: scale(0.98); }
   .matriz-dado span { font-size: 16px; font-weight: 500; }
 }
 @media (max-width: 1000px) { .sobre-secao { margin-top: 56px; } .sobre-escopo-texto { padding: 20px 24px; } }
+
+/* /analises/dinheiro: o lugar do recorte, com o atalho para a camada Dinheiro do mapa da página inicial */
+.area-lugar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 16px; }
+.area-lugar h2 { margin: 2px 0 6px; }
+.area-lugar .painel-resumo small { color: var(--muted); font-size: 14px; font-weight: 400; }
+.botao-mapa { padding: 11px 18px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.botao-mapa:hover { filter: brightness(1.08); }
+/* camada Dinheiro do mapa: a lista de candidatos no painel escuro */
+.dinheiro-cand .rotulo { margin: 14px 0 4px; }
+.dinheiro-cand .linhas-cand li { border-bottom-color: var(--line); }
+.camadas-apoio a.camada-link { color: var(--sobre-noite); text-decoration: underline; text-underline-offset: 3px; }
+.dinheiro-barras .barras li.link > a { margin-inline: 0; }   /* no painel, a barra clicável não passa da borda */
+.dinheiro-barras .barras.compacto li { grid-template-columns: minmax(0, 10em) minmax(48px, 1fr) auto; gap: 12px; min-width: 0; }
+.dinheiro-barras .barras-valor { text-align: right; }

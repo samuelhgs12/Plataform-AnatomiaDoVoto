@@ -17,6 +17,7 @@ const DESENHOS = {
   legenda: <><rect x="4" y="10.5" width="16" height="9.5" rx="1.5" /><path d="M8.5 10.5V4h7v6.5M8 14.5h8" /></>,
   comparar: <><path d="M4 20V4M4 20h16" /><circle cx="9" cy="14" r="1.4" /><circle cx="13" cy="10.5" r="1.4" /><circle cx="17.5" cy="7" r="1.4" /></>,
   seta: <><path d="m9 6 6 6-6 6" /></>,
+  dinheiro: <><rect x="3" y="6.5" width="18" height="11" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6.5 9.5v5M17.5 9.5v5" /></>,
 } as const;
 
 export type NomeIcone = keyof typeof DESENHOS;

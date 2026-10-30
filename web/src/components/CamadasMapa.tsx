@@ -1,8 +1,9 @@
 import { EscolhaMunicipio } from "./EscolhaMunicipio";
 import { Icone, type NomeIcone } from "./Icone";
 
-/** O que pinta o mapa: o voto de legenda ou a abstenção, sozinha ou cruzada com um indicador do Censo (Comparar). */
-export type ModoCamada = "legenda" | "comparar";
+/** O que pinta o mapa: o voto de legenda, a abstenção (sozinha ou cruzada com um indicador do Censo: Comparar) ou o
+ * gasto das campanhas por vaga (Dinheiro). */
+export type ModoCamada = "legenda" | "comparar" | "dinheiro";
 
 export interface CamadaLegenda {
   /** anos em que a camada existe, para a linha de apoio ("2018 a 2024") */
@@ -26,9 +27,16 @@ export interface CamadaComparativos {
   anos: { ano: number; href: string }[];
 }
 
+/** Camada Dinheiro (perguntas 1, 2 e 8): o cargo da eleição escolhida e o atalho para a análise completa. */
+export interface CamadaDinheiro {
+  cargos: { rotulo: string; href: string; on: boolean }[];
+  analise: string;
+}
+
 const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
   { chave: "legenda", rotulo: "Legenda", icone: "legenda" },
   { chave: "comparar", rotulo: "Comparar", icone: "comparar" },
+  { chave: "dinheiro", rotulo: "Dinheiro", icone: "dinheiro" },
 ];
 
 /**
@@ -38,7 +46,7 @@ const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
  * escolhido o desmarca. Tudo é link `data-mapa` (escolher é navegar, sem JavaScript); a opção escolhida tem
  * `aria-current`. Só desenha: os links e as situações chegam prontos da página.
  */
-export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: ModoCamada; hrefs: Record<ModoCamada, string>; legenda: CamadaLegenda; comparativos: CamadaComparativos }) {
+export function CamadasMapa({ modo, hrefs, legenda, comparativos, dinheiro }: { modo: ModoCamada; hrefs: Record<ModoCamada, string>; legenda: CamadaLegenda; comparativos: CamadaComparativos; dinheiro?: CamadaDinheiro }) {
   return (
     <div className="camadas">
       <nav className="segmentos camadas-modos" aria-label="O que pinta o mapa">
@@ -69,6 +77,20 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: Modo
           {legenda.partido && (
             <EscolhaMunicipio nome="p" rotulo="Partido" vazio="Todos os partidos" opcoes={legenda.partido.opcoes} atual={legenda.partido.atual} params={legenda.partido.params} />
           )}
+        </div>
+      )}
+
+      {modo === "dinheiro" && dinheiro && (
+        <div className="camadas-opcoes">
+          <p className="camadas-apoio">Gasto das campanhas dividido pelas vagas do cargo · 2018 a 2024</p>
+          <nav className="radios" aria-label="Cargo">
+            {dinheiro.cargos.map((c) => (
+              <a key={c.rotulo} href={c.href} data-mapa="" aria-current={c.on ? "true" : undefined}>
+                <span className="radio" aria-hidden="true" />{c.rotulo}
+              </a>
+            ))}
+          </nav>
+          <p className="camadas-apoio"><a className="camada-link" href={dinheiro.analise}>Quem teve mais dinheiro se elegeu mais? Comparações e propaganda ›</a></p>
         </div>
       )}
 
