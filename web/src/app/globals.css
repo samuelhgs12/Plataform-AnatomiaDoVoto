@@ -1446,7 +1446,6 @@ a.linha:hover { background: var(--panel2); }
 .secao-contexto { margin: 140px 0 32px; }
 .secao-contexto .titulo-secao { margin-bottom: 12px; }
 .secao-contexto .lead { max-width: 60ch; }
-.proximas { margin: 24px 4px 0; }
 .nota-fonte { font-size: var(--t-pequeno); max-width: 120ch; margin: 16px 4px 0; }
 .lista { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
 .acao-bloco { display: flex; align-items: flex-end; font-size: var(--t-lead); font-weight: 600; min-height: 220px; }
