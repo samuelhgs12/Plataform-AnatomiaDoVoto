@@ -3,7 +3,7 @@
 // já revisou nas páginas; para a /sobre há `resposta`, sem editar o original. As perguntas, no texto do dossiê, estão em
 // PERGUNTAS.
 
-export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p5" | "p8" | "p9" | "p10" | "candidato";
+export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p8" | "p9" | "p10" | "candidato";
 
 export interface Metodologia {
   id: IdMetodologia;
@@ -172,6 +172,34 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     sql: ["api/app/analises/q8.sql"],
   },
 
+  p4: {
+    id: "p4",
+    resposta: "No mapa, a parte da população de 18 anos ou mais de cada município (Censo 2022) com o grau de instrução escolhido. Ao passar o mouse, o grau do prefeito eleito e o grau mais comum na população; no painel, os eleitos (prefeito e vereadores) de 2020 ou 2024 ao lado da população.",
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/?ver=instrucao" }],
+    anos: "2020 e 2024",
+    cargos: "Prefeito e vereador eleitos",
+    dados: [
+      "candidatura, nivel_instrucao, eleicao, cargo, rotulo_resultado e municipio (banco bdr_final)",
+      "populacao_instrucao: pessoas de 18 anos ou mais por grau de instrução, Censo 2022 (IBGE, SIDRA 10061)",
+    ],
+    recorte: ["Eleições municipais ordinárias em volta do Censo 2022", "Só os eleitos, titulares (sem vices)", UFS],
+    calculo: [
+      "O IBGE publica quatro grupos de instrução: sem instrução e fundamental incompleto, fundamental completo e médio incompleto, médio completo e superior incompleto, e superior completo. Os rótulos do TSE, mais detalhados (analfabeto, “lê e escreve”, fundamental incompleto…), entram nesses quatro grupos.",
+      "A cor do mapa é a parte da população de 18 anos ou mais no grau escolhido: um recorte dos quatro grupos, acumulado do menor ao maior grau: “sem o fundamental completo”, “fundamental completo ou mais”, “médio completo ou mais” ou “superior completo”. Os grupos somados aparecem contornados nas barras do painel. Cores em quintos: cada cor reúne um quinto dos municípios dos seis estados.",
+      "Grau mais comum na população: o grupo com mais gente no município (no empate, o mais baixo).",
+      "Para um estado ou os seis juntos, as pessoas e os eleitos são somados antes da divisão.",
+      "Eleito: o resultado final da candidatura (2º turno, quando houve).",
+    ],
+    limites: [
+      "Os quatro grupos do IBGE não separam, por exemplo, quem é analfabeto de quem não terminou o fundamental: o detalhe do TSE se perde.",
+      "O grau do eleito é o que ele declarou no registro da candidatura, sem conferência; o da população é a resposta ao Censo.",
+      "A população adulta inclui os mais velhos, que estudaram menos; os eleitos não têm a mesma distribuição de idade.",
+      "Quem não informou a instrução ao TSE fica de fora da conta dos eleitos.",
+      "Município sem prefeito eleito na eleição ordinária (eleição anulada, por exemplo) aparece sem prefeito.",
+    ],
+    sql: ["api/app/analises/q4.sql"],
+  },
+
   p5: {
     id: "p5",
     resposta: "Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2024, com as fusões e renomeações marcadas.",
@@ -266,7 +294,7 @@ export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [
   { n: 1, texto: "Qual é o custo por cadeira conquistada?", id: "p1" },
   { n: 2, texto: "Existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?", id: "p2" },
   { n: 3, texto: "Como as características socioeconômicas dos municípios se relacionam com votação partidária e abstenção?", id: "mapa" },
-  { n: 4, texto: "Grau de instrução dos candidatos versus o da população?" },
+  { n: 4, texto: "Grau de instrução dos candidatos versus o da população?", id: "p4" },
   { n: 5, texto: "Qual é a quantidade e a proporção de votos de legenda recebidos por cada partido?", id: "p5" },
   { n: 6, texto: "Qual a relação entre a idade da população do município com o viés político?" },
   { n: 7, texto: "Qual o viés político do município/região na linha do tempo?" },
@@ -308,6 +336,7 @@ export const ESCOPO: LinhaEscopo[] = [
   { dado: "Participação e abstenção", nota: "o mapa (pergunta 3)", anos: de(2008, 2024, "dado") },
   { dado: "Censo 2010", nota: "Atlas do Desenvolvimento Humano", anos: de(2008, 2012, "censo") },
   { dado: "Censo 2022", nota: "IBGE", anos: de(2020, 2024, "censo") },
+  { dado: "Instrução dos eleitos × população", nota: "pergunta 4, com o Censo 2022", anos: { 2020: "censo", 2024: "censo" } },
   { dado: "Voto de legenda", nota: "pergunta 5", anos: de(2018, 2024, "dado") },
   { dado: "Receitas e despesas", nota: "perguntas 1, 2, 8 e 9", anos: de(2018, 2024, "dado") },
   { dado: "Fotos dos candidatos", nota: "banco à parte (bdr_fotos)", anos: de(2018, 2024, "dado") },

@@ -391,7 +391,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["municipios", "q1", "q10", "q2", "q5", "q8", "q9"]
+    assert client.get("/api/analises").json() == ["municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -401,6 +401,31 @@ def test_analise_devolve_cada_copy_como_tabela(client):
     assert "partido" in legenda["colunas"] and len(legenda["linhas"]) > 0
     assert all(len(l) == len(legenda["colunas"]) for l in legenda["linhas"])
     assert "max-age" in r.headers["cache-control"]
+
+
+def test_q4_instrucao_dos_eleitos_e_da_populacao(client):
+    dados = client.get("/api/analises/q4").json()
+    assert set(dados) == {"eleitos", "prefeitos", "populacao"}
+    # só eleitos de eleições municipais ordinárias de 2020 a 2024: sem a suplementar (9), sem os deputados de 2022 e sem
+    # a suplente de 2024 (8)
+    assert dados["eleitos"]["colunas"] == ["ano", "cargo", "uf", "cod_ibge", "nivel", "eleitos"]
+    assert dados["eleitos"]["linhas"] == [[2020, "Vereador", "MG", "3100001", 4, 1], [2020, "Prefeito", "PE", "2600002", 3, 1]]
+    assert dados["prefeitos"]["colunas"] == ["ano", "uf", "cod_ibge", "nome_urna", "nivel"]
+    assert dados["prefeitos"]["linhas"] == [[2020, "PE", "2600002", "JOÃO DO COMERCIO", 3]]
+    # só o Censo 2022 e só municípios com cod_ibge; os grupos de idade e sexos somados
+    assert dados["populacao"]["colunas"] == ["uf", "cod_ibge", "nivel", "populacao"]
+    assert dados["populacao"]["linhas"] == [["MG", "3100001", 1, 60], ["MG", "3100001", 4, 40]]
+
+
+def test_eleitos_do_municipio_com_instrucao_pelo_cod_ibge(client):
+    r = client.get("/api/municipios/ibge/3100001/eleitos?ano=2020")
+    assert r.status_code == 200
+    (e,) = r.json()   # Maria, vereadora eleita em Alvorada
+    assert (e["cargo"], e["nome_urna"], e["nivel"], e["ue"], e["sequencial"]) == ("Vereador", "MARIA PROFESSORA", 4, "11111", "S2")
+    # PE 2020: o prefeito da ordinária; a suplementar (9) fica de fora
+    assert [x["id_candidatura"] for x in client.get("/api/municipios/ibge/2600002/eleitos?ano=2020").json()] == [5]
+    assert client.get("/api/municipios/ibge/9999999/eleitos?ano=2020").json() == []
+    assert client.get("/api/municipios/ibge/abc/eleitos?ano=2020").status_code == 422
 
 
 def test_analise_so_as_tabelas_pedidas(client):
