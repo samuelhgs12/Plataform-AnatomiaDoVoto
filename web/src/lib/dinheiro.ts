@@ -75,10 +75,11 @@ export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
 /**
  * Endereço da camada Dinheiro no mapa da página inicial, com o recorte atual e as mudanças (null apaga). Trocar o
  * estado solta a cidade; trocar o ano solta o cargo que não existe nele (volta ao primeiro do ano) e, nas eleições
- * gerais, a cidade e o porte. `ancora` troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
+ * gerais, a cidade e o porte. A cidade vai pelo código do IBGE (o id_municipio muda a cada carga do banco). `ancora`
+ * troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
  */
 export function hrefMapaDinheiro(
-  atual: { ano: number; cargo: string; uf?: string; mun?: number; porte?: string; medir?: string },
+  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; medir?: string },
   novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "medir", string | number | null>> = {},
   ancora = "mapa",
 ): string {

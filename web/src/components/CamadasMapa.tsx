@@ -27,12 +27,20 @@ export interface CamadaComparativos {
   anos: { ano: number; href: string }[];
 }
 
-/** Camada Dinheiro (perguntas 1, 2 e 8): o cargo da eleição escolhida, o porte da cidade (municipais) e um atalho. */
+/** Uma lista de escolha que aplica na hora (EscolhaMunicipio): as opções, a atual e os outros filtros, que ela mantém. */
+type Lista = { opcoes: [string, string][]; atual?: string; params: Record<string, string> };
+
+/**
+ * Camada Dinheiro (perguntas 1, 2 e 8), com os mesmos filtros da análise: a eleição, o cargo dela, o estado, a cidade
+ * (municipais, com um estado escolhido) e o porte da cidade (municipais); `painel` leva aos números embaixo do mapa.
+ */
 export interface CamadaDinheiro {
+  anos: { rotulo: string; sub: string; href: string; on: boolean }[];
   cargos: { rotulo: string; href: string; on: boolean }[];
-  /** só nas eleições municipais: compara só cidades de um porte (eleitorado) */
-  porte?: { opcoes: [string, string][]; atual?: string; params: Record<string, string> };
-  analise: string;
+  estado: Lista;
+  cidade?: Lista;
+  porte?: Lista;
+  painel: string;
 }
 
 const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
@@ -84,7 +92,12 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos, dinheiro }: { 
 
       {modo === "dinheiro" && dinheiro && (
         <div className="camadas-opcoes">
-          <p className="camadas-apoio">Gasto das campanhas dividido pelas vagas do cargo · 2018 a 2024</p>
+          <p className="camadas-apoio">Gasto das campanhas dividido pelas vagas do cargo. Escolha a eleição e o lugar aqui ou clique no mapa.</p>
+          <nav className="segmentos segmentos-pequenos" aria-label="Eleição">
+            {dinheiro.anos.map((a) => (
+              <a key={a.rotulo} href={a.href} data-mapa="" aria-current={a.on ? "true" : undefined}>{a.rotulo}<small>{a.sub}</small></a>
+            ))}
+          </nav>
           <nav className="radios" aria-label="Cargo">
             {dinheiro.cargos.map((c) => (
               <a key={c.rotulo} href={c.href} data-mapa="" aria-current={c.on ? "true" : undefined}>
@@ -92,10 +105,14 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos, dinheiro }: { 
               </a>
             ))}
           </nav>
+          <EscolhaMunicipio nome="uf" rotulo="Estado" vazio="Os seis estados" opcoes={dinheiro.estado.opcoes} atual={dinheiro.estado.atual} params={dinheiro.estado.params} />
+          {dinheiro.cidade && (
+            <EscolhaMunicipio nome="mun" rotulo="Município" vazio="O estado inteiro" opcoes={dinheiro.cidade.opcoes} atual={dinheiro.cidade.atual} params={dinheiro.cidade.params} />
+          )}
           {dinheiro.porte && (
             <EscolhaMunicipio nome="porte" rotulo="Porte da cidade" vazio="Todos os portes" opcoes={dinheiro.porte.opcoes} atual={dinheiro.porte.atual} params={dinheiro.porte.params} />
           )}
-          <p className="camadas-apoio"><a className="camada-link" href={dinheiro.analise}>Quem teve mais dinheiro se elegeu mais? ↓</a></p>
+          <a className="camada-ir" href={dinheiro.painel}>Ver os números, os candidatos e as comparações ↓</a>
         </div>
       )}
 

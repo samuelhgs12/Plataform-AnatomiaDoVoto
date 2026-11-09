@@ -31,7 +31,7 @@ import { compacto, pct } from "@/lib/format";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { VisaoDinheiro } from "@/components/VisaoDinheiro";
-import { cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro } from "@/lib/dinheiro";
+import { ANOS_DINHEIRO, cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro } from "@/lib/dinheiro";
 import { PORTES } from "@/lib/territorio";
 import { MiniMapa } from "@/components/MiniMapa";
 import { CartaoDica } from "@/components/CartaoDica";
@@ -274,7 +274,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   // camada Dinheiro: o ano e o cargo dela (só 2018 a 2024); ao sair dela, a abstenção fica no mesmo ano
   const escDinheiro = escolhaMapaDinheiro(naDinheiro ? sp : { ano: String(naLegenda ? anoLeg : ano) });
   const anoBase = naLegenda && anos.includes(anoLeg!) ? anoLeg! : naDinheiro && anos.includes(escDinheiro.ano) ? escDinheiro.ano : ano;   // o ano da abstenção ao sair da legenda ou do dinheiro
-  const munDinheiro = naDinheiro && /^\d+$/.test(um(sp.mun) ?? "") ? Number(um(sp.mun)) : undefined;
+  // a cidade da camada Dinheiro vai pelo código do IBGE (igual no mapa estático e na API)
+  const munDinheiro = naDinheiro && uf ? municipios.find((m) => m.uf === uf && m.cod_ibge === um(sp.mun))?.cod_ibge : undefined;
+  const escolhaDin = { ...escDinheiro, uf, mun: munDinheiro };
+  const paramsSem = (...fora: ("uf" | "mun" | "porte")[]) =>
+    Object.fromEntries(new URL(hrefMapaDinheiro(escolhaDin, Object.fromEntries(fora.map((k) => [k, null]))), "http://x").searchParams);
   const comparativo = situacaoComparativo({ ano: anoBase, anosPorCenso: ANOS_POR_CENSO, uf });
   const censoBase = censoDoAno(anoBase) ?? 2010;
   const indBase = indicadorNoCenso(indPedido, censoBase);
@@ -288,12 +292,15 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         dinheiro: hrefMapaDinheiro({ ...escDinheiro, uf }),
       }}
       dinheiro={{
-        cargos: cargosDoAno(escDinheiro.ano).map((c) => ({ rotulo: c, href: hrefMapaDinheiro({ ...escDinheiro, uf, mun: munDinheiro }, { cargo: c }), on: naDinheiro && c === escDinheiro.cargo })),
-        porte: naDinheiro && ehMunicipal(escDinheiro.ano) ? {
-          opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte,
-          params: Object.fromEntries(new URL(hrefMapaDinheiro({ ...escDinheiro, uf, mun: munDinheiro }, { porte: null }), "http://x").searchParams),
+        anos: ANOS_DINHEIRO.map((a) => ({ rotulo: String(a), sub: ehMunicipal(a) ? "Municipal" : "Geral", href: hrefMapaDinheiro(escolhaDin, { ano: a }), on: naDinheiro && a === escDinheiro.ano })),
+        cargos: cargosDoAno(escDinheiro.ano).map((c) => ({ rotulo: c, href: hrefMapaDinheiro(escolhaDin, { cargo: c }), on: naDinheiro && c === escDinheiro.cargo })),
+        estado: { opcoes: ufs.map((u) => [u, NOME_UF[u] ?? u] as [string, string]), atual: uf, params: paramsSem("uf", "mun") },
+        cidade: naDinheiro && uf && ehMunicipal(escDinheiro.ano) ? {
+          opcoes: municipios.filter((m) => m.uf === uf).map((m) => [m.cod_ibge, nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR")),
+          atual: munDinheiro, params: paramsSem("mun"),
         } : undefined,
-        analise: hrefMapaDinheiro({ ...escDinheiro, uf, mun: munDinheiro }, {}, "comparar"),
+        porte: naDinheiro && ehMunicipal(escDinheiro.ano) ? { opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte, params: paramsSem("porte") } : undefined,
+        painel: hrefMapaDinheiro(escolhaDin, {}, "dinheiro-painel"),
       }}
       legenda={{
         anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",

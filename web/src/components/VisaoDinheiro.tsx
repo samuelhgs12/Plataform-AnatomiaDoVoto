@@ -64,8 +64,10 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const estados = comoObjetos<LinhaEstado>(dados.estados);
   const ufs = [...new Set(municipios.map((m) => m.uf))].sort();
   const uf = ufs.find((u) => u === um(sp.uf));
-  const mun = municipal && uf ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
-  const href = (novo: Parameters<typeof hrefMapaDinheiro>[1], ancora?: string) => hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.id_municipio, porte, medir }, novo, ancora);
+  // a cidade vem pelo código do IBGE, que é o mesmo no mapa e na API (o id_municipio muda a cada carga do banco)
+  const mun = municipal && uf ? municipios.find((m) => m.uf === uf && m.cod_ibge === um(sp.mun)) : undefined;
+  const codDe = new Map(municipios.map((m) => [m.id_municipio, m.cod_ibge]));
+  const href = (novo: Parameters<typeof hrefMapaDinheiro>[1], ancora?: string) => hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.cod_ibge, porte, medir }, novo, ancora);
   const nomeMun = new Map(municipios.map((m) => [m.id_municipio, nomeProprio(m.nome)]));
   const lugar = mun ? nomeMun.get(mun.id_municipio)! : uf ? NOME_UF[uf] ?? uf : "Os seis estados";
   const doAno = new Map(resumo.filter((x) => x.ano === ano).map((x) => [x.id_municipio, x]));
@@ -94,7 +96,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     const linha = doAno.get(m.id_municipio);
     const v = valorCidade(linha, "gasto", cargo);
     return {
-      ibge: m.cod_ibge, classe: classeComPorte(corCidade(v, "gasto", cargo), porteDe(linha?.eleitorado)?.chave, porte), href: href({ mun: m.id_municipio === mun?.id_municipio ? null : m.id_municipio }),
+      ibge: m.cod_ibge, classe: classeComPorte(corCidade(v, "gasto", cargo), porteDe(linha?.eleitorado)?.chave, porte), href: href({ mun: m.id_municipio === mun?.id_municipio ? null : m.cod_ibge }),
       dica: `${nomeMun.get(m.id_municipio)}: ${textoValor(v, "gasto", cargo)}${cargo === "Prefeito" ? " gastos na disputa" : " por vaga"}`,
       atraso: Math.round(((CENTRO_MUNICIPIO[m.cod_ibge][0] - caixa[0]) / (caixa[2] - caixa[0])) * 100) / 100,
     };
@@ -177,7 +179,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </div>
       </MapaVivo>
 
-      <div className="painel s12" key={`dinheiro-${uf}-${mun?.id_municipio}-${ano}-${cargo}`}>
+      <div id="dinheiro-painel" className="painel s12" key={`dinheiro-${uf}-${mun?.id_municipio}-${ano}-${cargo}`}>
         <div className="bloco noite painel-cab s4">
           <p className="palco-sobre">{mun ? `Município · ${uf}` : uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"} · {cargo} · {ano}{!mun && porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}</p>
           <h2>{lugar}</h2>
@@ -194,8 +196,8 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           {!mun && porte && <p className="pequeno muted">Soma das {inteiro(doPorte(uf).n)} cidades deste porte.</p>}
           {municipal && uf && (
             <EscolhaMunicipio
-              opcoes={municipios.filter((m) => m.uf === uf).map((m) => [m.id_municipio, nomeMun.get(m.id_municipio)!] as [number, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"))}
-              atual={mun?.id_municipio} params={paramsMun}
+              opcoes={municipios.filter((m) => m.uf === uf).map((m) => [m.cod_ibge, nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"))}
+              atual={mun?.cod_ibge} params={paramsMun}
             />
           )}
         </div>
@@ -205,7 +207,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             <h3>Cidades de {NOME_UF[uf!]} que mais gastaram{cargo === "Prefeito" ? " na disputa a prefeito" : " por vaga"}</h3>
             <BarrasH compacto titulo={`Cidades de ${NOME_UF[uf!]} com maior gasto ${cargo === "Prefeito" ? "na disputa a prefeito" : `por vaga de ${cargoMin}`} em ${ano}`}
               linhas={cidadesTopo.map((c) => ({ chave: String(c.id), rotulo: `${cidadesUf.indexOf(c) + 1}º ${c.nome}`, valor: c.valor ?? 0, classe: c.id === mun?.id_municipio ? "pub" : "fx2", texto: textoValor(c.valor, "gasto", cargo),
-                subtexto: c.conta && cargo !== "Prefeito" ? `${reais(c.conta.gasto)} ÷ ${inteiro(c.conta.vagas)} ${c.conta.vagas === 1 ? "vaga" : "vagas"}` : "", href: href({ mun: c.id }), atual: c.id === mun?.id_municipio }))} />
+                subtexto: c.conta && cargo !== "Prefeito" ? `${reais(c.conta.gasto)} ÷ ${inteiro(c.conta.vagas)} ${c.conta.vagas === 1 ? "vaga" : "vagas"}` : "", href: href({ mun: codDe.get(c.id)! }), atual: c.id === mun?.id_municipio }))} />
             <p className="muted pequeno">{mun ? `${lugar} é a ${posMun + 1}ª de ${inteiro(cidadesUf.length)} cidades${porteInfo ? ` de ${porteInfo.rotulo}` : ""}.` : "Clique numa cidade, aqui ou no mapa, para ver os candidatos e quanto cada um gastou."}</p>
             <details className="ver-todos">
               <summary>Ver todas as {inteiro(cidadesUf.length)} cidades{porteInfo ? ` de ${porteInfo.rotulo}` : ""}</summary>
@@ -215,7 +217,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
                   <tbody>
                     {cidadesUf.map((c) => (
                       <tr key={c.id} aria-current={c.id === mun?.id_municipio ? "true" : undefined}>
-                        <td><Link href={href({ mun: c.id })} scroll={false}>{c.nome}</Link></td>
+                        <td><Link href={href({ mun: codDe.get(c.id)! })} scroll={false}>{c.nome}</Link></td>
                         <td>{c.porte?.replace(" eleitores", "") ?? "Não informado"}</td>
                         <td className="num">{textoValor(c.valor, "gasto", cargo)}</td>
                         <td className="num">{c.conta ? reais(c.conta.gasto) : "Não informado"}</td>

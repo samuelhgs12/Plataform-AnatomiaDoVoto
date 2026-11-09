@@ -126,7 +126,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
           )}
           {custoUf !== null && <p className="muted pequeno">{mun ? NOME_UF[uf!] : "Seis estados"}{comPorte}: {reais(custoUf)} por vaga.</p>}
         </div>
-        <Link className="botao-mapa" href={hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.id_municipio })}>
+        <Link className="botao-mapa" href={hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.cod_ibge })}>
           {mun ? "Ver no mapa e os candidatos" : uf ? (municipal ? "Ver as cidades no mapa" : "Ver no mapa e os eleitos") : "Ver no mapa"} ›
         </Link>
       </section>
