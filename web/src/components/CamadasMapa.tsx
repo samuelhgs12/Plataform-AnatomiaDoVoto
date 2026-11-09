@@ -27,9 +27,11 @@ export interface CamadaComparativos {
   anos: { ano: number; href: string }[];
 }
 
-/** Camada Dinheiro (perguntas 1, 2 e 8): o cargo da eleição escolhida e o atalho para a análise completa. */
+/** Camada Dinheiro (perguntas 1, 2 e 8): o cargo da eleição escolhida, o porte da cidade (municipais) e um atalho. */
 export interface CamadaDinheiro {
   cargos: { rotulo: string; href: string; on: boolean }[];
+  /** só nas eleições municipais: compara só cidades de um porte (eleitorado) */
+  porte?: { opcoes: [string, string][]; atual?: string; params: Record<string, string> };
   analise: string;
 }
 
@@ -90,7 +92,10 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos, dinheiro }: { 
               </a>
             ))}
           </nav>
-          <p className="camadas-apoio"><a className="camada-link" href={dinheiro.analise}>Quem teve mais dinheiro se elegeu mais? Comparações e propaganda ›</a></p>
+          {dinheiro.porte && (
+            <EscolhaMunicipio nome="porte" rotulo="Porte da cidade" vazio="Todos os portes" opcoes={dinheiro.porte.opcoes} atual={dinheiro.porte.atual} params={dinheiro.porte.params} />
+          )}
+          <p className="camadas-apoio"><a className="camada-link" href={dinheiro.analise}>Quem teve mais dinheiro se elegeu mais? ↓</a></p>
         </div>
       )}
 

@@ -210,11 +210,16 @@ describe("mediaPorCandidato", () => {
 
 describe("escolhaMapaDinheiro", () => {
   it("usa o último ano e o primeiro cargo dele quando nada é pedido", () => {
-    expect(escolhaMapaDinheiro({})).toEqual({ ano: ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1], cargo: "Vereador" });
+    expect(escolhaMapaDinheiro({})).toEqual({ ano: ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1], cargo: "Vereador", porte: undefined, medir: "recursos" });
   });
   it("ignora ano sem prestação de contas e cargo que não existe no ano", () => {
-    expect(escolhaMapaDinheiro({ ano: "2016", cargo: "Prefeito" })).toEqual({ ano: 2024, cargo: "Prefeito" });
-    expect(escolhaMapaDinheiro({ ano: "2022", cargo: "Prefeito" })).toEqual({ ano: 2022, cargo: "Deputado federal" });
+    expect(escolhaMapaDinheiro({ ano: "2016", cargo: "Prefeito" })).toMatchObject({ ano: 2024, cargo: "Prefeito" });
+    expect(escolhaMapaDinheiro({ ano: "2022", cargo: "Prefeito" })).toMatchObject({ ano: 2022, cargo: "Deputado federal" });
+  });
+  it("aceita só portes que existem, e só nas eleições municipais; medir=publico liga a pergunta 8", () => {
+    expect(escolhaMapaDinheiro({ porte: "ate5", medir: "publico" })).toMatchObject({ porte: "ate5", medir: "publico" });
+    expect(escolhaMapaDinheiro({ porte: "gigante" }).porte).toBeUndefined();
+    expect(escolhaMapaDinheiro({ ano: "2022", porte: "ate5" }).porte).toBeUndefined();
   });
 });
 
@@ -228,7 +233,11 @@ describe("hrefMapaDinheiro", () => {
     expect(hrefMapaDinheiro(atual, { uf: "RJ" })).toBe("/?ver=dinheiro&uf=RJ#mapa");
     expect(hrefMapaDinheiro(atual, { uf: null })).toBe("/?ver=dinheiro#mapa");
   });
-  it("numa eleição geral não há cidade, e o cargo municipal cai", () => {
-    expect(hrefMapaDinheiro({ ...atual, cargo: "Prefeito" }, { ano: 2022 })).toBe("/?ver=dinheiro&ano=2022&uf=PE#mapa");
+  it("numa eleição geral não há cidade nem porte, e o cargo municipal cai", () => {
+    expect(hrefMapaDinheiro({ ...atual, cargo: "Prefeito", porte: "ate5" }, { ano: 2022 })).toBe("/?ver=dinheiro&ano=2022&uf=PE#mapa");
+  });
+  it("leva o porte e a medida, e aceita outra âncora", () => {
+    expect(hrefMapaDinheiro({ ...atual, porte: "ate5" }, { medir: "publico" }, "comparar")).toBe("/?ver=dinheiro&uf=PE&mun=10&porte=ate5&medir=publico#comparar");
+    expect(hrefMapaDinheiro({ ...atual, medir: "publico" }, { medir: null })).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
   });
 });

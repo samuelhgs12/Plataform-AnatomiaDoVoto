@@ -2035,3 +2035,22 @@ a.q-ver:active { transform: scale(0.98); }
 .dinheiro-barras .barras li.link > a { margin-inline: 0; }   /* no painel, a barra clicável não passa da borda */
 .dinheiro-barras .barras.compacto li { grid-template-columns: minmax(0, 10em) minmax(48px, 1fr) auto; gap: 12px; min-width: 0; }
 .dinheiro-barras .barras-valor { text-align: right; }
+
+/* camada Dinheiro do mapa: comparações, tabela de cidades e metodologia no painel escuro; h4 também na análise */
+.comparacao-duas h4, .area-estados h4, .area-comparacao h4, .dinheiro-comp h4 { font-size: 16px; margin: 14px 0 4px; }
+.dinheiro-comp > h3, .dinheiro-comp summary h3 { font-size: 22px; margin: 0 0 6px; }
+.dinheiro-comp .comparacao-sub { color: var(--muted); margin: 0 0 12px; }
+.dinheiro-comp details > summary { cursor: pointer; list-style: revert; }
+.dinheiro-comp details > summary h3 { display: inline; }
+.dinheiro-comp .frase-comp { color: var(--fg); }
+.dinheiro-comp .escala, .dinheiro-comp .legend { color: var(--muted); }
+.tabela-rolar { max-height: 420px; overflow: auto; margin-top: 8px; }
+.dinheiro-tabela { width: 100%; font-size: 14px; }
+.dinheiro-tabela th { position: sticky; top: 0; background: var(--panel); }
+.dinheiro-tabela .num { text-align: right; font-variant-numeric: tabular-nums; }
+.dinheiro-tabela tr[aria-current] td { background: var(--panel2); font-weight: 600; }
+.dinheiro-tabela a { color: var(--fg); }
+.dinheiro-metodo > summary { cursor: pointer; font-weight: 600; }
+.dinheiro-metodo ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+.dinheiro-comp summary, .dinheiro-comp summary h3, .dinheiro-comp h3, .dinheiro-comp h4 { color: var(--fg); }
+.bloco.noite .ver-todos > summary { color: var(--sobre-noite); }

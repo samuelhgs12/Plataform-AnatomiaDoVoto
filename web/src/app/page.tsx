@@ -31,7 +31,8 @@ import { compacto, pct } from "@/lib/format";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { VisaoDinheiro } from "@/components/VisaoDinheiro";
-import { cargosDoAno, escolhaMapaDinheiro, hrefMapaDinheiro } from "@/lib/dinheiro";
+import { cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro } from "@/lib/dinheiro";
+import { PORTES } from "@/lib/territorio";
 import { MiniMapa } from "@/components/MiniMapa";
 import { CartaoDica } from "@/components/CartaoDica";
 import { FaixaMunicipios } from "@/components/FaixaMunicipios";
@@ -288,7 +289,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       }}
       dinheiro={{
         cargos: cargosDoAno(escDinheiro.ano).map((c) => ({ rotulo: c, href: hrefMapaDinheiro({ ...escDinheiro, uf, mun: munDinheiro }, { cargo: c }), on: naDinheiro && c === escDinheiro.cargo })),
-        analise: `/analises/dinheiro?ano=${escDinheiro.ano}&cargo=${encodeURIComponent(escDinheiro.cargo)}${uf ? `&uf=${uf}` : ""}`,
+        porte: naDinheiro && ehMunicipal(escDinheiro.ano) ? {
+          opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte,
+          params: Object.fromEntries(new URL(hrefMapaDinheiro({ ...escDinheiro, uf, mun: munDinheiro }, { porte: null }), "http://x").searchParams),
+        } : undefined,
+        analise: hrefMapaDinheiro({ ...escDinheiro, uf, mun: munDinheiro }, {}, "comparar"),
       }}
       legenda={{
         anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",

@@ -3,7 +3,7 @@
 
 import { pontosPercentuais, type Resposta } from "./estatistica";
 import { reais } from "./format";
-import { mediana, porteDe, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
+import { mediana, porteDe, PORTES, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
 
 /** As três abas. `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
 export type Aba = "gasto" | "resultado" | "publico";
@@ -56,21 +56,31 @@ export function lerRecorte(sp: SP, op: { anos: number[]; ufs: string[]; municipi
 /** Eleições com prestação de contas no banco (não há receitas nem despesas antes de 2018). */
 export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
 
-/** Camada Dinheiro do mapa da página inicial: o ano (padrão: o último) e um cargo que exista nele. */
-export function escolhaMapaDinheiro(sp: SP): { ano: number; cargo: string } {
+/** O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais) e a medida da pergunta 2 × 8. */
+export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; medir: "recursos" | "publico" }
+
+/**
+ * Camada Dinheiro do mapa da página inicial: o ano (padrão: o último), um cargo que exista nele, o porte (só nas
+ * eleições municipais, e só um dos que existem) e a medida de "quem teve mais dinheiro se elegeu mais?": todo o
+ * dinheiro (padrão, pergunta 2) ou só o público (?medir=publico, pergunta 8).
+ */
+export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
   const pedido = Number(um(sp.ano));
   const ano = ANOS_DINHEIRO.includes(pedido) ? pedido : ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1];
   const cargos = cargosDoAno(ano);
-  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0] };
+  const porte = ehMunicipal(ano) ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
+  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, medir: um(sp.medir) === "publico" ? "publico" : "recursos" };
 }
 
 /**
  * Endereço da camada Dinheiro no mapa da página inicial, com o recorte atual e as mudanças (null apaga). Trocar o
- * estado solta a cidade; trocar o ano solta o cargo que não existe nele (volta ao primeiro do ano).
+ * estado solta a cidade; trocar o ano solta o cargo que não existe nele (volta ao primeiro do ano) e, nas eleições
+ * gerais, a cidade e o porte. `ancora` troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
  */
 export function hrefMapaDinheiro(
-  atual: { ano: number; cargo: string; uf?: string; mun?: number },
-  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun", string | number | null>> = {},
+  atual: { ano: number; cargo: string; uf?: string; mun?: number; porte?: string; medir?: string },
+  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "medir", string | number | null>> = {},
+  ancora = "mapa",
 ): string {
   const n = { ...atual, ...("uf" in novo ? { mun: undefined } : {}), ...novo };
   const ano = Number(n.ano);
@@ -80,7 +90,9 @@ export function hrefMapaDinheiro(
   if (n.cargo && cargos.includes(String(n.cargo)) && n.cargo !== cargos[0]) p.set("cargo", String(n.cargo));
   if (n.uf) p.set("uf", String(n.uf));
   if (n.uf && n.mun && ehMunicipal(ano)) p.set("mun", String(n.mun));
-  return `/?${p}#mapa`;
+  if (n.porte && ehMunicipal(ano)) p.set("porte", String(n.porte));
+  if (n.medir === "publico") p.set("medir", "publico");
+  return `/?${p}#${ancora}`;
 }
 
 /** Endereço da área com o recorte atual e as mudanças (null apaga). Trocar o estado solta a cidade. */
