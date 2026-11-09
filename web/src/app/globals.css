@@ -2060,3 +2060,23 @@ a.q-ver:active { transform: scale(0.98); }
 .camada-ir { display: block; margin-top: 4px; padding: 10px 12px; border-radius: 8px; background: var(--brilho); color: var(--noite); font-weight: 600; font-size: 14px; text-align: center; text-decoration: none; }
 .camada-ir:hover { filter: brightness(1.06); }
 #dinheiro-painel .painel-num { font-size: clamp(30px, 2vw + 12px, 46px); overflow-wrap: anywhere; }   /* "R$ 28 milhões" cabe no cabeçalho */
+
+/* camada Dinheiro: cartão do lugar por cima do mapa (aparece no clique, sem rolar) e aviso enquanto a página troca */
+.cartao-lugar { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); z-index: 3; width: min(270px, 34%); padding: 16px 18px; border-radius: 12px;
+  background: var(--noite2); color: var(--sobre-noite); box-shadow: 0 12px 32px rgb(0 0 0 / 0.35); border: 1px solid var(--noite-linha); }
+.cartao-lugar h2 { margin: 2px 0 6px; font-size: 24px; line-height: 1.1; padding-right: 24px; }
+.cartao-rotulo { margin: 0; font-size: 12px; color: var(--noite-muted); }
+.cartao-valor { margin: 0 0 6px; color: var(--noite-muted); font-size: 14px; }
+.cartao-valor b { display: block; font-size: 30px; line-height: 1.1; color: var(--brilho); }
+.cartao-linha { margin: 0 0 4px; font-size: 14px; }
+.cartao-ir { display: block; margin-top: 10px; padding: 9px 12px; border-radius: 8px; background: var(--brilho); color: var(--noite); font-weight: 600; text-align: center; text-decoration: none; }
+.cartao-fechar { position: absolute; top: 8px; right: 12px; font-size: 22px; line-height: 1; color: var(--noite-muted); text-decoration: none; }
+.cartao-fechar:hover { color: var(--sobre-noite); }
+.carregando-mapa { display: none; position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; margin: 0; padding: 8px 16px;
+  border-radius: 999px; background: var(--noite2); color: var(--sobre-noite); font-weight: 600; }
+.palco-dinheiro[aria-busy="true"] .carregando-mapa { display: block; }
+.palco-dinheiro[aria-busy="true"] .mapa-abst, .palco-dinheiro[aria-busy="true"] .cartao-lugar { opacity: 0.45; transition: opacity 0.2s ease; }
+@media (max-width: 1000px) {
+  .cartao-lugar { display: none; }   /* no celular não há lado livre no mapa; o painel logo abaixo mostra o mesmo resumo */
+}
+.palco-dinheiro:has(.cartao-lugar) .lupa-dica { display: none; }   /* a dica da roda ficaria atrás do cartão */

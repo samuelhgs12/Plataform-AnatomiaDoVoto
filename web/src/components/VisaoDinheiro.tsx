@@ -102,7 +102,10 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     };
   });
   const legenda = uf && municipal ? legendaCidade("gasto", cargo) : legendaPorFaixas(faixasUf, (v) => `R$ ${compacto(v)}`);
-  const camera = enquadrar(caixa ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA], TELA.larg, TELA.alt, caixa ? 0.06 : 0.02);
+  // com um estado aberto, o cartão do lugar fica na faixa da direita do mapa: o enquadramento ganha essa faixa vazia,
+  // e o estado vai para a esquerda, sem ficar embaixo do cartão
+  const quadro: [number, number, number, number] | undefined = caixa ? [caixa[0], caixa[1], caixa[2] + (caixa[2] - caixa[0]) * 0.8, caixa[3]] : undefined;
+  const camera = enquadrar(quadro ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA], TELA.larg, TELA.alt, caixa ? 0.06 : 0.02);
   const centro = mun ? CENTRO_MUNICIPIO[mun.cod_ibge] : undefined;
   const mapaPalco = (
     <MapaAbstencao
@@ -141,12 +144,28 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     : [];
   const posMun = mun ? cidadesUf.findIndex((c) => c.id === mun.id_municipio) : -1;
   const cidadesTopo = posMun >= 8 ? [...cidadesUf.slice(0, 7), cidadesUf[posMun]] : cidadesUf.slice(0, 8);
+  // cartão do lugar escolhido, por cima do mapa: o número, a posição e o atalho para a seção dele embaixo
+  const posUf = uf ? estadosGasto.findIndex((e) => e.id === uf) : -1;
+  const cartao = mun ? {
+    rotulo: `Município · ${uf} · ${cargo}`, nome: lugar,
+    valor: custo === null ? "Não informado" : reais(custo), unidade: cargo === "Prefeito" ? "gastos por todas as campanhas a prefeito" : `por vaga de ${cargoMin}`,
+    posicao: posMun >= 0 ? `${posMun + 1}ª de ${inteiro(cidadesUf.length)} cidades de ${NOME_UF[uf!]}${porteInfo ? ` (${porteInfo.rotulo})` : ""}` : null,
+    extra: eleitoPrefeito ? `Eleito: ${eleitoPrefeito.nome_urna} (${eleitoPrefeito.partido}), ${eleitoPrefeito.prestou === false ? "sem prestação de contas" : `gastou ${reais(eleitoPrefeito.gasto)}`}`
+      : candidatos ? `${inteiro(linhas.length)} candidatos, ${inteiro(eleitos.length)} eleitos` : null,
+    ir: { href: "#dinheiro-cand", texto: `Ver os ${linhas.length ? `${inteiro(linhas.length)} ` : ""}candidatos ↓` },
+  } : uf ? {
+    rotulo: `Estado · ${cargo}${porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}`, nome: lugar,
+    valor: custo === null ? "Não informado" : reais(custo), unidade: `por vaga de ${cargoMin}`,
+    posicao: posUf >= 0 ? `${posUf + 1}º de ${ufs.length} estados` : null,
+    extra: municipal ? "Clique numa cidade do mapa para ver os candidatos dela." : null,
+    ir: municipal ? { href: "#dinheiro-painel", texto: "Ver as cidades e as comparações ↓" } : { href: "#dinheiro-cand", texto: `Ver os ${inteiro(eleitos.length)} eleitos ↓` },
+  } : null;
   const propaganda = `/analises/dinheiro?${new URLSearchParams(Object.entries({ ano: String(ano), cargo, uf: uf ?? "", aba: "propaganda" }).filter(([, v]) => v))}`;
   const paramsMun = Object.fromEntries(new URL(href({ mun: null }), "http://x").searchParams);
 
   return (
     <>
-      <MapaVivo className="palco s12" estado={uf}>
+      <MapaVivo className="palco s12 palco-dinheiro" estado={uf}>
         {menu}
         <div className="palco-topo">
           <div>
@@ -163,6 +182,18 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         <div className="palco-mapa">
           {mapaPalco}
           {!uf && <p className="palco-dica" aria-hidden="true">{municipal ? "Clique num estado para ver as cidades" : "Clique num estado para ver os eleitos"}</p>}
+          <p className="carregando-mapa" aria-hidden="true">Carregando…</p>
+          {cartao && (
+            <aside className="cartao-lugar" aria-label={`Resumo: ${cartao.nome}`}>
+              <a className="cartao-fechar" href={href(mun ? { mun: null } : { uf: null })} data-mapa="" aria-label={mun ? "Voltar ao estado" : "Voltar aos seis estados"}>×</a>
+              <p className="cartao-rotulo">{cartao.rotulo} · {ano}</p>
+              <h2>{cartao.nome}</h2>
+              <p className="cartao-valor"><b>{cartao.valor}</b> {cartao.unidade}</p>
+              {cartao.posicao && <p className="cartao-linha">{cartao.posicao}</p>}
+              {cartao.extra && <p className="cartao-linha">{cartao.extra}</p>}
+              <a className="cartao-ir" href={cartao.ir.href}>{cartao.ir.texto}</a>
+            </aside>
+          )}
         </div>
 
         <div className="palco-base">
@@ -240,7 +271,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         )}
 
         {temCandidatos && (
-          <div className="bloco noite s12 dinheiro-cand">
+          <div id="dinheiro-cand" className="bloco noite s12 dinheiro-cand">
             <h3>{mun ? `Candidatos a ${cargoMin} em ${lugar}` : `Eleitos: ${cargoMin} em ${NOME_UF[uf!]}`}</h3>
             {maisGastou && <p className="r-texto"><b>{maisGastou.nome_urna}</b> teve o maior gasto declarado e {maisGastou.eleito ? "foi eleito" : "não foi eleito"}.</p>}
             {mun && <p className="rotulo">Eleitos ({inteiro(eleitos.length)})</p>}
