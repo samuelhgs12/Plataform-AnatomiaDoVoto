@@ -30,6 +30,9 @@ import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import { compacto, pct } from "@/lib/format";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
+import { VisaoDinheiro } from "@/components/VisaoDinheiro";
+import { ANOS_DINHEIRO, cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro } from "@/lib/dinheiro";
+import { PORTES } from "@/lib/territorio";
 import { MiniMapa } from "@/components/MiniMapa";
 import { CartaoDica } from "@/components/CartaoDica";
 import { FaixaMunicipios } from "@/components/FaixaMunicipios";
@@ -70,7 +73,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const anoLeg = anosLeg.includes(anoPedido) ? anoPedido : anoNaLegenda(anos.includes(anoPedido) ? anoPedido : anoPadrao, anosLeg);
   const pediuLegenda = um(sp.ver) === "legenda";
   const naCandidato = um(sp.ver) === "candidato";
-  const ver: Visao = naCandidato ? "candidato" : pediuLegenda && anoLeg !== undefined ? "legenda" : "abstencao";
+  const naDinheiro = um(sp.ver) === "dinheiro";   // camada Dinheiro (perguntas 1, 2 e 8): src/components/VisaoDinheiro.tsx
+  const ver: Visao = naCandidato ? "candidato" : naDinheiro ? "dinheiro" : pediuLegenda && anoLeg !== undefined ? "legenda" : "abstencao";
   const naLegenda = ver === "legenda";
   const cargo = CARGOS.find((c) => c === um(sp.cargo)) ?? "ambos";
   // juntar: os votos dos partidos que se fundiram passam para o atual (DEM e PSL → UNIÃO), como na análise da pergunta 5
@@ -79,7 +83,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const pedido = legenda.find((l) => l.partido === um(sp.p))?.partido;
   const partido = pedido && resolverSelecao([pedido], juntar, linhagem)[0];
 
-  const mun = uf && !naLegenda ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
+  const mun = uf && !naLegenda && !naDinheiro ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
   // cada eleição em volta de um Censo usa os indicadores dele (2008 a 2012: Censo 2010; 2020 a 2024: Censo 2022). O
   // indicador pedido fica na URL mesmo quando o Censo do ano não o tem (o IDHM em 2022): volta ao trocar de ano
   const censo = censoDoAno(ano);
@@ -96,7 +100,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
 
   type Estado = { ver?: Visao; ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null; p?: string | null; cargo?: CargoCiclo; juntar?: boolean };
   const params = (nova: Estado) => {
-    const n = { ver: ver === "candidato" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind: indPedido, cor: pediuCruzar && !naLegenda ? "cruzar" : null, p: partido, cargo, ...nova };
+    const n = { ver: ver === "candidato" || ver === "dinheiro" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : ano, uf, mun: mun?.id_municipio, ind: indPedido, cor: pediuCruzar && !naLegenda ? "cruzar" : null, p: partido, cargo, ...nova };
     if (nova.uf !== undefined && nova.mun === undefined) n.mun = null;   // trocar de estado solta o município
     const leg = n.ver === "legenda";
     const p = new URLSearchParams();
@@ -267,17 +271,36 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const hrefCand = "/?ver=candidato#mapa";   // como as camadas: <a data-mapa>, que o MapaVivo navega sem recarregar
 
   // submenu do mapa: abas Candidato e Camadas; a abstenção é o mapa base, e as camadas vêm por cima dela
-  const anoBase = naLegenda && anos.includes(anoLeg!) ? anoLeg! : ano;   // o ano da abstenção ao sair da legenda
+  // camada Dinheiro: o ano e o cargo dela (só 2018 a 2024); ao sair dela, a abstenção fica no mesmo ano
+  const escDinheiro = escolhaMapaDinheiro(naDinheiro ? sp : { ano: String(naLegenda ? anoLeg : ano) });
+  const anoBase = naLegenda && anos.includes(anoLeg!) ? anoLeg! : naDinheiro && anos.includes(escDinheiro.ano) ? escDinheiro.ano : ano;   // o ano da abstenção ao sair da legenda ou do dinheiro
+  // a cidade da camada Dinheiro vai pelo código do IBGE (igual no mapa estático e na API)
+  const munDinheiro = naDinheiro && uf ? municipios.find((m) => m.uf === uf && m.cod_ibge === um(sp.mun))?.cod_ibge : undefined;
+  const escolhaDin = { ...escDinheiro, uf, mun: munDinheiro };
+  const paramsSem = (...fora: ("uf" | "mun" | "porte")[]) =>
+    Object.fromEntries(new URL(hrefMapaDinheiro(escolhaDin, Object.fromEntries(fora.map((k) => [k, null]))), "http://x").searchParams);
   const comparativo = situacaoComparativo({ ano: anoBase, anosPorCenso: ANOS_POR_CENSO, uf });
   const censoBase = censoDoAno(anoBase) ?? 2010;
   const indBase = indicadorNoCenso(indPedido, censoBase);
   const comparativoLigado = !naLegenda && pediuCruzar;
   const camadas = (
     <CamadasMapa
-      modo={naLegenda ? "legenda" : "comparar"}
+      modo={naLegenda ? "legenda" : naDinheiro ? "dinheiro" : "comparar"}
       hrefs={{
         legenda: hrefLeg,
         comparar: href({ ver: "abstencao", ano: anoBase, cor: null }),   // sem indicador: a abstenção sozinha
+        dinheiro: hrefMapaDinheiro({ ...escDinheiro, uf }),
+      }}
+      dinheiro={{
+        anos: ANOS_DINHEIRO.map((a) => ({ rotulo: String(a), sub: ehMunicipal(a) ? "Municipal" : "Geral", href: hrefMapaDinheiro(escolhaDin, { ano: a }), on: naDinheiro && a === escDinheiro.ano })),
+        cargos: cargosDoAno(escDinheiro.ano).map((c) => ({ rotulo: c, href: hrefMapaDinheiro(escolhaDin, { cargo: c }), on: naDinheiro && c === escDinheiro.cargo })),
+        estado: { opcoes: ufs.map((u) => [u, NOME_UF[u] ?? u] as [string, string]), atual: uf, params: paramsSem("uf", "mun") },
+        cidade: naDinheiro && uf && ehMunicipal(escDinheiro.ano) ? {
+          opcoes: municipios.filter((m) => m.uf === uf).map((m) => [m.cod_ibge, nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR")),
+          atual: munDinheiro, params: paramsSem("mun"),
+        } : undefined,
+        porte: naDinheiro && ehMunicipal(escDinheiro.ano) ? { opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte, params: paramsSem("porte") } : undefined,
+        painel: hrefMapaDinheiro(escolhaDin, {}, "dinheiro-painel"),
       }}
       legenda={{
         anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",
@@ -300,7 +323,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const submenu = (
     <SubmenuMapa
       resumo={ufBusca ? `Busca só em ${NOME_UF[ufBusca]}` : resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined })}
-      aba={naCandidato ? "candidato" : "camadas"} hrefCandidato={hrefCand} hrefCamadas={hrefAbst}
+      aba={naCandidato ? "candidato" : "camadas"} hrefCandidato={hrefCand} hrefCamadas={naDinheiro ? href({ ver: "abstencao", ano: anoBase }) : hrefAbst}
     >
       {naCandidato ? (
         <div className="aba-candidato">
@@ -396,6 +419,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               menu={submenu} votos={votosCand} municipios={municipios} ufs={ufs}
               escolha={{ campanha, lista: campanhas, turno: turnoCand, turnos: turnosCand, uf: ufCand, mun: munCand }}
             />
+          ) : naDinheiro ? (
+            <VisaoDinheiro menu={submenu} sp={sp} />
           ) : (<>
           <MapaVivo className="palco s12" estado={naLegenda ? undefined : uf}>
             {submenu}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  cargosDoAno, classeComPorte, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
+  ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
@@ -205,5 +205,39 @@ describe("mediaPorCandidato", () => {
     expect(m.publico).toBeCloseTo(600 / 12);
     expect(m.privado).toBeCloseTo(110 / 12);   // 30 + 10 (não eleitos) + 60 + 10 (eleitos)
     expect(mediaPorCandidato([], 2024, "Vereador").publico).toBe(0);
+  });
+});
+
+describe("escolhaMapaDinheiro", () => {
+  it("usa o último ano e o primeiro cargo dele quando nada é pedido", () => {
+    expect(escolhaMapaDinheiro({})).toEqual({ ano: ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1], cargo: "Vereador", porte: undefined, medir: "recursos" });
+  });
+  it("ignora ano sem prestação de contas e cargo que não existe no ano", () => {
+    expect(escolhaMapaDinheiro({ ano: "2016", cargo: "Prefeito" })).toMatchObject({ ano: 2024, cargo: "Prefeito" });
+    expect(escolhaMapaDinheiro({ ano: "2022", cargo: "Prefeito" })).toMatchObject({ ano: 2022, cargo: "Deputado federal" });
+  });
+  it("aceita só portes que existem, e só nas eleições municipais; medir=publico liga a pergunta 8", () => {
+    expect(escolhaMapaDinheiro({ porte: "ate5", medir: "publico" })).toMatchObject({ porte: "ate5", medir: "publico" });
+    expect(escolhaMapaDinheiro({ porte: "gigante" }).porte).toBeUndefined();
+    expect(escolhaMapaDinheiro({ ano: "2022", porte: "ate5" }).porte).toBeUndefined();
+  });
+});
+
+describe("hrefMapaDinheiro", () => {
+  const atual = { ano: 2024, cargo: "Vereador", uf: "PE", mun: 10 };
+  it("omite o que é padrão e mantém o lugar", () => {
+    expect(hrefMapaDinheiro(atual)).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
+    expect(hrefMapaDinheiro(atual, { cargo: "Prefeito" })).toBe("/?ver=dinheiro&cargo=Prefeito&uf=PE&mun=10#mapa");
+  });
+  it("trocar o estado solta a cidade; null apaga", () => {
+    expect(hrefMapaDinheiro(atual, { uf: "RJ" })).toBe("/?ver=dinheiro&uf=RJ#mapa");
+    expect(hrefMapaDinheiro(atual, { uf: null })).toBe("/?ver=dinheiro#mapa");
+  });
+  it("numa eleição geral não há cidade nem porte, e o cargo municipal cai", () => {
+    expect(hrefMapaDinheiro({ ...atual, cargo: "Prefeito", porte: "ate5" }, { ano: 2022 })).toBe("/?ver=dinheiro&ano=2022&uf=PE#mapa");
+  });
+  it("leva o porte e a medida, e aceita outra âncora", () => {
+    expect(hrefMapaDinheiro({ ...atual, porte: "ate5" }, { medir: "publico" }, "comparar")).toBe("/?ver=dinheiro&uf=PE&mun=10&porte=ate5&medir=publico#comparar");
+    expect(hrefMapaDinheiro({ ...atual, medir: "publico" }, { medir: null })).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
   });
 });

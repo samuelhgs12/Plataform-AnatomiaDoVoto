@@ -1,8 +1,9 @@
 import { EscolhaMunicipio } from "./EscolhaMunicipio";
 import { Icone, type NomeIcone } from "./Icone";
 
-/** O que pinta o mapa: o voto de legenda ou a abstenção, sozinha ou cruzada com um indicador do Censo (Comparar). */
-export type ModoCamada = "legenda" | "comparar";
+/** O que pinta o mapa: o voto de legenda, a abstenção (sozinha ou cruzada com um indicador do Censo: Comparar) ou o
+ * gasto das campanhas por vaga (Dinheiro). */
+export type ModoCamada = "legenda" | "comparar" | "dinheiro";
 
 export interface CamadaLegenda {
   /** anos em que a camada existe, para a linha de apoio ("2018 a 2024") */
@@ -26,9 +27,26 @@ export interface CamadaComparativos {
   anos: { ano: number; href: string }[];
 }
 
+/** Uma lista de escolha que aplica na hora (EscolhaMunicipio): as opções, a atual e os outros filtros, que ela mantém. */
+type Lista = { opcoes: [string, string][]; atual?: string; params: Record<string, string> };
+
+/**
+ * Camada Dinheiro (perguntas 1, 2 e 8), com os mesmos filtros da análise: a eleição, o cargo dela, o estado, a cidade
+ * (municipais, com um estado escolhido) e o porte da cidade (municipais); `painel` leva aos números embaixo do mapa.
+ */
+export interface CamadaDinheiro {
+  anos: { rotulo: string; sub: string; href: string; on: boolean }[];
+  cargos: { rotulo: string; href: string; on: boolean }[];
+  estado: Lista;
+  cidade?: Lista;
+  porte?: Lista;
+  painel: string;
+}
+
 const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
   { chave: "legenda", rotulo: "Legenda", icone: "legenda" },
   { chave: "comparar", rotulo: "Comparar", icone: "comparar" },
+  { chave: "dinheiro", rotulo: "Dinheiro", icone: "dinheiro" },
 ];
 
 /**
@@ -38,7 +56,7 @@ const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
  * escolhido o desmarca. Tudo é link `data-mapa` (escolher é navegar, sem JavaScript); a opção escolhida tem
  * `aria-current`. Só desenha: os links e as situações chegam prontos da página.
  */
-export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: ModoCamada; hrefs: Record<ModoCamada, string>; legenda: CamadaLegenda; comparativos: CamadaComparativos }) {
+export function CamadasMapa({ modo, hrefs, legenda, comparativos, dinheiro }: { modo: ModoCamada; hrefs: Record<ModoCamada, string>; legenda: CamadaLegenda; comparativos: CamadaComparativos; dinheiro?: CamadaDinheiro }) {
   return (
     <div className="camadas">
       <nav className="segmentos camadas-modos" aria-label="O que pinta o mapa">
@@ -69,6 +87,32 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos }: { modo: Modo
           {legenda.partido && (
             <EscolhaMunicipio nome="p" rotulo="Partido" vazio="Todos os partidos" opcoes={legenda.partido.opcoes} atual={legenda.partido.atual} params={legenda.partido.params} />
           )}
+        </div>
+      )}
+
+      {modo === "dinheiro" && dinheiro && (
+        <div className="camadas-opcoes">
+          <p className="camadas-apoio">Gasto das campanhas dividido pelas vagas do cargo. Escolha a eleição e o lugar aqui ou clique no mapa.</p>
+          <nav className="segmentos segmentos-pequenos" aria-label="Eleição">
+            {dinheiro.anos.map((a) => (
+              <a key={a.rotulo} href={a.href} data-mapa="" aria-current={a.on ? "true" : undefined}>{a.rotulo}<small>{a.sub}</small></a>
+            ))}
+          </nav>
+          <nav className="radios" aria-label="Cargo">
+            {dinheiro.cargos.map((c) => (
+              <a key={c.rotulo} href={c.href} data-mapa="" aria-current={c.on ? "true" : undefined}>
+                <span className="radio" aria-hidden="true" />{c.rotulo}
+              </a>
+            ))}
+          </nav>
+          <EscolhaMunicipio nome="uf" rotulo="Estado" vazio="Os seis estados" opcoes={dinheiro.estado.opcoes} atual={dinheiro.estado.atual} params={dinheiro.estado.params} />
+          {dinheiro.cidade && (
+            <EscolhaMunicipio nome="mun" rotulo="Município" vazio="O estado inteiro" opcoes={dinheiro.cidade.opcoes} atual={dinheiro.cidade.atual} params={dinheiro.cidade.params} />
+          )}
+          {dinheiro.porte && (
+            <EscolhaMunicipio nome="porte" rotulo="Porte da cidade" vazio="Todos os portes" opcoes={dinheiro.porte.opcoes} atual={dinheiro.porte.atual} params={dinheiro.porte.params} />
+          )}
+          <a className="camada-ir" href={dinheiro.painel}>Ver os números, os candidatos e as comparações ↓</a>
         </div>
       )}
 

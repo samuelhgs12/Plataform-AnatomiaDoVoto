@@ -522,6 +522,7 @@ describe("resumoCamadas", () => {
     expect(resumoCamadas({ ver: "abstencao", comparativo: "IDHM" })).toBe("Abstenção × IDHM");
     expect(resumoCamadas({ ver: "legenda", partido: "PSOL" })).toBe("Voto de legenda · PSOL");
     expect(resumoCamadas({ ver: "candidato", comparativo: "IDHM" })).toBe("Votos de um candidato");
+    expect(resumoCamadas({ ver: "dinheiro" })).toBe("Gasto por vaga");
   });
 });
 

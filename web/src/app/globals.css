@@ -2021,3 +2021,62 @@ a.q-ver:active { transform: scale(0.98); }
   .matriz-dado span { font-size: 16px; font-weight: 500; }
 }
 @media (max-width: 1000px) { .sobre-secao { margin-top: 56px; } .sobre-escopo-texto { padding: 20px 24px; } }
+
+/* /analises/dinheiro: o lugar do recorte, com o atalho para a camada Dinheiro do mapa da página inicial */
+.area-lugar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 16px; }
+.area-lugar h2 { margin: 2px 0 6px; }
+.area-lugar .painel-resumo small { color: var(--muted); font-size: 14px; font-weight: 400; }
+.botao-mapa { padding: 11px 18px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.botao-mapa:hover { filter: brightness(1.08); }
+/* camada Dinheiro do mapa: a lista de candidatos no painel escuro */
+.dinheiro-cand .rotulo { margin: 14px 0 4px; }
+.dinheiro-cand .linhas-cand li { border-bottom-color: var(--line); }
+.camadas-apoio a.camada-link { color: var(--sobre-noite); text-decoration: underline; text-underline-offset: 3px; }
+.dinheiro-barras .barras li.link > a { margin-inline: 0; }   /* no painel, a barra clicável não passa da borda */
+.dinheiro-barras .barras.compacto li { grid-template-columns: minmax(0, 10em) minmax(48px, 1fr) auto; gap: 12px; min-width: 0; }
+.dinheiro-barras .barras-valor { text-align: right; }
+
+/* camada Dinheiro do mapa: comparações, tabela de cidades e metodologia no painel escuro; h4 também na análise */
+.comparacao-duas h4, .area-estados h4, .area-comparacao h4, .dinheiro-comp h4 { font-size: 16px; margin: 14px 0 4px; }
+.dinheiro-comp > h3, .dinheiro-comp summary h3 { font-size: 22px; margin: 0 0 6px; }
+.dinheiro-comp .comparacao-sub { color: var(--muted); margin: 0 0 12px; }
+.dinheiro-comp details > summary { cursor: pointer; list-style: revert; }
+.dinheiro-comp details > summary h3 { display: inline; }
+.dinheiro-comp .frase-comp { color: var(--fg); }
+.dinheiro-comp .escala, .dinheiro-comp .legend { color: var(--muted); }
+.tabela-rolar { max-height: 420px; overflow: auto; margin-top: 8px; }
+.dinheiro-tabela { width: 100%; font-size: 14px; }
+.dinheiro-tabela th { position: sticky; top: 0; background: var(--panel); }
+.dinheiro-tabela .num { text-align: right; font-variant-numeric: tabular-nums; }
+.dinheiro-tabela tr[aria-current] td { background: var(--panel2); font-weight: 600; }
+.dinheiro-tabela a { color: var(--fg); }
+.dinheiro-metodo > summary { cursor: pointer; font-weight: 600; }
+.dinheiro-metodo ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+.dinheiro-comp summary, .dinheiro-comp summary h3, .dinheiro-comp h3, .dinheiro-comp h4 { color: var(--fg); }
+.bloco.noite .ver-todos > summary { color: var(--sobre-noite); }
+/* menu da camada Dinheiro: anos com o tipo de eleição embaixo e o atalho para o painel abaixo do mapa */
+.camadas .segmentos a small { display: block; font-size: 10px; font-weight: 500; opacity: 0.8; }
+.camadas .segmentos a:has(small) { flex-direction: column; gap: 0; line-height: 1.15; }
+.camada-ir { display: block; margin-top: 4px; padding: 10px 12px; border-radius: 8px; background: var(--brilho); color: var(--noite); font-weight: 600; font-size: 14px; text-align: center; text-decoration: none; }
+.camada-ir:hover { filter: brightness(1.06); }
+#dinheiro-painel .painel-num { font-size: clamp(30px, 2vw + 12px, 46px); overflow-wrap: anywhere; }   /* "R$ 28 milhões" cabe no cabeçalho */
+
+/* camada Dinheiro: cartão do lugar por cima do mapa (aparece no clique, sem rolar) e aviso enquanto a página troca */
+.cartao-lugar { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); z-index: 3; width: min(270px, 34%); padding: 16px 18px; border-radius: 12px;
+  background: var(--noite2); color: var(--sobre-noite); box-shadow: 0 12px 32px rgb(0 0 0 / 0.35); border: 1px solid var(--noite-linha); }
+.cartao-lugar h2 { margin: 2px 0 6px; font-size: 24px; line-height: 1.1; padding-right: 24px; }
+.cartao-rotulo { margin: 0; font-size: 12px; color: var(--noite-muted); }
+.cartao-valor { margin: 0 0 6px; color: var(--noite-muted); font-size: 14px; }
+.cartao-valor b { display: block; font-size: 30px; line-height: 1.1; color: var(--brilho); }
+.cartao-linha { margin: 0 0 4px; font-size: 14px; }
+.cartao-ir { display: block; margin-top: 10px; padding: 9px 12px; border-radius: 8px; background: var(--brilho); color: var(--noite); font-weight: 600; text-align: center; text-decoration: none; }
+.cartao-fechar { position: absolute; top: 8px; right: 12px; font-size: 22px; line-height: 1; color: var(--noite-muted); text-decoration: none; }
+.cartao-fechar:hover { color: var(--sobre-noite); }
+.carregando-mapa { display: none; position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; margin: 0; padding: 8px 16px;
+  border-radius: 999px; background: var(--noite2); color: var(--sobre-noite); font-weight: 600; }
+.palco-dinheiro[aria-busy="true"] .carregando-mapa { display: block; }
+.palco-dinheiro[aria-busy="true"] .mapa-abst, .palco-dinheiro[aria-busy="true"] .cartao-lugar { opacity: 0.45; transition: opacity 0.2s ease; }
+@media (max-width: 1000px) {
+  .cartao-lugar { display: none; }   /* no celular não há lado livre no mapa; o painel logo abaixo mostra o mesmo resumo */
+}
+.palco-dinheiro:has(.cartao-lugar) .lupa-dica { display: none; }   /* a dica da roda ficaria atrás do cartão */
