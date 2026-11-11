@@ -25,6 +25,11 @@ export interface LinhaResumo {
   /** Vereadores em grupos (recursos considerados e dinheiro público): "mais" = cerca de 1/4 de maior valor na cidade. */
   rec_mais_cand?: number | null; rec_mais_eleitos?: number | null; rec_demais_cand?: number | null; rec_demais_eleitos?: number | null;
   pub_mais_cand?: number | null; pub_mais_eleitos?: number | null; pub_demais_cand?: number | null; pub_demais_eleitos?: number | null;
+  /** Receita de fonte marcada como privada (o resto, fora a pública, é de origem não classificada). */
+  vereador_privada?: number | null; prefeito_privada?: number | null;
+  /** Campanhas da cidade que não chegaram a disputar e gastaram, e quanto (o que a pergunta 1 soma a mais). */
+  vereador_nao_disputou_n?: number | null; vereador_nao_disputou_gasto?: number | null;
+  prefeito_nao_disputou_n?: number | null; prefeito_nao_disputou_gasto?: number | null;
 }
 
 /** Um cargo num estado e ano. disputas_maior/maior_venceu: só para prefeito (P2). */
@@ -38,6 +43,8 @@ export interface LinhaEstado {
   eleitorado?: number | null;
   /** Campanhas ao cargo que não chegaram a disputar e gastaram, e quanto: a pergunta 1 soma isso; aqui fica fora. */
   nao_disputou_com_gasto?: number | null; gasto_nao_disputou?: number | null;
+  /** Receita de fonte marcada como privada. */
+  receita_privada?: number | null;
 }
 
 /** Um eleito (resposta de /api/municipios/<id>/eleitos ou /api/estados/<uf>/eleitos). */

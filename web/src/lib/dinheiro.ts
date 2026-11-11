@@ -507,15 +507,32 @@ export const GRUPOS_DESPESA: { chave: string; rotulo: string; detalhe: string }[
   { chave: "transporte", rotulo: "Transporte e combustível", detalhe: "veículos, combustível, passagens" },
   { chave: "estrutura", rotulo: "Comitê e estrutura", detalhe: "aluguel, energia, telefone, materiais, alimentação" },
   { chave: "outros", rotulo: "Outros", detalhe: "taxas, multas, doações de bens e o que não se encaixa" },
+  { chave: "sem_categoria", rotulo: "Sem categoria", detalhe: "despesas sem categoria do TSE na base" },
 ];
+
+/** As cidades de um porte num ano (e estado), para levar o filtro de porte a quem só tem o município (ex.: despesas). */
+export function cidadesDoPorte(resumo: LinhaResumo[], ano: number, uf: string | undefined, porte: Porte): Set<number> {
+  return new Set(resumo.filter((r) => r.ano === ano && (!uf || r.uf === uf) && porteDe(r.eleitorado)?.chave === porte).map((r) => r.id_municipio));
+}
+
+/** foraDaDisputa só com as cidades de um porte (prefeito e vereador), para o aviso seguir o mesmo recorte. */
+export function foraDaDisputaPorte(resumo: LinhaResumo[], ano: number, uf: string | undefined, porte: Porte, cargo: string): { n: number; gasto: number } | null {
+  const sel = resumo.filter((r) => r.ano === ano && (!uf || r.uf === uf) && porteDe(r.eleitorado)?.chave === porte);
+  const prefeito = cargo === "Prefeito";
+  const n = sel.reduce((a, r) => a + ((prefeito ? r.prefeito_nao_disputou_n : r.vereador_nao_disputou_n) ?? 0), 0);
+  const gasto = sel.reduce((a, r) => a + ((prefeito ? r.prefeito_nao_disputou_gasto : r.vereador_nao_disputou_gasto) ?? 0), 0);
+  return n > 0 && gasto > 0 ? { n, gasto } : null;
+}
 
 /**
  * A composição das despesas de um recorte (eleição, cargo, estado ou os seis, cidade), em grupos do maior para o menor,
  * com a parte de cada um no total. Nas gerais as linhas são por estado (id_municipio nulo); nas municipais, por cidade,
  * e o estado é a soma delas. Vazio sem despesas.
  */
-export function composicaoDespesas(linhas: LinhaDespesa[], f: { ano: number; cargo: string; uf?: string; mun?: number }): { grupo: string; rotulo: string; detalhe: string; valor: number; despesas: number; parte: number }[] {
-  const sel = linhas.filter((l) => l.ano === f.ano && l.cargo === f.cargo && (!f.uf || l.uf === f.uf) && (f.mun === undefined || l.id_municipio === f.mun));
+export function composicaoDespesas(linhas: LinhaDespesa[], f: { ano: number; cargo: string; uf?: string; mun?: number; muns?: Set<number> }): { grupo: string; rotulo: string; detalhe: string; valor: number; despesas: number; parte: number }[] {
+  // muns: só as cidades do recorte (ex.: as de um porte), para as despesas valerem para o mesmo universo das receitas
+  const sel = linhas.filter((l) => l.ano === f.ano && l.cargo === f.cargo && (!f.uf || l.uf === f.uf) && (f.mun === undefined || l.id_municipio === f.mun)
+    && (!f.muns || (l.id_municipio !== null && f.muns.has(l.id_municipio))));
   const total = sel.reduce((a, l) => a + l.valor, 0);
   if (total <= 0) return [];
   return GRUPOS_DESPESA.map((g) => {
@@ -539,24 +556,28 @@ export function coberturaCurta(c: Contas | null): { texto: string; incompleta: b
  * dele). null sem receita.
  */
 export function origemDoDinheiro(
-  dados: { resumo: LinhaResumo[]; estados: { ano: number; uf: string; cargo: string; receita: number; receita_publica: number }[] },
+  dados: { resumo: LinhaResumo[]; estados: { ano: number; uf: string; cargo: string; receita: number; receita_publica: number; receita_privada?: number | null }[] },
   f: { ano: number; cargo: string; uf?: string; mun?: LinhaResumo; porte?: Porte },
-): { publico: number; privado: number; total: number } | null {
+): { publico: number; privado: number; naoClassificado: number; total: number } | { publico: number; naoPublico: number; total: number } | null {
   const prefeito = f.cargo === "Prefeito";
-  let receita = 0, publica = 0;
-  if (f.mun) {
-    receita = prefeito ? f.mun.prefeito_receita : f.mun.vereador_receita;
-    publica = prefeito ? f.mun.prefeito_publica : f.mun.vereador_publica;
-  } else if (f.porte) {
-    const sel = dados.resumo.filter((r) => r.ano === f.ano && (!f.uf || r.uf === f.uf) && porteDe(r.eleitorado)?.chave === f.porte);
-    receita = sel.reduce((a, r) => a + (prefeito ? r.prefeito_receita : r.vereador_receita), 0);
-    publica = sel.reduce((a, r) => a + (prefeito ? r.prefeito_publica : r.vereador_publica), 0);
-  } else {
-    const sel = dados.estados.filter((e) => e.ano === f.ano && e.cargo === f.cargo && e.uf !== "BR" && (!f.uf || e.uf === f.uf));
-    receita = sel.reduce((a, e) => a + e.receita, 0);
-    publica = sel.reduce((a, e) => a + e.receita_publica, 0);
-  }
+  const daCidade = (r: LinhaResumo) => (prefeito
+    ? [r.prefeito_receita, r.prefeito_publica, r.prefeito_privada]
+    : [r.vereador_receita, r.vereador_publica, r.vereador_privada]);
+  let receita = 0, publica = 0, privada = 0, semColuna = false;
+  const somar = ([rec, pub, priv]: (number | null | undefined)[]) => {
+    receita += rec ?? 0; publica += pub ?? 0; privada += priv ?? 0;
+    if (priv === undefined) semColuna = true;
+  };
+  if (f.mun) somar(daCidade(f.mun));
+  else if (f.porte) dados.resumo.filter((r) => r.ano === f.ano && (!f.uf || r.uf === f.uf) && porteDe(r.eleitorado)?.chave === f.porte).forEach((r) => somar(daCidade(r)));
+  else dados.estados.filter((e) => e.ano === f.ano && e.cargo === f.cargo && e.uf !== "BR" && (!f.uf || e.uf === f.uf)).forEach((e) => somar([e.receita, e.receita_publica, e.receita_privada]));
   if (receita <= 0) return null;
   const publico = Math.min(receita, publica);
-  return { publico, privado: receita - publico, total: receita };
+  // resposta da API sem a coluna do privado (versão anterior, ou cache do Next de até 1 h depois de atualizar a API):
+  // não dá para separar privado de sem fonte, então só "não público", sem afirmar nenhum dos dois
+  if (semColuna) return { publico, naoPublico: receita - publico, total: receita };
+  // privado = só o que a fonte marca como privado; o que sobra fica como "origem não classificada", nunca vira privado
+  const privado = Math.min(receita - publico, privada);
+  const resto = receita - publico - privado;   // resíduos de arredondamento (menos de 1 centavo) não viram categoria
+  return { publico, privado, naoClassificado: resto < 0.01 ? 0 : resto, total: receita };
 }

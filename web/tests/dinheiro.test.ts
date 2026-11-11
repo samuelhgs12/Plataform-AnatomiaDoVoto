@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
-  abaDe, anoAnterior, coberturaCurta, composicaoDespesas, contasDaCidade, origemDoDinheiro, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
+  abaDe, anoAnterior, cidadesDoPorte, coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
   type LinhaDespesa,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
@@ -308,12 +308,22 @@ describe("cobertura das prestações de contas", () => {
 
 describe("origemDoDinheiro", () => {
   const e = (uf: string, cargo: string, receita: number, receita_publica: number) => ({ ano: 2024, uf, cargo, receita, receita_publica });
-  const dados = { resumo: [r({ id_municipio: 1, eleitorado: 3_000, vereador_receita: 100, vereador_publica: 60 }), r({ id_municipio: 2, eleitorado: 4_000, vereador_receita: 100, vereador_publica: 20 })], estados: [e("PE", "Vereador", 1000, 700), e("RJ", "Vereador", 1000, 100), e("PE", "Prefeito", 50, 50), e("BR", "Vereador", 9, 9)] };
+  const ep = (uf: string, cargo: string, receita: number, receita_publica: number, receita_privada: number) => ({ ...e(uf, cargo, receita, receita_publica), receita_privada });
+  const dados = {
+    resumo: [r({ id_municipio: 1, eleitorado: 3_000, vereador_receita: 100, vereador_publica: 60, vereador_privada: 40 }), r({ id_municipio: 2, eleitorado: 4_000, vereador_receita: 100, vereador_publica: 20, vereador_privada: 80 })],
+    estados: [ep("PE", "Vereador", 1000, 700, 300), ep("RJ", "Vereador", 1000, 100, 900), ep("PE", "Prefeito", 50, 50, 0), ep("BR", "Vereador", 9, 9, 0)],
+  };
   it("cidade, porte, estado e os seis, sempre do cargo pedido", () => {
-    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Prefeito", mun: r({}) })).toEqual({ publico: 300_000, privado: 100_000, total: 400_000 });
-    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador", porte: "ate5" })).toEqual({ publico: 80, privado: 120, total: 200 });
-    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador", uf: "PE" })).toEqual({ publico: 700, privado: 300, total: 1000 });
-    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador" })).toEqual({ publico: 800, privado: 1200, total: 2000 });
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Prefeito", mun: r({ prefeito_privada: 100_000 }) })).toEqual({ publico: 300_000, privado: 100_000, naoClassificado: 0, total: 400_000 });
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador", porte: "ate5" })).toEqual({ publico: 80, privado: 120, naoClassificado: 0, total: 200 });
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador", uf: "PE" })).toEqual({ publico: 700, privado: 300, naoClassificado: 0, total: 1000 });
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador" })).toEqual({ publico: 800, privado: 1200, naoClassificado: 0, total: 2000 });
+  });
+  it("o que não é público nem privado identificado fica como origem não classificada, nunca vira privado", () => {
+    expect(origemDoDinheiro({ resumo: [], estados: [ep("PE", "Senador", 1000, 600, 300)] }, { ano: 2024, cargo: "Senador", uf: "PE" })).toEqual({ publico: 600, privado: 300, naoClassificado: 100, total: 1000 });
+    // sem a coluna do privado (API antiga ou cache): só "não público", sem chamar de privado nem de sem fonte
+    expect(origemDoDinheiro({ resumo: [], estados: [e("PE", "Senador", 1000, 600)] }, { ano: 2024, cargo: "Senador", uf: "PE" })).toEqual({ publico: 600, naoPublico: 400, total: 1000 });
+    expect(origemDoDinheiro({ resumo: [], estados: [] }, { ano: 2024, cargo: "Vereador", mun: r({}) })).toEqual({ publico: 300_000, naoPublico: 300_000, total: 600_000 });
   });
   it("sem receita, null", () => {
     expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Governador", uf: "PE" })).toBeNull();
@@ -384,8 +394,33 @@ describe("composicaoDespesas", () => {
     expect(composicaoDespesas(linhas, { ano: 2024, cargo: "Vereador", uf: "PE" }).map((g) => [g.grupo, g.valor])).toEqual([["pessoal", 400], ["propaganda_fisica", 100]]);
     expect(composicaoDespesas(linhas, { ano: 2024, cargo: "Vereador" }).find((g) => g.grupo === "outros")?.parte).toBeCloseTo(0.5);
   });
+  it("com as cidades de um porte, só as despesas delas (o mesmo universo das receitas)", () => {
+    expect(composicaoDespesas(linhas, { ano: 2024, cargo: "Vereador", uf: "PE", muns: new Set([2]) }).map((g) => [g.grupo, g.valor])).toEqual([["pessoal", 100]]);
+    expect(composicaoDespesas(linhas, { ano: 2024, cargo: "Vereador", muns: new Set() })).toEqual([]);
+  });
+  it("despesa sem categoria aparece como grupo próprio", () => {
+    expect(composicaoDespesas([d({ grupo: "sem_categoria", valor: 50 }), d({ valor: 150 })], { ano: 2024, cargo: "Vereador" }).map((g) => [g.rotulo, g.parte])).toEqual([["Propaganda impressa e de rua", 0.75], ["Sem categoria", 0.25]]);
+  });
   it("vazio sem despesas no recorte", () => {
     expect(composicaoDespesas(linhas, { ano: 2020, cargo: "Vereador" })).toEqual([]);
     expect(composicaoDespesas(linhas, { ano: 2024, cargo: "Vereador", uf: "PE", mun: 99 })).toEqual([]);
+  });
+});
+
+describe("cidadesDoPorte e foraDaDisputaPorte", () => {
+  const linhas = [
+    r({ id_municipio: 1, uf: "PE", eleitorado: 3_000, vereador_nao_disputou_n: 2, vereador_nao_disputou_gasto: 500, prefeito_nao_disputou_n: 1, prefeito_nao_disputou_gasto: 900 }),
+    r({ id_municipio: 2, uf: "RJ", eleitorado: 4_000, vereador_nao_disputou_n: 1, vereador_nao_disputou_gasto: 100 }),
+    r({ id_municipio: 3, uf: "PE", eleitorado: 40_000, vereador_nao_disputou_n: 9, vereador_nao_disputou_gasto: 9_999 }),
+  ];
+  it("as cidades do porte no ano e no estado", () => {
+    expect([...cidadesDoPorte(linhas, 2024, undefined, "ate5")]).toEqual([1, 2]);
+    expect([...cidadesDoPorte(linhas, 2024, "PE", "ate5")]).toEqual([1]);
+    expect(cidadesDoPorte(linhas, 2020, undefined, "ate5").size).toBe(0);
+  });
+  it("o gasto de quem não disputou só nas cidades do porte, do cargo pedido", () => {
+    expect(foraDaDisputaPorte(linhas, 2024, undefined, "ate5", "Vereador")).toEqual({ n: 3, gasto: 600 });
+    expect(foraDaDisputaPorte(linhas, 2024, "PE", "ate5", "Prefeito")).toEqual({ n: 1, gasto: 900 });
+    expect(foraDaDisputaPorte(linhas, 2024, "RJ", "ate5", "Prefeito")).toBeNull();
   });
 });

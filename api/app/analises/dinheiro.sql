@@ -4,10 +4,12 @@
 -- REGULARIZACAO_OMISSAO, sem transferências a outros candidatos ou partidos (não são gasto da campanha). Os valores são
 -- os contratados na prestação de contas, não o que foi pago. O município é o da candidatura (prefeito e vereador), não o
 -- lugar em que o serviço foi prestado. Só os seis estados do projeto. Servida em GET /api/analises/dinheiro.
+-- Despesas sem categoria entram no grupo sem_categoria, para a soma dos grupos bater com o gasto total.
 
 CREATE OR REPLACE TEMP TABLE despesa_grupo AS
 SELECT d.id_candidatura, d.valor_despesa,
-       CASE WHEN k.grupo_classificacao IN ('propaganda_fisica', 'propaganda_digital', 'propaganda_audiovisual') THEN k.grupo_classificacao
+       CASE WHEN k.id_categoria_despesa IS NULL THEN 'sem_categoria'   -- sem categoria: fica identificada, não some
+            WHEN k.grupo_classificacao IN ('propaganda_fisica', 'propaganda_digital', 'propaganda_audiovisual') THEN k.grupo_classificacao
             WHEN k.grupo_classificacao = 'mobilizacao' OR k.origem_despesa ILIKE 'Eventos%' THEN 'mobilizacao'
             WHEN k.origem_despesa ILIKE 'Despesas com pessoal%' OR k.origem_despesa ILIKE 'Encargos sociais%' THEN 'pessoal'
             WHEN k.origem_despesa ILIKE 'Servi_os pr_prios prestados%' OR k.origem_despesa ILIKE 'Servi_os prestados por terceiros%' THEN 'terceiros'
@@ -18,7 +20,7 @@ SELECT d.id_candidatura, d.valor_despesa,
               OR k.origem_despesa ILIKE '%geradores%' OR k.origem_despesa ILIKE 'Alimenta%' THEN 'estrutura'
             ELSE 'outros' END AS grupo
 FROM despesa_campanha d
-JOIN categoria_despesa k ON k.id_categoria_despesa = d.id_categoria_despesa
+LEFT JOIN categoria_despesa k ON k.id_categoria_despesa = d.id_categoria_despesa   -- LEFT, como vw_despesa_candidatura
 WHERE d.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO') AND NOT coalesce(k.transferencia, false);
 
 -------------------------------------------------------------------------------

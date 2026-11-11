@@ -2118,3 +2118,5 @@ a.q-ver:active { transform: scale(0.98); }
 .origem-destino h4 { font-size: 16px; margin: 8px 0 4px; color: var(--fg); }
 .origem-destino .barras.compacto li { grid-template-columns: minmax(0, 12em) minmax(48px, 1fr) auto; }
 @media (max-width: 900px) { .origem-destino { grid-template-columns: 1fr; } }
+.palco-dinheiro .escala-nota { flex-basis: 100%; order: 1; margin: -6px 0 0; font-size: 12.5px; color: var(--noite-muted); max-width: 46ch; }   /* logo abaixo da legenda */
+.palco-dinheiro .palco-base > .legenda-q { order: 0; } .palco-dinheiro .palco-base > .palco-escolhas { order: 2; }

@@ -18,6 +18,8 @@ SELECT c.id_candidatura, c.id_candidato, c.ano, g.id_cargo, g.nome AS cargo, coa
        coalesce(d.gasto_total, 0) AS gasto,
        coalesce(r.receita_total, 0) AS receita,
        coalesce(r.receita_publica, 0) AS receita_publica,
+       -- privado só o que a fonte marca como privado: receita sem fonte classificada não vira privada por exclusão
+       coalesce(r.receita_privada, 0) AS receita_privada,
        -- por candidato (como nas perguntas 2 e 8): o que recebeu, inclusive de outros candidatos
        coalesce(rec.recebido, 0) AS recebido, coalesce(rec.publico_rec, 0) AS publico_rec,
        c.id_candidatura IN (SELECT id_candidatura FROM prestou) AS prestou
@@ -102,6 +104,18 @@ LEFT JOIN vw_despesa_candidatura d ON d.id_candidatura = c.id_candidatura
 WHERE c.ano >= 2018 AND g.eh_titular AND e.tipo_eleicao = 'ORDINARIA' AND NOT coalesce(rr.disputou, false)
 GROUP BY ALL;
 
+-- O mesmo por município (prefeito e vereador), para o aviso acompanhar o filtro de porte das cidades.
+CREATE OR REPLACE TEMP TABLE nao_disputou_mun AS
+SELECT c.ano, c.id_municipio, g.nome AS cargo, count(*) FILTER (WHERE d.gasto_total > 0) AS n, coalesce(sum(d.gasto_total), 0) AS gasto
+FROM candidatura c
+JOIN eleicao e           ON e.id_eleicao = c.id_eleicao
+JOIN cargo g             ON g.id_cargo = e.id_cargo
+JOIN rotulo_resultado rr ON rr.id_rotulo = c.id_rotulo_final
+LEFT JOIN vw_despesa_candidatura d ON d.id_candidatura = c.id_candidatura
+WHERE c.ano >= 2018 AND g.nome IN ('Prefeito', 'Vereador') AND e.tipo_eleicao = 'ORDINARIA' AND NOT coalesce(rr.disputou, false)
+  AND c.id_municipio IS NOT NULL
+GROUP BY ALL;
+
 -------------------------------------------------------------------------------
 -- 1. Municípios dos seis estados, com o código IBGE (o desenho do mapa usa esse código)
 -------------------------------------------------------------------------------
@@ -124,12 +138,12 @@ COPY (
         GROUP BY ALL
     ), ver AS (
         SELECT ano, id_municipio, count(*) AS candidatos, count(*) FILTER (WHERE eleito) AS eleitos,
-               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
+               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica, sum(receita_privada) AS privada,
                count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar WHERE cargo = 'Vereador' GROUP BY ALL
     ), pre AS (
         SELECT ano, id_municipio, count(*) AS candidatos, sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
-               count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
+               sum(receita_privada) AS privada, count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar WHERE cargo = 'Prefeito' GROUP BY ALL
     ), eleito AS (
         SELECT ano, id_municipio, id_candidato, nome_urna, partido, votos, gasto
@@ -146,7 +160,10 @@ COPY (
            eleito.votos AS prefeito_votos, round(eleito.gasto, 2) AS prefeito_gasto_eleito,
            dp.maior_venceu, dp.excluida AS maior_excluida, el.eleitorado,
            gv.rec_mais_cand, gv.rec_mais_eleitos, gv.rec_demais_cand, gv.rec_demais_eleitos,
-           gv.pub_mais_cand, gv.pub_mais_eleitos, gv.pub_demais_cand, gv.pub_demais_eleitos
+           gv.pub_mais_cand, gv.pub_mais_eleitos, gv.pub_demais_cand, gv.pub_demais_eleitos,
+           round(ver.privada, 2) AS vereador_privada, round(coalesce(pre.privada, 0), 2) AS prefeito_privada,
+           coalesce(ndv.n, 0) AS vereador_nao_disputou_n, round(coalesce(ndv.gasto, 0), 2) AS vereador_nao_disputou_gasto,
+           coalesce(ndp.n, 0) AS prefeito_nao_disputou_n, round(coalesce(ndp.gasto, 0), 2) AS prefeito_nao_disputou_gasto
     FROM ver
     JOIN municipio m ON m.id_municipio = ver.id_municipio
     LEFT JOIN vag    ON vag.ano = ver.ano AND vag.id_municipio = ver.id_municipio
@@ -155,6 +172,8 @@ COPY (
     LEFT JOIN disputa_prefeito dp ON dp.ano = ver.ano AND dp.id_municipio = ver.id_municipio
     LEFT JOIN eleitorado_mun el   ON el.ano = ver.ano AND el.id_municipio = ver.id_municipio
     LEFT JOIN grupos_vereador gv  ON gv.ano = ver.ano AND gv.id_municipio = ver.id_municipio
+    LEFT JOIN nao_disputou_mun ndv ON ndv.ano = ver.ano AND ndv.id_municipio = ver.id_municipio AND ndv.cargo = 'Vereador'
+    LEFT JOIN nao_disputou_mun ndp ON ndp.ano = ver.ano AND ndp.id_municipio = ver.id_municipio AND ndp.cargo = 'Prefeito'
     ORDER BY ver.ano, m.uf, ver.id_municipio
 ) TO 'municipios/resumo.csv' (HEADER);
 
@@ -171,7 +190,7 @@ COPY (
         FROM eleitorado_mun el JOIN municipio m ON m.id_municipio = el.id_municipio GROUP BY ALL
     ), soma AS (
         SELECT ano, id_cargo, cargo, uf, count(*) AS candidatos, count(*) FILTER (WHERE eleito) AS eleitos,
-               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
+               sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica, sum(receita_privada) AS privada,
                count(*) FILTER (WHERE NOT prestou) AS sem_prestacao
         FROM cand_lugar GROUP BY ALL
     ), maior AS (
@@ -190,7 +209,8 @@ COPY (
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_sem_prestacao, 0) END AS excl_sem_prestacao,
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_sem_gasto, 0) END AS excl_sem_gasto,
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_empate, 0) END AS excl_empate,
-           ele.eleitorado, coalesce(nd.nao_disputou_com_gasto, 0) AS nao_disputou_com_gasto, coalesce(nd.gasto_nao_disputou, 0) AS gasto_nao_disputou
+           ele.eleitorado, coalesce(nd.nao_disputou_com_gasto, 0) AS nao_disputou_com_gasto, coalesce(nd.gasto_nao_disputou, 0) AS gasto_nao_disputou,
+           round(s.privada, 2) AS receita_privada
     FROM soma s
     LEFT JOIN vag   ON vag.ano = s.ano AND vag.id_cargo = s.id_cargo AND vag.uf = s.uf
     LEFT JOIN ele   ON ele.ano = s.ano AND ele.uf = s.uf

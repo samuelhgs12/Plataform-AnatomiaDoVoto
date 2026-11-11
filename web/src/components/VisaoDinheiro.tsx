@@ -6,8 +6,8 @@ import { enquadrar, nomeProprio, quantis } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
-  abaDe, ANOS_DINHEIRO, anoAnterior, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
-  diferencaRelativa, ehMunicipal, escolhaMapaDinheiro, foraDaDisputa, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
+  abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
+  diferencaRelativa, ehMunicipal, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
   ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoCurto, textoDiferenca, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   type Aba, type LinhaDespesa,
 } from "@/lib/dinheiro";
@@ -138,7 +138,8 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const origem = origemDoDinheiro({ resumo, estados }, { ano, cargo, uf, mun: linhaMun, porte: mun ? undefined : porte });
   const valorAntes = antes !== null ? valorLugar(aba, antes) : null;
   const variacao = variacaoNominal(principal, valorAntes);
-  const fora = !mun && aba === "gasto" ? foraDaDisputa(estados, ano, uf, cargo) : null;
+  // com um porte, o aviso conta só as cidades dele (o mesmo recorte do número)
+  const fora = mun || aba !== "gasto" ? null : porte ? foraDaDisputaPorte(resumo, ano, uf, porte, cargo) : foraDaDisputa(estados, ano, uf, cargo);
 
   // candidatos: os da cidade (eleições municipais) ou os eleitos do estado (gerais), na ordem escolhida
   const [candidatos, eleitosUf] = await Promise.all([
@@ -155,7 +156,8 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const ordInfo = ORDENS_CANDIDATOS.find((o) => o.chave === ord)!;
 
   // onde o dinheiro foi gasto: os grupos de categoria do TSE no recorte (cidade, estado ou os seis)
-  const grupos = despesas ? composicaoDespesas(despesas, { ano, cargo, uf, mun: mun?.id_municipio }) : [];
+  // com um porte (e sem cidade escolhida), só as despesas das cidades dele: o mesmo universo das receitas ao lado
+  const grupos = despesas ? composicaoDespesas(despesas, { ano, cargo, uf, mun: mun?.id_municipio, muns: !mun && porte ? cidadesDoPorte(resumo, ano, uf, porte) : undefined }) : [];
   const totalGrupos = grupos.reduce((a, g) => a + g.valor, 0);
 
   // sem candidatos à vista: os estados lado a lado (ou, com um estado aberto, as cidades de maior valor)
@@ -232,6 +234,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           <ul className="legenda-q" aria-label={uf && municipal ? `Cores: faixas fixas de ${pintarInfo.rotulo.toLowerCase()}` : `Cores: três faixas dos estados por ${pintarInfo.rotulo.toLowerCase()}`}>
             {legenda.map((l) => <li key={l.texto} className={l.classe === "sem" ? "legenda-sem" : undefined}><i className={l.classe} />{l.texto}</li>)}
           </ul>
+          <p className="escala-nota">{uf && municipal
+            ? "Faixas fixas: as mesmas em todos os estados e anos."
+            : "Escala relativa: os seis estados em três faixas, recalculadas a cada ano e cargo. Para comparar anos, use os números."}</p>
           <div className="palco-escolhas">
             <nav className="chips pintar" aria-label="O que pinta o mapa">
               {PINTAR.map((p) => (
@@ -350,7 +355,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
                   <BarrasH compacto titulo={`Dinheiro recebido pelas campanhas a ${cargoMin} ${mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"}, público e privado, ${ano}`}
                     linhas={[
                       { chave: "pub", rotulo: "Público", detalhe: "fundos Eleitoral e Partidário", valor: origem.publico, classe: "pub", trilhoCheio: true, texto: pct(origem.publico / origem.total, 0), subtexto: reais(origem.publico) },
-                      { chave: "priv", rotulo: "Privado", detalhe: "doações de pessoas e recursos próprios", valor: origem.privado, classe: "priv", trilhoCheio: true, texto: pct(origem.privado / origem.total, 0), subtexto: reais(origem.privado) },
+                      ...("naoPublico" in origem
+                        ? [{ chave: "np", rotulo: "Não público", detalhe: "privado e sem fonte juntos: a separação não está disponível agora", valor: origem.naoPublico, classe: "fx2", trilhoCheio: true, texto: pct(origem.naoPublico / origem.total, 0), subtexto: reais(origem.naoPublico) }]
+                        : [
+                          { chave: "priv", rotulo: "Privado", detalhe: "doações de pessoas e recursos próprios", valor: origem.privado, classe: "priv", trilhoCheio: true, texto: pct(origem.privado / origem.total, 0), subtexto: reais(origem.privado) },
+                          ...(origem.naoClassificado > 0 ? [{ chave: "nc", rotulo: "Origem não classificada", detalhe: "receitas sem fonte identificada na base", valor: origem.naoClassificado, classe: "fx2", trilhoCheio: true, texto: pct(origem.naoClassificado / origem.total, 0), subtexto: reais(origem.naoClassificado) }] : []),
+                        ]),
                     ]} max={origem.total} />
                   <p className="muted pequeno">Sem repasses entre candidatos (o mesmo real não conta duas vezes). Quem recebeu material em vez de dinheiro não aparece aqui.</p>
                 </div>
