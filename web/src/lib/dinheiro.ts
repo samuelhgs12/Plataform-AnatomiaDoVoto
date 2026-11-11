@@ -524,3 +524,39 @@ export function composicaoDespesas(linhas: LinhaDespesa[], f: { ano: number; car
     return { grupo: g.chave, rotulo: g.rotulo, detalhe: g.detalhe, valor, despesas: do_.reduce((a, l) => a + l.despesas, 0), parte: valor / total };
   }).filter((g) => g.valor > 0).sort((a, b) => b.valor - a.valor);
 }
+
+/** A cobertura em poucas palavras, para a linha de aviso do painel. */
+export function coberturaCurta(c: Contas | null): { texto: string; incompleta: boolean } | null {
+  if (!c) return null;
+  const n = (v: number) => v.toLocaleString("pt-BR");
+  if (c.com >= c.total) return { texto: `Contas na base: todas as ${n(c.total)} candidaturas.`, incompleta: false };
+  return { texto: `Contas na base: ${n(c.com)} de ${n(c.total)} candidaturas; ${n(c.total - c.com)} sem prestação final, então o total pode estar incompleto.`, incompleta: true };
+}
+
+/**
+ * De onde veio o dinheiro recebido pelas campanhas ao cargo no lugar: público (fundos Eleitoral e Partidário) e
+ * privado (o resto), somados. Cidade: a linha dela; estado ou os seis: a tabela estados (com um porte, as cidades
+ * dele). null sem receita.
+ */
+export function origemDoDinheiro(
+  dados: { resumo: LinhaResumo[]; estados: { ano: number; uf: string; cargo: string; receita: number; receita_publica: number }[] },
+  f: { ano: number; cargo: string; uf?: string; mun?: LinhaResumo; porte?: Porte },
+): { publico: number; privado: number; total: number } | null {
+  const prefeito = f.cargo === "Prefeito";
+  let receita = 0, publica = 0;
+  if (f.mun) {
+    receita = prefeito ? f.mun.prefeito_receita : f.mun.vereador_receita;
+    publica = prefeito ? f.mun.prefeito_publica : f.mun.vereador_publica;
+  } else if (f.porte) {
+    const sel = dados.resumo.filter((r) => r.ano === f.ano && (!f.uf || r.uf === f.uf) && porteDe(r.eleitorado)?.chave === f.porte);
+    receita = sel.reduce((a, r) => a + (prefeito ? r.prefeito_receita : r.vereador_receita), 0);
+    publica = sel.reduce((a, r) => a + (prefeito ? r.prefeito_publica : r.vereador_publica), 0);
+  } else {
+    const sel = dados.estados.filter((e) => e.ano === f.ano && e.cargo === f.cargo && e.uf !== "BR" && (!f.uf || e.uf === f.uf));
+    receita = sel.reduce((a, e) => a + e.receita, 0);
+    publica = sel.reduce((a, e) => a + e.receita_publica, 0);
+  }
+  if (receita <= 0) return null;
+  const publico = Math.min(receita, publica);
+  return { publico, privado: receita - publico, total: receita };
+}

@@ -6,9 +6,9 @@ import { enquadrar, nomeProprio, quantis } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
-  abaDe, ANOS_DINHEIRO, anoAnterior, classeComPorte, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
-  diferencaRelativa, ehMunicipal, escolhaMapaDinheiro, foraDaDisputa, fraseCobertura, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
-  ORDENS_CANDIDATOS, ordenarLinhas, PINTAR, referenciaDoPorte, TERCOS, textoCurto, textoDiferenca, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
+  abaDe, ANOS_DINHEIRO, anoAnterior, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
+  diferencaRelativa, ehMunicipal, escolhaMapaDinheiro, foraDaDisputa, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
+  ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoCurto, textoDiferenca, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   type Aba, type LinhaDespesa,
 } from "@/lib/dinheiro";
 import { METODOLOGIA } from "@/lib/metodologia";
@@ -131,10 +131,11 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const cima = mun ? valorUf(uf) : uf ? valorUf(undefined) : null;
   // a leitura do número: a cobertura das prestações de contas, a referência das cidades de porte parecido e a eleição anterior
   const contas = mun ? contasDaCidade(linhaMun, cargo) : porte ? contasDoPorte(resumo, ano, uf, porte, cargo) : contasDoEstado(estados, ano, uf, cargo);
-  const cobertura = fraseCobertura(contas);
+  const coberturaLinha = coberturaCurta(contas);
   const porteCidade = porteDe(linhaMun?.eleitorado);
   const referencia = mun && porteCidade ? referenciaDoPorte(resumo, ano, porteCidade.chave, aba, cargo) : null;
   const difReferencia = referencia ? diferencaRelativa(principal, referencia.valor) : null;
+  const origem = origemDoDinheiro({ resumo, estados }, { ano, cargo, uf, mun: linhaMun, porte: mun ? undefined : porte });
   const valorAntes = antes !== null ? valorLugar(aba, antes) : null;
   const variacao = variacaoNominal(principal, valorAntes);
   const fora = !mun && aba === "gasto" ? foraDaDisputa(estados, ano, uf, cargo) : null;
@@ -249,30 +250,46 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
       </MapaVivo>
 
       <div id="dinheiro-painel" className="painel s12" key={`dinheiro-${uf}-${mun?.id_municipio}-${ano}-${cargo}-${pintar}`}>
+        {/* o caminho do painel: quanto → de onde veio e para onde foi → quem → comparações */}
+        <nav className="painel-nav s12" aria-label="Seções do painel">
+          <a href="#dinheiro-painel">Números</a>
+          {(origem || grupos.length > 0) && <a href="#dinheiro-origem">De onde veio e para onde foi</a>}
+          {temCandidatos && <a href="#dinheiro-cand">{mun ? "Candidatos" : "Eleitos"}</a>}
+          <a href="#estados">Comparar os estados</a>
+          <a href="#comparar">Quem teve mais dinheiro se elegeu mais?</a>
+          <a href="#dinheiro-metodo">Como calculamos</a>
+        </nav>
+
         <div className="bloco noite painel-cab s4">
           <p className="palco-sobre">{mun ? `Município · ${uf}` : uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"} · {cargo} · {ano}{!mun && porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}</p>
           <h2>{lugar}</h2>
           <p className="painel-num longo"><Rolar valor={textoValor(principal, aba, cargo)} /></p>
           {aba === "gasto" && cargo === "Prefeito" && mun ? (
-            <>
-              <p>gastos por todas as campanhas a prefeito.</p>
-              {eleitoPrefeito && <p className="pequeno">Prefeito eleito: <b>{eleitoPrefeito.nome_urna}</b> ({eleitoPrefeito.partido}), que {eleitoPrefeito.prestou === false ? "não tem prestação de contas final na base" : <>gastou <b>{reais(eleitoPrefeito.gasto)}</b></>}.</p>}
-            </>
+            <p>gastos por todas as campanhas a prefeito.</p>
           ) : aba === "gasto" ? (
-            <p>por vaga de {cargoMin}{conta ? `: ${reais(conta.gasto)} gastos pelas campanhas ÷ ${inteiro(conta.vagas)} ${conta.vagas === 1 ? "vaga" : "vagas"}` : ""}.</p>
+            <p>por vaga de {cargoMin}{conta ? <>: <small className="muted">{reais(conta.gasto)} ÷ {inteiro(conta.vagas)} {conta.vagas === 1 ? "vaga" : "vagas"}</small></> : ""}.</p>
           ) : (
             <p>{unidade(aba, cargo)}.</p>
           )}
-          {outras.length > 0 && <p className="pequeno">{outras.map((o, i) => <span key={o.chave}>{i ? " · " : ""}<a href={href({ pintar: o.chave }, "dinheiro-painel")} data-mapa="">{o.rotulo.toLowerCase()}: <b>{textoValor(o.valor, o.aba, cargo)}</b></a></span>)}</p>}
-          {cima !== null && <p className="pequeno">{mun ? NOME_UF[uf!] : "Seis estados juntos"}{porteInfo ? ` (cidades de ${porteInfo.rotulo})` : ""}: <b>{textoValor(cima, aba, cargo)}</b> {unidadeCurta}.</p>}
-          {referencia && referencia.valor !== null && (
-            <p className="pequeno">Cidades de porte parecido ({porteCidade!.rotulo}, {inteiro(referencia.n)} cidades): mediana de <b>{textoValor(referencia.valor, aba, cargo)}</b>{difReferencia !== null && <>; {lugar} está <b>{textoDiferenca(difReferencia)}</b></>}.</p>
-          )}
-          {antes !== null && valorAntes !== null && (
-            <p className="pequeno">Em {antes}: <b>{textoValor(valorAntes, aba, cargo)}</b>{variacao !== null && aba !== "publico" && <> ({pctSinal(variacao)} em valores nominais, sem correção pela inflação)</>}.</p>
-          )}
-          {cobertura && <p className={`pequeno${contas && contas.com < contas.total ? " cobertura-aviso" : " muted"}`}>{cobertura}</p>}
-          {fora && <p className="pequeno muted">A Pergunta 1 soma ainda {reais(fora.gasto)} de {inteiro(fora.n)} {fora.n === 1 ? "campanha que não chegou" : "campanhas que não chegaram"} a disputar (barradas ou substituídas); aqui conta só quem disputou.</p>}
+          {eleitoPrefeito && aba === "gasto" && <p className="pequeno">Prefeito eleito: <b>{eleitoPrefeito.nome_urna}</b> ({eleitoPrefeito.partido}), que {eleitoPrefeito.prestou === false ? "não tem prestação de contas final na base" : <>gastou <b>{reais(eleitoPrefeito.gasto)}</b></>}.</p>}
+
+          {/* fichas: as outras medidas (clicáveis: trocam a pintura do mapa), a eleição anterior e as referências */}
+          <ul className="fichas-dinheiro" aria-label="Outras medidas e referências">
+            {outras.map((o) => (
+              <li key={o.chave}><a href={href({ pintar: o.chave }, "dinheiro-painel")} data-mapa=""><small>{o.rotulo}</small><b>{textoValor(o.valor, o.aba, cargo)}</b><span className="ficha-acao">ver no mapa</span></a></li>
+            ))}
+            {antes !== null && valorAntes !== null && (
+              <li><small>Em {antes}</small><b>{textoValor(valorAntes, aba, cargo)}</b>{variacao !== null && aba !== "publico" && <span className={`ficha-delta${variacao > 0 ? " sobe" : variacao < 0 ? " desce" : ""}`}>{pctSinal(variacao)} nominal</span>}</li>
+            )}
+            {cima !== null && (
+              <li><small>{mun ? NOME_UF[uf!] : "Seis estados"}{porteInfo ? ` · ${porteInfo.rotulo.replace(" eleitores", "")}` : ""}</small><b>{textoValor(cima, aba, cargo)}</b><span className="ficha-nota">{unidadeCurta}</span></li>
+            )}
+            {referencia && referencia.valor !== null && (
+              <li><small>Porte parecido · {porteCidade!.rotulo.replace(" eleitores", "")} ({inteiro(referencia.n)} cidades)</small><b>{textoValor(referencia.valor, aba, cargo)}</b><span className="ficha-nota">mediana</span>{difReferencia !== null && <span className={`ficha-delta${difReferencia > 0 ? " sobe" : difReferencia < 0 ? " desce" : ""}`}>{lugar.split(" ")[0]} está {textoDiferenca(difReferencia)}</span>}</li>
+            )}
+          </ul>
+          {coberturaLinha && <p className={`pequeno cobertura${coberturaLinha.incompleta ? " cobertura-aviso" : " muted"}`}>{coberturaLinha.texto}</p>}
+          {fora && <p className="pequeno muted">A Pergunta 1 soma ainda {reais(fora.gasto)} de {inteiro(fora.n)} {fora.n === 1 ? "campanha que não chegou" : "campanhas que não chegaram"} a disputar; aqui conta só quem disputou.</p>}
           {!mun && porte && <p className="pequeno muted">Soma das {inteiro(valorDoPorte(resumo, ano, uf, porte, aba, cargo).n)} cidades deste porte.</p>}
           {municipal && uf && (
             <EscolhaMunicipio
@@ -322,6 +339,34 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           </div>
         )}
 
+        {(origem || grupos.length > 0) && (
+          <div id="dinheiro-origem" className="bloco noite s12 dinheiro-barras dinheiro-origem">
+            <h3>De onde veio e para onde foi o dinheiro {mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"}</h3>
+            <p className="comparacao-sub">{cargo} · {ano} · todas as campanhas ao cargo{porteInfo && !mun ? ` nas cidades de ${porteInfo.rotulo}` : ""}.</p>
+            <div className="origem-destino">
+              {origem && (
+                <div>
+                  <h4>De onde veio: {reais(origem.total)} recebidos</h4>
+                  <BarrasH compacto titulo={`Dinheiro recebido pelas campanhas a ${cargoMin} ${mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"}, público e privado, ${ano}`}
+                    linhas={[
+                      { chave: "pub", rotulo: "Público", detalhe: "fundos Eleitoral e Partidário", valor: origem.publico, classe: "pub", trilhoCheio: true, texto: pct(origem.publico / origem.total, 0), subtexto: reais(origem.publico) },
+                      { chave: "priv", rotulo: "Privado", detalhe: "doações de pessoas e recursos próprios", valor: origem.privado, classe: "priv", trilhoCheio: true, texto: pct(origem.privado / origem.total, 0), subtexto: reais(origem.privado) },
+                    ]} max={origem.total} />
+                  <p className="muted pequeno">Sem repasses entre candidatos (o mesmo real não conta duas vezes). Quem recebeu material em vez de dinheiro não aparece aqui.</p>
+                </div>
+              )}
+              {grupos.length > 0 && (
+                <div className="dinheiro-grupos">
+                  <h4>Para onde foi: {reais(totalGrupos)} em despesas</h4>
+                  <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} ${mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"} por grupo, ${ano}`}
+                    linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: `${reais(g.valor)} · ${inteiro(g.despesas)} ${g.despesas === 1 ? "despesa" : "despesas"}` }))} />
+                  <p className="muted pequeno">Grupos de categoria do TSE; valores contratados, não pagos; sem transferências a outros candidatos ou partidos. A propaganda em detalhe fica em <Link href={propaganda}>Onde os candidatos investem em propaganda</Link>.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {temCandidatos && (
           <div id="dinheiro-cand" className="bloco noite s12 dinheiro-cand">
             <h3>{mun ? `Candidatos a ${cargoMin} em ${lugar}` : `Eleitos: ${cargoMin} em ${NOME_UF[uf!]}`}</h3>
@@ -356,22 +401,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           </div>
         )}
 
-        {grupos.length > 0 && (
-          <div className="bloco noite s12 dinheiro-barras dinheiro-grupos">
-            <h3>Onde o dinheiro foi gasto {mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"}</h3>
-            <p className="comparacao-sub">{cargo} · {ano} · {reais(totalGrupos)} em despesas declaradas por todas as campanhas, em grupos de categoria do TSE.</p>
-            <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} ${mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"} por grupo, ${ano}`}
-              linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: `${reais(g.valor)} · ${inteiro(g.despesas)} ${g.despesas === 1 ? "despesa" : "despesas"}` }))} />
-            <p className="muted pequeno">Valores contratados, como declarados ao TSE, não o que foi efetivamente pago; sem transferências a outros candidatos ou partidos. A propaganda em detalhe (peças, formatos) fica em <Link href={propaganda}>Onde os candidatos investem em propaganda</Link>.</p>
-          </div>
-        )}
-
         <ComparacoesDinheiro
           noite ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir={medir} semGasto={!uf}
           hrefMedir={(m) => href({ medir: m === "publico" ? "publico" : null }, "comparar")} hrefUf={(u) => href({ uf: u })}
         />
 
-        <details className="bloco noite s12 dinheiro-metodo">
+        <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">
           <summary>Como calculamos</summary>
           <ul>{METODOLOGIA.dinheiro.calculo.map((t) => <li key={t}>{t}</li>)}</ul>
         </details>

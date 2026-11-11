@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
-  abaDe, anoAnterior, composicaoDespesas, contasDaCidade, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
+  abaDe, anoAnterior, coberturaCurta, composicaoDespesas, contasDaCidade, origemDoDinheiro, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
   type LinhaDespesa,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
@@ -300,6 +300,23 @@ describe("cobertura das prestações de contas", () => {
     expect(fraseCobertura({ total: 100, com: 100 })).toBe("Prestação de contas final na base para todas as 100 candidaturas.");
     expect(fraseCobertura({ total: 1200, com: 1150 })).toBe("Prestação de contas final na base para 1.150 de 1.200 candidaturas (50 sem: o total pode estar incompleto).");
     expect(fraseCobertura(null)).toBeNull();
+    expect(coberturaCurta({ total: 10, com: 10 })).toEqual({ texto: "Contas na base: todas as 10 candidaturas.", incompleta: false });
+    expect(coberturaCurta({ total: 10, com: 8 })).toMatchObject({ incompleta: true });
+    expect(coberturaCurta({ total: 10, com: 8 })!.texto).toContain("8 de 10 candidaturas; 2 sem");
+  });
+});
+
+describe("origemDoDinheiro", () => {
+  const e = (uf: string, cargo: string, receita: number, receita_publica: number) => ({ ano: 2024, uf, cargo, receita, receita_publica });
+  const dados = { resumo: [r({ id_municipio: 1, eleitorado: 3_000, vereador_receita: 100, vereador_publica: 60 }), r({ id_municipio: 2, eleitorado: 4_000, vereador_receita: 100, vereador_publica: 20 })], estados: [e("PE", "Vereador", 1000, 700), e("RJ", "Vereador", 1000, 100), e("PE", "Prefeito", 50, 50), e("BR", "Vereador", 9, 9)] };
+  it("cidade, porte, estado e os seis, sempre do cargo pedido", () => {
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Prefeito", mun: r({}) })).toEqual({ publico: 300_000, privado: 100_000, total: 400_000 });
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador", porte: "ate5" })).toEqual({ publico: 80, privado: 120, total: 200 });
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador", uf: "PE" })).toEqual({ publico: 700, privado: 300, total: 1000 });
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Vereador" })).toEqual({ publico: 800, privado: 1200, total: 2000 });
+  });
+  it("sem receita, null", () => {
+    expect(origemDoDinheiro(dados, { ano: 2024, cargo: "Governador", uf: "PE" })).toBeNull();
   });
 });
 
