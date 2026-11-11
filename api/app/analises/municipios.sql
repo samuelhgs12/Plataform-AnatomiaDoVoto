@@ -81,11 +81,25 @@ SELECT ano, id_municipio,
        count(*) FILTER (WHERE NOT mais_pub) AS pub_demais_cand, count(*) FILTER (WHERE NOT mais_pub AND eleito) AS pub_demais_eleitos
 FROM r GROUP BY ALL;
 
--- Eleitorado apto de cada município em cada eleição (1º turno): o porte da cidade, para comparar cidades parecidas.
+-- Eleitorado apto de cada município em cada eleição (1º turno): o porte da cidade, para comparar cidades parecidas,
+-- e o gasto por eleitor.
 CREATE OR REPLACE TEMP TABLE eleitorado_mun AS
 SELECT e.ano, p.id_municipio, max(p.eleitorado_apto) AS eleitorado
 FROM participacao_eleitoral p JOIN eleicao e ON e.id_eleicao = p.id_eleicao
 WHERE p.turno = 1 AND e.ano >= 2018
+GROUP BY ALL;
+
+-- Gasto das campanhas que não chegaram a disputar (barradas, renúncias, substituições): fica fora das somas acima (regra
+-- do projeto), mas a pergunta 1 (q1.sql) o inclui no custo da cadeira. A página mostra a diferença quando ela existe.
+CREATE OR REPLACE TEMP TABLE nao_disputou AS
+SELECT c.ano, g.id_cargo, coalesce(c.uf, 'BR') AS uf, count(*) FILTER (WHERE d.gasto_total > 0) AS nao_disputou_com_gasto,
+       round(coalesce(sum(d.gasto_total), 0), 2) AS gasto_nao_disputou
+FROM candidatura c
+JOIN eleicao e           ON e.id_eleicao = c.id_eleicao
+JOIN cargo g             ON g.id_cargo = e.id_cargo
+JOIN rotulo_resultado rr ON rr.id_rotulo = c.id_rotulo_final
+LEFT JOIN vw_despesa_candidatura d ON d.id_candidatura = c.id_candidatura
+WHERE c.ano >= 2018 AND g.eh_titular AND e.tipo_eleicao = 'ORDINARIA' AND NOT coalesce(rr.disputou, false)
 GROUP BY ALL;
 
 -------------------------------------------------------------------------------
@@ -147,10 +161,14 @@ COPY (
 -------------------------------------------------------------------------------
 -- 3. Por estado e cargo, em todas as eleições (presidente fica na UF "BR"). Para prefeito (P2): quantas disputas são
 --    comparáveis, em quantas o que mais gastou venceu e quantas ficaram de fora, por motivo (a cobertura da análise).
+--    eleitorado = eleitores aptos do estado no ano (gasto por eleitor); gasto_nao_disputou = o que a pergunta 1 soma a mais.
 -------------------------------------------------------------------------------
 COPY (
     WITH vag AS (
         SELECT ano, id_cargo, coalesce(uf, 'BR') AS uf, sum(qt_vagas) AS vagas FROM vagas GROUP BY ALL
+    ), ele AS (
+        SELECT el.ano, m.uf, sum(el.eleitorado) AS eleitorado
+        FROM eleitorado_mun el JOIN municipio m ON m.id_municipio = el.id_municipio GROUP BY ALL
     ), soma AS (
         SELECT ano, id_cargo, cargo, uf, count(*) AS candidatos, count(*) FILTER (WHERE eleito) AS eleitos,
                sum(gasto) AS gasto, sum(receita) AS receita, sum(receita_publica) AS publica,
@@ -171,9 +189,12 @@ COPY (
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_um_candidato, 0) END AS excl_um_candidato,
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_sem_prestacao, 0) END AS excl_sem_prestacao,
            CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_sem_gasto, 0) END AS excl_sem_gasto,
-           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_empate, 0) END AS excl_empate
+           CASE WHEN s.cargo = 'Prefeito' THEN coalesce(maior.excl_empate, 0) END AS excl_empate,
+           ele.eleitorado, coalesce(nd.nao_disputou_com_gasto, 0) AS nao_disputou_com_gasto, coalesce(nd.gasto_nao_disputou, 0) AS gasto_nao_disputou
     FROM soma s
     LEFT JOIN vag   ON vag.ano = s.ano AND vag.id_cargo = s.id_cargo AND vag.uf = s.uf
+    LEFT JOIN ele   ON ele.ano = s.ano AND ele.uf = s.uf
+    LEFT JOIN nao_disputou nd ON nd.ano = s.ano AND nd.id_cargo = s.id_cargo AND nd.uf = s.uf
     LEFT JOIN maior ON maior.ano = s.ano AND maior.uf = s.uf
     ORDER BY s.ano, s.uf, s.id_cargo
 ) TO 'municipios/estados.csv' (HEADER);

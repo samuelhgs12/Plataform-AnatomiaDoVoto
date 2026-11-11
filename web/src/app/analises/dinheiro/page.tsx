@@ -4,7 +4,7 @@ import { apiGetOpcional, lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
 import { nomeProprio } from "@/lib/abstencao";
 import {
-  cargosDoAno, contaGasto, contaGastoEstado, ehMunicipal, hrefMapaDinheiro, lerRecorte, valorCidade, valorDoEstado, valorDoPorte,
+  cargosDoAno, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, ehMunicipal, fraseCobertura, hrefMapaDinheiro, lerRecorte, valorCidade, valorDoEstado, valorDoPorte,
 } from "@/lib/dinheiro";
 import { NOME_UF } from "@/lib/financiamento";
 import { inteiro, reais } from "@/lib/format";
@@ -77,6 +77,8 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const conta = mun ? contaGasto(linhaMun, cargo) : porteFiltro ? gastoEm(uf)!.conta : contaGastoEstado(estados, ano, uf, cargo);
   const custoUf = mun ? valorEstadoGasto(uf) : uf ? valorEstadoGasto(undefined) : null;
   const comPorte = porteFiltro ? ` (cidades de ${porteFiltro.rotulo})` : "";
+  // a cobertura: quantas candidaturas do recorte têm prestação de contas final na base
+  const cobertura = fraseCobertura(mun ? contasDaCidade(linhaMun, cargo) : porteFiltro ? contasDoPorte(resumo, ano, uf, porteFiltro.chave, cargo) : contasDoEstado(estados, ano, uf, cargo));
 
   // ---------- candidatos do recorte ----------
   // o prefeito eleito da cidade escolhida, para a frase do cartão do lugar (a lista de candidatos fica no mapa)
@@ -125,6 +127,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
             <p className="painel-resumo"><b>{custo === null ? "Não informado" : reais(custo)}</b> por vaga de {cargo.toLowerCase()}{conta ? <small> ({reais(conta.gasto)} ÷ {inteiro(conta.vagas)} {conta.vagas === 1 ? "vaga" : "vagas"})</small> : null}</p>
           )}
           {custoUf !== null && <p className="muted pequeno">{mun ? NOME_UF[uf!] : "Seis estados"}{comPorte}: {reais(custoUf)} por vaga.</p>}
+          {cobertura && <p className="muted pequeno">{cobertura}</p>}
         </div>
         <Link className="botao-mapa" href={hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.cod_ibge })}>
           {mun ? "Ver no mapa e os candidatos" : uf ? (municipal ? "Ver as cidades no mapa" : "Ver no mapa e os eleitos") : "Ver no mapa"} ›

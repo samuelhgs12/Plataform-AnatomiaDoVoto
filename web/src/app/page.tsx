@@ -31,7 +31,7 @@ import { compacto, pct } from "@/lib/format";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { VisaoDinheiro } from "@/components/VisaoDinheiro";
-import { ANOS_DINHEIRO, cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro } from "@/lib/dinheiro";
+import { ANOS_DINHEIRO, cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro, PINTAR } from "@/lib/dinheiro";
 import { PORTES } from "@/lib/territorio";
 import { MiniMapa } from "@/components/MiniMapa";
 import { CartaoDica } from "@/components/CartaoDica";
@@ -294,6 +294,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       dinheiro={{
         anos: ANOS_DINHEIRO.map((a) => ({ rotulo: String(a), sub: ehMunicipal(a) ? "Municipal" : "Geral", href: hrefMapaDinheiro(escolhaDin, { ano: a }), on: naDinheiro && a === escDinheiro.ano })),
         cargos: cargosDoAno(escDinheiro.ano).map((c) => ({ rotulo: c, href: hrefMapaDinheiro(escolhaDin, { cargo: c }), on: naDinheiro && c === escDinheiro.cargo })),
+        pintar: PINTAR.map((p) => ({ rotulo: p.rotulo, href: hrefMapaDinheiro(escolhaDin, { pintar: p.chave }), on: naDinheiro && p.chave === escDinheiro.pintar })),
         estado: { opcoes: ufs.map((u) => [u, NOME_UF[u] ?? u] as [string, string]), atual: uf, params: paramsSem("uf", "mun") },
         cidade: naDinheiro && uf && ehMunicipal(escDinheiro.ano) ? {
           opcoes: municipios.filter((m) => m.uf === uf).map((m) => [m.cod_ibge, nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR")),

@@ -37,6 +37,8 @@ type Lista = { opcoes: [string, string][]; atual?: string; params: Record<string
 export interface CamadaDinheiro {
   anos: { rotulo: string; sub: string; href: string; on: boolean }[];
   cargos: { rotulo: string; href: string; on: boolean }[];
+  /** o que pinta o mapa: gasto por vaga, gasto por eleitor ou parte pública */
+  pintar?: { rotulo: string; href: string; on: boolean }[];
   estado: Lista;
   cidade?: Lista;
   porte?: Lista;
@@ -105,6 +107,13 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos, dinheiro }: { 
               </a>
             ))}
           </nav>
+          {dinheiro.pintar && (
+            <nav className="radios" aria-label="O que pinta o mapa">
+              {dinheiro.pintar.map((c) => (
+                <a key={c.rotulo} href={c.href} data-mapa="" aria-current={c.on ? "true" : undefined}>{c.rotulo}</a>
+              ))}
+            </nav>
+          )}
           <EscolhaMunicipio nome="uf" rotulo="Estado" vazio="Os seis estados" opcoes={dinheiro.estado.opcoes} atual={dinheiro.estado.atual} params={dinheiro.estado.params} />
           {dinheiro.cidade && (
             <EscolhaMunicipio nome="mun" rotulo="Município" vazio="O estado inteiro" opcoes={dinheiro.cidade.opcoes} atual={dinheiro.cidade.atual} params={dinheiro.cidade.params} />

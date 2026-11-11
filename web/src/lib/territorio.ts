@@ -34,6 +34,10 @@ export interface LinhaEstado {
   sem_prestacao: number;
   /** Prefeito: disputas que ficaram fora da P2, por motivo. */
   excl_um_candidato?: number | null; excl_sem_prestacao?: number | null; excl_sem_gasto?: number | null; excl_empate?: number | null;
+  /** Eleitores aptos do estado no ano (gasto por eleitor). */
+  eleitorado?: number | null;
+  /** Campanhas ao cargo que não chegaram a disputar e gastaram, e quanto: a pergunta 1 soma isso; aqui fica fora. */
+  nao_disputou_com_gasto?: number | null; gasto_nao_disputou?: number | null;
 }
 
 /** Um eleito (resposta de /api/municipios/<id>/eleitos ou /api/estados/<uf>/eleitos). */

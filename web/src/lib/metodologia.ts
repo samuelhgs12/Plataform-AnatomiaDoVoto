@@ -87,17 +87,21 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou", "Prestação final ou regularização"],
     calculo: [
       "Gasto por vaga: soma dos gastos declarados por todas as campanhas ao cargo, inclusive as derrotadas, ÷ número de vagas. Não é salário nem o custo do mandato. Cidades de porte semelhante: a mediana das cidades com eleitorado parecido; estado: soma de todos os gastos ÷ soma de todas as vagas.",
+      "Gasto por eleitor: a mesma soma de gastos ÷ eleitores aptos do lugar no 1º turno. Parte pública: dinheiro dos fundos Eleitoral e Partidário ÷ tudo o que as campanhas ao cargo receberam. No mapa, os estados ficam em três faixas (terços dos seis) e as cidades em faixas fixas, iguais em todos os estados e anos.",
+      "Cobertura: junto do número vai quantas candidaturas têm prestação de contas final na base. Quem não tem entra com zero nas somas (o valor é desconhecido, e o total pode estar incompleto). “Na base” não quer dizer contas aprovadas pela Justiça Eleitoral.",
+      "Onde o dinheiro foi gasto: as despesas em grupos de categoria do TSE (propaganda impressa e de rua, internet, rádio e TV, militância e eventos, pessoal, serviços, transporte, estrutura, outros). São valores contratados, não pagos, e o município é o da candidatura, não o do fornecedor.",
       "Todo o dinheiro de campanha (P2): o maior valor entre receitas e despesas declaradas, para considerar também campanhas que receberam material. Só o dinheiro público (P8): o que veio do Fundo Eleitoral e do Fundo Partidário, inclusive por meio de outro candidato.",
       "Prefeito, governador e senador: se quem teve o maior gasto declarado venceu. Ficam de fora disputas com um só candidato, prestação de contas incompleta, sem gasto ou com empate no maior gasto.",
       "Teste estatístico: comparação de duas proporções com 95% de confiança; o projeto só destaca diferenças de pelo menos 20% (regra do projeto). Sem diferença estatística não quer dizer sem relação; com diferença, não quer dizer causa.",
-      "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não entregou a prestação final aparece como “Não informado”. Valores sem correção pela inflação: compare eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
+      "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não tem a prestação final na base aparece como “Não informado”. Campanhas que não chegaram a disputar ficam fora daqui; a Pergunta 1 soma o gasto delas no custo da cadeira, e a página diz quanto é quando há diferença.",
+      "Eleição anterior: a variação é nominal, sem correção pela inflação, e só entre eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
     ],
     limites: [
       "Mostra que dinheiro e vitória andam juntos, não que o dinheiro fez ganhar: quem já tem mais chance também arrecada mais.",
       "Não há receitas nem despesas antes de 2018 na base.",
       "Valores sem correção pela inflação.",
     ],
-    sql: ["api/app/analises/municipios.sql", "api/app/analises/q1.sql", "api/app/analises/q2.sql", "api/app/analises/q8.sql"],
+    sql: ["api/app/analises/municipios.sql", "api/app/analises/dinheiro.sql", "api/app/analises/q1.sql", "api/app/analises/q2.sql", "api/app/analises/q8.sql"],
   },
 
   p1: {

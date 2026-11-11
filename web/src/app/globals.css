@@ -2080,3 +2080,20 @@ a.q-ver:active { transform: scale(0.98); }
   .cartao-lugar { display: none; }   /* no celular não há lado livre no mapa; o painel logo abaixo mostra o mesmo resumo */
 }
 .palco-dinheiro:has(.cartao-lugar) .lupa-dica { display: none; }   /* a dica da roda ficaria atrás do cartão */
+
+/* camada Dinheiro: o que pinta o mapa (chips na base do mapa), a ordem dos candidatos, a cobertura e os grupos de despesa */
+.palco-dinheiro .palco-escolhas { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+.palco-dinheiro .pintar .chip { background: var(--noite2); color: var(--sobre-noite); border-color: transparent; }
+.palco-dinheiro .pintar .chip.on { background: var(--brilho); color: var(--noite); }
+.ord-cand { margin: 6px 0 10px; }
+.bloco.noite .chips .chip { background: var(--noite2); color: var(--fg); border-color: transparent; }
+.bloco.noite .chips .chip.on { background: var(--brilho); color: var(--noite); }
+.cobertura-aviso { color: var(--amarelo-400); }
+.cartao-aviso { color: var(--amarelo-400); }
+.painel-cab .pequeno a { color: inherit; text-decoration: underline dotted; }
+.dinheiro-grupos .barras.compacto li { grid-template-columns: minmax(0, 16em) minmax(48px, 1fr) auto; }
+.dinheiro-grupos .barras-rotulo small { display: block; color: var(--muted); font-size: 12px; }
+.dinheiro-grupos .comparacao-sub { color: var(--muted); margin: 0 0 10px; }
+@media (max-width: 700px) { .dinheiro-grupos .barras-rotulo small { display: none; } }   /* no celular, só o nome do grupo */
+
+.dinheiro-grupos a, .dinheiro-cand .muted a { color: var(--brilho); }

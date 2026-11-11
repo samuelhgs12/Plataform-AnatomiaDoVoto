@@ -2,11 +2,11 @@
 // cargo e lugar, sem React. Os dados vêm de /api/analises/municipios (cidades e estados), q1, q2 e q8.
 
 import { pontosPercentuais, type Resposta } from "./estatistica";
-import { reais } from "./format";
+import { brlCentavos, compacto, reais } from "./format";
 import { mediana, porteDe, PORTES, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
 
-/** As três abas. `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
-export type Aba = "gasto" | "resultado" | "publico";
+/** As três abas (e "eleitor": o gasto por eleitor apto, só uma medida do mapa). `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
+export type Aba = "gasto" | "resultado" | "publico" | "eleitor";
 export const ABAS: { chave: Aba; rotulo: string; numero: string; pergunta: string }[] = [
   { chave: "gasto", rotulo: "Gastos por vaga", numero: "Pergunta 1", pergunta: "Quanto as campanhas gastaram por vaga?" },
   { chave: "resultado", rotulo: "Gastos e resultado", numero: "Pergunta 2", pergunta: "Quem gastou mais se elegeu mais?" },
@@ -56,8 +56,17 @@ export function lerRecorte(sp: SP, op: { anos: number[]; ufs: string[]; municipi
 /** Eleições com prestação de contas no banco (não há receitas nem despesas antes de 2018). */
 export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
 
-/** O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais) e a medida da pergunta 2 × 8. */
-export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; medir: "recursos" | "publico" }
+/** O que pinta o mapa: o gasto por vaga (padrão), o gasto por eleitor apto ou a parte pública do dinheiro recebido. */
+export type Pintar = "vaga" | "eleitor" | "publico";
+export const PINTAR: { chave: Pintar; rotulo: string; aba: Aba; titulo: string }[] = [
+  { chave: "vaga", rotulo: "Gasto por vaga", aba: "gasto", titulo: "Quanto as campanhas gastaram por vaga" },
+  { chave: "eleitor", rotulo: "Gasto por eleitor", aba: "eleitor", titulo: "Quanto as campanhas gastaram por eleitor" },
+  { chave: "publico", rotulo: "Parte pública", aba: "publico", titulo: "Quanto do dinheiro das campanhas foi público" },
+];
+export const abaDe = (pintar: Pintar): Aba => PINTAR.find((p) => p.chave === pintar)!.aba;
+
+/** O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais), o que pinta o mapa e a medida da pergunta 2 × 8. */
+export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; pintar: Pintar; medir: "recursos" | "publico" }
 
 /**
  * Camada Dinheiro do mapa da página inicial: o ano (padrão: o último), um cargo que exista nele, o porte (só nas
@@ -69,7 +78,8 @@ export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
   const ano = ANOS_DINHEIRO.includes(pedido) ? pedido : ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1];
   const cargos = cargosDoAno(ano);
   const porte = ehMunicipal(ano) ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
-  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, medir: um(sp.medir) === "publico" ? "publico" : "recursos" };
+  const pintar = PINTAR.find((p) => p.chave === um(sp.pintar))?.chave ?? "vaga";
+  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, pintar, medir: um(sp.medir) === "publico" ? "publico" : "recursos" };
 }
 
 /**
@@ -79,8 +89,8 @@ export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
  * troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
  */
 export function hrefMapaDinheiro(
-  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; medir?: string },
-  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "medir", string | number | null>> = {},
+  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; medir?: string; ord?: string },
+  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "medir" | "ord", string | number | null>> = {},
   ancora = "mapa",
 ): string {
   const n = { ...atual, ...("uf" in novo ? { mun: undefined } : {}), ...novo };
@@ -92,7 +102,9 @@ export function hrefMapaDinheiro(
   if (n.uf) p.set("uf", String(n.uf));
   if (n.uf && n.mun && ehMunicipal(ano)) p.set("mun", String(n.mun));
   if (n.porte && ehMunicipal(ano)) p.set("porte", String(n.porte));
+  if (n.pintar && n.pintar !== "vaga" && PINTAR.some((x) => x.chave === n.pintar)) p.set("pintar", String(n.pintar));
   if (n.medir === "publico") p.set("medir", "publico");
+  if (n.ord && n.ord !== "votos" && ORDENS_CANDIDATOS.some((o) => o.chave === n.ord)) p.set("ord", String(n.ord));
   return `/?${p}#${ancora}`;
 }
 
@@ -116,6 +128,10 @@ export function valorCidade(r: LinhaResumo | undefined, aba: Aba, cargo: string)
   if (!r) return null;
   const prefeito = cargo === "Prefeito";
   if (aba === "gasto") return prefeito ? (r.prefeito_candidatos > 0 ? r.prefeito_gasto : null) : r.vereador_vagas > 0 ? r.vereador_gasto / r.vereador_vagas : null;
+  if (aba === "eleitor") {
+    const gasto = prefeito ? (r.prefeito_candidatos > 0 ? r.prefeito_gasto : null) : r.vereador_candidatos > 0 ? r.vereador_gasto : null;
+    return gasto !== null && r.eleitorado ? gasto / r.eleitorado : null;
+  }
   if (aba === "publico") {
     const [pub, rec] = prefeito ? [r.prefeito_publica, r.prefeito_receita] : [r.vereador_publica, r.vereador_receita];
     return rec > 0 ? pub / rec : null;
@@ -127,6 +143,8 @@ export function valorCidade(r: LinhaResumo | undefined, aba: Aba, cargo: string)
 /** Faixas de cor fixas e redondas (iguais em todos os anos), escolhidas pela distribuição real das cidades. */
 export function faixasDe(aba: Aba, cargo: string): number[] | null {
   if (aba === "gasto") return cargo === "Prefeito" ? [100_000, 250_000, 500_000, 1_000_000] : [2_000, 5_000, 10_000, 25_000];
+  // por eleitor apto: cortes redondos perto dos quartos da distribuição das cidades (2020 e 2024)
+  if (aba === "eleitor") return cargo === "Prefeito" ? [10, 20, 30, 40] : [3, 6, 10, 15];
   if (aba === "publico") return [0.2, 0.4, 0.6, 0.8];
   return cargo === "Prefeito" ? null : [0.2, 0.3, 0.4, 0.5];   // prefeito: venceu/perdeu, sem faixas
 }
@@ -144,6 +162,14 @@ export function legendaCidade(aba: Aba, cargo: string): { classe: string; texto:
   const sem = { classe: "sem", texto: aba === "resultado" && cargo === "Prefeito" ? "Não comparável" : "Não informado" };
   const f = faixasDe(aba, cargo);
   if (!f) return [{ classe: "q4", texto: "Quem mais gastou venceu" }, { classe: "q0", texto: "Perdeu" }, sem];
+  if (aba === "eleitor") {
+    return [
+      { classe: "q0", texto: `até R$ ${f[0]}` },
+      ...f.slice(1).map((v, i) => ({ classe: `q${i + 1}`, texto: `R$ ${f[i]}–${v}` })),
+      { classe: `q${f.length}`, texto: `R$ ${f[f.length - 1]} ou mais` },
+      sem,
+    ];
+  }
   const t = aba === "gasto" ? (v: number) => mil(v) : (v: number) => `${Math.round(v * 100)}%`;
   const pre = aba === "gasto" ? "R$ " : "";
   // intervalo curto quando as duas pontas têm a mesma unidade: "R$ 2–5 mil", "20–40%"; senão, "R$ 500 mil–1 mi"
@@ -163,6 +189,7 @@ export function legendaCidade(aba: Aba, cargo: string): { classe: string; texto:
 export function textoValor(v: number | null, aba: Aba, cargo: string): string {
   if (v === null) return "Não informado";
   if (aba === "gasto") return reais(v);
+  if (aba === "eleitor") return brlCentavos(v);
   if (aba === "resultado" && cargo === "Prefeito") return v === 1 ? "Venceu" : "Perdeu";
   return `${Math.round(v * 100)}%`;
 }
@@ -170,6 +197,7 @@ export function textoValor(v: number | null, aba: Aba, cargo: string): string {
 /** A unidade do valor de uma cidade, para ficar ao lado do número. */
 export function unidade(aba: Aba, cargo: string): string {
   if (aba === "gasto") return `por vaga de ${cargo.toLowerCase()}`;
+  if (aba === "eleitor") return `por eleitor apto, gastos pelas campanhas a ${cargo.toLowerCase()}`;
   if (aba === "publico") return `do que as campanhas a ${cargo.toLowerCase()} receberam veio de fundos públicos`;
   return ehMajoritario(cargo) ? `o candidato a ${cargo.toLowerCase()} que mais gastou` : `dos candidatos a ${cargo.toLowerCase()} com mais recursos se elegeram`;
 }
@@ -215,12 +243,13 @@ export const FAIXAS_PARTE_CIDADES = [0.5, 0.6, 0.7, 0.8];
  * municipios: gasto ÷ vagas; parte pública das receitas; prefeito: parte das disputas comparáveis em que quem mais
  * gastou venceu. A P2 de vereador e deputado vem da análise q2 (grupos), não daqui (null).
  */
-export function valorDoEstado(estados: { ano: number; uf: string; cargo: string; vagas: number; gasto: number; receita: number; receita_publica: number; disputas_maior: number | null; maior_venceu: number | null }[],
+export function valorDoEstado(estados: { ano: number; uf: string; cargo: string; vagas: number; gasto: number; receita: number; receita_publica: number; disputas_maior: number | null; maior_venceu: number | null; eleitorado?: number | null }[],
   ano: number, uf: string | undefined, aba: Aba, cargo: string): number | null {
   const sel = estados.filter((e) => e.ano === ano && e.cargo === cargo && e.uf !== "BR" && (!uf || e.uf === uf));
   if (!sel.length) return null;
-  const soma = (k: "vagas" | "gasto" | "receita" | "receita_publica" | "disputas_maior" | "maior_venceu") => sel.reduce((a, e) => a + (e[k] ?? 0), 0);
+  const soma = (k: "vagas" | "gasto" | "receita" | "receita_publica" | "disputas_maior" | "maior_venceu" | "eleitorado") => sel.reduce((a, e) => a + (e[k] ?? 0), 0);
   if (aba === "gasto") return soma("vagas") > 0 ? soma("gasto") / soma("vagas") : null;
+  if (aba === "eleitor") return soma("eleitorado") > 0 ? soma("gasto") / soma("eleitorado") : null;
   if (aba === "publico") return soma("receita") > 0 ? soma("receita_publica") / soma("receita") : null;
   if (cargo !== "Prefeito") return null;
   return soma("disputas_maior") > 0 ? soma("maior_venceu") / soma("disputas_maior") : null;
@@ -277,12 +306,13 @@ export function contaGastoEstado(estados: { ano: number; uf: string; cargo: stri
  * Legenda com os limites escritos (para as faixas dos estados, que vêm da distribuição dos seis): "até R$ 40 mil",
  * "R$ 40 mil–R$ 60 mil"... e "Não informado". `fmt` escreve um valor da camada.
  */
-export function legendaPorFaixas(faixas: number[], fmt: (v: number) => string): { classe: string; texto: string }[] {
+export function legendaPorFaixas(faixas: number[], fmt: (v: number) => string, classes?: string[]): { classe: string; texto: string }[] {
   if (!faixas.length) return [{ classe: "sem", texto: "Não informado" }];
+  const cl = (i: number) => classes?.[i] ?? `q${i}`;
   return [
-    { classe: "q0", texto: `até ${fmt(faixas[0])}` },
-    ...faixas.slice(1).map((v, i) => ({ classe: `q${i + 1}`, texto: `${fmt(faixas[i])}–${fmt(v)}` })),
-    { classe: `q${faixas.length}`, texto: `${fmt(faixas[faixas.length - 1])} ou mais` },
+    { classe: cl(0), texto: `até ${fmt(faixas[0])}` },
+    ...faixas.slice(1).map((v, i) => ({ classe: cl(i + 1), texto: `${fmt(faixas[i])}–${fmt(v)}` })),
+    { classe: cl(faixas.length), texto: `${fmt(faixas[faixas.length - 1])} ou mais` },
     { classe: "sem", texto: "Não informado" },
   ];
 }
@@ -312,6 +342,12 @@ export function valorDoPorte(resumo: LinhaResumo[], ano: number, uf: string | un
     const gasto = comDado.reduce((a, r) => a + (prefeito ? r.prefeito_gasto : r.vereador_gasto), 0);
     const vagas = prefeito ? comDado.length : comDado.reduce((a, r) => a + r.vereador_vagas, 0);
     return { valor: vagas > 0 ? gasto / vagas : null, n: comDado.length, conta: vagas > 0 ? { gasto, vagas } : null };
+  }
+  if (aba === "eleitor") {
+    const comDado = sel.filter((r) => (prefeito ? r.prefeito_candidatos > 0 : r.vereador_candidatos > 0) && r.eleitorado);
+    const gasto = comDado.reduce((a, r) => a + (prefeito ? r.prefeito_gasto : r.vereador_gasto), 0);
+    const eleitores = comDado.reduce((a, r) => a + (r.eleitorado ?? 0), 0);
+    return { valor: eleitores > 0 ? gasto / eleitores : null, n: comDado.length, conta: null };
   }
   if (aba === "publico") {
     const rec = soma((r) => (prefeito ? r.prefeito_receita : r.vereador_receita)), pub = soma((r) => (prefeito ? r.prefeito_publica : r.vereador_publica));
@@ -357,4 +393,134 @@ export function mediaPorCandidato(fontes: Parameters<typeof mediasPorResultado>[
     publico: cand ? (e.publico * e.candidaturas + n.publico * n.candidaturas) / cand : 0,
     privado: cand ? (e.privado * e.candidaturas + n.privado * n.candidaturas) / cand : 0,
   };
+}
+
+// ---------- a leitura do número: cobertura, referência, eleição anterior ----------
+
+/** Candidaturas do cargo no lugar e quantas têm prestação de contas final na base (as outras entram com zero nas somas). */
+export interface Contas { total: number; com: number }
+export function contasDaCidade(r: LinhaResumo | undefined, cargo: string): Contas | null {
+  if (!r) return null;
+  const [total, sem] = cargo === "Prefeito" ? [r.prefeito_candidatos, r.prefeito_sem_prestacao] : [r.vereador_candidatos, r.vereador_sem_prestacao];
+  return total > 0 ? { total, com: total - (sem ?? 0) } : null;
+}
+export function contasDoEstado(estados: { ano: number; uf: string; cargo: string; candidatos: number; sem_prestacao: number }[], ano: number, uf: string | undefined, cargo: string): Contas | null {
+  const sel = estados.filter((e) => e.ano === ano && e.cargo === cargo && e.uf !== "BR" && (!uf || e.uf === uf));
+  const total = sel.reduce((a, e) => a + e.candidatos, 0), sem = sel.reduce((a, e) => a + (e.sem_prestacao ?? 0), 0);
+  return total > 0 ? { total, com: total - sem } : null;
+}
+/** Com um porte escolhido: as candidaturas das cidades daquele porte. */
+export function contasDoPorte(resumo: LinhaResumo[], ano: number, uf: string | undefined, porte: Porte, cargo: string): Contas | null {
+  const sel = resumo.filter((r) => r.ano === ano && (!uf || r.uf === uf) && porteDe(r.eleitorado)?.chave === porte);
+  const partes = sel.flatMap((r) => contasDaCidade(r, cargo) ?? []);
+  const total = partes.reduce((a, c) => a + c.total, 0), com = partes.reduce((a, c) => a + c.com, 0);
+  return total > 0 ? { total, com } : null;
+}
+
+/**
+ * A cobertura escrita, para ficar junto do número: quantas candidaturas têm prestação final na base. "Na base" é o
+ * que dá para afirmar: não quer dizer contas aprovadas. Sem prestação, o gasto é desconhecido e a soma pode estar menor.
+ */
+export function fraseCobertura(c: Contas | null): string | null {
+  if (!c) return null;
+  const inteiro = (n: number) => n.toLocaleString("pt-BR");
+  if (c.com >= c.total) return `Prestação de contas final na base para todas as ${inteiro(c.total)} candidaturas.`;
+  const sem = c.total - c.com;
+  return `Prestação de contas final na base para ${inteiro(c.com)} de ${inteiro(c.total)} candidaturas (${inteiro(sem)} sem: o total pode estar incompleto).`;
+}
+
+/** Diferença relativa de um valor para a referência (null sem referência ou referência zero): 0,35 = 35% acima. */
+export function diferencaRelativa(valor: number | null, referencia: number | null): number | null {
+  if (valor === null || referencia === null || referencia === 0) return null;
+  return valor / referencia - 1;
+}
+
+/** "35% acima", "12% abaixo" ou "igual" (até 0,5% de diferença). */
+export function textoDiferenca(d: number): string {
+  const p = Math.round(Math.abs(d) * 100);
+  return p === 0 ? "igual à referência" : `${p}% ${d > 0 ? "acima" : "abaixo"}`;
+}
+
+/** A eleição anterior do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022), se houver dinheiro dela na base. */
+export const anoAnterior = (ano: number): number | null => (ANOS_DINHEIRO.includes(ano - 4) ? ano - 4 : null);
+
+/** Variação nominal (sem inflação) de um valor para o da eleição anterior, para a frase "em 2020: R$ X (+12%)". */
+export function variacaoNominal(atual: number | null, anterior: number | null): number | null {
+  return diferencaRelativa(atual, anterior);
+}
+
+/** O que a pergunta 1 soma a mais: gasto de campanhas ao cargo que não chegaram a disputar (null quando não há). */
+export function foraDaDisputa(estados: { ano: number; uf: string; cargo: string; nao_disputou_com_gasto?: number | null; gasto_nao_disputou?: number | null }[], ano: number, uf: string | undefined, cargo: string): { n: number; gasto: number } | null {
+  const sel = estados.filter((e) => e.ano === ano && e.cargo === cargo && e.uf !== "BR" && (!uf || e.uf === uf));
+  const n = sel.reduce((a, e) => a + (e.nao_disputou_com_gasto ?? 0), 0), gasto = sel.reduce((a, e) => a + (e.gasto_nao_disputou ?? 0), 0);
+  return n > 0 && gasto > 0 ? { n, gasto } : null;
+}
+
+// ---------- as cores dos estados ----------
+
+/** Com só seis estados, três faixas (terços) dizem mais que cinco: as classes de cor das pontas e do meio. */
+export const TERCOS = ["q0", "q2", "q4"];
+/** Classe de cor de um estado pelas faixas dos terços (os cortes de `quantis(valores, 3)`). */
+export const corTerco = (v: number | null, faixas: number[]) => (v === null ? "sem" : TERCOS[Math.min(2, faixas.filter((c) => v >= c).length)]);
+/** O valor escrito na legenda e no selo do estado, para a medida que pinta o mapa. */
+export function textoCurto(v: number, aba: Aba): string {
+  if (aba === "eleitor") return `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: v < 10 ? 1 : 0 })}`;
+  if (aba === "publico") return `${Math.round(v * 100)}%`;
+  return `R$ ${compacto(v)}`;
+}
+
+// ---------- os candidatos ----------
+
+export const ORDENS_CANDIDATOS = [
+  { chave: "votos", rotulo: "Mais votados" },
+  { chave: "gasto", rotulo: "Que mais gastaram" },
+  { chave: "recebido", rotulo: "Que mais receberam" },
+  { chave: "publico", rotulo: "Mais dinheiro público" },
+] as const;
+export type OrdemCandidatos = (typeof ORDENS_CANDIDATOS)[number]["chave"];
+export const ordemCandidatos = (v: string | undefined): OrdemCandidatos => ORDENS_CANDIDATOS.find((o) => o.chave === v)?.chave ?? "votos";
+
+/**
+ * Ordena os candidatos de uma lista pela medida escolhida, do maior para o menor; quem não tem prestação de contas
+ * final vai para o fim nas ordens de dinheiro (valor desconhecido, não zero). Empate: mais votos, depois o nome.
+ */
+export function ordenarCandidatos<T extends { votos: number; gasto: number; receita: number; receita_publica: number; prestou?: boolean | null; nome_urna?: string | null }>(linhas: T[], por: OrdemCandidatos): T[] {
+  const chave = { votos: "votos", gasto: "gasto", recebido: "receita", publico: "receita_publica" }[por] as "votos" | "gasto" | "receita" | "receita_publica";
+  const semDado = (c: T) => (por !== "votos" && c.prestou === false ? 1 : 0);
+  return [...linhas].sort((a, b) => semDado(a) - semDado(b) || b[chave] - a[chave] || b.votos - a.votos || (a.nome_urna ?? "").localeCompare(b.nome_urna ?? "", "pt-BR"));
+}
+
+// ---------- onde o dinheiro foi gasto ----------
+
+/** Uma linha da análise dinheiro (tabela despesas): o gasto de um grupo de categorias do TSE num lugar. */
+export interface LinhaDespesa { ano: number; cargo: string; uf: string; id_municipio: number | null; grupo: string; valor: number; despesas: number }
+
+/** Os grupos de categoria do TSE, na ordem da legenda, com o nome para o leitor. */
+export const GRUPOS_DESPESA: { chave: string; rotulo: string; detalhe: string }[] = [
+  { chave: "propaganda_fisica", rotulo: "Propaganda impressa e de rua", detalhe: "materiais impressos, adesivos, carros de som, jornais" },
+  { chave: "propaganda_digital", rotulo: "Propaganda na internet", detalhe: "impulsionamento e páginas na internet" },
+  { chave: "propaganda_audiovisual", rotulo: "Rádio, TV e jingles", detalhe: "programas de rádio e TV, vídeos, jingles" },
+  { chave: "mobilizacao", rotulo: "Militância, comícios e eventos", detalhe: "mobilização de rua, comícios, eventos" },
+  { chave: "pessoal", rotulo: "Pessoal", detalhe: "salários e encargos" },
+  { chave: "terceiros", rotulo: "Serviços de terceiros", detalhe: "serviços prestados por terceiros" },
+  { chave: "profissionais", rotulo: "Advogados, contadores e pesquisas", detalhe: "serviços advocatícios e contábeis, pesquisas" },
+  { chave: "transporte", rotulo: "Transporte e combustível", detalhe: "veículos, combustível, passagens" },
+  { chave: "estrutura", rotulo: "Comitê e estrutura", detalhe: "aluguel, energia, telefone, materiais, alimentação" },
+  { chave: "outros", rotulo: "Outros", detalhe: "taxas, multas, doações de bens e o que não se encaixa" },
+];
+
+/**
+ * A composição das despesas de um recorte (eleição, cargo, estado ou os seis, cidade), em grupos do maior para o menor,
+ * com a parte de cada um no total. Nas gerais as linhas são por estado (id_municipio nulo); nas municipais, por cidade,
+ * e o estado é a soma delas. Vazio sem despesas.
+ */
+export function composicaoDespesas(linhas: LinhaDespesa[], f: { ano: number; cargo: string; uf?: string; mun?: number }): { grupo: string; rotulo: string; detalhe: string; valor: number; despesas: number; parte: number }[] {
+  const sel = linhas.filter((l) => l.ano === f.ano && l.cargo === f.cargo && (!f.uf || l.uf === f.uf) && (f.mun === undefined || l.id_municipio === f.mun));
+  const total = sel.reduce((a, l) => a + l.valor, 0);
+  if (total <= 0) return [];
+  return GRUPOS_DESPESA.map((g) => {
+    const do_ = sel.filter((l) => l.grupo === g.chave);
+    const valor = do_.reduce((a, l) => a + l.valor, 0);
+    return { grupo: g.chave, rotulo: g.rotulo, detalhe: g.detalhe, valor, despesas: do_.reduce((a, l) => a + l.despesas, 0), parte: valor / total };
+  }).filter((g) => g.valor > 0).sort((a, b) => b.valor - a.valor);
 }

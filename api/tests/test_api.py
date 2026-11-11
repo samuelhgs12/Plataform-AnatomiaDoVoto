@@ -391,7 +391,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["municipios", "q1", "q10", "q2", "q5", "q8", "q9"]
+    assert client.get("/api/analises").json() == ["dinheiro", "municipios", "q1", "q10", "q2", "q5", "q8", "q9"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -440,9 +440,25 @@ def test_eleitos_do_estado(client):
     assert client.get("/api/estados/MG/eleitos?ano=2022").json() == []   # Maria disputou e não se elegeu
 
 
+def test_analise_dinheiro_despesas_em_grupos(client):
+    """Onde o dinheiro foi gasto: grupos de categoria do TSE por eleição, cargo, UF e município; sem transferências nem
+    prestação parcial. 'Serviços advocatícios' cai no grupo dos serviços profissionais."""
+    t = client.get("/api/analises/dinheiro?tabela=despesas").json()["despesas"]
+    assert t["colunas"] == ["ano", "cargo", "uf", "id_municipio", "grupo", "valor", "despesas"]
+    linhas = {tuple(l[:5]): l[5:] for l in t["linhas"]}
+    assert linhas[(2020, "Vereador", "MG", 1, "propaganda_fisica")] == [3000.0, 1]     # a parcial (500) fica de fora
+    assert linhas[(2020, "Vereador", "MG", 1, "propaganda_digital")] == [1500.0, 1]
+    assert linhas[(2020, "Vereador", "MG", 1, "profissionais")] == [1000.0, 1]
+    assert linhas[(2020, "Prefeito", "PE", 2, "propaganda_digital")] == [4000.0, 1]
+    assert not any(l[4] == "transferencia" for l in t["linhas"])
+    assert sum(v[0] for v in linhas.values()) == 3000 + 1500 + 1000 + 4000 + 1000
+
+
 def test_analise_municipios(client):
     dados = client.get("/api/analises/municipios").json()
     assert set(dados) == {"municipios", "resumo", "estados"}
+    # estados: eleitorado (gasto por eleitor) e o gasto de quem não chegou a disputar (o que a pergunta 1 soma a mais)
+    assert {"eleitorado", "nao_disputou_com_gasto", "gasto_nao_disputou"} <= set(dados["estados"]["colunas"])
     resumo = [dict(zip(dados["resumo"]["colunas"], l)) for l in dados["resumo"]["linhas"]]
     # Alvorada (MG) 2020: Maria eleita vereadora; gasto sem a transferência de 700 nem a prestação parcial
     alvorada = next(r for r in resumo if r["id_municipio"] == 1 and r["ano"] == 2020)
