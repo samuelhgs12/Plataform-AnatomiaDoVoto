@@ -27,6 +27,12 @@ INSERT INTO candidatura (id_candidatura, ano, ue, sequencial, id_eleicao, id_can
   (8, 2024, '33333', 'S8', 8, 4, 2, 3, 'RJ', 'MARIANA',          '55777', 34, 6, true),
   (9, 2020, '22222', 'S9', 9, 2, 3, 2, 'PE', 'JOÃO DO COMERCIO', '13', 49, 1, true),
   (10, 2022, 'MG', 'S10', 7, NULL, 4, NULL, 'MG', 'ZÉ DA SERRA', '22100', 50, 6, true);   -- rival de Maria (mapa do candidato)
+-- grau de instrução (pergunta 4): os níveis da escala comum e a instrução de algumas candidaturas. Antes das tabelas que
+-- apontam para candidatura: o DuckDB não deixa atualizar uma linha já referenciada por chave estrangeira
+INSERT INTO nivel_instrucao (id_nivel_instrucao, descricao_tse, nivel) VALUES (8, 'ENSINO MÉDIO COMPLETO', 3), (16, 'NÃO INFORMADO', NULL), (17, 'SUPERIOR COMPLETO', 4);
+UPDATE candidatura SET id_nivel_instrucao = 17 WHERE id_candidatura IN (2, 3, 7);
+UPDATE candidatura SET id_nivel_instrucao = 8 WHERE id_candidatura IN (5, 9, 10);
+UPDATE candidatura SET id_nivel_instrucao = 16 WHERE id_candidatura = 8;
 INSERT INTO resultado_candidatura (id_resultado, id_candidatura, turno, resultado, votos) VALUES
   (1, 1, 1, 'ELEITO', 1200), (2, 2, 1, 'ELEITO', 1500), (3, 3, 1, 'NÃO ELEITO', 30000), (4, 4, 1, 'ELEITO', 9000),
   (5, 5, 1, 'ELEITO', 11000), (6, 6, 1, 'ELEITO POR MÉDIA', 80000), (7, 7, 1, 'ELEITO', 120000), (8, 8, 1, 'SUPLENTE', 800), (9, 9, 1, 'ELEITO', 500),
@@ -53,3 +59,8 @@ INSERT INTO votos_partido_municipio (id_votos, id_eleicao, id_partido, id_munici
 -- votos por município (mapa do candidato): Maria (3) só em Alvorada; o rival (10) nos dois municípios de MG
 INSERT INTO votos_candidatura_municipio (id_votos_candidatura, id_candidatura, id_municipio, turno, votos) VALUES
   (1, 3, 1, 1, 30000), (2, 10, 1, 1, 3000), (3, 10, 4, 1, 2000);
+-- população por grau de instrução no Censo 2022 (pergunta 4)
+INSERT INTO populacao_instrucao (id_municipio, ano_referencia, nivel, grupo_idade, sexo, populacao) VALUES
+  (1, 2022, 1, '18 a 19', 'FEMININO', 35), (1, 2022, 1, '20 a 24', 'MASCULINO', 25), (1, 2022, 4, '20 a 24', 'FEMININO', 40),
+  (4, 2022, 4, '20 a 24', 'FEMININO', 99),   -- sem cod_ibge: fora do mapa
+  (1, 2010, 4, '20 a 24', 'FEMININO', 7);    -- outro Censo

@@ -13,6 +13,10 @@ import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { fotoDaBusca, fotoDaPessoa, fotoDoPerfil, urlFoto } from "../src/lib/foto-candidato";
 import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
+import {
+  MEDIDAS, contarNaMedida, grauDoEleito, linhasNiveis, medidaDe, parteNaMedida, perfilEleitos, perfilPopulacao, porMunicipio, predominante, rotuloNivel,
+  separarEleitos, type EleitoInstrucao, type LinhaEleitosInstrucao, type LinhaPopulacaoInstrucao, type LinhaPrefeito,
+} from "../src/lib/instrucao";
 import { respostaSucesso, resumoCampanhas, semPrestacao, SEM_PRESTACAO, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
 
 describe("format", () => {
@@ -522,6 +526,7 @@ describe("resumoCamadas", () => {
     expect(resumoCamadas({ ver: "abstencao", comparativo: "IDHM" })).toBe("Abstenção × IDHM");
     expect(resumoCamadas({ ver: "legenda", partido: "PSOL" })).toBe("Voto de legenda · PSOL");
     expect(resumoCamadas({ ver: "candidato", comparativo: "IDHM" })).toBe("Votos de um candidato");
+    expect(resumoCamadas({ ver: "instrucao", instrucao: "Superior completo" })).toBe("Instrução · Superior completo");
   });
 });
 
@@ -645,5 +650,84 @@ describe("semPrestacao (pergunta 8)", () => {
     expect(semPrestacao(linhas, { ano: 2022 })).toBe(8);
     expect(semPrestacao(linhas, { ano: 2022 }, ["Senador"])).toBe(2);
     expect(sucessoPorFaixa(linhas, { ano: 2022 }).reduce((a, g) => a + g.candidaturas, 0)).toBe(10);
+  });
+});
+
+describe("instrução (pergunta 4)", () => {
+  const e = (o: Partial<LinhaEleitosInstrucao>): LinhaEleitosInstrucao => ({ ano: 2024, cargo: "Vereador", uf: "MG", cod_ibge: "3100001", nivel: 4, eleitos: 1, ...o });
+  const pp = (o: Partial<LinhaPopulacaoInstrucao>): LinhaPopulacaoInstrucao => ({ uf: "MG", cod_ibge: "3100001", nivel: 1, populacao: 0, ...o });
+  const pf = (o: Partial<LinhaPrefeito>): LinhaPrefeito => ({ ano: 2024, uf: "MG", cod_ibge: "3100001", nome_urna: "ZÉ", nivel: 4, ...o });
+  // Alvorada (MG): 10 eleitos (1 prefeito com superior; 9 vereadores, 3 com superior); Bela Vista (PE): 2 vereadores
+  const eleitos = [
+    e({ cargo: "Prefeito", nivel: 4 }), e({ nivel: 4, eleitos: 3 }), e({ nivel: 3, eleitos: 4 }), e({ nivel: 1, eleitos: 2 }),
+    e({ uf: "PE", cod_ibge: "2600002", nivel: 2, eleitos: 2 }), e({ ano: 2020, nivel: 1, eleitos: 9 }),
+  ];
+  // Alvorada: 100 pessoas, a metade até o fundamental incompleto, 10 com superior; Bela Vista: 50 pessoas
+  const pop = [pp({ nivel: 1, populacao: 50 }), pp({ nivel: 3, populacao: 40 }), pp({ nivel: 4, populacao: 10 }), pp({ uf: "PE", cod_ibge: "2600002", nivel: 2, populacao: 30 }), pp({ uf: "PE", cod_ibge: "2600002", nivel: 4, populacao: 20 })];
+  const prefeitos = [pf({}), pf({ ano: 2020, nivel: 3 }), pf({ uf: "PE", cod_ibge: "2600002", nivel: null })];
+  const superior = medidaDe("superior");
+
+  it("medidaDe e rotuloNivel: chave inválida volta a superior completo; nível nulo não tem rótulo", () => {
+    expect(MEDIDAS.map((m) => m.niveis)).toEqual([[1], [2, 3, 4], [3, 4], [4]]);   // acumulados, do menor ao maior grau
+    expect(medidaDe("medio").niveis).toEqual([3, 4]);
+    expect(medidaDe("x").chave).toBe("superior");
+    expect(rotuloNivel(3)).toBe("Médio completo");
+    expect(rotuloNivel(null)).toBeNull();
+  });
+
+  it("perfilEleitos: soma por nível no ano e no lugar; com cargo, só os dele", () => {
+    expect(perfilEleitos(eleitos, { ano: 2024, ibge: "3100001" })).toEqual({ total: 10, niveis: [2, 0, 4, 4] });
+    expect(perfilEleitos(eleitos, { ano: 2024, uf: "MG", cargo: "Prefeito" }).total).toBe(1);
+    expect(perfilEleitos(eleitos, { ano: 2024 }).total).toBe(12);   // os seis estados
+    expect(perfilEleitos(eleitos, { ano: 2020 }).total).toBe(9);
+  });
+
+  it("perfilPopulacao, parteNaMedida e predominante", () => {
+    const p = perfilPopulacao(pop, { ibge: "3100001" });
+    expect(p).toEqual({ total: 100, niveis: [50, 0, 40, 10] });
+    expect(parteNaMedida(p, superior)).toBeCloseTo(0.1);
+    expect(parteNaMedida(p, medidaDe("medio"))).toBeCloseTo(0.5);
+    expect(parteNaMedida(p, medidaDe("fundamental"))).toBeCloseTo(0.5);
+    expect(parteNaMedida(p, medidaDe("sem-fundamental"))).toBeCloseTo(0.5);
+    expect(predominante(p)).toBe(1);
+    expect(predominante({ total: 4, niveis: [0, 2, 2, 0] })).toBe(2);   // empate: o mais baixo
+    expect(parteNaMedida({ total: 0, niveis: [0, 0, 0, 0] }, superior)).toBeNull();
+    expect(predominante({ total: 0, niveis: [0, 0, 0, 0] })).toBeNull();
+  });
+
+  it("porMunicipio: a taxa da população na medida, o nível mais comum e o prefeito eleito do ano", () => {
+    const m = porMunicipio(pop, prefeitos, { ano: 2024, medida: superior });
+    expect(m.get("3100001")).toEqual({ taxa: 0.1, predominante: 1, prefeito: prefeitos[0] });
+    expect(m.get("2600002")!.taxa).toBeCloseTo(0.4);
+    expect(m.get("2600002")!.predominante).toBe(2);
+    expect(m.get("2600002")!.prefeito!.nivel).toBeNull();   // não informou
+    expect(porMunicipio(pop, prefeitos, { ano: 2020, medida: superior }).get("2600002")!.prefeito).toBeNull();   // sem prefeito eleito
+  });
+
+  it("linhasNiveis: população, todos os eleitos e, fora do município, cada cargo; sem linhas vazias", () => {
+    const uf = linhasNiveis(eleitos, pop, { ano: 2024, uf: "MG" });
+    expect(uf.map((l) => l.chave)).toEqual(["populacao", "eleitos", "cargo-Prefeito", "cargo-Vereador"]);
+    expect(uf[0].partes).toEqual([0.5, 0, 0.4, 0.1]);
+    expect(linhasNiveis(eleitos, pop, { ano: 2024, ibge: "3100001" }).map((l) => l.chave)).toEqual(["populacao", "eleitos"]);
+    // Bela Vista: só vereadores eleitos nos dados, e a linha deles repetiria a de todos
+    expect(linhasNiveis(eleitos, pop, { ano: 2024, uf: "PE" }).map((l) => l.chave)).toEqual(["populacao", "eleitos"]);
+  });
+
+  it("grauDoEleito: o rótulo do TSE em letra de frase; sem ele, o do nível", () => {
+    expect(grauDoEleito({ escolaridade: "ENSINO MÉDIO COMPLETO", nivel: 3 })).toBe("Ensino médio completo");
+    expect(grauDoEleito({ escolaridade: "LÊ E ESCREVE", nivel: 1 })).toBe("Lê e escreve");
+    expect(grauDoEleito({ escolaridade: null, nivel: 4 })).toBe("Superior completo");
+    expect(grauDoEleito({ escolaridade: null, nivel: null })).toBe("Não informado");
+  });
+
+  it("separarEleitos e contarNaMedida", () => {
+    const el = (o: Partial<EleitoInstrucao>): EleitoInstrucao => ({ cargo: "Vereador", id_candidato: 1, id_candidatura: 1, nome_urna: "A", partido: "PT", ano: 2024, ue: "11111", sequencial: "1", escolaridade: null, nivel: 4, votos: 10, ...o });
+    const lista = [el({ cargo: "Prefeito", id_candidatura: 9 }), el({ id_candidatura: 2 }), el({ id_candidatura: 3, nivel: 3 }), el({ id_candidatura: 4, nivel: null })];
+    const { prefeito, vereadores } = separarEleitos(lista);
+    expect(prefeito!.id_candidatura).toBe(9);
+    expect(vereadores.map((v) => v.id_candidatura)).toEqual([2, 3, 4]);
+    expect(contarNaMedida(vereadores, medidaDe("superior"))).toEqual({ n: 1, de: 2 });   // quem não informou não conta
+    expect(contarNaMedida(vereadores, medidaDe("medio"))).toEqual({ n: 2, de: 2 });
+    expect(separarEleitos([]).prefeito).toBeNull();
   });
 });
