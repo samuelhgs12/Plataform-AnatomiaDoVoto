@@ -97,7 +97,7 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
             <h4>Gasto por vaga</h4>
             <BarrasH compacto titulo={`Gasto por vaga de ${cargo} em cada estado, ${ano}`}
               linhas={estadosGasto.map((e) => ({ chave: e.uf, rotulo: e.nome, valor: e.valor ?? 0, classe: !uf || uf === e.uf ? "pub" : "fx2",
-                texto: e.valor === null ? "Não informado" : reais(e.valor), subtexto: e.conta ? `${reais(e.conta.gasto)} ÷ ${inteiro(e.conta.vagas)} vagas` : "",
+                texto: e.valor === null ? "Não informado" : reais(e.valor), subtexto: !noite && e.conta ? `${reais(e.conta.gasto)} ÷ ${inteiro(e.conta.vagas)} vagas` : "",
                 href: hrefUf(e.uf), atual: uf === e.uf }))} />
           </div>}
           <div className="dinheiro-barras">

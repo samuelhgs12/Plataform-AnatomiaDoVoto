@@ -2059,7 +2059,6 @@ a.q-ver:active { transform: scale(0.98); }
 .camadas .segmentos a:has(small) { flex-direction: column; gap: 0; line-height: 1.15; }
 .camada-ir { display: block; margin-top: 4px; padding: 10px 12px; border-radius: 8px; background: var(--brilho); color: var(--noite); font-weight: 600; font-size: 14px; text-align: center; text-decoration: none; }
 .camada-ir:hover { filter: brightness(1.06); }
-#dinheiro-painel .painel-num { font-size: clamp(30px, 2vw + 12px, 46px); overflow-wrap: anywhere; }   /* "R$ 28 milhões" cabe no cabeçalho */
 
 /* camada Dinheiro: cartão do lugar por cima do mapa (aparece no clique, sem rolar) e aviso enquanto a página troca */
 .cartao-lugar { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); z-index: 3; width: min(270px, 34%); padding: 16px 18px; border-radius: 12px;
@@ -2082,18 +2081,12 @@ a.q-ver:active { transform: scale(0.98); }
 .palco-dinheiro:has(.cartao-lugar) .lupa-dica { display: none; }   /* a dica da roda ficaria atrás do cartão */
 
 /* camada Dinheiro: o que pinta o mapa (chips na base do mapa), a ordem dos candidatos, a cobertura e os grupos de despesa */
-.palco-dinheiro .palco-escolhas { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
-.palco-dinheiro .pintar .chip { background: var(--noite2); color: var(--sobre-noite); border-color: transparent; }
-.palco-dinheiro .pintar .chip.on { background: var(--brilho); color: var(--noite); }
 .ord-cand { margin: 6px 0 10px; }
 .bloco.noite .chips .chip { background: var(--noite2); color: var(--fg); border-color: transparent; }
 .bloco.noite .chips .chip.on { background: var(--brilho); color: var(--noite); }
-.cobertura-aviso { color: var(--amarelo-400); }
 .cartao-aviso { color: var(--amarelo-400); }
-.painel-cab .pequeno a { color: inherit; text-decoration: underline dotted; }
 .dinheiro-grupos .barras.compacto li { grid-template-columns: minmax(0, 16em) minmax(48px, 1fr) auto; }
 .dinheiro-grupos .barras-rotulo small { display: block; color: var(--muted); font-size: 12px; }
-.dinheiro-grupos .comparacao-sub { color: var(--muted); margin: 0 0 10px; }
 @media (max-width: 700px) { .dinheiro-grupos .barras-rotulo small { display: none; } }   /* no celular, só o nome do grupo */
 
 .dinheiro-grupos a, .dinheiro-cand .muted a { color: var(--brilho); }
@@ -2102,21 +2095,73 @@ a.q-ver:active { transform: scale(0.98); }
 .painel-nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
 .painel-nav a { padding: 6px 12px; border-radius: 999px; background: var(--panel); color: var(--fg); font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid var(--line); }
 .painel-nav a:hover { background: var(--panel2); }
-.fichas-dinheiro { list-style: none; margin: 12px 0 10px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.fichas-dinheiro li { background: var(--noite3); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.fichas-dinheiro li > a { display: contents; color: inherit; text-decoration: none; }
-.fichas-dinheiro small { font-size: 12px; color: var(--muted); line-height: 1.25; }
-.fichas-dinheiro b { font-size: 18px; line-height: 1.15; overflow-wrap: anywhere; }
-.fichas-dinheiro .ficha-nota { font-size: 12px; color: var(--muted); }
-.fichas-dinheiro .ficha-delta { font-size: 12px; font-weight: 600; color: var(--muted); }
-.fichas-dinheiro .ficha-delta.sobe { color: var(--brilho); }
-.fichas-dinheiro .ficha-delta.desce { color: var(--q1); }
-.fichas-dinheiro .ficha-acao { font-size: 12px; color: var(--brilho); text-decoration: underline dotted; }
-.fichas-dinheiro li:has(> a):hover { background: color-mix(in srgb, var(--brilho) 14%, var(--noite3)); }
-.painel-cab .cobertura { margin-top: 4px; }
-.origem-destino { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px 32px; }
-.origem-destino h4 { font-size: 16px; margin: 8px 0 4px; color: var(--fg); }
-.origem-destino .barras.compacto li { grid-template-columns: minmax(0, 12em) minmax(48px, 1fr) auto; }
-@media (max-width: 900px) { .origem-destino { grid-template-columns: 1fr; } }
-.palco-dinheiro .escala-nota { flex-basis: 100%; order: 1; margin: -6px 0 0; font-size: 12.5px; color: var(--noite-muted); max-width: 46ch; }   /* logo abaixo da legenda */
-.palco-dinheiro .palco-base > .legenda-q { order: 0; } .palco-dinheiro .palco-base > .palco-escolhas { order: 2; }
+
+/* camada Dinheiro, leitura de relance: a legenda com título, o cartão em selos, o cabeçalho do painel, os números grandes,
+   as notas em selos e as barras 100% de origem e destino. Rótulos pequenos em caixa alta; números grandes e tabulares. */
+.legenda-dinheiro { display: grid; gap: 8px; }
+.legenda-dinheiro .legenda-q { gap: 4px; }
+.legenda-dinheiro .legenda-q li { padding-right: 10px; }
+.legenda-titulo { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 13px; font-weight: 600; color: var(--sobre-noite); }
+.legenda-titulo span { font-size: 12px; font-weight: 500; color: var(--noite-muted); cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
+.cartao-selos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.cartao-selos:empty { display: none; }
+.cartao-selos span { padding: 3px 10px; border-radius: 999px; background: var(--noite3); font-size: 12.5px; font-weight: 600; }
+.cartao-selos .cartao-aviso { cursor: help; }
+.cartao-valor { line-height: 1.35; }
+
+.din-cab { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding: 12px 4px 4px; }
+.din-cab h2 { margin: 4px 0 0; font-size: clamp(30px, 1.6vw + 16px, 46px); font-weight: 700; line-height: 1.02; letter-spacing: -0.03em; }
+.din-cab .escolha-mun { min-width: min(280px, 100%); }
+.din-kicker, .din-kpi small, .empilhada figcaption span { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+.din-kicker { margin: 0; color: var(--muted); }
+
+.din-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(118px, auto); gap: var(--gap); }
+.din-kpi { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border-radius: var(--raio); background: var(--noite); color: var(--sobre-noite); text-decoration: none; }
+.din-kpi small { color: var(--noite-muted); line-height: 1.3; }
+.din-kpi b { font-size: 28px; font-weight: 650; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.din-kpi > span { margin-top: auto; font-size: 13px; color: var(--noite-muted); }
+.din-kpi-principal { grid-column: span 2; grid-row: span 2; justify-content: center; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brilho) 45%, transparent), inset 0 4px 0 var(--brilho); }
+.din-kpi-principal small { font-size: 13px; }
+.din-kpi-principal > span { margin-top: 0; font-size: 15px; }
+.din-kpi-principal b { font-size: clamp(44px, 3vw + 16px, 76px); font-weight: 700; letter-spacing: -0.04em; color: var(--brilho); }
+.din-kpi-link { transition: background-color var(--t-hover) ease; }
+.din-kpi-link:hover { background: var(--noite2); }
+.din-kpi-link > span { color: var(--brilho); font-weight: 600; }
+.din-kpi .delta.sobe { color: var(--brilho); }
+.din-kpi .delta.desce { color: var(--fx2); }
+@media (max-width: 900px) { .din-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .din-kpi-principal { grid-column: 1 / -1; grid-row: auto; } }
+@media (max-width: 520px) { .din-kpi b { font-size: 22px; } .din-kpi { padding: 14px 16px; } }
+
+.din-notas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.din-notas li { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 13px; }
+.din-notas li[title] { cursor: help; }
+.din-notas .aviso { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.din-notas .ok { color: var(--ok); }
+
+.din-sec { margin: 0 0 16px; }
+.din-sec h3 { margin: 0; font-size: 21px; font-weight: 650; line-height: 1.2; letter-spacing: -0.01em; color: var(--sobre-noite); }
+.din-sec p { margin: 4px 0 0; font-size: 14px; color: var(--noite-muted); }
+.din-sec p b { color: var(--sobre-noite); }
+.din-rodape { margin: 16px 0 0; font-size: 12.5px; color: var(--noite-muted); }
+.din-rodape a { color: var(--brilho); }
+
+.empilhada { margin: 0 0 22px; }
+.empilhada figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.empilhada figcaption span { color: var(--noite-muted); }
+.empilhada figcaption b { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.emp-barra { display: flex; gap: 2px; height: 34px; border-radius: 8px; overflow: hidden; background: var(--noite2); }
+.emp-seg { display: flex; align-items: center; justify-content: center; flex-basis: 0; min-width: 3px; }
+.emp-seg em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--noite); }
+.emp-seg.o em { color: var(--sobre-noite); }
+.emp-legenda { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.emp-legenda li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-template-areas: "cor nome pct" ". valor ."; align-items: center; column-gap: 10px; font-size: 14px; line-height: 1.3; }
+.emp-legenda i { grid-area: cor; } .emp-legenda span { grid-area: nome; } .emp-legenda b { grid-area: pct; }
+.emp-legenda i { width: 12px; height: 12px; border-radius: 3px; }
+.emp-legenda b { font-variant-numeric: tabular-nums; text-align: right; }
+.emp-legenda small { grid-area: valor; font-size: 12.5px; color: var(--noite-muted); font-variant-numeric: tabular-nums; }
+.empilhada .pub { background: var(--pub); } .empilhada .priv { background: var(--priv); } .empilhada .fx3 { background: var(--fx3); }
+.empilhada .o { background: var(--o); } .empilhada .f1 { background: var(--f1); } .empilhada .f2 { background: var(--f2); }
+.empilhada .f3 { background: var(--f3); } .empilhada .f4 { background: var(--f4); } .empilhada .f5 { background: var(--f5); }
+.din-origem .ver-todos { margin-top: 4px; }
+@media (max-width: 1000px) { #dinheiro-ranking, .din-origem { grid-column: 1 / -1; } }
+.legenda-titulo span { pointer-events: auto; }   /* a dica da escala aparece no mouse, mesmo com a base do palco deixando o clique passar */

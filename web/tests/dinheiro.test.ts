@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
   abaDe, anoAnterior, cidadesDoPorte, coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
+  coberturaSelo, descricaoFatias, fatias, larguraSelo, seloValor, seta,
   type LinhaDespesa,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
@@ -422,5 +423,77 @@ describe("cidadesDoPorte e foraDaDisputaPorte", () => {
     expect(foraDaDisputaPorte(linhas, 2024, undefined, "ate5", "Vereador")).toEqual({ n: 3, gasto: 600 });
     expect(foraDaDisputaPorte(linhas, 2024, "PE", "ate5", "Prefeito")).toEqual({ n: 1, gasto: 900 });
     expect(foraDaDisputaPorte(linhas, 2024, "RJ", "ate5", "Prefeito")).toBeNull();
+  });
+});
+
+describe("seloValor", () => {
+  it("encurta o gasto sem R$ e sem casa decimal acima de 10", () => {
+    expect(seloValor(221_900, "gasto")).toBe("222 mil");
+    expect(seloValor(4_620, "gasto")).toBe("4,6 mil");
+    expect(seloValor(1_234_000, "gasto")).toBe("1,2 mi");
+    expect(seloValor(64_300_000, "gasto")).toBe("64 mi");
+    expect(seloValor(999_700, "gasto")).toBe("1 mi");   // não vira "1.000 mil"
+    expect(seloValor(850, "gasto")).toBe("850");
+  });
+  it("por eleitor e parte pública", () => {
+    expect(seloValor(13.83, "eleitor")).toBe("14");
+    expect(seloValor(9.24, "eleitor")).toBe("9,2");
+    expect(seloValor(0.734, "publico")).toBe("73%");
+    expect(seloValor(null, "gasto")).toBe("");
+  });
+});
+
+describe("larguraSelo", () => {
+  it("cresce com o texto e nunca fica apertada", () => {
+    expect(larguraSelo("73%")).toBe(76);   // folga entre a sigla e o valor mesmo nos curtos
+    expect(larguraSelo("222 mil")).toBeGreaterThan(larguraSelo("46 mil"));
+    expect(larguraSelo("222 mil")).toBeGreaterThanOrEqual(90);
+  });
+});
+
+describe("fatias", () => {
+  const it3 = [{ chave: "a", rotulo: "A", valor: 10 }, { chave: "b", rotulo: "B", valor: 30 }, { chave: "c", rotulo: "C", valor: 0 }, { chave: "d", rotulo: "D", valor: 60 }];
+  it("ordena do maior ao menor, tira zeros e pinta f1, f2...", () => {
+    expect(fatias(it3)).toEqual([
+      { chave: "d", rotulo: "D", valor: 60, parte: 0.6, cor: "f1" },
+      { chave: "b", rotulo: "B", valor: 30, parte: 0.3, cor: "f2" },
+      { chave: "a", rotulo: "A", valor: 10, parte: 0.1, cor: "f3" },
+    ]);
+  });
+  it("junta os menores em Outros quando passa do máximo", () => {
+    const f = fatias(it3, { max: 2 });
+    expect(f.map((x) => [x.chave, x.valor, x.cor])).toEqual([["d", 60, "f1"], ["outros", 40, "o"]]);
+  });
+  it("com ordem fixa e cor própria, mantém a ordem dada", () => {
+    const f = fatias([{ chave: "pub", rotulo: "Público", valor: 1, cor: "pub" }, { chave: "priv", rotulo: "Privado", valor: 3, cor: "priv" }], { fixo: true });
+    expect(f.map((x) => [x.chave, x.cor, x.parte])).toEqual([["pub", "pub", 0.25], ["priv", "priv", 0.75]]);
+  });
+  it("sem total, nenhuma fatia", () => {
+    expect(fatias([{ chave: "a", rotulo: "A", valor: 0 }])).toEqual([]);
+  });
+});
+
+describe("descricaoFatias", () => {
+  it("lista cada fatia com a parte", () => {
+    expect(descricaoFatias("De onde veio", fatias([{ chave: "p", rotulo: "Público", valor: 73 }, { chave: "q", rotulo: "Privado", valor: 27 }], { fixo: true })))
+      .toBe("De onde veio: Público 73%, Privado 27%.");
+  });
+});
+
+describe("seta", () => {
+  it("mostra a direção e o tamanho da variação", () => {
+    expect(seta(0.99)).toBe("▲ 99%");
+    expect(seta(-0.124)).toBe("▼ 12%");
+    expect(seta(0.001)).toBe("= 0%");
+    expect(seta(17.53)).toBe("▲ 1.753%");
+    expect(seta(null)).toBeNull();
+  });
+});
+
+describe("coberturaSelo", () => {
+  it("resume a cobertura das prestações de contas", () => {
+    expect(coberturaSelo({ com: 10, total: 10 })).toEqual({ texto: "Todas as contas na base", incompleta: false });
+    expect(coberturaSelo({ com: 14_245, total: 14_453 })).toEqual({ texto: "14.245 de 14.453 contas na base", incompleta: true });
+    expect(coberturaSelo(null)).toBeNull();
   });
 });

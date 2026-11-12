@@ -4,7 +4,8 @@ import { TELA } from "@/lib/lupa";
 import type { FichaDica } from "@/lib/dica";
 
 /** `ficha`: o conteúdo gráfico da dica (MapaVivo); sem ela, a dica mostra só o texto (`descricao`, `dica`). */
-export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string; ficha?: FichaDica }
+/** `largura` (opcional, px): pílula mais larga para valores longos ("222 mil"); sem ela, a pílula padrão de 66 px. */
+export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string; ficha?: FichaDica; largura?: number }
 export interface MunicipioNoMapa { ibge: string; classe: string; href: string; dica: string; atraso: number; ficha?: FichaDica }
 
 interface Props {
@@ -75,10 +76,21 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
             const d = comDados.get(e.uf)!;
             return (
               <g key={e.uf} className="etiqueta" transform={`translate(${x} ${y})`} style={varre(e.x)}>
-                <rect x={-33} y={-13} width={66} height={26} rx={13} />
-                <text x={-15} dy="0.35em" className="etiqueta-sigla">{d.sigla}</text>
-                {/* a chave muda com o valor: o texto novo entra no lugar do antigo em vez de trocar seco */}
-                <text key={d.valor} x={13} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
+                {d.largura ? (
+                  <>
+                    {/* pílula larga: a sigla na ponta esquerda e o valor no espaço que sobra, sem um cobrir o outro */}
+                    <rect x={-d.largura / 2} y={-13} width={d.largura} height={26} rx={13} />
+                    <text x={-d.largura / 2 + 17} dy="0.35em" className="etiqueta-sigla">{d.sigla}</text>
+                    <text key={d.valor} x={13} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
+                  </>
+                ) : (
+                  <>
+                    <rect x={-33} y={-13} width={66} height={26} rx={13} />
+                    <text x={-15} dy="0.35em" className="etiqueta-sigla">{d.sigla}</text>
+                    {/* a chave muda com o valor: o texto novo entra no lugar do antigo em vez de trocar seco */}
+                    <text key={d.valor} x={13} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
+                  </>
+                )}
               </g>
             );
           })}

@@ -581,3 +581,60 @@ export function origemDoDinheiro(
   const resto = receita - publico - privado;   // resíduos de arredondamento (menos de 1 centavo) não viram categoria
   return { publico, privado, naoClassificado: resto < 0.01 ? 0 : resto, total: receita };
 }
+
+// ---------- leitura rápida: selo do estado e barras empilhadas ----------
+
+/**
+ * O valor do selo do estado no mapa: curto, sem "R$" (a unidade está no título e na legenda) e sem casa decimal acima
+ * de 10 (mil ou milhões): "222 mil", "4,6 mil", "1,2 mi", "14 mi", "13,8" (por eleitor), "73%" (parte pública).
+ */
+export function seloValor(v: number | null, aba: Aba): string {
+  if (v === null) return "";
+  if (aba === "publico") return `${Math.round(v * 100)}%`;
+  const num = (x: number) => x.toLocaleString("pt-BR", { maximumFractionDigits: x < 10 ? 1 : 0 });
+  if (aba === "eleitor") return num(v);
+  if (v >= 999_500) return `${num(v / 1e6)} mi`;
+  if (v >= 1000) return `${num(v / 1e3)} mil`;
+  return num(v);
+}
+
+/** Largura da pílula do selo (px): a sigla à esquerda e o valor ao lado, sem um passar por cima do outro. */
+export const larguraSelo = (valor: string) => Math.max(76, Math.round(40 + valor.length * 8.4));
+
+/** Um pedaço da barra empilhada: o valor, a parte do total (0 a 1) e a classe de cor. */
+export interface Fatia { chave: string; rotulo: string; valor: number; parte: number; cor: string }
+
+/**
+ * As fatias de uma barra empilhada, da maior para a menor: zeros saem; com mais de `max` itens, os menores viram uma
+ * fatia "Outros" no fim (a barra fica legível de relance). A cor é a do item, ou f1, f2... na ordem; "Outros" é cinza (o).
+ * Itens com `fixo` mantêm a ordem dada (origem do dinheiro: público, privado, sem fonte).
+ */
+export function fatias(itens: { chave: string; rotulo: string; valor: number; cor?: string }[], { max = 5, fixo = false, outros = "Outros" }: { max?: number; fixo?: boolean; outros?: string } = {}): Fatia[] {
+  const vivos = itens.filter((i) => i.valor > 0);
+  const total = vivos.reduce((a, i) => a + i.valor, 0);
+  if (total <= 0) return [];
+  const ordem = fixo ? vivos : [...vivos].sort((a, b) => b.valor - a.valor);
+  const cabe = ordem.length > max ? ordem.slice(0, max - 1) : ordem;
+  const resto = ordem.slice(cabe.length).reduce((a, i) => a + i.valor, 0);
+  return [
+    ...cabe.map((i, n) => ({ chave: i.chave, rotulo: i.rotulo, valor: i.valor, parte: i.valor / total, cor: i.cor ?? `f${n + 1}` })),
+    ...(resto > 0 ? [{ chave: "outros", rotulo: outros, valor: resto, parte: resto / total, cor: "o" }] : []),
+  ];
+}
+
+/** O texto da barra empilhada para leitores de tela: "Título: Público 73%, Privado 27%." */
+export const descricaoFatias = (titulo: string, f: Fatia[]) => `${titulo}: ${f.map((x) => `${x.rotulo} ${Math.round(x.parte * 100)}%`).join(", ")}.`;
+
+/** Uma variação em seta e percentual, para ler de relance: "▲ 99%", "▼ 12%", "= 0%". */
+export function seta(d: number | null): string | null {
+  if (d === null || !Number.isFinite(d)) return null;
+  const p = Math.round(Math.abs(d) * 100);
+  return p === 0 ? "= 0%" : `${d > 0 ? "▲" : "▼"} ${p.toLocaleString("pt-BR")}%`;
+}
+
+/** A cobertura em poucas palavras, para um selo: "Todas as contas na base" ou "14.245 de 14.453 contas na base". */
+export function coberturaSelo(c: Contas | null): { texto: string; incompleta: boolean } | null {
+  if (!c) return null;
+  if (c.com >= c.total) return { texto: "Todas as contas na base", incompleta: false };
+  return { texto: `${c.com.toLocaleString("pt-BR")} de ${c.total.toLocaleString("pt-BR")} contas na base`, incompleta: true };
+}
