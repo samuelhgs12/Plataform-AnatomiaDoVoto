@@ -3,7 +3,7 @@
 
 import { pontosPercentuais, type Resposta } from "./estatistica";
 import { brlCentavos, compacto, reais } from "./format";
-import { mediana, porteDe, PORTES, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
+import { mediana, porteDe, PORTES, type CandidatoLocal, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
 
 /** As três abas (e "eleitor": o gasto por eleitor apto, só uma medida do mapa). `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
 export type Aba = "gasto" | "resultado" | "publico" | "eleitor";
@@ -637,4 +637,194 @@ export function coberturaSelo(c: Contas | null): { texto: string; incompleta: bo
   if (!c) return null;
   if (c.com >= c.total) return { texto: "Todas as contas na base", incompleta: false };
   return { texto: `${c.com.toLocaleString("pt-BR")} de ${c.total.toLocaleString("pt-BR")} contas na base`, incompleta: true };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// As três perguntas do painel (quanto cada partido gastou, quanto custou um voto, como o gasto se divide entre os
+// candidatos) e a comparação entre as eleições do mesmo cargo. Dados da análise `dinheiro` (tabelas partidos e quartis,
+// por recorte: uf e porte nulos = todos) ou, numa cidade, da lista de candidatos dela (/api/municipios/<id>/candidatos).
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Uma linha da tabela `partidos` da análise dinheiro. */
+export interface LinhaPartido {
+  ano: number; cargo: string; uf: string | null; porte: string | null; partido: string;
+  candidatos: number; eleitos: number; sem_prestacao: number; gasto: number; votos: number; publico: number;
+}
+/** Uma linha da tabela `quartis`: faixa -1 = sem prestação final, 0 = sem gasto declarado, 1 a 4 = quartis de gasto. */
+export interface LinhaQuartil {
+  ano: number; cargo: string; uf: string | null; porte: string | null; faixa: number;
+  candidatos: number; eleitos: number; gasto: number; votos: number; gasto_min: number; gasto_max: number; gasto_mediana: number;
+}
+/** O recorte das tabelas partidos e quartis: sem uf, os seis estados; sem porte, todas as cidades. */
+export interface RecorteTabela { ano: number; cargo: string; uf?: string; porte?: string }
+const doRecorte = (f: RecorteTabela) => (l: { ano: number; cargo: string; uf: string | null; porte: string | null }) =>
+  l.ano === f.ano && l.cargo === f.cargo && (l.uf ?? undefined) === f.uf && (l.porte ?? undefined) === f.porte;
+
+/** Quanto custou um voto: o gasto dividido pelos votos (1º turno). null sem votos. */
+export const custoPorVoto = (gasto: number, votos: number): number | null => (votos > 0 ? gasto / votos : null);
+
+/** Um partido no recorte: o que gastou, a parte do gasto total, os votos e o custo de cada voto. */
+export interface Partido { partido: string; candidatos: number; eleitos: number; semPrestacao: number; gasto: number; votos: number; publico: number; porVoto: number | null; parte: number }
+
+const somarPartidos = (linhas: Omit<Partido, "porVoto" | "parte">[]): Partido[] => {
+  const total = linhas.reduce((a, l) => a + l.gasto, 0);
+  return linhas
+    .map((l) => ({ ...l, porVoto: custoPorVoto(l.gasto, l.votos), parte: total > 0 ? l.gasto / total : 0 }))
+    .sort((a, b) => b.gasto - a.gasto || b.votos - a.votos || a.partido.localeCompare(b.partido));
+};
+
+/** Os partidos de um recorte (tabela partidos), do que mais gastou para o que menos gastou. */
+export function partidosDoRecorte(linhas: LinhaPartido[], f: RecorteTabela): Partido[] {
+  return somarPartidos(linhas.filter(doRecorte(f)).map((l) => ({
+    partido: l.partido, candidatos: l.candidatos, eleitos: l.eleitos, semPrestacao: l.sem_prestacao, gasto: l.gasto, votos: l.votos, publico: l.publico,
+  })));
+}
+
+/** Os partidos de uma cidade, somando a lista de candidatos dela (quem não entregou as contas conta em semPrestacao). */
+export function partidosDeCandidatos(cands: CandidatoLocal[]): Partido[] {
+  const por = new Map<string, Omit<Partido, "porVoto" | "parte">>();
+  for (const c of cands) {
+    const k = c.partido ?? "?";
+    const p = por.get(k) ?? { partido: k, candidatos: 0, eleitos: 0, semPrestacao: 0, gasto: 0, votos: 0, publico: 0 };
+    p.candidatos++;
+    if (c.eleito) p.eleitos++;
+    if (c.prestou === false) p.semPrestacao++;
+    p.gasto += c.gasto; p.votos += c.votos; p.publico += c.receita_publica;
+    por.set(k, p);
+  }
+  return somarPartidos([...por.values()]);
+}
+
+/** O total de um recorte a partir dos partidos: gasto, votos, custo por voto, candidatos e eleitos. */
+export function totalPartidos(ps: Partido[]): { gasto: number; votos: number; porVoto: number | null; candidatos: number; eleitos: number } {
+  const gasto = ps.reduce((a, p) => a + p.gasto, 0), votos = ps.reduce((a, p) => a + p.votos, 0);
+  return { gasto, votos, porVoto: custoPorVoto(gasto, votos), candidatos: ps.reduce((a, p) => a + p.candidatos, 0), eleitos: ps.reduce((a, p) => a + p.eleitos, 0) };
+}
+
+/** Um grupo de gasto: um quartil (faixa 1 a 4), quem não declarou gasto (0) ou quem não entregou as contas (-1). */
+export interface GrupoGasto {
+  faixa: number; rotulo: string; candidatos: number; eleitos: number; gasto: number; votos: number;
+  min: number; max: number; mediana: number; taxa: number; porVoto: number | null;
+}
+export interface QuartisGasto {
+  /** Faixas na ordem -1, 0, 1, 2, 3, 4 (só as que têm candidatos). */
+  grupos: GrupoGasto[];
+  candidatos: number; eleitos: number; gasto: number;
+  /** A parte do gasto total que ficou com os 25% que mais gastaram (faixa 4). */
+  concentracao: number | null;
+}
+export const ROTULO_FAIXA: Record<number, string> = {
+  [-1]: "Sem contas", 0: "Sem gasto declarado", 1: "25% que menos gastaram", 2: "2º quarto", 3: "3º quarto", 4: "25% que mais gastaram",
+};
+/** A cor de cada grupo: os quartis na escala do mapa (do azul ao amarelo); sem contas e sem gasto em cinza. */
+export const COR_FAIXA: Record<number, string> = { [-1]: "o", 0: "o", 1: "q1", 2: "q2", 3: "q3", 4: "q4" };
+
+/** Junta os grupos (já somados) no resultado: taxa de eleição, custo por voto e a concentração no quartil de cima. */
+function montarQuartis(gs: Omit<GrupoGasto, "rotulo" | "taxa" | "porVoto">[]): QuartisGasto | null {
+  const vivos = gs.filter((g) => g.candidatos > 0).sort((a, b) => a.faixa - b.faixa);
+  if (!vivos.some((g) => g.faixa >= 1)) return null;
+  const gasto = vivos.reduce((a, g) => a + g.gasto, 0);
+  const topo = vivos.find((g) => g.faixa === 4);
+  return {
+    grupos: vivos.map((g) => ({ ...g, rotulo: ROTULO_FAIXA[g.faixa], taxa: g.eleitos / g.candidatos, porVoto: custoPorVoto(g.gasto, g.votos) })),
+    candidatos: vivos.reduce((a, g) => a + g.candidatos, 0), eleitos: vivos.reduce((a, g) => a + g.eleitos, 0), gasto,
+    concentracao: gasto > 0 && topo ? topo.gasto / gasto : null,
+  };
+}
+
+/** Os grupos de gasto de um recorte (tabela quartis). null sem nenhum candidato com gasto declarado. */
+export function quartisDoRecorte(linhas: LinhaQuartil[], f: RecorteTabela): QuartisGasto | null {
+  return montarQuartis(linhas.filter(doRecorte(f)).map((l) => ({
+    faixa: l.faixa, candidatos: l.candidatos, eleitos: l.eleitos, gasto: l.gasto, votos: l.votos, min: l.gasto_min, max: l.gasto_max, mediana: l.gasto_mediana,
+  })));
+}
+
+/**
+ * Os grupos de gasto dos candidatos de uma cidade, com a mesma regra da análise (percent_rank do SQL): entre quem entregou
+ * as contas e declarou gasto, faixa = 1 + ⌊4 × posição⌋ (no máximo 4), em que posição = (quantos gastaram menos) ÷ (n − 1);
+ * valores iguais caem no mesmo grupo. Com menos de `minimo` candidatos com gasto, null (quatro grupos não dizem nada).
+ */
+export function quartisDeCandidatos(cands: CandidatoLocal[], minimo = 8): QuartisGasto | null {
+  const com = cands.filter((c) => c.prestou !== false && c.gasto > 0).map((c) => c.gasto).sort((a, b) => a - b);
+  if (com.length < minimo) return null;
+  const faixaDe = (g: number) => Math.min(4, 1 + Math.floor((4 * com.findIndex((x) => x >= g)) / Math.max(1, com.length - 1)));
+  const por = new Map<number, { faixa: number; candidatos: number; eleitos: number; gasto: number; votos: number; valores: number[] }>();
+  for (const c of cands) {
+    const faixa = c.prestou === false ? -1 : c.gasto <= 0 ? 0 : faixaDe(c.gasto);
+    const g = por.get(faixa) ?? { faixa, candidatos: 0, eleitos: 0, gasto: 0, votos: 0, valores: [] };
+    g.candidatos++;
+    if (c.eleito) g.eleitos++;
+    g.votos += c.votos;
+    if (faixa >= 0) { g.gasto += c.gasto; g.valores.push(c.gasto); }
+    por.set(faixa, g);
+  }
+  return montarQuartis([...por.values()].map(({ valores, ...g }) => ({
+    ...g, min: valores.length ? Math.min(...valores) : 0, max: valores.length ? Math.max(...valores) : 0, mediana: mediana(valores) ?? 0,
+  })));
+}
+
+/** A faixa de gasto de um quartil em poucas palavras: "até R$ 500", "R$ 500 a R$ 1.358", "acima de R$ 3.915". */
+export function faixaGasto(g: GrupoGasto, ultimo: boolean): string {
+  const r = (v: number) => (v >= 1e4 ? reais(v) : `R$ ${Math.round(v).toLocaleString("pt-BR")}`);
+  if (g.faixa === 1) return `até ${r(g.max)}`;
+  if (ultimo) return `acima de ${r(g.min)}`;
+  return `${r(g.min)} a ${r(g.max)}`;
+}
+
+/** As três barras 100% dos grupos de gasto (candidatos, eleitos, dinheiro): de relance, quem fica com o dinheiro e as vagas. */
+export function barrasQuartis(q: QuartisGasto): { titulo: string; total: string; fatias: Fatia[] }[] {
+  const barra = (titulo: string, total: string, valor: (g: GrupoGasto) => number) => ({
+    titulo, total, fatias: fatias(q.grupos.map((g) => ({ chave: String(g.faixa), rotulo: g.rotulo, valor: valor(g), cor: COR_FAIXA[g.faixa] })), { fixo: true, max: 10 }),
+  });
+  return [
+    barra("Candidatos", q.candidatos.toLocaleString("pt-BR"), (g) => g.candidatos),
+    barra("Eleitos", q.eleitos.toLocaleString("pt-BR"), (g) => g.eleitos),
+    barra("Dinheiro gasto", reais(q.gasto), (g) => g.gasto),
+  ].filter((b) => b.fatias.length > 0);
+}
+
+/** Uma medida nas eleições do mesmo cargo: o texto e a largura (0 a 1) de cada ano e a variação do primeiro ao último. */
+export interface MedidaNosAnos { chave: string; rotulo: string; textos: string[]; partes: number[]; variacao: number | null; pontos?: boolean }
+
+/**
+ * A comparação entre as eleições do mesmo cargo (ex.: vereador em 2020 e 2024). Cada medida vira uma linha com uma barra
+ * por ano, na escala do maior valor da linha, e a variação do primeiro para o último ano com valor. `pontos`: a variação
+ * é em pontos percentuais (medidas que já são uma parte, como a parte pública), não em %. Medidas sem nenhum valor saem.
+ */
+export function medidasNosAnos(medidas: { chave: string; rotulo: string; valores: (number | null)[]; fmt: (v: number) => string; pontos?: boolean }[]): MedidaNosAnos[] {
+  return medidas
+    .filter((m) => m.valores.some((v) => v !== null))
+    .map((m) => {
+      const teto = Math.max(...m.valores.map((v) => v ?? 0));
+      const comValor = m.valores.filter((v): v is number => v !== null);
+      const [primeiro, ultimo] = [comValor[0], comValor[comValor.length - 1]];
+      const variacao = comValor.length < 2 ? null : m.pontos ? ultimo - primeiro : variacaoNominal(ultimo, primeiro);
+      return {
+        chave: m.chave, rotulo: m.rotulo, pontos: m.pontos,
+        textos: m.valores.map((v) => (v === null ? "—" : m.fmt(v))),
+        partes: m.valores.map((v) => (v === null || teto <= 0 ? 0 : v / teto)),
+        variacao,
+      };
+    });
+}
+
+/** A variação de uma medida nos anos, escrita: "▲ 52%" ou, em pontos percentuais, "▲ 6 p.p.". */
+export function setaMedida(m: MedidaNosAnos): string | null {
+  if (!m.pontos) return seta(m.variacao);
+  if (m.variacao === null) return null;
+  const p = Math.round(Math.abs(m.variacao) * 100);
+  return p === 0 ? "= 0 p.p." : `${m.variacao > 0 ? "▲" : "▼"} ${p} p.p.`;
+}
+
+/** Os anos com dinheiro em que o cargo foi disputado (vereador: 2020 e 2024; deputado federal: 2018 e 2022). */
+export const anosDoCargo = (cargo: string) => ANOS_DINHEIRO.filter((a) => cargosDoAno(a).includes(cargo));
+
+/**
+ * A leitura dos quartis numa frase, comparando o quarto de cima com o de baixo: "Os 25% que mais gastaram ficaram com
+ * 83% do dinheiro e 29% dos eleitos." null sem o quartil de cima ou sem eleitos.
+ */
+export function fraseConcentracao(q: QuartisGasto): { dinheiro: number; eleitos: number } | null {
+  const topo = q.grupos.find((g) => g.faixa === 4);
+  if (!topo || q.gasto <= 0 || q.eleitos <= 0) return null;
+  return { dinheiro: topo.gasto / q.gasto, eleitos: topo.eleitos / q.eleitos };
 }

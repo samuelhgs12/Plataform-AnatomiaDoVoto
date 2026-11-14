@@ -95,6 +95,9 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
       "Teste estatístico: comparação de duas proporções com 95% de confiança; o projeto só destaca diferenças de pelo menos 20% (regra do projeto). Sem diferença estatística não quer dizer sem relação; com diferença, não quer dizer causa.",
       "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não tem a prestação final na base aparece como “Não informado”. Campanhas que não chegaram a disputar ficam fora daqui; a Pergunta 1 soma o gasto delas no custo da cadeira, e a página diz quanto é quando há diferença.",
       "Eleição anterior: a variação é nominal, sem correção pela inflação, e só entre eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
+      "Quanto cada partido gastou: a soma dos gastos declarados pelas campanhas do partido ao cargo, no mesmo recorte do número (cidade, porte, estado ou os seis). Quanto custou um voto: esse gasto ÷ votos nominais no 1º turno (o voto só na legenda não entra).",
+      "Quartis: os candidatos que entregaram as contas e declararam algum gasto, em quatro grupos de tamanho aproximado, do que menos ao que mais gastou, comparando cada um com os do mesmo recorte (valores iguais ficam no mesmo grupo). Quem não declarou gasto e quem não entregou as contas aparecem à parte. Numa cidade, só com pelo menos 8 candidatos com gasto (não vale para prefeito).",
+      "Ano a ano: o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar; valores da época, e as partes (parte pública, fatia dos 25% que mais gastaram) comparadas em pontos percentuais.",
     ],
     limites: [
       "Mostra que dinheiro e vitória andam juntos, não que o dinheiro fez ganhar: quem já tem mais chance também arrecada mais.",

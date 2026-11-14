@@ -9,14 +9,16 @@ import {
   abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
   coberturaSelo, diferencaRelativa, ehMunicipal, fatias, larguraSelo, seloValor, seta, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
   ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
-  type Aba, type LinhaDespesa,
+  anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
+  type Aba, type LinhaDespesa, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
 } from "@/lib/dinheiro";
 import { METODOLOGIA } from "@/lib/metodologia";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { NOME_UF } from "@/lib/financiamento";
-import { inteiro, pct, reais } from "@/lib/format";
+import { brlCentavos, compacto, inteiro, pct, reais } from "@/lib/format";
 import { centrarLupa, TELA } from "@/lib/lupa";
 import { disputaPrefeito, porteDe, PORTES, type CandidatoLocal, type Eleito, type LinhaEstado, type LinhaMunicipio, type LinhaResumo } from "@/lib/territorio";
+import { AnosDoCargo } from "./AnosDoCargo";
 import { BarraEmpilhada } from "./BarraEmpilhada";
 import { BarrasH } from "./BarrasH";
 import { ComparacoesDinheiro } from "./ComparacoesDinheiro";
@@ -25,6 +27,8 @@ import { LinhasCandidatos, type LinhaCandidato } from "./LinhasCandidatos";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "./MapaAbstencao";
 import { MapaVivo } from "./MapaVivo";
 import { MiniMapa } from "./MiniMapa";
+import { PartidosGasto } from "./PartidosGasto";
+import { QuartisDoGasto } from "./QuartisDoGasto";
 import { Rolar } from "./Rolar";
 
 type SP = Record<string, string | string[] | undefined>;
@@ -51,7 +55,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const ord = ordemCandidatos(um(sp.ord));
   const porteInfo = porte ? PORTES.find((p) => p.chave === porte) : undefined;
   const municipal = ehMunicipal(ano);
-  const [dados, dadosDespesas] = await Promise.all([lerAnalise("municipios", ["municipios", "resumo", "estados"]), lerAnalise("dinheiro", ["despesas"])]);
+  const [dados, dadosDespesas, dadosPerguntas] = await Promise.all([
+    lerAnalise("municipios", ["municipios", "resumo", "estados"]), lerAnalise("dinheiro", ["despesas"]), lerAnalise("dinheiro", ["partidos", "quartis"]),
+  ]);
   if (!dados?.resumo || !dados.estados || !dados.municipios) {
     return (
       <>
@@ -156,6 +162,36 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const eleitoPrefeito = disputa?.candidatos.find((c) => c.eleito);
   const temCandidatos = !!mun || (!municipal && !!uf);
   const ordInfo = ORDENS_CANDIDATOS.find((o) => o.chave === ord)!;
+
+  // as perguntas do painel: quanto cada partido gastou, quanto custou um voto e como o gasto se divide entre os candidatos
+  // (quartis), no mesmo recorte do número. Numa cidade, da lista de candidatos dela; fora, das tabelas da análise dinheiro.
+  const linhasPartido = dadosPerguntas?.partidos ? comoObjetos<LinhaPartido>(dadosPerguntas.partidos) : null;
+  const linhasQuartil = dadosPerguntas?.quartis ? comoObjetos<LinhaQuartil>(dadosPerguntas.quartis) : null;
+  const recorteTab = (a: number): RecorteTabela => ({ ano: a, cargo, uf, porte: mun ? undefined : porte });
+  const anosCargo = anosDoCargo(cargo);
+  const candsAnos = mun ? await Promise.all(anosCargo.map((a) => (a === ano ? Promise.resolve(candidatos)
+    : apiGetOpcional<CandidatoLocal[]>(`/municipios/${mun.id_municipio}/candidatos?ano=${a}&cargo=${encodeURIComponent(cargo)}`)))) : null;
+  const partidosEm = (a: number, cands: CandidatoLocal[] | null | undefined) => (mun ? (cands ? partidosDeCandidatos(cands) : null) : linhasPartido ? partidosDoRecorte(linhasPartido, recorteTab(a)) : null);
+  const quartisEm = (a: number, cands: CandidatoLocal[] | null | undefined) => (mun ? (cands && cargo !== "Prefeito" ? quartisDeCandidatos(cands) : null) : linhasQuartil ? quartisDoRecorte(linhasQuartil, recorteTab(a)) : null);
+  const partidos = partidosEm(ano, candidatos) ?? [];
+  const totalVoto = partidos.length ? totalPartidos(partidos) : null;
+  const quartis = quartisEm(ano, candidatos);
+  // o mesmo cargo nas eleições com dados de dinheiro (vereador: 2020 e 2024), no mesmo lugar
+  const porAno = anosCargo.map((a, i) => {
+    const ps = partidosEm(a, candsAnos?.[i]);
+    return { total: ps?.length ? totalPartidos(ps) : null, quartis: quartisEm(a, candsAnos?.[i]), vaga: valorLugar("gasto", a), eleitor: valorLugar("eleitor", a), publico: valorLugar("publico", a) };
+  });
+  const medidasAnos = anosCargo.length < 2 ? [] : medidasNosAnos([
+    { chave: "gasto", rotulo: "Gasto total", valores: porAno.map((x) => x.total?.gasto ?? null), fmt: reais },
+    ...(cargo === "Prefeito" && mun ? [] : [{ chave: "vaga", rotulo: "Gasto por vaga", valores: porAno.map((x) => x.vaga), fmt: reais }]),
+    { chave: "voto", rotulo: "Cada voto", valores: porAno.map((x) => x.total?.porVoto ?? null), fmt: brlCentavos },
+    { chave: "eleitor", rotulo: "Por eleitor apto", valores: porAno.map((x) => x.eleitor), fmt: brlCentavos },
+    { chave: "publico", rotulo: "Parte pública do dinheiro", valores: porAno.map((x) => x.publico), fmt: (v: number) => pct(v, 0), pontos: true },
+    { chave: "topo", rotulo: "Fatia dos 25% que mais gastaram", valores: porAno.map((x) => x.quartis?.concentracao ?? null), fmt: (v: number) => pct(v, 0), pontos: true },
+    { chave: "cand", rotulo: "Candidatos", valores: porAno.map((x) => x.total?.candidatos ?? null), fmt: inteiro },
+  ]);
+  const votoAntes = antes !== null ? porAno[anosCargo.indexOf(antes)]?.total?.porVoto ?? null : null;
+  const variacaoVoto = totalVoto ? variacaoNominal(totalVoto.porVoto, votoAntes) : null;
 
   // onde o dinheiro foi gasto: os grupos de categoria do TSE no recorte (cidade, estado ou os seis)
   // com um porte (e sem cidade escolhida), só as despesas das cidades dele: o mesmo universo das receitas ao lado
@@ -282,8 +318,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </header>
         <nav className="painel-nav s12" aria-label="Seções do painel">
           <a href="#dinheiro-painel">Resumo</a>
-          <a href="#dinheiro-ranking">{cidadesTopo.length ? "Cidades" : "Estados"}</a>
+          {partidos.length > 0 && <a href="#dinheiro-partidos">Partidos</a>}
+          {totalVoto?.porVoto != null && <a href="#dinheiro-voto">Custo do voto</a>}
           {(fatiasOrigem.length > 0 || fatiasDestino.length > 0) && <a href="#dinheiro-origem">Origem e destino</a>}
+          {quartis && <a href="#dinheiro-quartis">Quartis</a>}
+          {medidasAnos.length > 0 && <a href="#dinheiro-anos">{anosCargo.join(" × ")}</a>}
+          <a href="#dinheiro-ranking">{cidadesTopo.length ? "Cidades" : "Estados"}</a>
           {temCandidatos && <a href="#dinheiro-cand">{mun ? "Candidatos" : "Eleitos"}</a>}
           <a href="#comparar">Dinheiro e voto</a>
           <a href="#dinheiro-metodo">Método</a>
@@ -343,8 +383,82 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           </ul>
         )}
 
-        {/* o ranking (cidades do estado ou os seis estados) e, ao lado, de onde veio e para onde foi o dinheiro */}
-        <section id="dinheiro-ranking" className={`bloco noite ${fatiasOrigem.length || fatiasDestino.length ? "s6" : "s12"} dinheiro-barras`}>
+        {/* 1: quanto cada partido gastou; 2 e 3, lado a lado: quanto custou um voto e de onde veio e para onde foi o dinheiro */}
+        {partidos.length > 0 && (
+          <section id="dinheiro-partidos" className="bloco noite s12 din-partidos">
+            <header className="din-sec">
+              <h3><span className="din-num" aria-hidden="true">1</span>Quanto cada partido gastou</h3>
+              <p><b>{partidos[0].partido}</b> gastou mais: {reais(partidos[0].gasto)}, {pct(partidos[0].parte, 0)} do total de {cargoMin} {mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"}</p>
+            </header>
+            <PartidosGasto partidos={partidos} titulo={`Gasto de cada partido com as campanhas a ${cargoMin}, ${lugar}, ${ano}`} inicio={mun ? 8 : 10} />
+          </section>
+        )}
+        {totalVoto?.porVoto != null && (
+          <section id="dinheiro-voto" className={`bloco noite ${(fatiasOrigem.length > 0 || fatiasDestino.length > 0) ? "s6" : "s12"} din-voto`}>
+            <header className="din-sec">
+              <h3><span className="din-num" aria-hidden="true">2</span>Quanto custou um voto</h3>
+              <p>Gasto de todas as campanhas ÷ votos no 1º turno</p>
+            </header>
+            <p className="voto-grande"><b>{brlCentavos(totalVoto.porVoto)}</b><span>por voto</span></p>
+            <p className="voto-conta">{reais(totalVoto.gasto)} ÷ {compacto(totalVoto.votos)} votos
+              {antes !== null && votoAntes !== null && seta(variacaoVoto) && <> · <span className={`delta${variacaoVoto! > 0 ? " sobe" : variacaoVoto! < 0 ? " desce" : ""}`}>{seta(variacaoVoto)}</span> desde {antes} ({brlCentavos(votoAntes)})</>}
+            </p>
+            {quartis && quartis.grupos.some((g) => g.faixa >= 1 && g.porVoto !== null) && (
+              <>
+                <p className="rotulo">Cada voto, por grupo de gasto</p>
+                <BarrasH compacto titulo={`Custo de cada voto em cada grupo de gasto dos candidatos a ${cargoMin}, ${ano}`}
+                  linhas={quartis.grupos.filter((g) => g.faixa >= 1 && g.porVoto !== null).map((g) => ({ chave: String(g.faixa), rotulo: g.rotulo, valor: g.porVoto!, classe: COR_FAIXA[g.faixa], texto: brlCentavos(g.porVoto!), subtexto: "" }))} />
+              </>
+            )}
+            <p className="din-rodape">Votos nominais: o voto só na legenda do partido não entra</p>
+          </section>
+        )}
+
+        {(fatiasOrigem.length > 0 || fatiasDestino.length > 0) && (
+          <section id="dinheiro-origem" className={`bloco noite ${totalVoto?.porVoto != null ? "s6" : "s12"} din-origem`}>
+            <header className="din-sec">
+              <h3><span className="din-num" aria-hidden="true">3</span>De onde veio, para onde foi o dinheiro</h3>
+              <p>Todas as campanhas a {cargoMin} · {ano}</p>
+            </header>
+            {fatiasOrigem.length > 0 && <BarraEmpilhada titulo="Recebido" total={reais(origem!.total)} fatias={fatiasOrigem} valor={reais} />}
+            {fatiasDestino.length > 0 && <BarraEmpilhada titulo="Gasto" total={reais(totalGrupos)} fatias={fatiasDestino} valor={reais} />}
+            {grupos.length > 0 && (
+              <details className="ver-todos dinheiro-grupos">
+                <summary>Todos os {grupos.length} grupos de despesa</summary>
+                <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} por grupo, ${ano}`}
+                  linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: reais(g.valor) }))} />
+              </details>
+            )}
+            <p className="din-rodape">Sem repasses entre candidatos · valores sem correção pela inflação · <Link href={propaganda}>Propaganda em detalhe</Link></p>
+          </section>
+        )}
+
+        {/* 4: os candidatos em quatro grupos de gasto (quartis) */}
+        {quartis && (
+          <section id="dinheiro-quartis" className="bloco noite s12 din-quartis">
+            <header className="din-sec">
+              <h3><span className="din-num" aria-hidden="true">4</span>Quem gastou quanto</h3>
+              <p>Os candidatos que declararam gasto em 4 grupos do mesmo tamanho (quartis), do que menos ao que mais gastou</p>
+            </header>
+            <QuartisDoGasto q={quartis} />
+            <p className="din-rodape">Grupos de tamanho aproximado: valores iguais ficam no mesmo grupo{!mun ? ` · candidatos comparados com todos os ${cargoMin === "prefeito" ? "candidatos a prefeito" : "candidatos"} do recorte${porte ? "" : " (use o porte para comparar cidades parecidas)"}` : ""}</p>
+          </section>
+        )}
+
+        {/* 5: o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar */}
+        {medidasAnos.length > 0 && (
+          <section id="dinheiro-anos" className="bloco noite s12 din-anos">
+            <header className="din-sec">
+              <h3><span className="din-num" aria-hidden="true">5</span>{cargo}: {anosCargo.join(" × ")}</h3>
+              <p>{lugar}{!mun && porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""} · as eleições para {cargoMin} com dados de dinheiro, lado a lado</p>
+            </header>
+            <AnosDoCargo anos={anosCargo} atual={ano} medidas={medidasAnos} hrefAno={(a) => href({ ano: a }, "dinheiro-anos")} titulo={`${cargo} em ${lugar}: ${anosCargo.join(" e ")}`} />
+            <p className="din-rodape">Valores da época, sem correção pela inflação · porcentagens comparadas em pontos percentuais (p.p.)</p>
+          </section>
+        )}
+
+        {/* as cidades do estado (ou os seis estados) na medida do mapa */}
+        <section id="dinheiro-ranking" className="bloco noite s12 dinheiro-barras">
           <header className="din-sec">
             <h3>{tituloRanking}</h3>
             <p>{cidadesTopo.length ? `${Math.min(8, cidadesTopo.length)} de ${inteiro(cidadesUf.length)} cidades de ${NOME_UF[uf!]}${porteInfo ? ` · ${porteInfo.rotulo}` : ""}` : `Os seis estados · ${cargo} · ${ano}`}</p>
@@ -381,25 +495,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
                 texto: textoValor(e.valor, aba, cargo), subtexto: "", href: href({ uf: e.id }), atual: uf === e.id }))} />
           )}
         </section>
-
-        {(fatiasOrigem.length > 0 || fatiasDestino.length > 0) && (
-          <section id="dinheiro-origem" className="bloco noite s6 din-origem">
-            <header className="din-sec">
-              <h3>De onde veio, para onde foi</h3>
-              <p>Todas as campanhas a {cargoMin} · {ano}</p>
-            </header>
-            {fatiasOrigem.length > 0 && <BarraEmpilhada titulo="Recebido" total={reais(origem!.total)} fatias={fatiasOrigem} valor={reais} />}
-            {fatiasDestino.length > 0 && <BarraEmpilhada titulo="Gasto" total={reais(totalGrupos)} fatias={fatiasDestino} valor={reais} />}
-            {grupos.length > 0 && (
-              <details className="ver-todos dinheiro-grupos">
-                <summary>Todos os {grupos.length} grupos de despesa</summary>
-                <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} por grupo, ${ano}`}
-                  linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: reais(g.valor) }))} />
-              </details>
-            )}
-            <p className="din-rodape">Sem repasses entre candidatos · valores sem correção pela inflação · <Link href={propaganda}>Propaganda em detalhe</Link></p>
-          </section>
-        )}
 
         {temCandidatos && (
           <section id="dinheiro-cand" className="bloco noite s12 dinheiro-cand">

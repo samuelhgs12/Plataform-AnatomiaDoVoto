@@ -2123,7 +2123,7 @@ a.q-ver:active { transform: scale(0.98); }
 .din-kpi-principal { grid-column: span 2; grid-row: span 2; justify-content: center; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brilho) 45%, transparent), inset 0 4px 0 var(--brilho); }
 .din-kpi-principal small { font-size: 13px; }
 .din-kpi-principal > span { margin-top: 0; font-size: 15px; }
-.din-kpi-principal b { font-size: clamp(44px, 3vw + 16px, 76px); font-weight: 700; letter-spacing: -0.04em; color: var(--brilho); }
+.din-kpi-principal b { font-size: clamp(38px, 2.2vw + 14px, 68px); font-weight: 700; letter-spacing: -0.04em; color: var(--brilho); }
 .din-kpi-link { transition: background-color var(--t-hover) ease; }
 .din-kpi-link:hover { background: var(--noite2); }
 .din-kpi-link > span { color: var(--brilho); font-weight: 600; }
@@ -2165,3 +2165,60 @@ a.q-ver:active { transform: scale(0.98); }
 .din-origem .ver-todos { margin-top: 4px; }
 @media (max-width: 1000px) { #dinheiro-ranking, .din-origem { grid-column: 1 / -1; } }
 .legenda-titulo span { pointer-events: auto; }   /* a dica da escala aparece no mouse, mesmo com a base do palco deixando o clique passar */
+
+/* camada Dinheiro, as perguntas do painel: o número de cada pergunta, a tabela dos partidos, o custo do voto, os quartis
+   (três barras 100% alinhadas nas cores do mapa, do azul ao amarelo) e o mesmo cargo nos anos, lado a lado. */
+.din-num { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 10px; border-radius: 50%; background: var(--brilho); color: var(--noite); font-size: 14px; font-weight: 800; vertical-align: 2px; }
+.din-sec h3 { display: flex; align-items: center; }
+.din .delta.sobe { color: var(--brilho); } .din .delta.desce { color: var(--fx2); }
+
+.partidos-tabela, .quartis-tabela, .anos-cargo { width: 100%; border-collapse: collapse; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.partidos-tabela th, .partidos-tabela td, .quartis-tabela th, .quartis-tabela td, .anos-cargo th, .anos-cargo td { padding: 7px 8px; border-bottom: 1px solid var(--noite-linha); text-align: left; vertical-align: middle; }
+.partidos-tabela thead th, .quartis-tabela thead th, .anos-cargo thead th { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.partidos-tabela .num, .quartis-tabela .num, .anos-cargo .num { text-align: right; }
+.partidos-tabela tbody th { font-weight: 700; white-space: nowrap; width: 1%; }
+.partidos-tabela small, .quartis-tabela small { color: var(--noite-muted); font-size: 12.5px; }
+.pt-gasto { width: 60%; }
+.pt-gasto > div { display: grid; grid-template-columns: minmax(40px, 1fr) 118px 38px; align-items: center; gap: 10px; }
+.pt-gasto small { text-align: right; }
+.pt-trilho, .ac-trilho { display: block; height: 12px; border-radius: 3px; background: var(--noite2); overflow: hidden; }
+.pt-trilho i, .ac-trilho i { display: block; height: 100%; border-radius: 3px; background: var(--q3); }
+.pt-gasto b { font-weight: 650; white-space: nowrap; }
+.tabela-rolar:has(> .partidos-tabela) + .ver-todos { margin-top: 8px; }
+
+.voto-grande { margin: 4px 0 2px; display: flex; align-items: baseline; gap: 10px; }
+.voto-grande b { font-size: clamp(44px, 2.6vw + 18px, 72px); font-weight: 700; line-height: 1; letter-spacing: -0.04em; color: var(--brilho); font-variant-numeric: tabular-nums; }
+.voto-grande span { font-size: 15px; color: var(--noite-muted); }
+.voto-conta { margin: 0 0 18px; font-size: 14px; color: var(--noite-muted); }
+.din-voto .barras.compacto li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "rot val" "bar bar"; gap: 4px 12px; }
+.din-voto .barras-rotulo { grid-area: rot; font-size: 14.5px; } .din-voto .barras-valor { grid-area: val; text-align: right; } .din-voto .barras-trilho { grid-area: bar; height: 14px; }
+.din-voto .barras-barra.q1, .empilhada .q1, .empilhada-cor.q1 { background: var(--q1); }
+.din-voto .barras-barra.q2, .empilhada .q2, .empilhada-cor.q2 { background: var(--q2); }
+.din-voto .barras-barra.q3, .empilhada .q3, .empilhada-cor.q3 { background: var(--q3); }
+.din-voto .barras-barra.q4, .empilhada .q4, .empilhada-cor.q4 { background: var(--q4); }
+.empilhada-cor.o { background: var(--o); }
+
+.quartis { display: grid; gap: 4px; }
+.quartis-frase { margin: 0 0 16px; font-size: 19px; line-height: 1.4; }
+.quartis-frase em { font-style: normal; font-weight: 750; color: var(--q4); }
+.quartis-barras { display: grid; gap: 10px; margin-bottom: 18px; }
+.quartis-linha { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 12px; margin: 0; }
+.quartis-rot { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--noite-muted); line-height: 1.25; }
+.quartis-rot small { display: block; font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--sobre-noite); font-variant-numeric: tabular-nums; }
+.quartis-linha .emp-barra { height: 30px; }
+.empilhada-cor { display: inline-block; width: 11px; height: 11px; margin-right: 8px; border-radius: 3px; vertical-align: -1px; }
+
+.anos-cargo { min-width: 520px; }
+.anos-cargo tbody th { font-weight: 600; }
+.anos-cargo td { min-width: 150px; }
+.anos-cargo td b { display: block; margin-top: 4px; font-weight: 650; }
+.anos-cargo td:not(.on) b { color: var(--noite-muted); }
+.anos-cargo td:not(.on) .ac-trilho i { background: var(--q1); }
+.anos-cargo thead th a { color: var(--noite-muted); text-decoration: none; font-size: 14px; letter-spacing: 0; }
+.anos-cargo thead th.on a { color: var(--brilho); font-weight: 750; }
+.anos-cargo td.delta { font-size: 16px; font-weight: 700; white-space: nowrap; }
+
+@media (max-width: 1000px) { #dinheiro-voto { grid-column: 1 / -1; } }
+@media (max-width: 1000px) { #dinheiro-origem { grid-column: 1 / -1; } }
+@media (max-width: 620px) { .quartis-linha { grid-template-columns: 1fr; gap: 4px; } .pt-gasto { width: auto; } .pt-gasto > div { display: block; } .pt-gasto small, .pt-trilho, .pt-de { display: none; } .partidos-tabela { font-size: 13.5px; } .partidos-tabela tbody th { font-size: 12.5px; } .anos-cargo { min-width: 0; font-size: 13.5px; } .anos-cargo td { min-width: 0; } .anos-cargo th, .anos-cargo td { padding: 6px 4px; } .partidos-tabela th, .partidos-tabela td { padding: 6px 5px; } }
+.tabela-rolar:has(> .partidos-tabela), .tabela-rolar:has(> .anos-cargo) { max-height: none; }

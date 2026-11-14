@@ -3,9 +3,12 @@ import {
   ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
   abaDe, anoAnterior, cidadesDoPorte, coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
   coberturaSelo, descricaoFatias, fatias, larguraSelo, seloValor, seta,
+  anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos,
+  type LinhaPartido, type LinhaQuartil,
   type LinhaDespesa,
 } from "../src/lib/dinheiro";
-import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
+import { reais } from "../src/lib/format";
+import type { CandidatoLocal, LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
 const r = (o: Partial<LinhaResumo>): LinhaResumo => ({
   ano: 2024, id_municipio: 1, uf: "PE", vereador_candidatos: 100, vereador_eleitos: 10, vereador_vagas: 10,
@@ -495,5 +498,133 @@ describe("coberturaSelo", () => {
     expect(coberturaSelo({ com: 10, total: 10 })).toEqual({ texto: "Todas as contas na base", incompleta: false });
     expect(coberturaSelo({ com: 14_245, total: 14_453 })).toEqual({ texto: "14.245 de 14.453 contas na base", incompleta: true });
     expect(coberturaSelo(null)).toBeNull();
+  });
+});
+
+// --- partidos, custo do voto, quartis e anos ---
+const lp = (o: Partial<LinhaPartido>): LinhaPartido => ({
+  ano: 2024, cargo: "Vereador", uf: "PE", porte: null, partido: "PFA", candidatos: 10, eleitos: 2, sem_prestacao: 0, gasto: 1000, votos: 100, publico: 400, ...o,
+});
+const lq = (o: Partial<LinhaQuartil>): LinhaQuartil => ({
+  ano: 2024, cargo: "Vereador", uf: "PE", porte: null, faixa: 1, candidatos: 10, eleitos: 1, gasto: 1000, votos: 500, gasto_min: 10, gasto_max: 200, gasto_mediana: 100, ...o,
+});
+const cl = (o: Partial<CandidatoLocal>): CandidatoLocal => ({
+  cargo: "Vereador", id_cargo: 13, id_candidato: 1, id_candidatura: 1, nome_urna: "X", partido: "PFA", votos: 100, gasto: 1000, receita: 1000, receita_publica: 500,
+  eleito: false, resultado: "NAO_ELEITO", prestou: true, ...o,
+});
+
+describe("custoPorVoto", () => {
+  it("divide o gasto pelos votos e não inventa custo sem votos", () => {
+    expect(custoPorVoto(1630, 100)).toBeCloseTo(16.3);
+    expect(custoPorVoto(500, 0)).toBeNull();
+  });
+});
+
+describe("partidosDoRecorte", () => {
+  const linhas = [lp({ partido: "PFA", gasto: 1000 }), lp({ partido: "PFB", gasto: 3000, votos: 50 }), lp({ partido: "PFC", uf: null, gasto: 9 }), lp({ partido: "PFD", porte: "ate5" })];
+  it("pega só o recorte pedido e ordena do que mais gastou", () => {
+    const ps = partidosDoRecorte(linhas, { ano: 2024, cargo: "Vereador", uf: "PE" });
+    expect(ps.map((p) => p.partido)).toEqual(["PFB", "PFA"]);
+    expect(ps[0]).toMatchObject({ parte: 0.75, porVoto: 60 });
+  });
+  it("sem uf é a linha dos seis estados (não soma os estados de novo)", () => {
+    expect(partidosDoRecorte(linhas, { ano: 2024, cargo: "Vereador" }).map((p) => p.partido)).toEqual(["PFC"]);
+    expect(partidosDoRecorte(linhas, { ano: 2024, cargo: "Vereador", uf: "PE", porte: "ate5" }).map((p) => p.partido)).toEqual(["PFD"]);
+  });
+});
+
+describe("partidosDeCandidatos e totalPartidos", () => {
+  it("soma os candidatos da cidade por partido", () => {
+    const ps = partidosDeCandidatos([cl({ partido: "PFA", eleito: true }), cl({ partido: "PFA", gasto: 3000, votos: 300 }), cl({ partido: null, prestou: false, gasto: 0 })]);
+    expect(ps[0]).toMatchObject({ partido: "PFA", candidatos: 2, eleitos: 1, gasto: 4000, votos: 400, porVoto: 10, publico: 1000 });
+    expect(ps[1]).toMatchObject({ partido: "?", semPrestacao: 1, gasto: 0 });
+    expect(totalPartidos(ps)).toEqual({ gasto: 4000, votos: 500, porVoto: 8, candidatos: 3, eleitos: 1 });
+  });
+});
+
+describe("quartisDoRecorte", () => {
+  const linhas = [lq({ faixa: -1, candidatos: 2, eleitos: 0, gasto: 0 }), lq({ faixa: 0, candidatos: 8, eleitos: 1, gasto: 0 }),
+    lq({ faixa: 1, gasto: 100 }), lq({ faixa: 2, gasto: 300 }), lq({ faixa: 3, gasto: 600 }), lq({ faixa: 4, gasto: 9000, eleitos: 6, votos: 1000 })];
+  it("junta os grupos em ordem, com taxa de eleição, custo por voto e a concentração no quartil de cima", () => {
+    const q = quartisDoRecorte(linhas, { ano: 2024, cargo: "Vereador", uf: "PE" })!;
+    expect(q.grupos.map((g) => g.faixa)).toEqual([-1, 0, 1, 2, 3, 4]);
+    expect(q).toMatchObject({ candidatos: 50, eleitos: 10, gasto: 10_000, concentracao: 0.9 });
+    expect(q.grupos[5]).toMatchObject({ rotulo: "25% que mais gastaram", taxa: 0.6, porVoto: 9 });
+  });
+  it("null sem candidato com gasto declarado", () => {
+    expect(quartisDoRecorte([lq({ faixa: 0 })], { ano: 2024, cargo: "Vereador", uf: "PE" })).toBeNull();
+    expect(quartisDoRecorte(linhas, { ano: 2020, cargo: "Vereador", uf: "PE" })).toBeNull();
+  });
+});
+
+describe("quartisDeCandidatos", () => {
+  it("usa a regra do percent_rank: empates no mesmo grupo, sem contas e sem gasto à parte", () => {
+    const gastos = [10, 20, 30, 40, 50, 60, 70, 80, 90];   // n = 9: posições 0, 1/8 ... 1
+    const cands = [...gastos.map((g, i) => cl({ id_candidatura: i, gasto: g, eleito: g >= 80 })), cl({ gasto: 0 }), cl({ prestou: false, gasto: 0 })];
+    const q = quartisDeCandidatos(cands)!;
+    const de = (f: number) => q.grupos.find((g) => g.faixa === f)!;
+    expect(de(1)).toMatchObject({ candidatos: 2, min: 10, max: 20 });   // posições 0 e 0,125
+    expect(de(4)).toMatchObject({ candidatos: 3, min: 70, max: 90, eleitos: 2 });   // posições 0,75 a 1
+    expect(de(0).candidatos).toBe(1);
+    expect(de(-1).candidatos).toBe(1);
+    const empate = quartisDeCandidatos(Array.from({ length: 8 }, (_, i) => cl({ id_candidatura: i, gasto: i < 4 ? 5 : 100 })))!;
+    expect(empate.grupos.map((g) => [g.faixa, g.candidatos])).toEqual([[1, 4], [3, 4]]);
+  });
+  it("com poucos candidatos com gasto, não divide em quartis", () => {
+    expect(quartisDeCandidatos([cl({}), cl({}), cl({})])).toBeNull();
+  });
+});
+
+describe("faixaGasto", () => {
+  const g = (o: object) => ({ faixa: 2, rotulo: "", candidatos: 1, eleitos: 0, gasto: 0, votos: 0, min: 500.1, max: 1357.5, mediana: 0, taxa: 0, porVoto: null, ...o });
+  it("escreve a faixa de cada quartil", () => {
+    expect(faixaGasto(g({ faixa: 1, max: 500 }), false)).toBe("até R$ 500");
+    expect(faixaGasto(g({}), false)).toBe("R$ 500 a R$ 1.358");
+    expect(faixaGasto(g({ faixa: 4, min: 141_850 }), true)).toBe("acima de R$ 142 mil");
+  });
+});
+
+describe("barrasQuartis", () => {
+  it("três barras 100% (candidatos, eleitos, dinheiro) nas cores da escala, sem fatias vazias", () => {
+    const q = quartisDoRecorte([lq({ faixa: 0, candidatos: 10, eleitos: 0, gasto: 0 }), lq({ faixa: 1, gasto: 100 }), lq({ faixa: 4, gasto: 900 })], { ano: 2024, cargo: "Vereador", uf: "PE" })!;
+    const [cand, ele, din] = barrasQuartis(q);
+    expect(cand.fatias.map((f) => [f.chave, f.cor])).toEqual([["0", "o"], ["1", "q1"], ["4", "q4"]]);
+    expect(ele.fatias.map((f) => f.chave)).toEqual(["1", "4"]);
+    expect(din).toMatchObject({ titulo: "Dinheiro gasto", total: reais(1000) });
+    expect(din.fatias[1].parte).toBeCloseTo(0.9);
+  });
+});
+
+describe("medidasNosAnos e setaMedida", () => {
+  it("uma barra por ano na escala do maior e a variação do primeiro ao último", () => {
+    const [gasto, pub] = medidasNosAnos([
+      { chave: "g", rotulo: "Gasto", valores: [100, 150], fmt: String },
+      { chave: "p", rotulo: "Público", valores: [0.6, 0.66], fmt: String, pontos: true },
+      { chave: "x", rotulo: "Vazia", valores: [null, null], fmt: String },
+    ]);
+    expect(gasto).toMatchObject({ textos: ["100", "150"], variacao: 0.5 });
+    expect(gasto.partes[0]).toBeCloseTo(2 / 3);
+    expect(setaMedida(gasto)).toBe("▲ 50%");
+    expect(setaMedida(pub)).toBe("▲ 6 p.p.");
+  });
+  it("sem dois anos com valor, sem variação", () => {
+    const [m] = medidasNosAnos([{ chave: "g", rotulo: "Gasto", valores: [null, 10], fmt: String }]);
+    expect(m).toMatchObject({ textos: ["—", "10"], variacao: null });
+    expect(setaMedida(m)).toBeNull();
+  });
+});
+
+describe("anosDoCargo", () => {
+  it("os anos com dinheiro em que o cargo foi disputado", () => {
+    expect(anosDoCargo("Vereador")).toEqual([2020, 2024]);
+    expect(anosDoCargo("Deputado federal")).toEqual([2018, 2022]);
+  });
+});
+
+describe("fraseConcentracao", () => {
+  it("a parte do dinheiro e dos eleitos que ficou com os 25% que mais gastaram", () => {
+    const q = quartisDoRecorte([lq({ faixa: 0, eleitos: 2, gasto: 0 }), lq({ faixa: 1, gasto: 100, eleitos: 2 }), lq({ faixa: 4, gasto: 900, eleitos: 4 })], { ano: 2024, cargo: "Vereador", uf: "PE" })!;
+    expect(fraseConcentracao(q)).toEqual({ dinheiro: 0.9, eleitos: 0.5 });
+    expect(fraseConcentracao({ ...q, eleitos: 0 })).toBeNull();
   });
 });
