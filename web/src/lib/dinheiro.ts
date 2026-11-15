@@ -89,8 +89,8 @@ export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
  * troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
  */
 export function hrefMapaDinheiro(
-  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; medir?: string; ord?: string },
-  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "medir" | "ord", string | number | null>> = {},
+  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; medir?: string; ord?: string; quem?: string },
+  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "medir" | "ord" | "quem", string | number | null>> = {},
   ancora = "mapa",
 ): string {
   const n = { ...atual, ...("uf" in novo ? { mun: undefined } : {}), ...novo };
@@ -105,6 +105,7 @@ export function hrefMapaDinheiro(
   if (n.pintar && n.pintar !== "vaga" && PINTAR.some((x) => x.chave === n.pintar)) p.set("pintar", String(n.pintar));
   if (n.medir === "publico") p.set("medir", "publico");
   if (n.ord && n.ord !== "votos" && ORDENS_CANDIDATOS.some((o) => o.chave === n.ord)) p.set("ord", String(n.ord));
+  if (n.quem === "eleitos") p.set("quem", "eleitos");
   return `/?${p}#${ancora}`;
 }
 
@@ -827,4 +828,200 @@ export function fraseConcentracao(q: QuartisGasto): { dinheiro: number; eleitos:
   const topo = q.grupos.find((g) => g.faixa === 4);
   if (!topo || q.gasto <= 0 || q.eleitos <= 0) return null;
   return { dinheiro: topo.gasto / q.gasto, eleitos: topo.eleitos / q.eleitos };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Mais quatro perguntas do painel, no mesmo recorte: quem mais gastou (todos ou só os eleitos), quanto custou cada
+// cadeira em cada cargo, quantos de cada 100 candidatos dependeram de dinheiro público e o que se comprou em propaganda.
+// Tabelas `cargos` e `maiores` da análise dinheiro ou, numa cidade, as listas de candidatos dela.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Quem entra nas listas "quem mais gastou" e na nuvem de propaganda: todos os que disputaram ou só os eleitos. */
+export type Quem = "todos" | "eleitos";
+export const QUEM: { chave: Quem; rotulo: string }[] = [
+  { chave: "todos", rotulo: "Todos os candidatos" },
+  { chave: "eleitos", rotulo: "Só os eleitos" },
+];
+export const quemDe = (v: string | string[] | undefined): Quem => ((Array.isArray(v) ? v[0] : v) === "eleitos" ? "eleitos" : "todos");
+
+/**
+ * De onde veio o dinheiro de cada candidato, em cinco grupos: mais da metade do que recebeu veio de fundos públicos
+ * (Fundo Eleitoral + Fundo Partidário), menos da metade, nada público, não recebeu nada e sem prestação final.
+ */
+export type Fundo = "maioria" | "parte" | "nada" | "sem_receita" | "sem_contas";
+export const FUNDOS: { chave: Fundo; rotulo: string; curto: string; cor: string }[] = [
+  { chave: "maioria", rotulo: "Mais da metade do dinheiro veio de fundos públicos", curto: "Dependeu do dinheiro público", cor: "pub" },
+  { chave: "parte", rotulo: "Menos da metade veio de fundos públicos", curto: "Usou um pouco", cor: "fx2" },
+  { chave: "nada", rotulo: "Nenhum dinheiro público", curto: "Nada público", cor: "priv" },
+  { chave: "sem_receita", rotulo: "Entregou as contas sem nada recebido", curto: "Não recebeu nada", cor: "o" },
+  { chave: "sem_contas", rotulo: "Sem prestação de contas final", curto: "Sem contas", cor: "sc" },
+];
+export type ContagemFundos = Record<Fundo, number>;
+const fundosVazios = (): ContagemFundos => ({ maioria: 0, parte: 0, nada: 0, sem_receita: 0, sem_contas: 0 });
+
+/** O grupo de um candidato pelo que recebeu (mesma regra de dinheiro.sql). */
+export function fundoDe(c: { prestou: boolean; receita: number; receita_publica: number }): Fundo {
+  if (!c.prestou) return "sem_contas";
+  if (c.receita <= 0) return "sem_receita";
+  if (c.receita_publica <= 0) return "nada";
+  return c.receita_publica / c.receita >= 0.5 ? "maioria" : "parte";
+}
+
+/** Uma linha da tabela `cargos` da análise dinheiro: cadeiras, gasto e os cinco grupos de dinheiro (el_* = só eleitos). */
+export interface LinhaCargo {
+  ano: number; cargo: string; uf: string | null; porte: string | null; vagas: number | null;
+  candidatos: number; eleitos: number; gasto: number; gasto_eleitos: number; mediana_eleito: number | null;
+  maioria: number; parte: number; nada: number; sem_receita: number; sem_contas: number;
+  el_maioria: number; el_parte: number; el_nada: number; el_sem_receita: number; el_sem_contas: number;
+}
+
+/** Um cargo no recorte, pronto para o painel: o custo da cadeira, o eleito típico e os grupos de dinheiro. */
+export interface ResumoCargo {
+  cargo: string; vagas: number; candidatos: number; eleitos: number; gasto: number; gastoEleitos: number;
+  /** Gasto de todas as campanhas ÷ cadeiras (null sem cadeiras). */ porCadeira: number | null;
+  /** Mediana do gasto dos eleitos que entregaram as contas. */ medianaEleito: number | null;
+  todos: ContagemFundos; soEleitos: ContagemFundos;
+}
+
+const resumoDeLinha = (l: LinhaCargo): ResumoCargo => ({
+  cargo: l.cargo, vagas: l.vagas ?? 0, candidatos: l.candidatos, eleitos: l.eleitos, gasto: l.gasto, gastoEleitos: l.gasto_eleitos,
+  porCadeira: l.vagas ? l.gasto / l.vagas : null, medianaEleito: l.mediana_eleito,
+  todos: { maioria: l.maioria, parte: l.parte, nada: l.nada, sem_receita: l.sem_receita, sem_contas: l.sem_contas },
+  soEleitos: { maioria: l.el_maioria, parte: l.el_parte, nada: l.el_nada, sem_receita: l.el_sem_receita, sem_contas: l.el_sem_contas },
+});
+
+/**
+ * Todos os cargos de uma eleição no recorte (tabela cargos), na ordem das opções do ano (cargosDoAno). O porte só vale
+ * nas eleições municipais.
+ */
+export function cargosDoRecorte(linhas: LinhaCargo[], f: { ano: number; uf?: string; porte?: string }): ResumoCargo[] {
+  const ordem = cargosDoAno(f.ano);
+  const porte = ehMunicipal(f.ano) ? f.porte : undefined;
+  return linhas
+    .filter((l) => l.ano === f.ano && (l.uf ?? undefined) === f.uf && (l.porte ?? undefined) === porte && ordem.includes(l.cargo))
+    .sort((a, b) => ordem.indexOf(a.cargo) - ordem.indexOf(b.cargo))
+    .map(resumoDeLinha);
+}
+
+/** Um cargo numa cidade, a partir da lista de candidatos dela e do número de cadeiras (prefeito: 1). */
+export function cargoDeCandidatos(cargo: string, cands: CandidatoLocal[], vagas: number): ResumoCargo {
+  const todos = fundosVazios(), soEleitos = fundosVazios();
+  let gasto = 0, gastoEleitos = 0;
+  const gastosEleitos: number[] = [];
+  for (const c of cands) {
+    const f = fundoDe(c);
+    todos[f]++;
+    gasto += c.gasto;
+    if (c.eleito) {
+      soEleitos[f]++;
+      gastoEleitos += c.gasto;
+      if (c.prestou) gastosEleitos.push(c.gasto);
+    }
+  }
+  return {
+    cargo, vagas, candidatos: cands.length, eleitos: cands.filter((c) => c.eleito).length, gasto, gastoEleitos,
+    porCadeira: vagas > 0 ? gasto / vagas : null, medianaEleito: mediana(gastosEleitos), todos, soEleitos,
+  };
+}
+
+/** Um grupo de dinheiro em "de cada 100": quantos de 100 (inteiro) e quantos de verdade. */
+export interface Cada100 { chave: Fundo; rotulo: string; curto: string; cor: string; de100: number; n: number }
+
+/**
+ * Os cinco grupos em "de cada 100", somando exatamente 100 (maiores restos: as unidades que o arredondamento para baixo
+ * deixou vão para os grupos de maior resto). null sem ninguém. Os grupos vazios saem.
+ */
+export function deCada100(c: ContagemFundos): Cada100[] | null {
+  const total = FUNDOS.reduce((a, f) => a + c[f.chave], 0);
+  if (total <= 0) return null;
+  const base = FUNDOS.map((f, i) => {
+    const exato = (c[f.chave] / total) * 100;
+    return { ...f, n: c[f.chave], de100: Math.floor(exato), resto: exato - Math.floor(exato), i };
+  });
+  let falta = 100 - base.reduce((a, b) => a + b.de100, 0);
+  for (const b of [...base].sort((x, y) => y.resto - x.resto || x.i - y.i)) {
+    if (falta <= 0) break;
+    if (b.resto > 0) { b.de100++; falta--; }
+  }
+  return base.filter((b) => b.n > 0).map((b) => ({ chave: b.chave, rotulo: b.rotulo, curto: b.curto, cor: b.cor, de100: b.de100, n: b.n }));
+}
+
+/** Quantos de cada 100 dependeram do dinheiro público (grupo "maioria"); null sem ninguém. */
+export function dependeram(c: ContagemFundos): number | null {
+  const g = deCada100(c);
+  return g === null ? null : g.find((x) => x.chave === "maioria")?.de100 ?? 0;
+}
+
+/** O cargo dentro da frase: "deputado estadual", "vereador". */
+const cargoNaFrase = (cargo: string) => cargo.toLowerCase();
+
+/**
+ * A frase de "de cada 100": "De cada 100 candidatos a deputado estadual em 2022, 63 tiveram mais da metade do dinheiro
+ * vindo de fundos públicos." Com `eleitos`, "De cada 100 eleitos para ...". null sem ninguém.
+ */
+export function fraseDeCada100(cargo: string, ano: number, c: ContagemFundos, eleitos = false): string | null {
+  const n = dependeram(c);
+  if (n === null) return null;
+  const quem = eleitos ? `eleitos para ${cargoNaFrase(cargo)}` : `candidatos a ${cargoNaFrase(cargo)}`;
+  return `De cada 100 ${quem} em ${ano}, ${n} ${n === 1 ? "teve" : "tiveram"} mais da metade do dinheiro vindo de fundos públicos.`;
+}
+
+/** Uma linha da tabela `maiores`: as 10 campanhas de maior gasto do recorte (so_eleitos: só entre os eleitos). */
+export interface LinhaMaior {
+  ano: number; cargo: string; uf: string | null; porte: string | null; so_eleitos: boolean; pos: number;
+  id_candidato: number | null; id_candidatura: number; nome_urna: string | null; partido: string | null;
+  municipio: string | null; uf_candidato: string; eleito: boolean; gasto: number; votos: number; receita: number; publico: number;
+}
+
+/** Uma campanha em "quem mais gastou": o gasto, os votos, o custo de cada voto e a parte pública do que recebeu. */
+export interface Maior {
+  id_candidato: number | null; id_candidatura: number; nome: string; partido: string; municipio: string | null; uf: string | null;
+  eleito: boolean; gasto: number; votos: number; porVoto: number | null; partePublica: number | null;
+}
+
+type BaseMaior = { id_candidato: number | null; id_candidatura: number; nome_urna: string | null; partido: string | null; eleito: boolean; gasto: number; votos: number; receita: number; publico: number };
+const comoMaior = (c: BaseMaior, municipio: string | null, uf: string | null): Maior => ({
+  id_candidato: c.id_candidato, id_candidatura: c.id_candidatura, nome: c.nome_urna ?? "(sem nome)", partido: c.partido ?? "?", municipio, uf,
+  eleito: c.eleito, gasto: c.gasto, votos: c.votos, porVoto: custoPorVoto(c.gasto, c.votos), partePublica: c.receita > 0 ? Math.min(1, c.publico / c.receita) : null,
+});
+
+/** As campanhas de maior gasto de um recorte (tabela maiores), em ordem. */
+export function maioresDoRecorte(linhas: LinhaMaior[], f: RecorteTabela, quem: Quem): Maior[] {
+  return linhas.filter((l) => doRecorte(f)(l) && l.so_eleitos === (quem === "eleitos"))
+    .sort((a, b) => a.pos - b.pos)
+    .map((l) => comoMaior(l, l.municipio, l.uf_candidato));
+}
+
+/** As `n` campanhas de maior gasto de uma cidade (só quem declarou gasto), entre todos ou só os eleitos. */
+export function maioresDeCandidatos(cands: CandidatoLocal[], quem: Quem, n = 10): Maior[] {
+  return cands.filter((c) => c.gasto > 0 && (quem === "todos" || c.eleito))
+    .sort((a, b) => b.gasto - a.gasto || a.id_candidatura - b.id_candidatura)
+    .slice(0, n)
+    .map((c) => comoMaior({ ...c, publico: c.receita_publica }, null, null));
+}
+
+/** A parte de um gasto no total do recorte (0 a 1); null sem total. */
+export const parteDoTotal = (gasto: number, total: number | null | undefined): number | null => (total && total > 0 ? gasto / total : null);
+
+/**
+ * O caminho da nuvem de propaganda da camada Dinheiro (GET /api/dinheiro/pecas): ano, cargo e estado (ou os seis), ou
+ * a cidade (id_municipio, que vale no lugar do estado); `eleitos` só com os eleitos.
+ */
+export function caminhoPecas(f: { ano: number; cargo: string; uf?: string; mun?: number }, quem: Quem): string {
+  const p = new URLSearchParams({ ano: String(f.ano), cargo: f.cargo });
+  if (f.mun !== undefined) p.set("mun", String(f.mun));
+  else if (f.uf) p.set("uf", f.uf);
+  if (quem === "eleitos") p.set("eleitos", "true");
+  return `/dinheiro/pecas?${p}`;
+}
+
+/** Com menos de `minimo` pessoas, "de cada 100" engana: aí vale a conta de verdade. */
+export const MINIMO_CADA_100 = 20;
+export const totalFundos = (c: ContagemFundos) => FUNDOS.reduce((a, f) => a + c[f.chave], 0);
+
+/** Quantos dependeram do dinheiro público, em texto curto: "63 de 100" ou, com poucas pessoas, "2 de 3". null sem ninguém. */
+export function textoDependeram(c: ContagemFundos, minimo = MINIMO_CADA_100): string | null {
+  const total = totalFundos(c);
+  if (total <= 0) return null;
+  return total >= minimo ? `${dependeram(c)} de 100` : `${c.maioria} de ${total}`;
 }

@@ -2222,3 +2222,63 @@ a.q-ver:active { transform: scale(0.98); }
 @media (max-width: 1000px) { #dinheiro-origem { grid-column: 1 / -1; } }
 @media (max-width: 620px) { .quartis-linha { grid-template-columns: 1fr; gap: 4px; } .pt-gasto { width: auto; } .pt-gasto > div { display: block; } .pt-gasto small, .pt-trilho, .pt-de { display: none; } .partidos-tabela { font-size: 13.5px; } .partidos-tabela tbody th { font-size: 12.5px; } .anos-cargo { min-width: 0; font-size: 13.5px; } .anos-cargo td { min-width: 0; } .anos-cargo th, .anos-cargo td { padding: 6px 4px; } .partidos-tabela th, .partidos-tabela td { padding: 6px 5px; } }
 .tabela-rolar:has(> .partidos-tabela), .tabela-rolar:has(> .anos-cargo) { max-height: none; }
+
+/* camada Dinheiro: quem mais gastou, cada cadeira, "de cada 100" e a nuvem de propaganda */
+.din-quem { margin: 0 0 12px; }
+.maiores-tabela, .cadeiras-tabela, .fundos-tabela { width: 100%; border-collapse: collapse; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.maiores-tabela th, .maiores-tabela td, .cadeiras-tabela th, .cadeiras-tabela td, .fundos-tabela th, .fundos-tabela td { padding: 7px 8px; border-bottom: 1px solid var(--noite-linha); text-align: left; vertical-align: middle; }
+.maiores-tabela thead th, .cadeiras-tabela thead th, .fundos-tabela thead th { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.maiores-tabela .num, .cadeiras-tabela .num, .fundos-tabela .num { text-align: right; }
+.maiores-tabela tbody th { font-weight: 650; }
+.maiores-tabela tbody th a, .cadeiras-tabela tbody th a, .fundos-tabela tbody th a { color: var(--sobre-noite); }
+.maiores-tabela tbody th small { display: block; margin-top: 2px; font-weight: 500; font-size: 12.5px; color: var(--noite-muted); }
+.maiores-tabela .pt-gasto { width: 34%; } .maiores-tabela .pt-gasto > div { grid-template-columns: minmax(40px, 1fr) 118px; }
+.mg-pos { color: var(--noite-muted); width: 1%; }
+.mg-res { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: var(--noite2); color: var(--noite-muted); }
+.mg-res.eleito { background: var(--accent); color: var(--on-accent); }
+.cadeiras-tabela tbody tr.on th a, .fundos-tabela tbody tr.on th a { color: var(--brilho); font-weight: 750; }
+.cadeiras-tabela tbody tr:not(.on) .pt-trilho i { background: var(--q1); }
+.cadeiras-tabela .pt-gasto { width: 40%; } .cadeiras-tabela .pt-gasto > div { grid-template-columns: minmax(40px, 1fr) 118px; }
+.fundos-tabela { margin-top: 18px; max-width: 720px; }
+.tabela-rolar:has(> .maiores-tabela), .tabela-rolar:has(> .cadeiras-tabela), .tabela-rolar:has(> .fundos-tabela) { max-height: none; }
+
+.cem-par { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px 40px; }
+.cem { margin: 0; }
+.cem figcaption { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.cem figcaption b { font-size: 44px; line-height: 1; font-weight: 700; color: var(--sobre-noite); font-variant-numeric: tabular-nums; }
+.cem figcaption span { font-size: 14.5px; color: var(--noite-muted); max-width: 22ch; }
+.cem-grade { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-width: 300px; }
+.cem-grade i { aspect-ratio: 1; border-radius: 3px; }
+.cem-grade .pub, .cem-legenda .pub { background: var(--pub); } .cem-grade .fx2, .cem-legenda .fx2 { background: var(--fx2); }
+.cem-grade .priv, .cem-legenda .priv { background: var(--priv); } .cem-grade .o, .cem-legenda .o { background: var(--o); }
+.cem-grade .sc, .cem-legenda .sc { background: transparent; box-shadow: inset 0 0 0 1.5px var(--noite-muted); }
+.cem-legenda { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; font-size: 14px; color: var(--noite-muted); }
+.cem-legenda i { display: inline-block; width: 11px; height: 11px; margin-right: 8px; border-radius: 3px; vertical-align: -1px; }
+.cem-legenda b { color: var(--sobre-noite); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.cem-poucos { font-size: 18px; margin: 0; }
+
+/* a nuvem da P9 nasce para fundo claro: no painel escuro, os tons do tema escuro */
+.din { --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93; }
+.din-nuvem { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px 32px; align-items: center; }
+.din-nuvem .nuvem { margin: 0; }
+@media (max-width: 1000px) { .din-nuvem { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+  .mg-pub, .cd-total { display: none; }
+  .maiores-tabela, .cadeiras-tabela, .fundos-tabela { font-size: 13.5px; }
+  .maiores-tabela th, .maiores-tabela td, .cadeiras-tabela th, .cadeiras-tabela td, .fundos-tabela th, .fundos-tabela td { padding: 6px 4px; }
+  .maiores-tabela .pt-gasto > div, .cadeiras-tabela .pt-gasto > div { display: block; }
+  .cem figcaption b { font-size: 36px; }
+}
+.maiores-tabela .num, .cadeiras-tabela .num, .fundos-tabela .num, .cadeiras-tabela tbody th { white-space: nowrap; }
+.maiores-tabela tbody th { min-width: 170px; }
+.maiores-tabela .pt-gasto { width: 26%; }
+.cem figcaption span { max-width: 30ch; }
+.cem-grade { max-width: 270px; }
+.cem-grade .o, .cem-legenda .o { background: var(--noite-muted); opacity: 0.55; }
+.din-pecas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-variant-numeric: tabular-nums; }
+.din-pecas li { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(30px, 1fr) 3.2em minmax(0, 7.5em); align-items: center; gap: 10px; font-size: 14.5px; }
+.din-pecas li > span:first-child { font-weight: 650; color: var(--sobre-noite); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.din-pecas-trilho { display: block; height: 10px; border-radius: 3px; background: var(--noite2); overflow: hidden; }
+.din-pecas-trilho i { display: block; height: 100%; border-radius: 3px; background: var(--q3); }
+.din-pecas b { text-align: right; } .din-pecas small { color: var(--noite-muted); font-size: 13px; white-space: nowrap; }
+@media (max-width: 620px) { .maiores-tabela tbody th { min-width: 0; } .maiores-tabela .mg-pos, .maiores-tabela thead th:first-child { display: none; } .maiores-tabela .pt-gasto b { font-size: 13px; } .mg-res { padding: 2px 6px; font-size: 11.5px; } }

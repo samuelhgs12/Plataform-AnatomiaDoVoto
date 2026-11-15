@@ -98,6 +98,10 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
       "Quanto cada partido gastou: a soma dos gastos declarados pelas campanhas do partido ao cargo, no mesmo recorte do número (cidade, porte, estado ou os seis). Quanto custou um voto: esse gasto ÷ votos nominais no 1º turno (o voto só na legenda não entra).",
       "Quartis: os candidatos que entregaram as contas e declararam algum gasto, em quatro grupos de tamanho aproximado, do que menos ao que mais gastou, comparando cada um com os do mesmo recorte (valores iguais ficam no mesmo grupo). Quem não declarou gasto e quem não entregou as contas aparecem à parte. Numa cidade, só com pelo menos 8 candidatos com gasto (não vale para prefeito).",
       "Ano a ano: o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar; valores da época, e as partes (parte pública, fatia dos 25% que mais gastaram) comparadas em pontos percentuais.",
+      "Quem mais gastou: as 10 campanhas de maior gasto declarado no recorte, entre todos os que disputaram ou só entre os eleitos; a parte pública é o que veio do Fundo Eleitoral e do Fundo Partidário no que a campanha recebeu.",
+      "Cada cadeira: gasto de todas as campanhas ao cargo ÷ cadeiras em disputa no recorte; o eleito típico é a mediana do gasto dos eleitos que entregaram as contas.",
+      "Dependeu do dinheiro público: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário. “De cada 100” arredonda pelos maiores restos para somar 100; com menos de 20 pessoas, mostra a conta de verdade (ex.: 2 de 3).",
+      "Propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo mesmo dicionário da Pergunta 9; o tamanho da palavra é o valor contratado. Dá para ver todos os candidatos ou só os eleitos; o filtro de porte não se aplica à nuvem.",
     ],
     limites: [
       "Mostra que dinheiro e vitória andam juntos, não que o dinheiro fez ganhar: quem já tem mais chance também arrecada mais.",
