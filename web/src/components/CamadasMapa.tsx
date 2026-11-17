@@ -121,7 +121,8 @@ export function CamadasMapa({ modo, hrefs, legenda, comparativos, dinheiro }: { 
           {dinheiro.porte && (
             <EscolhaMunicipio nome="porte" rotulo="Porte da cidade" vazio="Todos os portes" opcoes={dinheiro.porte.opcoes} atual={dinheiro.porte.atual} params={dinheiro.porte.params} />
           )}
-          <a className="camada-ir" href={dinheiro.painel}>Ver os números, os candidatos e as comparações ↓</a>
+          {dinheiro.estado.atual ? <a className="camada-ir" href={dinheiro.painel}>Ver os números, os candidatos e as comparações ↓</a>
+            : <p className="camadas-apoio">Selecione um estado no mapa ou na lista para ver os dados.</p>}
         </div>
       )}
 

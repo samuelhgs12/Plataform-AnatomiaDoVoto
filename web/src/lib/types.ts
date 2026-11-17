@@ -31,6 +31,10 @@ export interface Despesas {
   id_candidatura: number; ano: number; cargo: string; uf: string | null; total: number; propaganda: number;
   pct_propaganda: number; categorias: CategoriaGasto[]; n_comparaveis: number;
 }
+export interface DespesasCandidato {
+  id_candidatura: number; prestou: boolean; total: number | null; propaganda: number | null;
+  categorias: CategoriaGasto[];
+}
 export interface Palavra { termo: string; freq: number }
 export interface Receitas {
   id_candidatura: number; publica: number; privada: number; total: number; pct_publica: number | null; mediana_pct_publica_cargo: number | null;

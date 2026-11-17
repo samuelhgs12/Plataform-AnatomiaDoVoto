@@ -70,7 +70,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const porteInfo = porte ? PORTES.find((p) => p.chave === porte) : undefined;
   const municipal = ehMunicipal(ano);
   const [dados, dadosDespesas, dadosPerguntas] = await Promise.all([
-    lerAnalise("municipios", ["municipios", "resumo", "estados"]), lerAnalise("dinheiro", ["despesas"]), lerAnalise("dinheiro", ["partidos", "quartis", "cargos", "maiores"]),
+    lerAnalise("municipios", ["municipios", "resumo", "estados"]),
+    um(sp.uf) ? lerAnalise("dinheiro", ["despesas"]) : Promise.resolve(null),
+    um(sp.uf) ? lerAnalise("dinheiro", ["partidos", "quartis", "cargos", "maiores"]) : Promise.resolve(null),
   ]);
   if (!dados?.resumo || !dados.estados || !dados.municipios) {
     return (
@@ -114,10 +116,11 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     const v = valoresUf[i];
     const ficha: FichaDica = { titulo: NOME_UF[u] ?? u, sub: `${cargo} · ${ano}${porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}`, medidas: v === null ? [] : [{ rotulo: medidaInfo.rotulo, valor: textoValor(v, aba, cargo), cores: TERCOS, p: naRegua(v, faixasUf, minUf, maxUf) }] };
     // o selo do estado é curto e sem "R$" (a unidade está no título e na legenda): "222 mil", "14", "62%"; a pílula cresce com ele
-    const selo = seloValor(v, aba);
+    const selo = uf ? seloValor(v, aba) : "";
     return {
-      uf: u, classe: corTerco(v, faixasUf), href: href({ uf: u === uf ? null : u }), sigla: u, valor: selo, largura: larguraSelo(selo),
-      descricao: `${NOME_UF[u] ?? u}: ${textoValor(v, aba, cargo)} ${unidade(aba, cargo)} em ${ano}`, ficha,
+      uf: u, classe: uf ? corTerco(v, faixasUf) : "dinheiro-neutro", href: href({ uf: u === uf ? null : u }), sigla: u, valor: selo, largura: uf ? larguraSelo(selo) : undefined,
+      descricao: uf ? `${NOME_UF[u] ?? u}: ${textoValor(v, aba, cargo)} ${unidade(aba, cargo)} em ${ano}` : `Selecionar ${NOME_UF[u] ?? u}`,
+      ficha: uf ? ficha : undefined,
     };
   });
   // cidades do estado aberto (só nas municipais): faixas fixas, iguais em todos os estados; fora do porte, apagadas
@@ -212,7 +215,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const outroCargo = mun ? cargosDoAno(ano).find((c) => c !== cargo) : undefined;
   const [candsOutro, recebidasPecas] = await Promise.all([
     mun && outroCargo ? apiGetOpcional<CandidatoLocal[]>(`/municipios/${mun.id_municipio}/candidatos?ano=${ano}&cargo=${encodeURIComponent(outroCargo)}`) : Promise.resolve(null),
-    apiGetOpcional<unknown>(caminhoPecas({ ano, cargo, uf, mun: mun?.id_municipio }, quem)),
+    uf && tem("propaganda") ? apiGetOpcional<unknown>(caminhoPecas({ ano, cargo, uf, mun: mun?.id_municipio }, quem)) : Promise.resolve(null),
   ]);
   const vagasMun = (c: string) => (c === "Prefeito" ? 1 : linhaMun?.vereador_vagas ?? 0);
   const cargosLugar = mun
@@ -289,7 +292,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
   return (
     <>
-      <MapaVivo className="palco s12 palco-dinheiro" estado={uf}>
+      <MapaVivo className={`palco s12 palco-dinheiro${!uf ? " dinheiro-inicial" : ""}`} estado={uf}>
         {menu}
         <div className="palco-topo">
           <div>
@@ -305,7 +308,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         <div className="palco-mapa">
           {mapaPalco}
-          {!uf && <p className="palco-dica" aria-hidden="true">{municipal ? "Clique num estado para ver as cidades" : "Clique num estado para ver os eleitos"}</p>}
+          {!uf && <p className="palco-dica">Selecione um estado para explorar o dinheiro das campanhas</p>}
           <p className="carregando-mapa" aria-hidden="true">Carregando…</p>
           {cartao && (
             <aside className="cartao-lugar" aria-label={`Resumo: ${cartao.nome}`}>
@@ -324,7 +327,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </div>
 
         <div className="palco-base">
-          <div className="legenda-dinheiro">
+          {uf && <div className="legenda-dinheiro">
             <p className="legenda-titulo">
               {medidaInfo.rotulo}{aba === "publico" ? "" : " (R$)"}
               <span title={uf && municipal ? "As mesmas faixas em todos os estados e anos." : "Os seis estados em três faixas, recalculadas a cada ano e cargo. Para comparar anos, use os números."}>
@@ -334,7 +337,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             <ul className="legenda-q" aria-label={uf && municipal ? `Cores: faixas fixas de ${medidaInfo.rotulo.toLowerCase()}` : `Cores: três faixas dos estados por ${medidaInfo.rotulo.toLowerCase()}, relativas ao ano e ao cargo`}>
               {legenda.map((l) => <li key={l.texto} className={l.classe === "sem" ? "legenda-sem" : undefined}><i className={l.classe} />{l.texto}</li>)}
             </ul>
-          </div>
+          </div>}
           <div className="anos" role="group" aria-label="Ano da eleição">
             {ANOS_DINHEIRO.map((a) => (
               <Link key={a} scroll={false} href={href({ ano: a })} className={`ano${a === ano ? " on" : ""}`} aria-current={a === ano ? "true" : undefined}>
@@ -345,7 +348,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </div>
       </MapaVivo>
 
-      <div id="dinheiro-painel" className="painel s12 din" key={`dinheiro-${uf}-${mun?.id_municipio}-${ano}-${cargo}-${pintar}`}>
+      {uf && <div id="dinheiro-painel" className="painel s12 din" key={`dinheiro-${uf}-${mun?.id_municipio}-${ano}-${cargo}-${pintar}`}>
         {/* cabeçalho: onde estamos e a troca de cidade */}
         <header className="din-cab s12">
           <div>
@@ -662,25 +665,25 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
               </nav>
             )}
             {mun && <p className="rotulo">Eleitos ({inteiro(eleitos.length)})</p>}
-            <LinhasCandidatos linhas={eleitos.slice(0, INICIO_LISTA)} ano={ano}
+            <LinhasCandidatos detalhar linhas={eleitos.slice(0, INICIO_LISTA)} ano={ano}
               vazio={candidatos === null && eleitosUf === null ? "Não foi possível carregar os candidatos agora. Recarregue a página para tentar de novo." : "Nenhum eleito registrado."} />
             {eleitos.length > INICIO_LISTA && (
               <details className="ver-todos"><summary>Todos os {inteiro(eleitos.length)} eleitos</summary>
-                <LinhasCandidatos linhas={eleitos.slice(INICIO_LISTA)} ano={ano} vazio="" />
+                <LinhasCandidatos detalhar linhas={eleitos.slice(INICIO_LISTA)} ano={ano} vazio="" />
               </details>
             )}
             {naoEleitos.length > 0 && (
               <>
                 <p className="rotulo">Não eleitos ({inteiro(naoEleitos.length)})</p>
-                <LinhasCandidatos linhas={naoEleitos.slice(0, INICIO_LISTA)} ano={ano} vazio="" />
+                <LinhasCandidatos detalhar linhas={naoEleitos.slice(0, INICIO_LISTA)} ano={ano} vazio="" />
                 {naoEleitos.length > INICIO_LISTA && (
                   <details className="ver-todos"><summary>{naoEleitos.length > MAX_LISTA ? `Os ${MAX_LISTA} primeiros (${ordInfo.rotulo.toLowerCase()})` : `Todos os ${inteiro(naoEleitos.length)} não eleitos`}</summary>
-                    <LinhasCandidatos linhas={naoEleitos.slice(INICIO_LISTA, MAX_LISTA)} ano={ano} vazio="" />
+                    <LinhasCandidatos detalhar linhas={naoEleitos.slice(INICIO_LISTA, MAX_LISTA)} ano={ano} vazio="" />
                   </details>
                 )}
               </>
             )}
-            <p className="din-rodape">Prestação de contas final na base (não quer dizer aprovada) · clique no nome para ver o perfil</p>
+            <p className="din-rodape">Gasto por voto = gasto declarado ÷ votos do 1º turno · abra as despesas para ver cada categoria · clique no nome para ver o perfil</p>
           </section>
         )}
 
@@ -694,7 +697,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           <li><Link href={propaganda}>Onde os candidatos investem em propaganda</Link></li>
           <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
         </ul>
-      </div>
+      </div>}
     </>
   );
 }

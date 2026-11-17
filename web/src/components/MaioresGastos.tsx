@@ -1,7 +1,11 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import type { Maior } from "@/lib/dinheiro";
 import { nomeProprio } from "@/lib/abstencao";
 import { brlCentavos, compacto, pct, reais } from "@/lib/format";
+import { fotoDoDinheiro } from "@/lib/foto-dinheiro";
+import { Avatar } from "./Avatar";
+import { DespesasDoCandidato } from "./DespesasDoCandidato";
 
 /**
  * Quem mais gastou no recorte (lista de src/lib/dinheiro.ts, do maior gasto): o nome leva ao perfil, com a barra do
@@ -21,11 +25,15 @@ export function MaioresGastos({ maiores, titulo, comLugar }: { maiores: Maior[];
         </thead>
         <tbody>
           {maiores.map((m, i) => (
-            <tr key={m.id_candidatura}>
+            <Fragment key={m.id_candidatura}><tr>
               <td className="num mg-pos">{i + 1}</td>
               <th scope="row">
-                {m.id_candidato ? <Link href={`/candidato/${m.id_candidato}?campanha=${m.id_candidatura}#dinheiro`}>{nomeProprio(m.nome)}</Link> : nomeProprio(m.nome)}
-                <small>{m.partido}{comLugar && m.municipio ? ` · ${nomeProprio(m.municipio)}${m.uf ? `/${m.uf}` : ""}` : ""}</small>
+                <div className="mg-identidade"><Avatar nome={m.nome} partido={m.partido} foto={fotoDoDinheiro(m)} />
+                  <div>{m.id_candidato ? <Link href={`/candidato/${m.id_candidato}?campanha=${m.id_candidatura}#dinheiro`}>{nomeProprio(m.nome)}</Link> : nomeProprio(m.nome)}
+                    <small>{m.partido}{comLugar && m.municipio ? ` · ${nomeProprio(m.municipio)}${m.uf ? `/${m.uf}` : ""}` : ""}</small>
+                    <small className="mg-custo-mobile">{m.porVoto === null ? "Gasto por voto indisponível" : `${brlCentavos(m.porVoto)} por voto`}</small>
+                  </div>
+                </div>
               </th>
               <td className="pt-gasto">
                 <div>
@@ -37,7 +45,7 @@ export function MaioresGastos({ maiores, titulo, comLugar }: { maiores: Maior[];
               <td className="num mg-pub">{m.porVoto === null ? "—" : brlCentavos(m.porVoto)}</td>
               <td className="num mg-pub" title="Parte do que a campanha recebeu que veio do Fundo Eleitoral e do Fundo Partidário">{m.partePublica === null ? "—" : pct(m.partePublica, 0)}</td>
               <td><span className={`mg-res${m.eleito ? " eleito" : ""}`}>{m.eleito ? "Eleito" : "Não eleito"}</span></td>
-            </tr>
+            </tr><tr className="mg-detalhes"><td colSpan={7}><DespesasDoCandidato id={m.id_candidatura} nome={nomeProprio(m.nome)} /></td></tr></Fragment>
           ))}
         </tbody>
       </table>

@@ -1,11 +1,31 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from .. import db, pecas_eleitos, pecas_geral
 from ..nuvem import nuvem
-from ..schemas import TermoPropaganda
+from ..schemas import CategoriaGasto, DespesasCandidato, TermoPropaganda
 
 router = APIRouter(tags=["dinheiro"])
+
+
+@router.get("/dinheiro/candidaturas/{id_candidatura}/despesas", response_model=DespesasCandidato)
+def despesas_candidato(id_candidatura: int):
+    """Despesas por categoria original do TSE, carregadas ao abrir um candidato na seção Dinheiro."""
+    if not db.um("candidatura_contexto", (id_candidatura,)):
+        raise HTTPException(404, "Candidatura não encontrada")
+    prestou = db.um("dinheiro_contas_candidato", (id_candidatura,))["prestou"]
+    if not prestou:
+        return DespesasCandidato(id_candidatura=id_candidatura, prestou=False, total=None,
+                                 propaganda=None, categorias=[])
+    cats = db.consultar("dinheiro_despesas_candidato", (id_candidatura,))
+    total = float(sum(c["valor"] for c in cats))
+    return DespesasCandidato(
+        id_candidatura=id_candidatura, prestou=True, total=total,
+        propaganda=float(sum(c["valor"] for c in cats if c["publicidade"])),
+        categorias=[CategoriaGasto(categoria=c["categoria"], publicidade=c["publicidade"],
+                                   valor=float(c["valor"]), pct=float(c["valor"]) / total if total > 0 else 0)
+                    for c in cats],
+    )
 
 
 @router.get("/dinheiro/pecas", response_model=list[TermoPropaganda],

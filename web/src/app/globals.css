@@ -2031,6 +2031,47 @@ a.q-ver:active { transform: scale(0.98); }
 /* camada Dinheiro do mapa: a lista de candidatos no painel escuro */
 .dinheiro-cand .rotulo { margin: 14px 0 4px; }
 .dinheiro-cand .linhas-cand li { border-bottom-color: var(--line); }
+
+/* Dinheiro: os dados aparecem após escolher um estado; as demais camadas mantêm seu comportamento. */
+.palco-dinheiro .mapa-abst .uf.dinheiro-neutro { fill: var(--noite-linha); }
+.dinheiro-inicial .etiqueta-sigla { transform: translateX(15px); }
+.dinheiro-inicial .etiqueta-valor { display: none; }
+.dinheiro-cand .custo-voto-candidato { color: var(--brilho); font-weight: 600; margin-top: 5px; }
+.dinheiro-cand .linhas-cand .despesas-candidato { grid-column: 2 / -1; }
+.despesas-candidato > summary { cursor: pointer; min-height: 44px; padding: 12px 0; color: var(--brilho); font-size: 14px; font-weight: 600; }
+.despesas-candidato-corpo { padding: 14px; margin-bottom: 8px; border: 1px solid var(--noite-linha); border-radius: var(--raio); background: var(--noite); }
+.despesas-candidato-corpo p { font-size: 14px; }
+.despesas-candidato-corpo button { color: var(--brilho); background: transparent; border: 1px solid var(--noite-linha); border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+.despesas-candidato-totais { display: flex; flex-wrap: wrap; gap: 12px 28px; margin-bottom: 14px; font-size: 14px; color: var(--noite-muted); }
+.despesas-candidato-totais b { display: block; margin-top: 4px; font-size: 18px; color: var(--sobre-noite); font-variant-numeric: tabular-nums; }
+.despesas-candidato-tabela { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.despesas-candidato-tabela th, .despesas-candidato-tabela td { border-bottom: 1px solid var(--noite-linha); padding: 10px 8px; text-align: left; vertical-align: top; }
+.despesas-candidato-tabela thead th { font-size: 12px; color: var(--noite-muted); }
+.despesas-candidato-tabela tbody th { width: 60%; font-weight: 500; }
+.despesas-candidato-tabela .num { text-align: right; white-space: nowrap; }
+.despesas-candidato-tabela small { display: block; margin-top: 3px; font-size: 12px; color: var(--noite-muted); }
+.despesa-trilho { display: block; height: 5px; margin-top: 8px; border-radius: 3px; background: var(--noite3); overflow: hidden; }
+.despesa-trilho i { display: block; height: 100%; background: var(--brilho); }
+.despesas-candidato-nota { margin-bottom: 0; color: var(--noite-muted); line-height: 1.5; }
+.mg-identidade { display: flex; align-items: center; gap: 10px; }
+.mg-identidade .avatar { width: 40px; height: 48px; flex-shrink: 0; border-radius: 6px; overflow: hidden; font-size: 14px; }
+.mg-identidade .foto-cand { width: 100%; height: 100%; object-fit: cover; }
+.maiores-tabela .mg-custo-mobile { display: none; }
+.maiores-tabela .mg-detalhes > td { padding: 0 8px 4px; }
+/* a linha das despesas faz parte do candidato de cima: sem borda entre as duas e com o botão baixo */
+.maiores-tabela tr:has(+ .mg-detalhes) > * { border-bottom: 0; }
+.maiores-tabela .mg-detalhes .despesas-candidato > summary { min-height: 32px; padding: 0 0 8px 47px; font-size: 13px; }
+/* a tabela de despesas mostra todas as categorias, sem rolagem dentro da rolagem */
+.tabela-rolar:has(> .despesas-candidato-tabela) { max-height: none; }
+.maiores-tabela .despesas-candidato-tabela th { min-width: 0; white-space: normal; }
+@media (max-width: 620px) {
+  .dinheiro-cand .linhas-cand .despesas-candidato { grid-column: 1 / -1; }
+  .despesas-candidato-corpo { padding: 10px; }
+  .despesas-candidato-tabela { font-size: 12px; }
+  .despesas-candidato-tabela th, .despesas-candidato-tabela td { padding: 8px 4px; }
+  .maiores-tabela .mg-custo-mobile { display: block; color: var(--brilho); }
+  .maiores-tabela .mg-detalhes .despesas-candidato > summary { padding-left: 0; }
+}
 .camadas-apoio a.camada-link { color: var(--sobre-noite); text-decoration: underline; text-underline-offset: 3px; }
 .dinheiro-barras .barras li.link > a { margin-inline: 0; }   /* no painel, a barra clicável não passa da borda */
 .dinheiro-barras .barras.compacto li { grid-template-columns: minmax(0, 10em) minmax(48px, 1fr) auto; gap: 12px; min-width: 0; }
