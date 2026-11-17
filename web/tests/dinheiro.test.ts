@@ -5,7 +5,7 @@ import {
   coberturaSelo, descricaoFatias, fatias, larguraSelo, seloValor, seta,
   anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos, maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos,
-  medidaDe, MEDIDAS_ANOS, PINTAR, SECOES,
+  medidaDe, MEDIDAS_ANOS, MEIAS, PINTAR, SECOES,
   type ContagemFundos, type LinhaCargo, type LinhaMaior,
   type LinhaPartido, type LinhaQuartil,
   type LinhaDespesa,
@@ -230,11 +230,13 @@ describe("escolhaMapaDinheiro", () => {
     expect(escolhaMapaDinheiro({ porte: "gigante" }).porte).toBeUndefined();
     expect(escolhaMapaDinheiro({ ano: "2022", porte: "ate5" }).porte).toBeUndefined();
   });
-  it("pintar: só as medidas que existem; o padrão é o gasto por vaga", () => {
-    expect(escolhaMapaDinheiro({ pintar: "eleitor" }).pintar).toBe("eleitor");
+  it("pintar: só as perguntas que existem; o padrão é a 1 (gasto por vaga)", () => {
+    expect(escolhaMapaDinheiro({ pintar: "eleitor" }).pintar).toBe("vaga");
+    expect(escolhaMapaDinheiro({ pintar: "voto" }).pintar).toBe("voto");
     expect(escolhaMapaDinheiro({ pintar: "publico" }).pintar).toBe("publico");
     expect(escolhaMapaDinheiro({ pintar: "sorte" }).pintar).toBe("vaga");
-    expect(abaDe("eleitor")).toBe("eleitor");
+    expect(abaDe("publico")).toBe("publico");
+    expect(abaDe("propaganda")).toBe("gasto");
     expect(abaDe("vaga")).toBe("gasto");
   });
 });
@@ -257,8 +259,8 @@ describe("hrefMapaDinheiro", () => {
     expect(hrefMapaDinheiro({ ...atual, medir: "publico" }, { medir: null })).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
   });
   it("leva o que pinta o mapa e a ordem dos candidatos, omitindo os padrões e o que não existe", () => {
-    expect(hrefMapaDinheiro(atual, { pintar: "eleitor", ord: "gasto" })).toBe("/?ver=dinheiro&uf=PE&mun=10&pintar=eleitor&ord=gasto#mapa");
-    expect(hrefMapaDinheiro({ ...atual, pintar: "eleitor", ord: "gasto" }, { pintar: "vaga", ord: "votos" })).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
+    expect(hrefMapaDinheiro(atual, { pintar: "publico", ord: "gasto" })).toBe("/?ver=dinheiro&uf=PE&mun=10&pintar=publico&ord=gasto#mapa");
+    expect(hrefMapaDinheiro({ ...atual, pintar: "publico", ord: "gasto" }, { pintar: "vaga", ord: "votos" })).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
     expect(hrefMapaDinheiro(atual, { pintar: "arcoiris", ord: "altura" })).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
   });
 });
@@ -806,26 +808,34 @@ describe("parteDependeu e fraseDependeram", () => {
   });
 });
 
-describe("perguntas do menu: medidaDe, SECOES e MEDIDAS_ANOS", () => {
-  it("as perguntas novas valem no endereço e pintam o mapa com o gasto por vaga", () => {
+describe("perguntas do menu: PINTAR, medidaDe, SECOES, MEIAS e MEDIDAS_ANOS", () => {
+  it("são só as quatro perguntas de dinheiro, na ordem 1, 2, 8 e 9", () => {
+    expect(PINTAR.map((p) => p.rotulo.split(".")[0])).toEqual(["1", "2", "8", "9"]);
     expect(escolhaMapaDinheiro({ pintar: "propaganda" }).pintar).toBe("propaganda");
-    expect(hrefMapaDinheiro({ ano: 2024, cargo: "Vereador" }, { pintar: "gastou" })).toBe("/?ver=dinheiro&pintar=gastou#mapa");
-    expect(medidaDe("gastou").chave).toBe("vaga");
-    expect(medidaDe("voto").aba).toBe("gasto");
+    expect(escolhaMapaDinheiro({ pintar: "gastou" }).pintar).toBe("vaga");
+    expect(hrefMapaDinheiro({ ano: 2024, cargo: "Vereador" }, { pintar: "voto" })).toBe("/?ver=dinheiro&pintar=voto#mapa");
+  });
+  it("a 8 pinta a parte pública; as outras, o gasto por vaga", () => {
     expect(medidaDe("publico").chave).toBe("publico");
+    for (const p of ["vaga", "voto", "propaganda"] as const) expect(medidaDe(p).chave).toBe("vaga");
   });
   it("cada pergunta mostra só os seus blocos, e todo bloco aparece em alguma pergunta", () => {
     expect(SECOES.vaga).toEqual(["numeros", "cadeiras", "ranking", "anos"]);
-    expect(SECOES.vaga).not.toContain("propaganda");
     expect(SECOES.publico).toContain("fundos");
-    expect(SECOES.gastou).not.toContain("numeros");
+    expect(SECOES.voto).not.toContain("numeros");
     const todas = new Set(Object.values(SECOES).flat());
-    for (const s of ["numeros", "cadeiras", "voto", "origem", "fundos", "ranking", "anos", "maiores", "partidos", "quartis", "cand", "destino", "propaganda", "comparar"]) expect(todas.has(s as never)).toBe(true);
-    for (const p of PINTAR) expect(SECOES[p.chave].length).toBeGreaterThan(0);
+    for (const x of ["numeros", "cadeiras", "voto", "origem", "fundos", "ranking", "anos", "maiores", "partidos", "quartis", "cand", "destino", "propaganda", "comparar"]) expect(todas.has(x as never)).toBe(true);
+  });
+  it("os blocos de meia largura vêm aos pares, vizinhos, e são da própria pergunta", () => {
+    for (const p of PINTAR) {
+      const m = MEIAS[p.chave];
+      expect(m.length % 2).toBe(0);
+      for (let k = 0; k < m.length; k += 2) expect(SECOES[p.chave].indexOf(m[k + 1]) - SECOES[p.chave].indexOf(m[k])).toBe(1);
+    }
   });
   it("os anos mostram só as linhas da pergunta, e só nas que têm anos", () => {
     expect(MEDIDAS_ANOS.publico).toEqual(["publico"]);
-    expect(MEDIDAS_ANOS.vaga).toContain("vaga");
+    expect(MEDIDAS_ANOS.vaga).toContain("eleitor");
     for (const p of PINTAR) expect(MEDIDAS_ANOS[p.chave].length > 0).toBe(SECOES[p.chave].includes("anos"));
   });
 });

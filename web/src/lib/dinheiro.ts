@@ -58,41 +58,45 @@ export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
 
 /** O que pinta o mapa: o gasto por vaga (padrão), o gasto por eleitor apto ou a parte pública do dinheiro recebido. */
 /**
- * As perguntas da camada Dinheiro, na ordem do menu. As três primeiras são medidas que pintam o mapa; as outras usam o
- * gasto por vaga no mapa e mudam só o que o painel mostra embaixo (SECOES).
+ * As perguntas da camada Dinheiro, na ordem do menu: só as do dossiê sobre dinheiro (1, 2, 8 e 9). A 1 e a 8 pintam o
+ * mapa com a sua medida; a 2 e a 9 usam o gasto por vaga no mapa e mudam só o que o painel mostra embaixo (SECOES).
  */
-export type Pintar = "vaga" | "eleitor" | "publico" | "gastou" | "propaganda" | "voto";
+export type Pintar = "vaga" | "voto" | "publico" | "propaganda";
 export const PINTAR: { chave: Pintar; rotulo: string; aba: Aba; titulo: string }[] = [
-  { chave: "vaga", rotulo: "Gasto por vaga", aba: "gasto", titulo: "Quanto as campanhas gastaram por vaga" },
-  { chave: "eleitor", rotulo: "Gasto por eleitor", aba: "eleitor", titulo: "Quanto as campanhas gastaram por eleitor" },
-  { chave: "publico", rotulo: "Parte pública", aba: "publico", titulo: "Quanto do dinheiro das campanhas foi público" },
-  { chave: "gastou", rotulo: "Quem mais gastou", aba: "gasto", titulo: "Quem mais gastou nas campanhas" },
-  { chave: "propaganda", rotulo: "Propaganda", aba: "gasto", titulo: "Em que as campanhas gastaram" },
-  { chave: "voto", rotulo: "Dinheiro e voto", aba: "gasto", titulo: "Quem teve mais dinheiro se elegeu mais?" },
+  { chave: "vaga", rotulo: "1. Quanto custa uma cadeira", aba: "gasto", titulo: "Quanto custou cada cadeira" },
+  { chave: "voto", rotulo: "2. Dinheiro elege?", aba: "gasto", titulo: "Quem teve mais dinheiro se elegeu mais?" },
+  { chave: "publico", rotulo: "8. Dinheiro público", aba: "publico", titulo: "Quanto do dinheiro das campanhas foi público" },
+  { chave: "propaganda", rotulo: "9. Propaganda", aba: "gasto", titulo: "Em que as campanhas gastaram" },
 ];
-/** A medida que pinta o mapa em cada pergunta (as perguntas sem medida própria pintam o gasto por vaga). */
-export const medidaDe = (pintar: Pintar) => PINTAR.find((p) => p.chave === (pintar === "eleitor" || pintar === "publico" ? pintar : "vaga"))!;
+/** As medidas que pintam o mapa (legenda, dicas e título do mapa). */
+export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba }[] = [
+  { chave: "vaga", rotulo: "Gasto por vaga", aba: "gasto" },
+  { chave: "publico", rotulo: "Parte pública", aba: "publico" },
+];
+/** A medida que pinta o mapa em cada pergunta: a parte pública na 8; o gasto por vaga nas outras. */
+export const medidaDe = (pintar: Pintar) => MEDIDAS_MAPA.find((m) => m.chave === (pintar === "publico" ? "publico" : "vaga"))!;
 
 /** Os blocos do painel embaixo do mapa. */
 export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar";
 /**
- * O que cada pergunta mostra no painel: só os blocos que a respondem, para a tela não misturar assuntos.
- * Gasto por vaga: o número, cada cadeira, os lugares e os anos. Por eleitor: o número, o custo do voto, os lugares e os
- * anos. Parte pública: o número, de onde veio o dinheiro, quem dependeu dele, os lugares e os anos. Quem mais gastou:
- * as pessoas, os partidos, os quartis e os candidatos. Propaganda: para onde foi o dinheiro e a nuvem. Dinheiro e voto:
- * as comparações.
+ * O que cada pergunta mostra no painel, na ordem da página: só os blocos que a respondem, para a tela não misturar
+ * assuntos. 1: o custo da vaga (com o gasto por eleitor), cada cadeira, os lugares e os anos. 2: dinheiro × resultado,
+ * quem mais gastou, os partidos, o custo do voto, os quartis e os candidatos. 8: a parte pública, de onde veio o
+ * dinheiro, os lugares, quem dependeu dele e os anos. 9: para onde foi o dinheiro e a nuvem de propaganda.
  */
 export const SECOES: Record<Pintar, Secao[]> = {
   vaga: ["numeros", "cadeiras", "ranking", "anos"],
-  eleitor: ["numeros", "voto", "ranking", "anos"],
-  publico: ["numeros", "origem", "fundos", "ranking", "anos"],
-  gastou: ["maiores", "partidos", "quartis", "cand"],
+  voto: ["comparar", "maiores", "partidos", "voto", "quartis", "cand"],
+  publico: ["numeros", "origem", "ranking", "fundos", "anos"],
   propaganda: ["destino", "propaganda"],
-  voto: ["comparar"],
+};
+/** Os blocos que dividem a linha com o vizinho (meia largura na tela larga), aos pares, na ordem de SECOES. */
+export const MEIAS: Record<Pintar, Secao[]> = {
+  vaga: ["ranking", "anos"], voto: ["partidos", "voto"], publico: ["origem", "ranking"], propaganda: [],
 };
 /** As linhas da comparação entre anos (medidasNosAnos) que cada pergunta mostra. */
 export const MEDIDAS_ANOS: Record<Pintar, string[]> = {
-  vaga: ["gasto", "vaga", "cand"], eleitor: ["eleitor", "voto"], publico: ["publico"], gastou: [], propaganda: [], voto: [],
+  vaga: ["gasto", "vaga", "eleitor", "cand"], voto: [], publico: ["publico"], propaganda: [],
 };
 export const abaDe = (pintar: Pintar): Aba => PINTAR.find((p) => p.chave === pintar)!.aba;
 

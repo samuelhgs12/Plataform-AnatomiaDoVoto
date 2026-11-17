@@ -8,7 +8,7 @@ import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
   abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
   coberturaSelo, diferencaRelativa, ehMunicipal, fatias, larguraSelo, seloValor, seta, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
-  MEDIDAS_ANOS, medidaDe, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
+  MEDIDAS_ANOS, MEIAS, medidaDe, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosDoRecorte, cargosDoAno, deCada100, fraseDependeram, parteDependeu, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
   type Aba, type LinhaCargo, type LinhaDespesa, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
@@ -19,7 +19,7 @@ import { METODOLOGIA } from "@/lib/metodologia";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { NOME_UF } from "@/lib/financiamento";
 import { brlCentavos, compacto, inteiro, pct, reais } from "@/lib/format";
-import { centrarLupa, TELA } from "@/lib/lupa";
+import { TELA } from "@/lib/lupa";
 import { disputaPrefeito, porteDe, PORTES, type CandidatoLocal, type Eleito, type LinhaEstado, type LinhaMunicipio, type LinhaResumo } from "@/lib/territorio";
 import { AnosDoCargo } from "./AnosDoCargo";
 import { BarraEmpilhada } from "./BarraEmpilhada";
@@ -32,7 +32,6 @@ import { LinhasCandidatos, type LinhaCandidato } from "./LinhasCandidatos";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "./MapaAbstencao";
 import { MaioresGastos } from "./MaioresGastos";
 import { MapaVivo } from "./MapaVivo";
-import { MiniMapa } from "./MiniMapa";
 import { NuvemPalavras } from "./NuvemPalavras";
 import { PartidosGasto } from "./PartidosGasto";
 import { QuartisDoGasto } from "./QuartisDoGasto";
@@ -64,6 +63,8 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const medidaInfo = medidaDe(pintar);
   const secoes = new Set<Secao>(SECOES[pintar]);
   const tem = (x: Secao) => secoes.has(x);
+  // na tela larga, alguns blocos dividem a linha com o vizinho (MEIAS)
+  const meia = (x: Secao) => (MEIAS[pintar].includes(x) ? " meia" : "");
   const ord = ordemCandidatos(um(sp.ord));
   const quem = quemDe(sp.quem);
   const porteInfo = porte ? PORTES.find((p) => p.chave === porte) : undefined;
@@ -142,7 +143,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
       destaque={mun && centro ? { ibge: mun.cod_ibge, nome: lugar, x: centro[0], y: centro[1] } : undefined}
     />
   );
-  const focoMini = mun && centro && caixa ? centrarLupa({ x: camera.x + centro[0] * camera.k, y: camera.y + centro[1] * camera.k }, 3) : undefined;
 
   // o número do lugar na medida escolhida, as outras duas medidas, a conta do gasto por vaga e o de cima para comparar
   const valorLugar = (a: Aba, emAno = ano) => (mun ? valorCidade(resumo.find((x) => x.ano === emAno && x.id_municipio === mun.id_municipio), a, cargo) : valorUf(uf, a, emAno));
@@ -367,6 +367,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             <b><Rolar valor={textoValor(principal, aba, cargo)} /></b>
             <span>{subPrincipal}</span>
           </div>
+          {aba === "gasto" && valorLugar("eleitor") !== null && (
+            <div className="din-kpi"><small>Gasto por eleitor</small><b>{textoValor(valorLugar("eleitor"), "eleitor", cargo)}</b><span>gasto ÷ eleitores aptos</span></div>
+          )}
           {antes !== null && valorAntes !== null && (
             aba !== "publico" && seta(variacao) ? (
               <div className="din-kpi">
@@ -407,6 +410,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           </ul>
         )}
 
+        {/* pergunta 2: primeiro a resposta (dinheiro × resultado), depois quem gastou */}
+        {tem("comparar") && <ComparacoesDinheiro
+          noite ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir={medir} semGasto={!uf}
+          hrefMedir={(m) => href({ medir: m === "publico" ? "publico" : null }, "comparar")} hrefUf={(u) => href({ uf: u })}
+        />}
+
         {/* cada pergunta do menu mostra só os seus blocos (SECOES, em src/lib/dinheiro.ts); as pessoas que mais gastaram */}
         {tem("maiores") && <section id="dinheiro-maiores" className="bloco noite s12 din-maiores">
           <header className="din-sec">
@@ -426,7 +435,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </section>}
         {/* quanto cada partido gastou, logo depois das pessoas */}
         {tem("partidos") && partidos.length > 0 && (
-          <section id="dinheiro-partidos" className="bloco noite s12 din-partidos">
+          <section id="dinheiro-partidos" className={`bloco noite s12 din-partidos${meia("partidos")}`}>
             <header className="din-sec">
               <h3>Quanto cada partido gastou</h3>
               <p><b>{partidos[0].partido}</b> gastou mais: {reais(partidos[0].gasto)}, {pct(partidos[0].parte, 0)} do total de {cargoMin} {mun ? `em ${lugar}` : uf ? `em ${NOME_UF[uf]}` : "nos seis estados"}</p>
@@ -436,7 +445,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         )}
 
         {tem("voto") && totalVoto?.porVoto != null && (
-          <section id="dinheiro-voto" className="bloco noite s12 din-voto">
+          <section id="dinheiro-voto" className={`bloco noite s12 din-voto${meia("voto")}`}>
             <header className="din-sec">
               <h3>Quanto custou um voto</h3>
               <p>Gasto de todas as campanhas ÷ votos no 1º turno</p>
@@ -461,7 +470,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         )}
 
         {tem("origem") && fatiasOrigem.length > 0 && (
-          <section id="dinheiro-origem" className="bloco noite s12 din-origem">
+          <section id="dinheiro-origem" className={`bloco noite s12 din-origem${meia("origem")}`}>
             <header className="din-sec">
               <h3>De onde veio o dinheiro</h3>
               <p>Tudo o que as campanhas a {cargoMin} receberam · {ano}</p>
@@ -590,7 +599,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         {/* o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar */}
         {medidasAnos.length > 0 && (
-          <section id="dinheiro-anos" className="bloco noite s12 din-anos">
+          <section id="dinheiro-anos" className={`bloco noite s12 din-anos${meia("anos")}`}>
             <header className="din-sec">
               <h3>{cargo}: {anosCargo.join(" × ")}</h3>
               <p>{lugar}{!mun && porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""} · as eleições para {cargoMin} com dados de dinheiro, lado a lado</p>
@@ -601,7 +610,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         )}
 
         {/* as cidades do estado (ou os seis estados) na medida do mapa */}
-        {tem("ranking") && <section id="dinheiro-ranking" className="bloco noite s12 dinheiro-barras">
+        {tem("ranking") && <section id="dinheiro-ranking" className={`bloco noite s12 dinheiro-barras${meia("ranking")}`}>
           <header className="din-sec">
             <h3>{tituloRanking}</h3>
             <p>{cidadesTopo.length ? `${Math.min(8, cidadesTopo.length)} de ${inteiro(cidadesUf.length)} cidades de ${NOME_UF[uf!]}${porteInfo ? ` · ${porteInfo.rotulo}` : ""}` : `Os seis estados · ${cargo} · ${ano}`}</p>
@@ -675,10 +684,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           </section>
         )}
 
-        {tem("comparar") && <ComparacoesDinheiro
-          noite ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir={medir} semGasto={!uf}
-          hrefMedir={(m) => href({ medir: m === "publico" ? "publico" : null }, "comparar")} hrefUf={(u) => href({ uf: u })}
-        />}
 
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">
           <summary>Como calculamos</summary>
@@ -690,7 +695,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
         </ul>
       </div>
-      <MiniMapa recorte={`${pintarInfo.rotulo} · ${cargo} · ${lugar} · ${ano}`} foco={focoMini}>{mapaPalco}</MiniMapa>
     </>
   );
 }

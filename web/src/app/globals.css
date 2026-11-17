@@ -2337,3 +2337,20 @@ a.q-ver:active { transform: scale(0.98); }
   .cadeiras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cadeiras a { padding: 14px; }
 }
+
+/* camada Dinheiro sem o mini-mapa (o mapa já está no palco, logo acima): o painel ocupa a largura toda e, na tela
+   larga, os blocos de meia largura (MEIAS, em src/lib/dinheiro.ts) dividem a linha; "dense" sobe o par para junto do
+   vizinho mesmo com um bloco inteiro entre eles no HTML */
+@media (min-width: 1001px) {
+  .observatorio > .painel.din { grid-column: 1 / -1; grid-auto-flow: row dense; }
+}
+@media (min-width: 1100px) {
+  .painel.din > .meia { grid-column: span 6; }
+}
+.painel.din > .meia .anos-cargo { min-width: 0; }
+.painel.din > .meia .anos-cargo td { min-width: 0; }
+.painel.din > .meia .anos-cargo td.delta { font-size: 14px; }
+.din .dinheiro-metodo > summary { color: var(--sobre-noite); }
+.din .dinheiro-metodo ul { color: var(--noite-muted); }
+/* na largura cheia, as legendas das barras 100% (origem e destino) em colunas, sem vão entre o nome e a parte */
+.painel.din > .din-origem:not(.meia) .emp-legenda { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 48px; }
