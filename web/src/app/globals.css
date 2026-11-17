@@ -2334,4 +2334,6 @@ a.q-ver:active { transform: scale(0.98); }
   .din .bloco.noite { padding: 20px 16px 18px; }
   .fd-trilho { display: none; }
   .cd-valor { font-size: 22px; }
+  .cadeiras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cadeiras a { padding: 14px; }
 }
