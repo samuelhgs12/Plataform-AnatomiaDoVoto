@@ -77,15 +77,15 @@ export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba
 export const medidaDe = (pintar: Pintar) => MEDIDAS_MAPA.find((m) => m.chave === (pintar === "publico" ? "publico" : "vaga"))!;
 
 /** Os blocos do painel embaixo do mapa. */
-export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar";
+export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar" | "busca";
 /**
  * O que cada pergunta mostra no painel, na ordem da página: só os blocos que a respondem, para a tela não misturar
- * assuntos. 1: o custo da vaga (com o gasto por eleitor), cada cadeira, os lugares e os anos. 2: dinheiro × resultado,
+ * assuntos. 1: o custo da vaga (com o gasto por eleitor), cada cadeira, a busca de um candidato, os lugares e os anos. 2: dinheiro × resultado,
  * quem mais gastou, os partidos, o custo do voto, os quartis e os candidatos. 8: a parte pública, de onde veio o
  * dinheiro, os lugares, quem dependeu dele e os anos. 9: para onde foi o dinheiro e a nuvem de propaganda.
  */
 export const SECOES: Record<Pintar, Secao[]> = {
-  vaga: ["numeros", "cadeiras", "ranking", "anos"],
+  vaga: ["numeros", "cadeiras", "busca", "ranking", "anos"],
   voto: ["comparar", "maiores", "partidos", "voto", "quartis", "cand"],
   publico: ["numeros", "origem", "ranking", "fundos", "anos"],
   propaganda: ["destino", "propaganda"],
@@ -1094,4 +1094,27 @@ export function fraseDependeram(todos: ContagemFundos, eleitos: ContagemFundos):
   const e = totalFundos(eleitos);
   const entre = e === 0 ? "" : `; entre os eleitos, ${eleitos.maioria === 0 ? "nenhum" : `${eleitos.maioria} de ${e}`}`;
   return `${sujeito} ${todos.maioria <= 1 ? "dependeu" : "dependeram"} do dinheiro público${entre}.`;
+}
+
+/**
+ * O nome digitado na busca de candidato da pergunta 1 (`?nome=`): sem espaços sobrando, com pelo menos 2 letras ou
+ * números e no máximo 80 caracteres; senão, null (sem busca).
+ */
+export function termoBuscaCandidato(x: string | undefined): string | null {
+  const t = (x ?? "").replace(/\s+/g, " ").trim();
+  if (t.length > 80) return null;
+  return (t.normalize("NFD").match(/[\p{L}\p{N}]/gu) ?? []).length >= 2 ? t : null;
+}
+
+/** O endereço da busca de candidatos do recorte na API (`/api/dinheiro/candidatos`); a cidade só nas municipais. */
+export function caminhoBuscaCandidato(r: { q: string; ano: number; cargo: string; uf: string; mun?: number | null }): string {
+  const p = new URLSearchParams({ q: r.q, ano: String(r.ano), cargo: r.cargo, uf: r.uf });
+  if (r.mun != null && ehMunicipal(r.ano)) p.set("mun", String(r.mun));
+  return `/dinheiro/candidatos?${p}`;
+}
+
+/** Os campos escondidos do formulário de busca: o recorte atual, tirado do endereço (sem o próprio nome buscado). */
+export function camposDoHref(href: string): [string, string][] {
+  const consulta = href.split("#")[0].split("?")[1] ?? "";
+  return [...new URLSearchParams(consulta)].filter(([k]) => k !== "nome");
 }

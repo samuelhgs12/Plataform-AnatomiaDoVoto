@@ -8,7 +8,7 @@ import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
   abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
   coberturaSelo, diferencaRelativa, ehMunicipal, fatias, larguraSelo, seloValor, seta, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
-  MEDIDAS_ANOS, MEIAS, medidaDe, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
+  camposDoHref, caminhoBuscaCandidato, MEDIDAS_ANOS, MEIAS, medidaDe, termoBuscaCandidato, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosDoRecorte, cargosDoAno, deCada100, fraseDependeram, parteDependeu, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
   type Aba, type LinhaCargo, type LinhaDespesa, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
@@ -213,9 +213,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const linhasCargo = dadosPerguntas?.cargos ? comoObjetos<LinhaCargo>(dadosPerguntas.cargos) : null;
   const linhasMaior = dadosPerguntas?.maiores ? comoObjetos<LinhaMaior>(dadosPerguntas.maiores) : null;
   const outroCargo = mun ? cargosDoAno(ano).find((c) => c !== cargo) : undefined;
-  const [candsOutro, recebidasPecas] = await Promise.all([
+  // pergunta 1: a busca de um candidato pelo nome, no recorte (estado ou cidade, cargo e ano)
+  const nomeBusca = uf && tem("busca") ? termoBuscaCandidato(um(sp.nome)) : null;
+  const [candsOutro, recebidasPecas, achados] = await Promise.all([
     mun && outroCargo ? apiGetOpcional<CandidatoLocal[]>(`/municipios/${mun.id_municipio}/candidatos?ano=${ano}&cargo=${encodeURIComponent(outroCargo)}`) : Promise.resolve(null),
     uf && tem("propaganda") ? apiGetOpcional<unknown>(caminhoPecas({ ano, cargo, uf, mun: mun?.id_municipio }, quem)) : Promise.resolve(null),
+    uf && nomeBusca ? apiGetOpcional<(CandidatoLocal & { municipio?: string | null })[]>(caminhoBuscaCandidato({ q: nomeBusca, ano, cargo, uf, mun: mun?.id_municipio })) : Promise.resolve(null),
   ]);
   const vagasMun = (c: string) => (c === "Prefeito" ? 1 : linhaMun?.vereador_vagas ?? 0);
   const cargosLugar = mun
@@ -513,6 +516,30 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             <CadeirasCargos cargos={cargosLugar} atual={cargo} hrefCargo={(c) => href({ cargo: c }, "dinheiro-cadeiras")}
               titulo={`Quanto custou cada cadeira em cada cargo, ${lugar}, ${ano}`} />
             <p className="din-rodape">Cada cadeira = gasto de todas as campanhas ao cargo ÷ cadeiras em disputa · eleito típico = mediana do gasto dos eleitos{!mun && porteInfo ? ` · só cidades de ${porteInfo.rotulo}` : ""} · clique num cargo para vê-lo no painel</p>
+          </section>
+        )}
+
+        {/* pergunta 1: procurar um candidato e ver quanto ele gastou, o custo do voto e as despesas por tipo */}
+        {tem("busca") && (
+          <section id="dinheiro-busca" className="bloco noite s12 din-busca">
+            <header className="din-sec">
+              <h3>Quanto gastou um candidato</h3>
+              <p>Procure pelo nome: candidatos a {cargoMin} em {lugar} · {ano}</p>
+            </header>
+            <form className="din-busca-form" action="/#dinheiro-busca" method="get" role="search">
+              {camposDoHref(href({})).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+              <label htmlFor="din-busca-nome" className="sr-only">Nome do candidato</label>
+              <input id="din-busca-nome" name="nome" type="search" defaultValue={nomeBusca ?? ""} placeholder="Nome de urna ou nome completo"
+                minLength={2} maxLength={80} autoComplete="off" />
+              <button type="submit">Buscar</button>
+            </form>
+            {nomeBusca && (achados === null
+              ? <p className="card aviso" role="status">Não foi possível buscar agora: a API não respondeu. Tente de novo.</p>
+              : <div role="status" aria-live="polite">
+                  <p className="rotulo">{achados.length === 0 ? `Nenhum candidato a ${cargoMin} com "${nomeBusca}" no nome` : achados.length >= 20 ? `Os 20 primeiros com "${nomeBusca}" no nome (eleitos primeiro)` : `${inteiro(achados.length)} ${achados.length === 1 ? "candidato" : "candidatos"} com "${nomeBusca}" no nome`}</p>
+                  <div className="dinheiro-cand"><LinhasCandidatos detalhar linhas={mun ? achados.map((a) => ({ ...a, municipio: null })) : achados.map((a) => ({ ...a, municipio: a.municipio ? nomeProprio(a.municipio) : null }))} ano={ano} vazio="" /></div>
+                </div>)}
+            <p className="din-rodape">Gasto declarado na prestação de contas final · gasto por voto = gasto ÷ votos do 1º turno · abra as despesas para ver cada tipo de gasto (materiais impressos, comícios, passagens...)</p>
           </section>
         )}
 

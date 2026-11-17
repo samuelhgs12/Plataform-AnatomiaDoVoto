@@ -11,7 +11,7 @@ import { DespesasDoCandidato } from "./DespesasDoCandidato";
 export interface LinhaCandidato {
   id_candidato: number | null; id_candidatura: number; nome_urna: string | null; partido: string | null;
   votos: number; gasto: number; receita: number; receita_publica: number;
-  eleito?: boolean; prestou?: boolean | null; parteVotos?: number | null; maisGastou?: boolean;
+  eleito?: boolean; prestou?: boolean | null; municipio?: string | null; parteVotos?: number | null; maisGastou?: boolean;
 }
 
 /**
@@ -37,7 +37,7 @@ export function LinhasCandidatos({ linhas, ano, vazio, detalhar = false }: { lin
             </span>
             <span className="linhas-nome">
               {c.id_candidato ? <Link href={`/candidato/${c.id_candidato}?campanha=${c.id_candidatura}#dinheiro`}>{nome}</Link> : nome}
-              <small><PartyChip sigla={c.partido} />{c.maisGastou && <span className="selo">gastou mais</span>}</small>
+              <small><PartyChip sigla={c.partido} />{c.maisGastou && <span className="selo">gastou mais</span>}{c.municipio && <span className="linhas-lugar">{c.municipio}</span>}</small>
             </span>
             <span className="linhas-resultado">
               {c.eleito === undefined ? null : <b className={c.eleito ? "eleito" : undefined}>{c.eleito ? "Eleito" : "Não eleito"}</b>}

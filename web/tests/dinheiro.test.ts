@@ -5,7 +5,7 @@ import {
   coberturaSelo, descricaoFatias, fatias, larguraSelo, seloValor, seta,
   anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos, maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos,
-  medidaDe, MEDIDAS_ANOS, MEIAS, PINTAR, SECOES,
+  camposDoHref, caminhoBuscaCandidato, medidaDe, MEDIDAS_ANOS, MEIAS, PINTAR, SECOES, termoBuscaCandidato,
   type ContagemFundos, type LinhaCargo, type LinhaMaior,
   type LinhaPartido, type LinhaQuartil,
   type LinhaDespesa,
@@ -820,11 +820,11 @@ describe("perguntas do menu: PINTAR, medidaDe, SECOES, MEIAS e MEDIDAS_ANOS", ()
     for (const p of ["vaga", "voto", "propaganda"] as const) expect(medidaDe(p).chave).toBe("vaga");
   });
   it("cada pergunta mostra só os seus blocos, e todo bloco aparece em alguma pergunta", () => {
-    expect(SECOES.vaga).toEqual(["numeros", "cadeiras", "ranking", "anos"]);
+    expect(SECOES.vaga).toEqual(["numeros", "cadeiras", "busca", "ranking", "anos"]);
     expect(SECOES.publico).toContain("fundos");
     expect(SECOES.voto).not.toContain("numeros");
     const todas = new Set(Object.values(SECOES).flat());
-    for (const x of ["numeros", "cadeiras", "voto", "origem", "fundos", "ranking", "anos", "maiores", "partidos", "quartis", "cand", "destino", "propaganda", "comparar"]) expect(todas.has(x as never)).toBe(true);
+    for (const x of ["numeros", "cadeiras", "voto", "origem", "fundos", "ranking", "anos", "maiores", "partidos", "quartis", "cand", "destino", "propaganda", "comparar", "busca"]) expect(todas.has(x as never)).toBe(true);
   });
   it("os blocos de meia largura vêm aos pares, vizinhos, e são da própria pergunta", () => {
     for (const p of PINTAR) {
@@ -837,5 +837,32 @@ describe("perguntas do menu: PINTAR, medidaDe, SECOES, MEIAS e MEDIDAS_ANOS", ()
     expect(MEDIDAS_ANOS.publico).toEqual(["publico"]);
     expect(MEDIDAS_ANOS.vaga).toContain("eleitor");
     for (const p of PINTAR) expect(MEDIDAS_ANOS[p.chave].length > 0).toBe(SECOES[p.chave].includes("anos"));
+  });
+});
+
+describe("termoBuscaCandidato", () => {
+  it("limpa os espaços e exige ao menos 2 letras ou números", () => {
+    expect(termoBuscaCandidato("  zé   da serra ")).toBe("zé da serra");
+    expect(termoBuscaCandidato("Zé")).toBe("Zé");
+    expect(termoBuscaCandidato("a")).toBeNull();
+    expect(termoBuscaCandidato(" - . ")).toBeNull();
+    expect(termoBuscaCandidato(undefined)).toBeNull();
+    expect(termoBuscaCandidato("x".repeat(81))).toBeNull();
+  });
+});
+
+describe("caminhoBuscaCandidato", () => {
+  it("leva o recorte; a cidade só nas eleições municipais", () => {
+    expect(caminhoBuscaCandidato({ q: "zé", ano: 2022, cargo: "Deputado estadual", uf: "MG", mun: 10 }))
+      .toBe("/dinheiro/candidatos?q=z%C3%A9&ano=2022&cargo=Deputado+estadual&uf=MG");
+    expect(caminhoBuscaCandidato({ q: "ana", ano: 2024, cargo: "Vereador", uf: "PE", mun: 10 }))
+      .toBe("/dinheiro/candidatos?q=ana&ano=2024&cargo=Vereador&uf=PE&mun=10");
+  });
+});
+
+describe("camposDoHref", () => {
+  it("devolve os parâmetros do endereço, sem a âncora e sem o nome buscado", () => {
+    expect(camposDoHref("/?ver=dinheiro&uf=MG&nome=ana#dinheiro-busca")).toEqual([["ver", "dinheiro"], ["uf", "MG"]]);
+    expect(camposDoHref("/#mapa")).toEqual([]);
   });
 });

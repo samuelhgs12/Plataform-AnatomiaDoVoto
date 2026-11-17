@@ -2061,6 +2061,15 @@ a.q-ver:active { transform: scale(0.98); }
 /* a linha das despesas faz parte do candidato de cima: sem borda entre as duas e com o botão baixo */
 .maiores-tabela tr:has(+ .mg-detalhes) > * { border-bottom: 0; }
 .maiores-tabela .mg-detalhes .despesas-candidato > summary { min-height: 32px; padding: 0 0 8px 47px; font-size: 13px; }
+/* pergunta 1: busca de um candidato pelo nome */
+.din-busca-form { display: flex; gap: 8px; max-width: 640px; margin: 4px 0 12px; }
+.din-busca-form input[type=search] { flex: 1; min-width: 0; min-height: 44px; background: var(--noite); color: var(--sobre-noite); box-shadow: inset 0 0 0 1px var(--noite-linha); }
+.din-busca-form input[type=search]::placeholder { color: var(--noite-muted); }
+.din-busca-form input[type=search]:focus { box-shadow: inset 0 0 0 2px var(--brilho); }
+.din-busca-form button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; font: inherit; font-weight: 650; cursor: pointer; color: var(--noite); background: var(--brilho); }
+.din-busca-form button:focus-visible { outline: 2px solid var(--sobre-noite); outline-offset: 2px; }
+.din-busca .rotulo { margin: 8px 0 4px; }
+.linhas-lugar { margin-left: 6px; color: var(--noite-muted); font-size: 12.5px; }
 /* a tabela de despesas mostra todas as categorias, sem rolagem dentro da rolagem */
 .tabela-rolar:has(> .despesas-candidato-tabela) { max-height: none; }
 .maiores-tabela .despesas-candidato-tabela th { min-width: 0; white-space: normal; }
