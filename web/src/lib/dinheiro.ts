@@ -633,11 +633,27 @@ export function seta(d: number | null): string | null {
   return p === 0 ? "= 0%" : `${d > 0 ? "▲" : "▼"} ${p.toLocaleString("pt-BR")}%`;
 }
 
-/** A cobertura em poucas palavras, para um selo: "Todas as contas na base" ou "14.245 de 14.453 contas na base". */
-export function coberturaSelo(c: Contas | null): { texto: string; incompleta: boolean } | null {
-  if (!c) return null;
-  if (c.com >= c.total) return { texto: "Todas as contas na base", incompleta: false };
-  return { texto: `${c.com.toLocaleString("pt-BR")} de ${c.total.toLocaleString("pt-BR")} contas na base`, incompleta: true };
+/**
+ * Parte mínima das candidaturas com prestação de contas final para o total valer como completo. Abaixo dela, o painel
+ * avisa que o número pode estar incompleto; acima, só informa a parte (faltar 2% das contas, quase sempre campanhas
+ * sem gasto, não muda a leitura).
+ */
+export const LIMIAR_CONTAS = 0.95;
+
+/**
+ * A cobertura em poucas palavras, para um selo: "Todas as contas na base", "98% das contas na base" (sem aviso) ou,
+ * abaixo de LIMIAR_CONTAS, "Faltam 30% das contas" (incompleta). `detalhe` traz a conta inteira, para a dica.
+ */
+export function coberturaSelo(c: Contas | null, limiar = LIMIAR_CONTAS): { texto: string; incompleta: boolean; detalhe: string } | null {
+  if (!c || c.total <= 0) return null;
+  const n = (v: number) => v.toLocaleString("pt-BR");
+  const detalhe = `${n(c.com)} de ${n(c.total)} candidaturas com prestação de contas final na base`;
+  if (c.com >= c.total) return { texto: "Todas as contas na base", incompleta: false, detalhe };
+  const parte = c.com / c.total;
+  // arredonda para baixo: 99,6% não vira "100% das contas"
+  const p = Math.floor(parte * 100);
+  if (parte >= limiar) return { texto: `${p}% das contas na base`, incompleta: false, detalhe };
+  return { texto: `Faltam ${100 - p}% das contas`, incompleta: true, detalhe: `${detalhe}: o total pode estar incompleto` };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1024,4 +1040,23 @@ export function textoDependeram(c: ContagemFundos, minimo = MINIMO_CADA_100): st
   const total = totalFundos(c);
   if (total <= 0) return null;
   return total >= minimo ? `${dependeram(c)} de 100` : `${c.maioria} de ${total}`;
+}
+
+/** A parte que dependeu do dinheiro público (0 a 1), para a barra da tabela dos cargos; null sem ninguém. */
+export function parteDependeu(c: ContagemFundos): number | null {
+  const total = totalFundos(c);
+  return total > 0 ? c.maioria / total : null;
+}
+
+/**
+ * A frase de quando há poucas pessoas para os 100 quadradinhos (prefeito numa cidade, governador num estado), com a
+ * conta real e o verbo no número certo: "3 de 5 candidatos dependeram do dinheiro público; entre os eleitos, 1 de 1."
+ */
+export function fraseDependeram(todos: ContagemFundos, eleitos: ContagemFundos): string {
+  const t = totalFundos(todos);
+  if (t === 0) return "Ninguém deste recorte prestou contas com dinheiro recebido.";
+  const sujeito = todos.maioria === 0 ? `Nenhum dos ${t} candidatos` : `${todos.maioria} de ${t} ${t === 1 ? "candidato" : "candidatos"}`;
+  const e = totalFundos(eleitos);
+  const entre = e === 0 ? "" : `; entre os eleitos, ${eleitos.maioria === 0 ? "nenhum" : `${eleitos.maioria} de ${e}`}`;
+  return `${sujeito} ${todos.maioria <= 1 ? "dependeu" : "dependeram"} do dinheiro público${entre}.`;
 }

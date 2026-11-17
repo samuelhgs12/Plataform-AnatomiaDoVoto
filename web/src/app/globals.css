@@ -2282,3 +2282,56 @@ a.q-ver:active { transform: scale(0.98); }
 .din-pecas-trilho i { display: block; height: 100%; border-radius: 3px; background: var(--q3); }
 .din-pecas b { text-align: right; } .din-pecas small { color: var(--noite-muted); font-size: 13px; white-space: nowrap; }
 @media (max-width: 620px) { .maiores-tabela tbody th { min-width: 0; } .maiores-tabela .mg-pos, .maiores-tabela thead th:first-child { display: none; } .maiores-tabela .pt-gasto b { font-size: 13px; } .mg-res { padding: 2px 6px; font-size: 11.5px; } }
+
+/* camada Dinheiro, acabamento: atalhos numa linha que acompanha a rolagem, números sem buraco na grade, uma cor só para
+   o dinheiro gasto (a do número grande), blocos 3 e 4 em largura cheia com duas colunas por dentro, cartões por cargo e
+   barras na tabela de quem dependeu do dinheiro público */
+.din .painel-nav { position: sticky; top: 0; z-index: 4; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 8px 0; background: var(--bg); }
+.din .painel-nav::-webkit-scrollbar { display: none; }
+.din .painel-nav a { flex: none; }
+.din-kpis > .din-kpi:nth-child(2):last-child { grid-column: span 2; }
+.din-kpis > .din-kpi:not(.din-kpi-principal):nth-child(4):last-child { grid-column: span 2; }
+@media (min-width: 901px) {
+  .din-kpis > .din-kpi:nth-child(2):last-child, .din-kpis:has(> :nth-child(3):last-child) > .din-kpi:not(.din-kpi-principal) { grid-row: span 2; }
+}
+.din-kpi:not(.din-kpi-principal) b { font-size: 24px; }
+
+.din .bloco.noite { padding: 26px 28px 24px; }
+.din-sec { padding-bottom: 14px; border-bottom: 1px solid var(--noite-linha); margin-bottom: 18px; }
+.din-sec h3 { font-size: 22px; }
+.din-sec p { font-size: 14.5px; line-height: 1.45; }
+.din-rodape { padding-top: 4px; }
+
+.din .pt-trilho, .din .fd-trilho, .din .din-pecas-trilho { background: color-mix(in srgb, var(--sobre-noite) 9%, transparent); }
+.din .pt-trilho i, .din .din-pecas-trilho i { background: var(--brilho); }
+.din .ac-trilho i { background: var(--brilho); }
+.din .mg-res.eleito { background: var(--confirma); color: var(--noite); }
+.din .emp-seg { overflow: hidden; }
+.din .emp-seg em { white-space: nowrap; }
+
+.din-duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 40px; align-items: start; }
+.din-duas .empilhada { margin-bottom: 4px; }
+.din-voto .din-duas { align-items: center; }
+
+.cadeiras { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; }
+.cadeiras a { display: flex; flex-direction: column; height: 100%; padding: 16px 18px; border-radius: var(--raio); background: var(--noite3); color: var(--sobre-noite); text-decoration: none; box-shadow: inset 0 0 0 1px var(--noite-linha); transition: background-color var(--t-hover) ease; }
+.cadeiras a:hover { background: var(--noite-linha); }
+.cadeiras a:focus-visible { outline: 2px solid var(--brilho); outline-offset: 2px; }
+.cadeiras li.on a { box-shadow: inset 0 0 0 2px var(--brilho); }
+.cd-cargo { font-size: 12px; font-weight: 650; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.cadeiras li.on .cd-cargo, .cadeiras li.on .cd-valor { color: var(--brilho); }
+.cd-valor { margin-top: 10px; font-size: 28px; white-space: nowrap; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.cd-un { margin-bottom: 12px; font-size: 13px; color: var(--noite-muted); }
+.cd-linha { margin-top: auto; font-size: 13px; line-height: 1.4; color: var(--noite-muted); }
+.cd-linha + .cd-linha { margin-top: 2px; }
+
+.din .fundos-tabela { max-width: none; }
+.fd-celula { white-space: nowrap; }
+.fd-trilho { display: inline-block; width: clamp(48px, 12vw, 140px); height: 8px; margin-right: 10px; border-radius: 4px; vertical-align: middle; overflow: hidden; }
+.fd-trilho i { display: block; height: 100%; border-radius: 4px; background: var(--pub); }
+.fd-celula b { font-weight: 650; font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) {
+  .din .bloco.noite { padding: 20px 16px 18px; }
+  .fd-trilho { display: none; }
+  .cd-valor { font-size: 22px; }
+}

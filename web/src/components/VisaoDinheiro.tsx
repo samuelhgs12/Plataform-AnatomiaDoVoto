@@ -10,7 +10,7 @@ import {
   coberturaSelo, diferencaRelativa, ehMunicipal, fatias, larguraSelo, seloValor, seta, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
   ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
-  caminhoPecas, cargoDeCandidatos, cargosDoRecorte, cargosDoAno, deCada100, fraseDeCada100, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
+  caminhoPecas, cargoDeCandidatos, cargosDoRecorte, cargosDoAno, deCada100, fraseDependeram, parteDependeu, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
   type Aba, type LinhaCargo, type LinhaDespesa, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
 } from "@/lib/dinheiro";
 import { montarNuvem, type TermoNuvem } from "@/lib/nuvem";
@@ -253,8 +253,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   // cartão do lugar escolhido, por cima do mapa: o número, a posição e o atalho para a seção dele embaixo
   const posUf = uf ? estadosLista.findIndex((e) => e.id === uf) : -1;
   const unidadeCurta = aba === "gasto" ? (cargo === "Prefeito" && mun ? "gastos por todas as campanhas a prefeito" : `por vaga de ${cargoMin}`) : aba === "eleitor" ? "por eleitor apto" : "do dinheiro recebido veio de fundos públicos";
-  const semContas = contas && contas.com < contas.total ? `${inteiro(contas.total - contas.com)} de ${inteiro(contas.total)} candidaturas sem prestação final: total incompleto` : null;
+  // só avisa no cartão do mapa quando faltam contas de verdade (abaixo de LIMIAR_CONTAS); acima, o painel só informa a parte
   const seloContas = coberturaSelo(contas);
+  const semContas = seloContas?.incompleta ? seloContas.detalhe : null;
   // leitura de relance: a origem e o destino do dinheiro em barras 100%, com os grupos menores juntos em "Outros"
   const fatiasOrigem = !origem ? [] : fatias("naoPublico" in origem
     ? [{ chave: "pub", rotulo: "Público", valor: origem.publico, cor: "pub" }, { chave: "np", rotulo: "Não público", valor: origem.naoPublico, cor: "fx3" }]
@@ -310,7 +311,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
               <p className="cartao-valor"><b>{cartao.valor}</b> {cartao.unidade}</p>
               <p className="cartao-selos">
                 {cartao.posicao && <span>{cartao.posicao}</span>}
-                {semContas && <span className="cartao-aviso" title={semContas}>Contas incompletas</span>}
+                {semContas && <span className="cartao-aviso" title={semContas}>{seloContas!.texto}</span>}
               </p>
               {cartao.extra && <p className="cartao-linha">{cartao.extra}</p>}
               <a className="cartao-ir" href={cartao.ir.href}>{cartao.ir.texto}</a>
@@ -418,7 +419,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </section>
         {(seloContas || fora || (!mun && porte)) && (
           <ul className="din-notas s12" aria-label="Notas sobre os números">
-            {seloContas && <li className={seloContas.incompleta ? "aviso" : "ok"} title={coberturaLinha?.texto}>{seloContas.incompleta ? "⚠ " : "✓ "}{seloContas.texto}</li>}
+            {seloContas && <li className={seloContas.incompleta ? "aviso" : "ok"} title={coberturaLinha?.texto ?? seloContas.detalhe}>{seloContas.incompleta ? "⚠ " : "✓ "}{seloContas.texto}</li>}
             {fora && <li title="A Pergunta 1 soma também essas campanhas; aqui conta só quem disputou.">Fora da conta: {reais(fora.gasto)} de {inteiro(fora.n)} {fora.n === 1 ? "campanha que não disputou" : "campanhas que não disputaram"}</li>}
             {!mun && porte && <li>Soma de {inteiro(valorDoPorte(resumo, ano, uf, porte, aba, cargo).n)} cidades</li>}
             {eleitoPrefeito && <li>Eleito: {eleitoPrefeito.nome_urna} ({eleitoPrefeito.partido}){eleitoPrefeito.prestou === false ? ", sem prestação final" : ` · gastou ${reais(eleitoPrefeito.gasto)}`}</li>}
@@ -454,34 +455,40 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           <p className="din-rodape">Gasto declarado na prestação de contas final · cada voto = gasto ÷ votos no 1º turno · público = parte do que recebeu vinda dos fundos Eleitoral e Partidário · clique no nome para ver o perfil</p>
         </section>
         {totalVoto?.porVoto != null && (
-          <section id="dinheiro-voto" className={`bloco noite ${(fatiasOrigem.length > 0 || fatiasDestino.length > 0) ? "s6" : "s12"} din-voto`}>
+          <section id="dinheiro-voto" className="bloco noite s12 din-voto">
             <header className="din-sec">
               <h3><span className="din-num" aria-hidden="true">3</span>Quanto custou um voto</h3>
               <p>Gasto de todas as campanhas ÷ votos no 1º turno</p>
             </header>
+            <div className="din-duas">
+            <div>
             <p className="voto-grande"><b>{brlCentavos(totalVoto.porVoto)}</b><span>por voto</span></p>
             <p className="voto-conta">{reais(totalVoto.gasto)} ÷ {compacto(totalVoto.votos)} votos
               {antes !== null && votoAntes !== null && seta(variacaoVoto) && <> · <span className={`delta${variacaoVoto! > 0 ? " sobe" : variacaoVoto! < 0 ? " desce" : ""}`}>{seta(variacaoVoto)}</span> desde {antes} ({brlCentavos(votoAntes)})</>}
             </p>
+            </div>
             {quartis && quartis.grupos.some((g) => g.faixa >= 1 && g.porVoto !== null) && (
-              <>
+              <div>
                 <p className="rotulo">Cada voto, por grupo de gasto</p>
                 <BarrasH compacto titulo={`Custo de cada voto em cada grupo de gasto dos candidatos a ${cargoMin}, ${ano}`}
                   linhas={quartis.grupos.filter((g) => g.faixa >= 1 && g.porVoto !== null).map((g) => ({ chave: String(g.faixa), rotulo: g.rotulo, valor: g.porVoto!, classe: COR_FAIXA[g.faixa], texto: brlCentavos(g.porVoto!), subtexto: "" }))} />
-              </>
+              </div>
             )}
+            </div>
             <p className="din-rodape">Votos nominais: o voto só na legenda do partido não entra</p>
           </section>
         )}
 
         {(fatiasOrigem.length > 0 || fatiasDestino.length > 0) && (
-          <section id="dinheiro-origem" className={`bloco noite ${totalVoto?.porVoto != null ? "s6" : "s12"} din-origem`}>
+          <section id="dinheiro-origem" className="bloco noite s12 din-origem">
             <header className="din-sec">
               <h3><span className="din-num" aria-hidden="true">4</span>De onde veio, para onde foi o dinheiro</h3>
               <p>Todas as campanhas a {cargoMin} · {ano}</p>
             </header>
-            {fatiasOrigem.length > 0 && <BarraEmpilhada titulo="Recebido" total={reais(origem!.total)} fatias={fatiasOrigem} valor={reais} />}
-            {fatiasDestino.length > 0 && <BarraEmpilhada titulo="Gasto" total={reais(totalGrupos)} fatias={fatiasDestino} valor={reais} />}
+            <div className="din-duas">
+              {fatiasOrigem.length > 0 && <BarraEmpilhada titulo="Recebido" total={reais(origem!.total)} fatias={fatiasOrigem} valor={reais} />}
+              {fatiasDestino.length > 0 && <BarraEmpilhada titulo="Gasto" total={reais(totalGrupos)} fatias={fatiasDestino} valor={reais} />}
+            </div>
             {grupos.length > 0 && (
               <details className="ver-todos dinheiro-grupos">
                 <summary>Todos os {grupos.length} grupos de despesa</summary>
@@ -514,7 +521,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           <section id="dinheiro-fundos" className="bloco noite s12 din-fundos">
             <header className="din-sec">
               <h3><span className="din-num" aria-hidden="true">6</span>Quem dependeu do dinheiro público</h3>
-              <p>{(totalFundos(cargoAqui.todos) >= MINIMO_CADA_100 ? fraseDeCada100(cargo, ano, cargoAqui.todos) : null) ?? `${cargo} · ${ano} · ${lugar}`}</p>
+              <p>{cem || cemEleitos ? "Dependeu: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário" : `${cargo} · ${ano} · ${lugar}`}</p>
             </header>
             {cem || cemEleitos ? (
               <div className="cem-par">
@@ -522,25 +529,30 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
                 {cemEleitos && <CemCandidatos grupos={cemEleitos} quem="eleitos" total={totalFundos(cargoAqui.soEleitos)} titulo={`Eleitos para ${cargoMin}, ${lugar}, ${ano}, de cada 100`} />}
               </div>
             ) : (
-              <p className="cem-poucos">{textoDependeram(cargoAqui.todos)} candidatos e {textoDependeram(cargoAqui.soEleitos) ?? "nenhum"} eleitos dependeram do dinheiro público (mais da metade do que receberam)</p>
+              <p className="cem-poucos">{fraseDependeram(cargoAqui.todos, cargoAqui.soEleitos)}</p>
             )}
             {cargosLugar.length > 1 && (
               <div className="tabela-rolar">
                 <table className="fundos-tabela" aria-label={`Quantos dependeram do dinheiro público em cada cargo, ${lugar}, ${ano}`}>
-                  <thead><tr><th>Cargo</th><th className="num">Candidatos que dependeram</th><th className="num">Eleitos que dependeram</th></tr></thead>
+                  <thead><tr><th>Cargo</th><th>Candidatos que dependeram</th><th>Eleitos que dependeram</th></tr></thead>
                   <tbody>
                     {cargosLugar.map((c) => (
                       <tr key={c.cargo} className={c.cargo === cargo ? "on" : undefined}>
                         <th scope="row"><Link href={href({ cargo: c.cargo }, "dinheiro-fundos")} scroll={false} aria-current={c.cargo === cargo ? "true" : undefined}>{c.cargo}</Link></th>
-                        <td className="num">{textoDependeram(c.todos) ?? "—"}</td>
-                        <td className="num">{textoDependeram(c.soEleitos) ?? "—"}</td>
+                        {[c.todos, c.soEleitos].map((g, i) => (
+                          <td key={i} className="fd-celula">
+                            {parteDependeu(g) === null ? <span className="muted">ninguém</span> : (
+                              <><span className="fd-trilho" aria-hidden="true"><i style={{ width: `${parteDependeu(g)! * 100}%` }} /></span><b>{textoDependeram(g)}</b></>
+                            )}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-            <p className="din-rodape">Dependeu = mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário · com menos de {MINIMO_CADA_100} pessoas, a conta aparece como de fato é (ex.: 2 de 3)</p>
+            <p className="din-rodape">Com menos de {MINIMO_CADA_100} pessoas, a conta aparece como de fato é (ex.: 2 de 3)</p>
           </section>
         )}
 

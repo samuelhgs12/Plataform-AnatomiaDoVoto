@@ -4,7 +4,7 @@ import {
   abaDe, anoAnterior, cidadesDoPorte, coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
   coberturaSelo, descricaoFatias, fatias, larguraSelo, seloValor, seta,
   anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos,
-  caminhoPecas, cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fundoDe, maioresDeCandidatos, maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos,
+  caminhoPecas, cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos, maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos,
   type ContagemFundos, type LinhaCargo, type LinhaMaior,
   type LinhaPartido, type LinhaQuartil,
   type LinhaDespesa,
@@ -497,9 +497,21 @@ describe("seta", () => {
 
 describe("coberturaSelo", () => {
   it("resume a cobertura das prestações de contas", () => {
-    expect(coberturaSelo({ com: 10, total: 10 })).toEqual({ texto: "Todas as contas na base", incompleta: false });
-    expect(coberturaSelo({ com: 14_245, total: 14_453 })).toEqual({ texto: "14.245 de 14.453 contas na base", incompleta: true });
+    expect(coberturaSelo({ com: 10, total: 10 })).toMatchObject({ texto: "Todas as contas na base", incompleta: false });
     expect(coberturaSelo(null)).toBeNull();
+    expect(coberturaSelo({ com: 0, total: 0 })).toBeNull();
+  });
+  it("acima do limiar só informa a parte; abaixo, avisa quanto falta", () => {
+    expect(coberturaSelo({ com: 14_245, total: 14_453 })).toEqual({
+      texto: "98% das contas na base", incompleta: false, detalhe: "14.245 de 14.453 candidaturas com prestação de contas final na base",
+    });
+    expect(coberturaSelo({ com: 999, total: 1000 })!.texto).toBe("99% das contas na base");   // nunca "100%" sem ser todas
+    expect(coberturaSelo({ com: 95, total: 100 })!.incompleta).toBe(false);
+    const baixa = coberturaSelo({ com: 70, total: 100 })!;
+    expect(baixa.texto).toBe("Faltam 30% das contas");
+    expect(baixa.incompleta).toBe(true);
+    expect(baixa.detalhe).toContain("pode estar incompleto");
+    expect(coberturaSelo({ com: 90, total: 100 }, 0.9)!.incompleta).toBe(false);
   });
 });
 
@@ -776,5 +788,19 @@ describe("parteDoTotal e caminhoPecas", () => {
     expect(caminhoPecas({ ano: 2022, cargo: "Deputado estadual", uf: "MG" }, "todos")).toBe("/dinheiro/pecas?ano=2022&cargo=Deputado+estadual&uf=MG");
     expect(caminhoPecas({ ano: 2024, cargo: "Vereador", uf: "MG", mun: 7 }, "eleitos")).toBe("/dinheiro/pecas?ano=2024&cargo=Vereador&mun=7&eleitos=true");
     expect(caminhoPecas({ ano: 2024, cargo: "Vereador" }, "todos")).toBe("/dinheiro/pecas?ano=2024&cargo=Vereador");
+  });
+});
+
+describe("parteDependeu e fraseDependeram", () => {
+  const z: ContagemFundos = { maioria: 0, parte: 0, nada: 0, sem_receita: 0, sem_contas: 0 };
+  it("dá a parte que dependeu, e null sem ninguém", () => {
+    expect(parteDependeu({ ...z, maioria: 3, nada: 1 })).toBe(0.75);
+    expect(parteDependeu(z)).toBeNull();
+  });
+  it("escreve a conta real com o verbo no número certo", () => {
+    expect(fraseDependeram({ ...z, maioria: 3, nada: 2 }, { ...z, maioria: 1 })).toBe("3 de 5 candidatos dependeram do dinheiro público; entre os eleitos, 1 de 1.");
+    expect(fraseDependeram({ ...z, maioria: 1, nada: 4 }, { ...z, nada: 1 })).toBe("1 de 5 candidatos dependeu do dinheiro público; entre os eleitos, nenhum.");
+    expect(fraseDependeram({ ...z, nada: 2 }, z)).toBe("Nenhum dos 2 candidatos dependeu do dinheiro público.");
+    expect(fraseDependeram(z, z)).toContain("Ninguém");
   });
 });

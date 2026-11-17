@@ -37,7 +37,7 @@ export function QuartisDoGasto({ q }: { q: QuartisGasto }) {
           {q.grupos.map((g) => (
             <tr key={g.faixa}>
               <td><i className={`empilhada-cor ${COR_FAIXA[g.faixa]}`} aria-hidden="true" />{g.rotulo}</td>
-              <td>{g.faixa >= 1 ? faixaGasto(g, g.faixa === ultimo) : g.faixa === 0 ? "R$ 0" : "não se sabe"}</td>
+              <td>{g.faixa >= 1 ? faixaGasto(g, g.faixa === ultimo) : g.faixa === 0 ? "R$ 0" : "sem prestação final"}</td>
               <td className="num">{inteiro(g.eleitos)} de {inteiro(g.candidatos)} <small>{pct(g.taxa, 0)}</small></td>
               <td className="num">{g.faixa >= 1 && g.porVoto !== null ? brlCentavos(g.porVoto) : "—"}</td>
             </tr>
