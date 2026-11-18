@@ -29,6 +29,7 @@ import { CemCandidatos } from "./CemCandidatos";
 import { ComparacoesDinheiro } from "./ComparacoesDinheiro";
 import { EscolhaMunicipio } from "./EscolhaMunicipio";
 import { LinhasCandidatos, type LinhaCandidato } from "./LinhasCandidatos";
+import { BuscaCandidatoDinheiro } from "./BuscaCandidatoDinheiro";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "./MapaAbstencao";
 import { MaioresGastos } from "./MaioresGastos";
 import { MapaVivo } from "./MapaVivo";
@@ -125,9 +126,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
       ficha: uf ? ficha : undefined,
     };
   });
-  // cidades do estado aberto (só nas municipais): faixas fixas, iguais em todos os estados; fora do porte, apagadas.
-  // Nas gerais o dado é só por estado: o mapa fica nos seis estados e só o contorno marca o escolhido
-  const caixa = uf && municipal ? CAIXA_UF[uf] : undefined;
+  // ao entrar num estado, o mapa aproxima dele; as cidades (faixas fixas, iguais em todos os estados; fora do porte,
+  // apagadas) só nas municipais, porque nas gerais o dado é só por estado
+  const caixa = uf ? CAIXA_UF[uf] : undefined;
   const noMapaMun: MunicipioNoMapa[] = !municipal || !uf || !caixa ? [] : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
     const linha = doAno.get(m.id_municipio);
     const v = valorCidade(linha, aba, cargo);
@@ -141,14 +142,14 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const algumSem = uf && municipal ? noMapaMun.some((m) => m.classe.split(" ").includes("sem")) : valoresUf.includes(null);
   const legenda = (uf && municipal ? legendaCidade(aba, cargo) : legendaPorFaixas(faixasUf, (v) => seloValor(v, aba), aba === "gasto" ? "R$ " : "")).filter((l) => l.classe !== "sem" || algumSem);
   // com um estado aberto, o cartão do lugar fica na faixa da direita do mapa: o enquadramento ganha essa faixa vazia,
-  // e o lugar vai para a esquerda, sem ficar embaixo do cartão (nas gerais, os seis estados)
+  // e o lugar vai para a esquerda, sem ficar embaixo do cartão
   const base: [number, number, number, number] = caixa ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA];
   const quadro: [number, number, number, number] | undefined = uf ? [base[0], base[1], base[2] + (base[2] - base[0]) * (caixa ? 0.8 : 0.7), base[3]] : undefined;
   const camera = enquadrar(quadro ?? base, TELA.larg, TELA.alt, caixa ? 0.06 : 0.02);
   const centro = mun ? CENTRO_MUNICIPIO[mun.cod_ibge] : undefined;
   const mapaPalco = (
     <MapaAbstencao
-      titulo={`${medidaInfo.rotulo} de ${cargoMin}: ${lugar}, ${ano}`} camera={camera} estados={noMapaUf} uf={uf} zoom={municipal} municipios={noMapaMun}
+      titulo={`${medidaInfo.rotulo} de ${cargoMin}: ${lugar}, ${ano}`} camera={camera} estados={noMapaUf} uf={uf} municipios={noMapaMun}
       destaque={mun && centro ? { ibge: mun.cod_ibge, nome: lugar, x: centro[0], y: centro[1] } : undefined}
     />
   );
@@ -299,7 +300,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
   return (
     <>
-      <MapaVivo className={`palco s12 palco-dinheiro${!uf ? " dinheiro-inicial" : ""}`} estado={municipal ? uf : undefined}>
+      <MapaVivo className={`palco s12 palco-dinheiro${!uf ? " dinheiro-inicial" : ""}`} estado={uf}>
         {menu}
         <div className="palco-topo">
           <div>
@@ -521,13 +522,8 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
               <h3>Quanto gastou um candidato</h3>
               <p>Procure pelo nome: candidatos a {cargoMin} em {lugar} · {ano}</p>
             </header>
-            <form className="din-busca-form" action="/#dinheiro-busca" method="get" role="search">
-              {camposDoHref(href({})).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
-              <label htmlFor="din-busca-nome" className="sr-only">Nome do candidato</label>
-              <input id="din-busca-nome" name="nome" type="search" defaultValue={nomeBusca ?? ""} placeholder="Nome de urna ou nome completo"
-                minLength={2} maxLength={80} autoComplete="off" />
-              <button type="submit">Buscar</button>
-            </form>
+            <BuscaCandidatoDinheiro campos={camposDoHref(href({}))} recorte={{ ano, cargo, uf: uf!, mun: mun?.id_municipio }}
+              inicial={nomeBusca ?? ""} municipal={municipal} />
             {nomeBusca && (achados === null
               ? <p className="card aviso" role="status">Não foi possível buscar agora: a API não respondeu. Tente de novo.</p>
               : <div role="status" aria-live="polite">

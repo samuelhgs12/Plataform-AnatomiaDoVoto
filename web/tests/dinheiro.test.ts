@@ -8,7 +8,7 @@ import {
   coberturaSelo, descricaoFatias, fatias, larguraSelo, seloValor, seta, anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao,
   medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos, caminhoPecas,
   cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos,
-  maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos, camposDoHref, caminhoBuscaCandidato, medidaDe, MEDIDAS_ANOS, MEIAS, PINTAR,
+  maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos, camposDoHref, hrefBuscaCandidato, caminhoBuscaCandidato, medidaDe, MEDIDAS_ANOS, MEIAS, PINTAR,
   SECOES, termoBuscaCandidato, type ContagemFundos, type LinhaCargo, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type LinhaDespesa,
   intervalo,
 } from "../src/lib/dinheiro";
@@ -886,5 +886,13 @@ describe("intervalo", () => {
     expect(intervalo("40 mil", "46 mil")).toBe("40–46 mil");
     expect(intervalo("500 mil", "1 mi")).toBe("500 mil–1 mi");
     expect(intervalo("9,5 mil", "12 mil")).toBe("9,5–12 mil");
+  });
+});
+
+describe("hrefBuscaCandidato", () => {
+  it("troca só o nome buscado e leva ao bloco da busca", () => {
+    const campos: [string, string][] = [["ver", "dinheiro"], ["uf", "MG"], ["nome", "antigo"]];
+    expect(hrefBuscaCandidato(campos, "Zé da Serra")).toBe("/?ver=dinheiro&uf=MG&nome=Z%C3%A9+da+Serra#dinheiro-busca");
+    expect(hrefBuscaCandidato([], "ana")).toBe("/?nome=ana#dinheiro-busca");
   });
 });

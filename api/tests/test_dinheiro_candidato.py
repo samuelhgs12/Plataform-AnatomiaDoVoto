@@ -78,3 +78,14 @@ def test_busca_de_candidato_no_recorte_do_dinheiro(client):
     assert maria[0]["municipio"] is None
     assert client.get("/api/dinheiro/candidatos?ano=2020&cargo=Vereador&uf=MG&mun=4&q=maria").json() == []
     assert client.get(base + "&q=a").status_code == 422
+
+
+def test_busca_do_dinheiro_poe_primeiro_quem_comeca_com_o_texto(client):
+    """Autocompletar: "ze" acha "ZÉ DA SERRA" (começa com o texto) antes de quem só tem a palavra no meio do nome."""
+    base = "/api/dinheiro/candidatos?ano=2022&cargo=Deputado%20estadual&uf=MG"
+    da = [x["nome_urna"] for x in client.get(base + "&q=da").json()]
+    # "da" está no meio dos dois nomes de urna (MARIA DA SILVA e ZÉ DA SERRA): nenhum começa com o texto, vale o voto
+    assert da == ["MARIA DA SILVA", "ZÉ DA SERRA"]
+    assert [x["nome_urna"] for x in client.get(base + "&q=ze").json()] == ["ZÉ DA SERRA"]
+    # nome de urna igual ao digitado vem antes, mesmo com menos votos
+    assert [x["nome_urna"] for x in client.get(base + "&q=ze%20da%20serra").json()][0] == "ZÉ DA SERRA"

@@ -1120,3 +1120,10 @@ export function camposDoHref(href: string): [string, string][] {
   const consulta = href.split("#")[0].split("?")[1] ?? "";
   return [...new URLSearchParams(consulta)].filter(([k]) => k !== "nome");
 }
+
+/** O endereço da página com a busca de um nome (`?nome=`), mantendo o recorte (os campos de camposDoHref), já no bloco da busca. */
+export function hrefBuscaCandidato(campos: [string, string][], nome: string): string {
+  const p = new URLSearchParams(campos.filter(([k]) => k !== "nome"));
+  p.set("nome", nome);
+  return `/?${p}#dinheiro-busca`;
+}

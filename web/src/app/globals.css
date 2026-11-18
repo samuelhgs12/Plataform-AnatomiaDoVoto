@@ -2101,6 +2101,23 @@ a.q-ver:active { transform: scale(0.98); }
 .din-busca-form button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; font: inherit; font-weight: 650; cursor: pointer; color: var(--noite); background: var(--brilho); }
 .din-busca-form button:focus-visible { outline: 2px solid var(--sobre-noite); outline-offset: 2px; }
 .din-busca .rotulo { margin: 8px 0 4px; }
+/* camada Dinheiro, eleições gerais: o estado aproximado não tem cidades por cima, então fica com a cor da faixa dele
+   (a regra do mapa escurece o estado para as cidades aparecerem, o que aqui o deixaria preto) */
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q0 { fill: var(--q0); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q1 { fill: var(--q1); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q2 { fill: var(--q2); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q3 { fill: var(--q3); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q4 { fill: var(--q4); }
+/* autocompletar da busca: a lista abre embaixo do campo, clara sobre o painel escuro (como a busca da aba Candidato) */
+.din-busca-form.combo { max-width: 640px; flex-wrap: wrap; }
+.din-busca-campo { position: relative; flex: 1; min-width: 0; display: flex; }
+.din-busca-lista { top: 100%; background: var(--sobre-noite); color: var(--noite); }
+.din-busca-lista li[aria-selected="true"] { background: color-mix(in srgb, var(--noite) 10%, var(--sobre-noite)); }
+.din-busca-nome { display: block; font-weight: 650; }
+.din-busca-nome mark { background: color-mix(in srgb, var(--brilho) 40%, transparent); color: inherit; border-radius: 2px; }
+.din-busca-lista small { display: block; margin-top: 2px; font-size: 13px; color: color-mix(in srgb, var(--noite) 70%, var(--sobre-noite)); }
+.din-busca-status { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--noite-muted); }
+.din-busca-status:empty { display: none; }
 .linhas-lugar { margin-left: 6px; color: var(--noite-muted); font-size: 12.5px; }
 /* a tabela de despesas mostra todas as categorias, sem rolagem dentro da rolagem */
 .tabela-rolar:has(> .despesas-candidato-tabela) { max-height: none; }
