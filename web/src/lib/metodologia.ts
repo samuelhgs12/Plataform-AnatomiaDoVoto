@@ -104,7 +104,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     id: "p1",
     resposta: "Quanto todas as campanhas a um cargo gastaram, dividido pelo número de vagas, por ano e estado.",
     formula: { resultado: "custo da cadeira", parcelas: ["gasto de todas as campanhas ao cargo", "número de vagas"], operador: "÷" },
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/custo-cadeira" }, { rotulo: "Dinheiro nas eleições, cidade por cidade", href: "/analises/dinheiro" }],
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/custo-cadeira" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     dados: ["vw_despesa_candidatura (sobre despesa_campanha)", "vagas", "candidatura, eleicao, cargo e rotulo_resultado"],
@@ -123,7 +123,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
   p2: {
     id: "p2",
     resposta: "Se, na mesma disputa, quem teve mais dinheiro se elegeu mais do que quem teve menos.",
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/gastos" }, { rotulo: "Dinheiro nas eleições, cidade por cidade", href: "/analises/dinheiro" }],
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/gastos" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     turno: "Votos do 1º turno na correlação",
@@ -149,7 +149,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
   p8: {
     id: "p8",
     resposta: "De onde vem o dinheiro das campanhas e se quem recebeu mais do Fundo Eleitoral e do Fundo Partidário se elegeu mais que os concorrentes.",
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/financiamento" }, { rotulo: "Dinheiro nas eleições, cidade por cidade", href: "/analises/dinheiro" }],
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/financiamento" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     dados: ["receita_campanha e fonte_recurso", "candidatura, eleicao, cargo e rotulo_resultado"],

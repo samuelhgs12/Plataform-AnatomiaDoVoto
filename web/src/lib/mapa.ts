@@ -4,10 +4,11 @@ import { porUf, type LinhaFontes } from "./financiamento";
 import { cicloDoAno, proporcao, type CargoCiclo, type LinhaLegenda } from "./legenda";
 
 /**
- * O que o mapa da página inicial pinta: a abstenção (padrão), o voto de legenda, os votos de um candidato ou o grau de
- * instrução dos candidatos x o da população (Comparar › Instrução).
+ * O que o mapa da página inicial pinta: a abstenção (padrão), o voto de legenda, os votos de um candidato, o grau de
+ * instrução dos candidatos x o da população (Comparar › Instrução) ou o gasto das campanhas por vaga (camada Dinheiro,
+ * perguntas 1, 2 e 8).
  */
-export const VISOES = ["abstencao", "legenda", "candidato", "instrucao"] as const;
+export const VISOES = ["abstencao", "legenda", "candidato", "instrucao", "dinheiro"] as const;
 export type Visao = (typeof VISOES)[number];
 
 /**
@@ -133,6 +134,7 @@ export function situacaoComparativo({ ano, anosPorCenso, uf }: { ano: number; an
  */
 export function resumoCamadas({ ver, partido, comparativo, instrucao }: { ver: Visao; partido?: string; comparativo?: string; instrucao?: string }): string {
   if (ver === "candidato") return "Votos de um candidato";
+  if (ver === "dinheiro") return "Gasto por vaga";
   if (ver === "instrucao") return instrucao ? `Instrução · ${instrucao}` : "Instrução";
   if (ver === "legenda") return partido ? `Voto de legenda · ${partido}` : "Voto de legenda";
   return comparativo ? `Abstenção × ${comparativo}` : "Abstenção";
