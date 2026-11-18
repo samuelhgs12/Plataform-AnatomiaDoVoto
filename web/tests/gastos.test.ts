@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  coberturaDisputas, correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, grupo, maiorGastador, respostaGasto, respostaMaior, sucessoPorGasto,
+  coberturaDisputas, correlacaoDe, daMedida, medidaDe, efeitoDoCargo, ehMajoritario, forcaCorrelacao, grupo, maiorGastador, respostaGasto, respostaMaior, sucessoPorGasto,
   type LinhaCorrelacao, type LinhaGastoFaixa, type LinhaMaiorGasto,
 } from "../src/lib/gastos";
 import { semPrestacao } from "../src/lib/financiamento";
@@ -124,5 +124,13 @@ describe("coberturaDisputas", () => {
       motivos: [{ motivo: "só um candidato", n: 5 }, { motivo: "prestação de contas incompleta", n: 3 }, { motivo: "empate no maior valor", n: 1 }],
     });
     expect(coberturaDisputas(maiorGastador([mg({})], {})).motivos).toEqual([]);
+  });
+});
+
+describe("medidaDe", () => {
+  it("usa o patrimônio (a medida da pergunta 2) quando a URL não pede outra que exista", () => {
+    expect(medidaDe(undefined)).toBe("patrimonio");
+    expect(medidaDe("qualquer")).toBe("patrimonio");
+    expect(medidaDe("gasto")).toBe("gasto");
   });
 });

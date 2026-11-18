@@ -53,6 +53,9 @@ INSERT INTO receita_campanha (id_receita, id_candidatura, id_fonte_recurso, orig
   (1, 2, 1, 'Recursos de partido político', 4000, false, 'FINAL'), (2, 2, 2, 'Recursos de pessoas físicas', 1000, false, 'FINAL'),
   (5, 2, 2, 'Recursos próprios', 500, false, 'FINAL'), (3, 2, 2, 'Recursos de outros candidatos', 300, true, 'FINAL'),
   (4, 5, 2, 'Recursos de pessoas físicas', 5000, false, 'FINAL');
+-- bens declarados (pergunta 2): Maria declarou dois bens em 2022 e um em 2016; o rival dela (10) não declarou nenhum
+INSERT INTO bem_candidato (id_bem, id_candidatura, ordem, tipo_bem, valor_bem) VALUES
+  (1, 3, 1, 'Casa', 300000), (2, 3, 2, 'Veículo automotor terrestre', 50000), (3, 1, 1, 'Casa', 200000);
 -- votos de partido (para os painéis agregados da pergunta 5): 2020 vereador e 2022 deputado
 INSERT INTO votos_partido_municipio (id_votos, id_eleicao, id_partido, id_municipio, turno, votos_nominais, votos_legenda) VALUES
   (1, 4, 1, 1, 1, 400, 120), (2, 4, 2, 1, 1, 900, 60), (3, 4, 3, 2, 1, 1000, 50), (4, 7, 1, 1, 1, 700, 70), (5, 7, 4, 3, 1, 600, 0);

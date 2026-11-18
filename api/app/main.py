@@ -5,9 +5,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import db, pecas_geral
+from . import db, pecas_eleitos, pecas_geral
 from .config import get_settings
 from .routers import analises, busca, candidaturas, candidatos, fotos, locais, meta, propaganda, saude
+from .routers import dinheiro
 
 
 @asynccontextmanager
@@ -15,6 +16,7 @@ async def ciclo(_: FastAPI):
     # peças de propaganda de cada recorte (visão geral da pergunta 9): calculadas em segundo plano, sem atrasar a subida
     if get_settings().pecas_ao_subir:
         pecas_geral.iniciar()
+        pecas_eleitos.iniciar()   # camada Dinheiro do mapa: a mesma nuvem, só dos eleitos
     yield
 
 
@@ -38,5 +40,5 @@ async def banco_indisponivel(_: Request, exc: db.BancoIndisponivel):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
-for r in (saude.router, meta.router, busca.router, candidaturas.router, candidatos.router, fotos.router, analises.router, locais.router, propaganda.router):
+for r in (saude.router, meta.router, busca.router, candidaturas.router, candidatos.router, fotos.router, analises.router, locais.router, propaganda.router, dinheiro.router):
     app.include_router(r, prefix="/api")

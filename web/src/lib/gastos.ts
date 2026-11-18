@@ -1,20 +1,26 @@
-// Lógica da página "recursos de campanha e sucesso eleitoral" (pergunta 2), sem dependência do React: fácil de testar.
-// Os dados vêm de GET /api/analises/q2 (api/app/analises/q2.sql), em três medidas (coluna "medida"): o gasto, a
+// Lógica da página "patrimônio e sucesso eleitoral" (pergunta 2), sem dependência do React: fácil de testar.
+// Os dados vêm de GET /api/analises/q2 (api/app/analises/q2.sql), em quatro medidas (coluna "medida"): o patrimônio
+// declarado (a da pergunta, de 2006 em diante) e, para comparar, o dinheiro de campanha (2018 em diante): o gasto, a
 // receita (inclusive material doado por outros candidatos) e "recursos" (o maior dos dois).
 
 import { compararGrupos, responder, zContagem, type Resposta } from "./estatistica";
 import { passa, type Filtros } from "./financiamento";
 
-export type Medida = "recursos" | "gasto" | "receita";
+export type Medida = "patrimonio" | "recursos" | "gasto" | "receita";
+/** A medida da pergunta 2; as outras comparam com o dinheiro de campanha. */
+export const MEDIDA_PADRAO: Medida = "patrimonio";
 export const MEDIDAS: { chave: Medida; rotulo: string; explicacao: string }[] = [
+  { chave: "patrimonio", rotulo: "Patrimônio declarado", explicacao: "a soma dos bens que o candidato declarou ao registrar a candidatura" },
   { chave: "recursos", rotulo: "Recursos de campanha considerados", explicacao: "Usamos o maior valor entre receitas e despesas declaradas, para considerar também campanhas que receberam material." },
   { chave: "gasto", rotulo: "Só gasto", explicacao: "o que o candidato gastou (despesas declaradas)" },
   { chave: "receita", rotulo: "Só receita", explicacao: "o que o candidato recebeu, inclusive material doado por outros candidatos" },
 ];
+/** A medida pedida na URL, se existir; senão, o patrimônio. */
+export const medidaDe = (v: string | undefined): Medida => MEDIDAS.find((m) => m.chave === v)?.chave ?? MEDIDA_PADRAO;
 /** Só as linhas de uma medida. */
 export const daMedida = <T extends { medida: Medida }>(linhas: T[], medida: Medida) => linhas.filter((l) => l.medida === medida);
 
-/** faixa -1 = sem prestação final (fora dos grupos); 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou, comparando só com a mesma disputa (4 = os que mais têm). */
+/** faixa -1 = valor desconhecido, sem prestação final (só nas medidas de campanha; fora dos grupos); 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou, comparando só com a mesma disputa (4 = os que mais têm). */
 export interface LinhaGastoFaixa { medida: Medida; ano: number; cargo: string; uf: string; tinha_cargo: boolean; faixa: number; candidaturas: number; eleitos: number }
 /** Disputas com poucos candidatos: quantas vezes o que teve mais recursos venceu, e quantas vitórias teria por sorteio. */
 export interface LinhaMaiorGasto {

@@ -122,25 +122,26 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p2: {
     id: "p2",
-    resposta: "Se, na mesma disputa, quem teve mais dinheiro se elegeu mais do que quem teve menos.",
+    resposta: "Se, na mesma disputa, quem declarou mais patrimônio se elegeu mais do que quem declarou menos.",
     ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/gastos" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
-    anos: "2018–2024",
+    anos: "2006–2024 (dinheiro de campanha: 2018–2024)",
     cargos: "Todos os cargos titulares",
     turno: "Votos do 1º turno na correlação",
-    dados: ["vw_despesa_candidatura e receita_campanha", "resultado_candidatura e rotulo_resultado", "candidatura, eleicao e cargo"],
-    recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou", "Prestação final ou regularização"],
+    dados: ["bem_candidato (bens declarados)", "vw_despesa_candidatura e receita_campanha (para comparar)", "resultado_candidatura e rotulo_resultado", "candidatura, eleicao e cargo"],
+    recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou"],
     calculo: [
-      "Três medidas, da prestação de contas entregue ao TSE (versão final ou regularização): o gasto (despesas, sem as transferências para outros candidatos ou partidos); a receita (tudo o que recebeu, inclusive material de campanha doado por outros candidatos, comum entre vereadores); e os recursos, o maior dos dois. As conclusões são as mesmas nas três.",
-      "Os recursos existem porque muitos candidatos declaram despesas com valor zero (material doado) e recebem o material de outro candidato: só pelo gasto, eles pareceriam campanhas sem dinheiro.",
+      "Patrimônio = soma dos bens que o candidato declarou ao TSE no registro da candidatura (casas, terrenos, veículos, aplicações...), no valor informado por ele, sem correção pela inflação. Quem não declarou nenhum bem entra como “nada declarado”.",
       "Cada candidato é comparado só com os concorrentes da mesma disputa: o município (prefeito e vereador), o estado (deputados, senador e governador) ou o país (presidente).",
-      "“Muito” é cerca de 1/4 de quem declarou algo, os que mais têm na disputa; “pouco”, cerca de 1/4, os que menos têm; “médio”, o meio. Valores iguais ficam sempre no mesmo grupo, por isso os grupos têm tamanho aproximado. “Nada declarado” = valor zero na prestação final.",
-      "Em prefeito, governador, senador e presidente há poucos candidatos por disputa, então a pergunta vira “o que tinha mais dinheiro venceu?”, comparada com a chance de um sorteio.",
+      "“Muito” é cerca de 1/4 de quem declarou algo, os que mais têm na disputa; “pouco”, cerca de 1/4, os que menos têm; “médio”, o meio. Valores iguais ficam sempre no mesmo grupo, por isso os grupos têm tamanho aproximado.",
+      "Em prefeito, governador, senador e presidente há poucos candidatos por disputa, então a pergunta vira “o que tinha mais patrimônio venceu?”, comparada com a chance de um sorteio.",
       "A resposta “Sim” ou “Não” só aparece quando a diferença é grande demais para ser acaso (teste estatístico, 95% de confiança) e de pelo menos 20%; com poucos casos, a página diz que não dá para afirmar.",
-      "Correlação: cada candidato recebe sua posição no dinheiro e nos votos (1º turno) dentro da disputa, com a média das posições em caso de empate (como no Spearman), dividida pelo número de candidatos; as posições de todas as disputas do cargo são reunidas numa só correlação.",
-      "Sucesso eleitoral = ter sido eleito, conforme o resultado do TSE. Só titulares, eleições ordinárias e quem de fato disputou; não há receitas nem despesas antes de 2018.",
+      "Correlação: cada candidato recebe sua posição no patrimônio e nos votos (1º turno) dentro da disputa, com a média das posições em caso de empate (como no Spearman), dividida pelo número de candidatos; as posições de todas as disputas do cargo são reunidas numa só correlação.",
+      "Para comparar, a mesma conta pode ser feita com o dinheiro da campanha, da prestação de contas final (2018 em diante): o gasto, a receita (inclusive material doado por outros candidatos) ou os recursos, o maior dos dois. Quem não entregou a prestação final fica de fora: não se sabe quanto teve.",
+      "Sucesso eleitoral = ter sido eleito, conforme o resultado do TSE. Só titulares, eleições ordinárias e quem de fato disputou.",
     ],
     limites: [
-      "Mostra que dinheiro e vitória andam juntos, não que o dinheiro fez ganhar: quem já tem mais chance também arrecada mais.",
+      "Mostra que patrimônio e vitória andam juntos, não que ser rico fez ganhar: quem tem mais patrimônio também costuma ter mais dinheiro de campanha e, muitas vezes, já um mandato.",
+      "O patrimônio é o declarado pelo candidato: bens podem estar em nome de outras pessoas ou com valor desatualizado.",
       "Sem diferença estatística não quer dizer sem relação; com poucos casos, a página diz que não dá para afirmar.",
     ],
     sql: ["api/app/analises/q2.sql"],
@@ -320,9 +321,33 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 };
 
 /** As dez perguntas de pesquisa, no texto do dossiê. Sem `id`, a plataforma ainda não responde: a /sobre diz "Em breve". */
+/**
+ * O "Como calculamos" da camada Dinheiro do mapa (VisaoDinheiro): além da regra da análise, as medidas e os blocos que só
+ * o mapa mostra (gasto por eleitor, cada cadeira, quartis, quem mais gastou...). A página /analises/dinheiro e a /sobre
+ * usam METODOLOGIA.dinheiro.
+ */
+export const CALCULO_MAPA_DINHEIRO: string[] = [
+      "Gasto por vaga: soma dos gastos declarados por todas as campanhas ao cargo, inclusive as derrotadas, ÷ número de vagas. Não é salário nem o custo do mandato. Cidades de porte semelhante: a mediana das cidades com eleitorado parecido; estado: soma de todos os gastos ÷ soma de todas as vagas.",
+      "Gasto por eleitor: a mesma soma de gastos ÷ eleitores aptos do lugar no 1º turno. Parte pública: dinheiro dos fundos Eleitoral e Partidário ÷ tudo o que as campanhas ao cargo receberam. No mapa, os estados ficam em três faixas (terços dos seis) e as cidades em faixas fixas, iguais em todos os estados e anos.",
+      "Cobertura: junto do número vai quantas candidaturas têm prestação de contas final na base. Quem não tem entra com zero nas somas (o valor é desconhecido, e o total pode estar incompleto). “Na base” não quer dizer contas aprovadas pela Justiça Eleitoral.",
+      "Onde o dinheiro foi gasto: as despesas em grupos de categoria do TSE (propaganda impressa e de rua, internet, rádio e TV, militância e eventos, pessoal, serviços, transporte, estrutura, outros). São valores contratados, não pagos, e o município é o da candidatura, não o do fornecedor.",
+      "Todo o dinheiro de campanha (P2): o maior valor entre receitas e despesas declaradas, para considerar também campanhas que receberam material. Só o dinheiro público (P8): o que veio do Fundo Eleitoral e do Fundo Partidário, inclusive por meio de outro candidato.",
+      "Prefeito, governador e senador: se quem teve o maior gasto declarado venceu. Ficam de fora disputas com um só candidato, prestação de contas incompleta, sem gasto ou com empate no maior gasto.",
+      "Teste estatístico: comparação de duas proporções com 95% de confiança; o projeto só destaca diferenças de pelo menos 20% (regra do projeto). Sem diferença estatística não quer dizer sem relação; com diferença, não quer dizer causa.",
+      "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não tem a prestação final na base aparece como “Não informado”. Campanhas que não chegaram a disputar ficam fora daqui; a Pergunta 1 soma o gasto delas no custo da cadeira, e a página diz quanto é quando há diferença.",
+      "Eleição anterior: a variação é nominal, sem correção pela inflação, e só entre eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
+      "Quanto cada partido gastou: a soma dos gastos declarados pelas campanhas do partido ao cargo, no mesmo recorte do número (cidade, porte, estado ou os seis). Quanto custou um voto: esse gasto ÷ votos nominais no 1º turno (o voto só na legenda não entra).",
+      "Quartis: os candidatos que entregaram as contas e declararam algum gasto, em quatro grupos de tamanho aproximado, do que menos ao que mais gastou, comparando cada um com os do mesmo recorte (valores iguais ficam no mesmo grupo). Quem não declarou gasto e quem não entregou as contas aparecem à parte. Numa cidade, só com pelo menos 8 candidatos com gasto (não vale para prefeito).",
+      "Ano a ano: o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar; valores da época, e as partes (parte pública, fatia dos 25% que mais gastaram) comparadas em pontos percentuais.",
+      "Quem mais gastou: as 10 campanhas de maior gasto declarado no recorte, entre todos os que disputaram ou só entre os eleitos; a parte pública é o que veio do Fundo Eleitoral e do Fundo Partidário no que a campanha recebeu.",
+      "Cada cadeira: gasto de todas as campanhas ao cargo ÷ cadeiras em disputa no recorte; o eleito típico é a mediana do gasto dos eleitos que entregaram as contas.",
+      "Dependeu do dinheiro público: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário. “De cada 100” arredonda pelos maiores restos para somar 100; com menos de 20 pessoas, mostra a conta de verdade (ex.: 2 de 3).",
+      "Propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo mesmo dicionário da Pergunta 9; o tamanho da palavra é o valor contratado. Dá para ver todos os candidatos ou só os eleitos; o filtro de porte não se aplica à nuvem.",
+];
+
 export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [
   { n: 1, texto: "Qual é o custo por cadeira conquistada?", id: "p1" },
-  { n: 2, texto: "Existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?", id: "p2" },
+  { n: 2, texto: "Existe relação entre o patrimônio do candidato e a taxa de sucesso eleitoral?", id: "p2" },
   { n: 3, texto: "Como as características socioeconômicas dos municípios se relacionam com votação partidária e abstenção?", id: "mapa" },
   { n: 4, texto: "Grau de instrução dos candidatos versus o da população?", id: "p4" },
   { n: 5, texto: "Qual é a quantidade e a proporção de votos de legenda recebidos por cada partido?", id: "p5" },
