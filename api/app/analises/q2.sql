@@ -1,8 +1,13 @@
--- Pergunta 2: existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?
+-- Pergunta 2: existe relação entre o patrimônio do candidato e a taxa de sucesso eleitoral?
 -- Roda no banco final (bdr_final.duckdb ou MotherDuck). Servida pela API em GET /api/analises/q2 (cada COPY ... TO
 -- 'x.csv' vira a tabela x da resposta)
 --
--- Três medidas, todas da prestação de contas FINAL ou REGULARIZACAO_OMISSAO (coluna "medida" nas tabelas exportadas):
+-- A medida da pergunta (coluna "medida" = 'patrimonio'): o patrimônio declarado no registro da candidatura, soma de
+-- valor_bem em bem_candidato (de 2006 em diante; o valor é o informado pelo candidato, sem correção pela inflação).
+-- Sem nenhum bem na declaração = patrimônio zero ("nada declarado"): não há prestação a faltar, então ninguém fica de fora.
+--
+-- Para comparar, três medidas do dinheiro de campanha (a camada Dinheiro do mapa também as usa), só de 2018 em diante e
+-- todas da prestação de contas FINAL ou REGULARIZACAO_OMISSAO:
 --   * gasto:    despesas (vw_despesa_candidatura), sem transferências para outros candidatos ou partidos;
 --   * receita:  tudo o que o candidato recebeu, INCLUSIVE de outros candidatos (material de campanha doado, comum entre
 --               vereadores). Nas somas gerais do projeto esse repasse fica de fora para não contar o mesmo real duas vezes,
@@ -10,7 +15,7 @@
 --   * recursos: o maior dos dois. Muitos candidatos declaram despesas com valor zero (material estimável) e recebem o
 --               material de outro candidato: só com o gasto, dezenas de milhares pareceriam "sem dinheiro".
 -- Só titulares, eleição ordinária e quem de fato disputou; não há receitas nem despesas antes de 2018.
--- Quem não entregou a prestação final fica na faixa -1 (valor desconhecido, não "zero"): fora dos grupos, das disputas
+-- Nas medidas de campanha, quem não entregou a prestação final fica na faixa -1 (valor desconhecido, não "zero"): fora dos grupos, das disputas
 -- do item 2 e da correlação; a página só informa quantos são.
 -- Cada candidato é comparado só com os concorrentes da mesma disputa: o município (prefeito e vereador) ou a UF
 -- (deputados, senador e governador; presidente: o país).
@@ -28,6 +33,7 @@ SELECT c.id_candidatura, c.id_candidato, c.ano, g.id_cargo, g.nome AS cargo, coa
        rr.eleito,
        coalesce(d.gasto_total, 0) AS gasto,
        coalesce(r.recebido, 0) AS receita,
+       coalesce(b.patrimonio, 0) AS patrimonio,
        coalesce(v.votos, 0) AS votos,
        c.id_candidatura IN (SELECT id_candidatura FROM prestou) AS prestou
 FROM candidatura c
@@ -42,13 +48,16 @@ LEFT JOIN (
     GROUP BY id_candidatura
 ) r ON r.id_candidatura = c.id_candidatura
 LEFT JOIN (
+    SELECT id_candidatura, sum(valor_bem) AS patrimonio FROM bem_candidato GROUP BY id_candidatura
+) b ON b.id_candidatura = c.id_candidatura
+LEFT JOIN (
     SELECT id_candidatura, sum(votos) AS votos FROM resultado_candidatura WHERE turno = 1 GROUP BY id_candidatura
 ) v ON v.id_candidatura = c.id_candidatura
-WHERE c.ano >= 2018 AND g.eh_titular AND e.tipo_eleicao = 'ORDINARIA' AND rr.disputou;
+WHERE c.ano >= 2006 AND g.eh_titular AND e.tipo_eleicao = 'ORDINARIA' AND rr.disputou;
 
 -- Quem já tinha o cargo: eleito para o mesmo cargo, NA MESMA LOCALIDADE (município ou UF), na eleição ordinária anterior
--- (4 anos antes; senador, também 8). Não prova que continuava no mandato, mas separa o efeito do dinheiro do efeito de
--- já ter sido eleito ali (quem tem mandato costuma ter mais recursos e ganhar mais).
+-- (4 anos antes; senador, também 8). Não prova que continuava no mandato, mas separa o efeito do patrimônio (ou do
+-- dinheiro) do efeito de já ter sido eleito ali (quem tem mandato costuma ter mais recursos e ganhar mais).
 CREATE OR REPLACE TEMP TABLE eleitos_antes AS
 SELECT DISTINCT c.id_candidato, c.ano, e.id_cargo,
        CASE WHEN g.nome IN ('Prefeito', 'Vereador') THEN 'M' || c.id_municipio::VARCHAR ELSE coalesce(c.uf, 'BR') END AS disputa
@@ -58,18 +67,20 @@ JOIN cargo g             ON g.id_cargo = e.id_cargo
 JOIN rotulo_resultado rr ON rr.id_rotulo = c.id_rotulo_final
 WHERE rr.eleito AND e.tipo_eleicao = 'ORDINARIA' AND c.id_candidato IS NOT NULL;
 
--- Uma linha por candidatura e medida.
+-- Uma linha por candidatura e medida. "prestou" = o valor é conhecido: no patrimônio, sempre; nas medidas de campanha,
+-- só com a prestação final (e só de 2018 em diante, quando há receitas e despesas).
 CREATE OR REPLACE TEMP TABLE medida_q2 AS
-SELECT x.*,
+SELECT x.* EXCLUDE (prestou), m.medida = 'patrimonio' OR x.prestou AS prestou,
        EXISTS (SELECT 1 FROM eleitos_antes a
                WHERE a.id_candidato = x.id_candidato AND a.id_cargo = x.id_cargo AND a.disputa = x.disputa
                  AND (a.ano = x.ano - 4 OR (x.cargo = 'Senador' AND a.ano = x.ano - 8))) AS tinha_cargo,
        m.medida,
-       CASE m.medida WHEN 'gasto' THEN x.gasto WHEN 'receita' THEN x.receita ELSE greatest(x.gasto, x.receita) END AS valor
+       CASE m.medida WHEN 'patrimonio' THEN x.patrimonio WHEN 'gasto' THEN x.gasto WHEN 'receita' THEN x.receita ELSE greatest(x.gasto, x.receita) END AS valor
 FROM cand_q2 x
-CROSS JOIN (VALUES ('recursos'), ('gasto'), ('receita')) m(medida);
+CROSS JOIN (VALUES ('patrimonio'), ('recursos'), ('gasto'), ('receita')) m(medida)
+WHERE m.medida = 'patrimonio' OR x.ano >= 2018;
 
--- Faixa dentro da disputa: -1 = sem prestação final; 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou (4 = os que mais têm).
+-- Faixa dentro da disputa: -1 = valor desconhecido (sem prestação final, só nas medidas de campanha); 0 = nada declarado; 1 a 4 = cerca de um quarto cada de quem declarou (4 = os que mais têm).
 -- percent_rank dá a mesma posição a valores iguais: empates caem sempre no mesmo grupo (resultado estável), por isso os
 -- grupos têm tamanho aproximado; com 2 ou 3 candidatos na disputa, "o que mais tem" pode ser metade dela.
 CREATE OR REPLACE TEMP TABLE faixa_q2 AS

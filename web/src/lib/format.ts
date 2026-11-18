@@ -11,6 +11,14 @@ export function pctSinal(v: number, casas = 0): string {
   return `${r > 0 ? "+" : r < 0 ? "−" : ""}${pct(Math.abs(r) / 100, casas)}`;
 }
 
+/** Ainda mais curto, para o selo dos estados no mapa e a legenda: casa decimal só abaixo de 10 ("9,5 mil", "223 mil", "1,2 mi"). */
+export function curto(n: number): string {
+  const um = (v: number, u: string) => `${(v < 10 ? Math.round(v * 10) / 10 : Math.round(v)).toLocaleString("pt-BR")} ${u}`;
+  if (n >= 999_500) return um(n / 1e6, "mi");
+  if (n >= 1e3) return um(n / 1e3, "mil");
+  return inteiro(n);
+}
+
 export function compacto(n: number): string {
   if (n >= 1e6) return `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
   if (n >= 1e3) return `${(n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;

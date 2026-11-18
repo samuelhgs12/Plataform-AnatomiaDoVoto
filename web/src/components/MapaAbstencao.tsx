@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { ESTADOS_MAPA } from "@/lib/brasil-uf";
 import { TELA } from "@/lib/lupa";
+import { seloUf } from "@/lib/mapa";
 import type { FichaDica } from "@/lib/dica";
 
 /** `ficha`: o conteúdo gráfico da dica (MapaVivo); sem ela, a dica mostra só o texto (`descricao`, `dica`). */
@@ -73,12 +74,13 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
             const [dx, dy] = DESLOCAR[e.uf] ?? [0, 0];
             const [x, y] = tela(e.x + dx, e.y + dy);
             const d = comDados.get(e.uf)!;
+            const s = seloUf(d.valor);
             return (
               <g key={e.uf} className="etiqueta" transform={`translate(${x} ${y})`} style={varre(e.x)}>
-                <rect x={-33} y={-13} width={66} height={26} rx={13} />
-                <text x={-15} dy="0.35em" className="etiqueta-sigla">{d.sigla}</text>
+                <rect x={-s.larg / 2} y={-13} width={s.larg} height={26} rx={13} />
+                <text x={s.xSigla} dy="0.35em" className="etiqueta-sigla">{d.sigla}</text>
                 {/* a chave muda com o valor: o texto novo entra no lugar do antigo em vez de trocar seco */}
-                <text key={d.valor} x={13} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
+                <text key={d.valor} x={s.xValor} dy="0.35em" className="etiqueta-valor">{d.valor}</text>
               </g>
             );
           })}

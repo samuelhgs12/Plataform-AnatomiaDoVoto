@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
+  ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, hrefDinheiro, legendaCidade, intervalo, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade,
 } from "../src/lib/dinheiro";
 import type { LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
 
@@ -69,8 +69,9 @@ describe("corCidade, legendaCidade e textoValor", () => {
     expect(corCidade(3_000, "gasto", "Vereador")).toBe("q1");
     expect(corCidade(0, "resultado", "Prefeito")).toBe("q0");
     expect(corCidade(null, "publico", "Vereador")).toBe("sem");
-    expect(legendaCidade("gasto", "Vereador").map((l) => l.texto)).toEqual(["até R$ 2 mil", "R$ 2–5 mil", "R$ 5–10 mil", "R$ 10–25 mil", "R$ 25 mil ou mais", "Não informado"]);
-    expect(legendaCidade("gasto", "Prefeito")[4].texto).toBe("R$ 1 mi ou mais");
+    expect(legendaCidade("gasto", "Vereador").map((l) => l.texto)).toEqual(["até R$ 2 mil", "2–5 mil", "5–10 mil", "10–25 mil", "25 mil ou mais", "Não informado"]);
+    expect(legendaCidade("gasto", "Prefeito").map((l) => l.texto).slice(2, 5)).toEqual(["250–500 mil", "500 mil–1 mi", "1 mi ou mais"]);
+    expect(legendaCidade("publico", "Vereador")[1].texto).toBe("20–40%");
     expect(legendaCidade("resultado", "Prefeito").map((l) => l.classe)).toEqual(["q4", "q0", "sem"]);
     expect(textoValor(null, "gasto", "Vereador")).toBe("Não informado");
     expect(textoValor(0.912, "publico", "Prefeito")).toBe("91%");
@@ -154,7 +155,8 @@ describe("contaGasto, contaGastoEstado e legendaPorFaixas", () => {
   });
   it("escreve os limites das faixas na legenda", () => {
     const l = legendaPorFaixas([10, 20], (v) => `${v}%`);
-    expect(l.map((x) => x.texto)).toEqual(["até 10%", "10%–20%", "20% ou mais", "Não informado"]);
+    expect(l.map((x) => x.texto)).toEqual(["até 10%", "10–20%", "20% ou mais", "Não informado"]);
+    expect(legendaPorFaixas([40_000, 46_000], (v) => `${v / 1000} mil`, "R$ ").map((x) => x.texto).slice(0, 2)).toEqual(["até R$ 40 mil", "40–46 mil"]);
     expect(legendaPorFaixas([], String)).toEqual([{ classe: "sem", texto: "Não informado" }]);
   });
 });
@@ -239,5 +241,13 @@ describe("hrefMapaDinheiro", () => {
   it("leva o porte e a medida, e aceita outra âncora", () => {
     expect(hrefMapaDinheiro({ ...atual, porte: "ate5" }, { medir: "publico" }, "comparar")).toBe("/?ver=dinheiro&uf=PE&mun=10&porte=ate5&medir=publico#comparar");
     expect(hrefMapaDinheiro({ ...atual, medir: "publico" }, { medir: null })).toBe("/?ver=dinheiro&uf=PE&mun=10#mapa");
+  });
+});
+
+describe("intervalo", () => {
+  it("escreve a unidade uma vez quando as pontas a têm igual", () => {
+    expect(intervalo("40 mil", "46 mil")).toBe("40–46 mil");
+    expect(intervalo("500 mil", "1 mi")).toBe("500 mil–1 mi");
+    expect(intervalo("9,5 mil", "12 mil")).toBe("9,5–12 mil");
   });
 });

@@ -139,3 +139,14 @@ export function resumoCamadas({ ver, partido, comparativo, instrucao }: { ver: V
   if (ver === "legenda") return partido ? `Voto de legenda · ${partido}` : "Voto de legenda";
   return comparativo ? `Abstenção × ${comparativo}` : "Abstenção";
 }
+
+/**
+ * Medidas do selo de cada estado no mapa (sigla + valor), centrado no estado. Até 4 caracteres ("16%", "100%") é o
+ * selo padrão; valores mais longos ("223 mil") alargam o selo, com o valor logo depois da sigla (5 unidades entre eles).
+ */
+export function seloUf(valor: string): { larg: number; xSigla: number; xValor: number } {
+  if (valor.length <= 4) return { larg: 66, xSigla: -15, xValor: 13 };
+  const wv = valor.length * 7.5;    // largura do valor (14px, negrito); a sigla ocupa ~20
+  const larg = 8 + 20 + 5 + wv + 10;
+  return { larg, xSigla: -larg / 2 + 18, xValor: -larg / 2 + 33 + wv / 2 };
+}
