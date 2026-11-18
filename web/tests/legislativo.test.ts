@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bancadas, cadeirasDaCasa, chaveCasa, classeCusto, classePartido, classeVies, espalhar, fileiras, fmtVies, hemiciclo, lerCasa, legislatura,
-  lugares, mediana, nomeCasa, faixaVies, ordenarCadeiras, posicaoNaEscala, raioInterno, RAIO_MAX_CADEIRA, textoCentral, quartis, resumo, semResultado, siglaNaComposicao, siglasNoArco, vagasDaCasa,
+  gruposDaLista, lugares, mediana, nomeCasa, faixaVies, ordenarCadeiras, posicaoNaEscala, raioInterno, RAIO_MAX_CADEIRA, textoCentral, quartis, resumo, semResultado, siglaNaComposicao, siglasNoArco, vagasDaCasa,
   type LinhaCadeira, type LinhaGastoPartido,
 } from "../src/lib/legislativo";
 
@@ -225,5 +225,21 @@ describe("ordenarCadeiras", () => {
     expect(nomes(ordenarCadeiras(cads, "custo", "menor"))).toEqual(["C", "D", "A", "B"]);
     expect(nomes(ordenarCadeiras(cads, "custo"))).toEqual(["A", "B", "C", "D"]);
     expect(nomes(ordenarCadeiras(cads, "vies", "maior"))).toEqual(["A", "B", "C", "D"]);
+  });
+});
+
+describe("gruposDaLista", () => {
+  const cads = [
+    c({ nome: "ZÉ", sigla: "PE", score: -70, renovacao: "reeleito" }), c({ nome: "ANA", sigla: "PE", score: -70, renovacao: "estreante" }),
+    c({ nome: "BIA", sigla: "PD", score: 40, renovacao: "reeleito" }),
+  ];
+  it("agrupa por bancada na ordem do hemiciclo, com os nomes em ordem", () => {
+    expect(gruposDaLista(cads, "vies").map((g) => [g.titulo, g.cadeiras.map((x) => x.nome)])).toEqual([["PE", ["ANA", "ZÉ"]], ["PD", ["BIA"]]]);
+  });
+  it("na Renovação agrupa pelos blocos e omite os vazios", () => {
+    expect(gruposDaLista(cads, "renovacao").map((g) => [g.chave, g.cadeiras.length])).toEqual([["reeleito", 2], ["estreante", 1]]);
+  });
+  it("respeita o filtro de faixa", () => {
+    expect(gruposDaLista(cads, "custo", "cd").map((g) => g.titulo)).toEqual(["PD"]);
   });
 });

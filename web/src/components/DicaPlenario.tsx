@@ -10,6 +10,9 @@ interface Ficha {
   nome: string; partido: string; id: string; faixa: string; faixaRotulo: string; vies: string; gasto: string;
   renovacao: string; eleito: string; bancada: string;
 }
+/** Largura da ficha em px; a mesma do .dica-cadeira em globals.css. */
+const LARGURA_FICHA = 300;
+
 interface Dica { ficha: Ficha; x: number; y: number; abaixo: boolean }
 
 const ler = (el: Element): Ficha => {
@@ -35,7 +38,10 @@ export function DicaPlenario({ alvo }: { alvo: string }) {
       const b = caixa.getBoundingClientRect(), c = cad.getBoundingClientRect();
       const y = c.top - b.top;
       // perto do topo do bloco, a ficha abre para baixo da cadeira, para não sair do bloco
-      setDica({ ficha: ler(cad), x: c.left + c.width / 2 - b.left, y: y < 230 ? c.bottom - b.top : y, abaixo: y < 230 });
+      // a ficha (300 px) fica inteira dentro da caixa do plenário, mesmo nas cadeiras das pontas do arco
+      const meia = LARGURA_FICHA / 2 + 4;
+      const x = Math.min(Math.max(c.left + c.width / 2 - b.left, meia), b.width - meia);
+      setDica({ ficha: ler(cad), x, y: y < 230 ? c.bottom - b.top : y, abaixo: y < 230 });
     };
     const sair = () => setDica(null);
     caixa.addEventListener("pointerover", sobre);

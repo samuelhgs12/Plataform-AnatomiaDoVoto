@@ -7,7 +7,7 @@ import { compacto, inteiro, pct, reais } from "@/lib/format";
 import {
   ANOS_LEGISLATIVO, FAIXAS_VIES, LEITURAS, PLENARIO_NACIONAL, ROTULO_FAIXA, ROTULO_FONTE, ROTULO_RENOVACAO, UFS_PROJETO,
   bancadas as montarBancadas, cadeirasDaCasa, chaveCasa, classeCusto, classePartido, classeRenovacao, classeVies, faixaVies, fmtVies,
-  lerCasa, legislatura, lugares as montarLugares, mediana, nomeCasa, ordenarCadeiras, posicaoNaEscala, quartis, resumo as montarResumo,
+  gruposDaLista, lerCasa, legislatura, lugares as montarLugares, mediana, nomeCasa, ordenarCadeiras, posicaoNaEscala, quartis, resumo as montarResumo,
   semResultado, siglaNaComposicao, vagasDaCasa,
   type Bancada, type Escolha, type Faixa, type Leitura, type LinhaCadeira, type LinhaGastoPartido, type LinhaSemResultado, type LinhaVagas,
   type Ordem, type Recorte,
@@ -106,6 +106,13 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
     : ordem !== "padrao" ? []
     : [...lista].sort((a, b) => b.cadeiras - a.cadeiras).filter((b) => b.cadeiras >= Math.max(2, cadeiras.length * 0.03))
         .map((b) => ({ grupo: b.sigla, texto: b.sigla }));
+  // lista das cadeiras: a mesma informação da ficha, para quem usa teclado ou leitor de tela
+  const grupos = gruposDaLista(cadeiras, leitura, faixa);
+  const valorNaLista = (c: LinhaCadeira) =>
+    leitura === "vies" ? (c.score === null ? "sem viés" : `${ROTULO_FAIXA[faixaVies(c.score)]} · ${fmtVies(c.score, 0)}`)
+    : leitura === "custo" ? gastoDe(c)
+    : leitura === "renovacao" ? `${c.sigla} · eleito em ${c.ano_eleicao}`
+    : `${ROTULO_RENOVACAO[c.renovacao]} · eleito em ${c.ano_eleicao}`;
   const gastoTipicoFaixa = faixa ? mediana(cadeiras.filter((c) => c.score !== null && faixaVies(c.score) === faixa && c.gasto !== null).map((c) => c.gasto!)) : null;
 
   const centro = (() => {
@@ -190,6 +197,28 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
             <Legenda leitura={leitura} cortes={cortes} media={res.viesMedio} fora={lugares.some((l) => l.tipo === "fora")} semResultado={ufsSem.length > 0} />
             {ordem !== "padrao" && <p className="leg-ordem">Cadeiras do {ordem === "maior" ? "maior para o menor" : "menor para o maior"} gasto, da esquerda para a direita; sem dado de gasto no fim.</p>}
           </div>
+        )}
+        {grupos.length > 0 && (
+          <details className="leg-lista-cad">
+            <summary>Ver as {inteiro(grupos.reduce((s, g) => s + g.cadeiras.length, 0))} cadeiras em lista{faixa ? ` (${ROTULO_FAIXA[faixa].toLowerCase()})` : ""}</summary>
+            <div className="leg-grupos">
+              {grupos.map((g) => (
+                <section key={g.chave} className="leg-grupo" aria-labelledby={`g-${g.chave}`}>
+                  <h3 id={`g-${g.chave}`}>{g.titulo} <span>{inteiro(g.cadeiras.length)}</span></h3>
+                  <ul>
+                    {g.cadeiras.map((c) => (
+                      <li key={`${c.id_candidatura}-${c.ano_eleicao}`}>
+                        <span className={`amostra ${classeDe(c)}`} aria-hidden="true" />
+                        <Link href={`/candidato/${c.id_candidato}`}>{c.nome}</Link>
+                        <span className="leg-lista-uf">{c.uf}</span>
+                        <span className="leg-lista-valor">{valorNaLista(c)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </details>
         )}
         {ufsSem.length > 0 && (
           <p className="leg-nota aviso-causa">

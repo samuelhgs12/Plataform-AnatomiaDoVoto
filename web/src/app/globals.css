@@ -2170,6 +2170,20 @@ a.q-ver:active { transform: scale(0.98); }
 .cad.par-psol { fill: var(--par-psol); } .cad.par-pt { fill: var(--par-pt); } .cad.par-ptb { fill: var(--par-ptb); }
 .cad.par-ptc { fill: var(--par-agir); } .cad.par-pv { fill: var(--par-pv); } .cad.par-rede { fill: var(--par-rede); }
 .cad.par-republicanos { fill: var(--par-republicanos); } .cad.par-solidariedade { fill: var(--par-solidariedade); } .cad.par-uniao { fill: var(--par-uniao); }
+.amostra.par-outro { background: var(--o); }
+.amostra.par-agir { background: var(--par-agir); } .amostra.par-avante { background: var(--par-avante); } .amostra.par-cidadania { background: var(--par-cidadania); }
+.amostra.par-dc { background: var(--par-dc); } .amostra.par-dem { background: var(--par-dem); } .amostra.par-democrata { background: var(--par-democrata); }
+.amostra.par-mdb { background: var(--par-mdb); } .amostra.par-novo { background: var(--par-novo); } .amostra.par-patriota { background: var(--par-patriota); }
+.amostra.par-pcdob { background: var(--par-pcdob); } .amostra.par-pdt { background: var(--par-pdt); } .amostra.par-phs { background: var(--par-phs); }
+.amostra.par-pl { background: var(--par-pl); } .amostra.par-pmb { background: var(--par-pmb); } .amostra.par-pmn { background: var(--par-pmn); }
+.amostra.par-pode { background: var(--par-pode); } .amostra.par-pp { background: var(--par-pp); } .amostra.par-ppl { background: var(--par-ppl); }
+.amostra.par-pps { background: var(--par-cidadania); } .amostra.par-pr { background: var(--par-pl); } .amostra.par-prb { background: var(--par-republicanos); }
+.amostra.par-prd { background: var(--par-prd); } .amostra.par-pros { background: var(--par-pros); } .amostra.par-prp { background: var(--par-prp); }
+.amostra.par-prtb { background: var(--par-prtb); } .amostra.par-psb { background: var(--par-psb); } .amostra.par-psc { background: var(--par-psc); }
+.amostra.par-psd { background: var(--par-psd); } .amostra.par-psdb { background: var(--par-psdb); } .amostra.par-psl { background: var(--par-psl); }
+.amostra.par-psol { background: var(--par-psol); } .amostra.par-pt { background: var(--par-pt); } .amostra.par-ptb { background: var(--par-ptb); }
+.amostra.par-ptc { background: var(--par-agir); } .amostra.par-pv { background: var(--par-pv); } .amostra.par-rede { background: var(--par-rede); }
+.amostra.par-republicanos { background: var(--par-republicanos); } .amostra.par-solidariedade { background: var(--par-solidariedade); } .amostra.par-uniao { background: var(--par-uniao); }
 .amostra { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: none; vertical-align: -1px; margin-right: 8px; background: var(--o); }
 .amostra.vazia { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--muted) 70%, var(--panel)); }
 .amostra.vazia.sem-resultado { box-shadow: inset 0 0 0 1.5px var(--warn); }
@@ -2196,6 +2210,22 @@ a.q-ver:active { transform: scale(0.98); }
 .leg-legenda-vazias { margin-top: 4px !important; justify-content: center; width: 100%; }
 .leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 14px auto 0; max-width: 760px; text-align: center; }
 .leg-nota.aviso-causa { box-shadow: inset 3px 0 0 var(--warn); padding-left: 12px; }
+
+/* lista das cadeiras: a alternativa em texto ao hemiciclo (teclado e leitor de tela), fechada por padrão */
+.leg-lista-cad { max-width: 1180px; margin: 18px auto 0; border-top: 1px solid var(--line); padding-top: 14px; }
+.leg-lista-cad summary { cursor: pointer; font-weight: 600; width: fit-content; margin: 0 auto; padding: 6px 12px; border-radius: 6px; color: var(--fg); }
+.leg-lista-cad summary:hover { background: var(--panel2); }
+.leg-grupos { columns: 3 300px; column-gap: 32px; margin-top: 16px; }
+.leg-grupo { break-inside: avoid; margin-bottom: 18px; }
+.leg-grupo h3 { font-size: 16px; margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+.leg-grupo h3 span { color: var(--muted); font-weight: 500; }
+.leg-grupo ul { list-style: none; margin: 0; padding: 0; }
+.leg-grupo li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 0; align-items: baseline; padding: 4px 0; font-size: 14px; }
+.leg-grupo li .amostra { align-self: center; }
+.leg-grupo li a { text-decoration: none; font-weight: 500; overflow-wrap: anywhere; }
+.leg-grupo li a:hover, .leg-grupo li a:focus-visible { text-decoration: underline; text-underline-offset: 0.2em; }
+.leg-lista-uf { color: var(--muted); font-size: 13px; margin-left: 8px; }
+.leg-lista-valor { grid-column: 2 / -1; color: var(--muted); font-size: 13px; }
 
 /* ficha da cadeira */
 .dica-cadeira { position: absolute; transform: translate(-50%, calc(-100% - 12px)); pointer-events: none; z-index: 3; width: 300px;

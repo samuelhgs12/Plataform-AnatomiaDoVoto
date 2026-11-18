@@ -248,6 +248,30 @@ export function ordenarCadeiras(cadeiras: LinhaCadeira[], leitura: Leitura, orde
   return cadeiras;
 }
 
+// ---------- Lista das cadeiras (alternativa em texto ao hemiciclo) ----------
+
+export interface GrupoLista { chave: string; titulo: string; cadeiras: LinhaCadeira[] }
+
+/**
+ * As cadeiras em grupos para a lista que acompanha o hemiciclo (teclado e leitor de tela): por bancada, na ordem do viés,
+ * ou, na Renovação, pelos três blocos. Dentro de cada grupo, por nome. `filtro` deixa só as cadeiras de uma faixa do viés.
+ */
+export function gruposDaLista(cadeiras: LinhaCadeira[], leitura: Leitura, filtro?: Faixa): GrupoLista[] {
+  const vis = filtro ? cadeiras.filter((c) => c.score !== null && faixaVies(c.score) === filtro) : cadeiras;
+  const porNome = (a: LinhaCadeira, b: LinhaCadeira) => a.nome.localeCompare(b.nome);
+  if (leitura === "renovacao") {
+    return ORDEM_RENOVACAO.map((r) => ({ chave: r, titulo: ROTULO_RENOVACAO[r], cadeiras: vis.filter((c) => c.renovacao === r).sort(porNome) }))
+      .filter((g) => g.cadeiras.length > 0);
+  }
+  const ordem: string[] = [];
+  const mapa = new Map<string, LinhaCadeira[]>();
+  for (const c of vis) {
+    if (!mapa.has(c.sigla)) { mapa.set(c.sigla, []); ordem.push(c.sigla); }
+    mapa.get(c.sigla)!.push(c);
+  }
+  return ordem.map((s) => ({ chave: s, titulo: s, cadeiras: mapa.get(s)!.sort(porNome) }));
+}
+
 // ---------- Cores de cada leitura (classes CSS; as cores moram em globals.css) ----------
 
 export type Faixa = "e" | "ce" | "c" | "cd" | "d";
