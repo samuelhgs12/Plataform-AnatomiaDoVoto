@@ -2125,6 +2125,36 @@ a.q-ver:active { transform: scale(0.98); }
 .leg-filtros { grid-column: 1; display: flex; align-items: flex-end; gap: 12px 28px; flex-wrap: wrap; }
 .leg-filtros-lado { display: grid; gap: 10px; padding-bottom: 6px; }
 
+/* seletor das Assembleias (components/Assembleias.tsx): silhuetas dos estados e o mini-mapa do Brasil */
+.assembleias { display: grid; gap: 8px; padding-bottom: 4px; }
+.assembleias-corpo { display: flex; align-items: center; gap: 18px; }
+.assembleias-lista { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.assembleia { display: grid; justify-items: center; gap: 2px; width: 74px; padding: 8px 4px 7px; border-radius: var(--raio); text-decoration: none;
+  background: var(--bg); transition: background-color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.assembleia svg { width: 40px; height: 40px; overflow: visible; }
+.assembleia path { fill: var(--panel2); stroke: var(--muted); stroke-width: 1.4; vector-effect: non-scaling-stroke; stroke-linejoin: round;
+  transition: fill var(--t-hover) ease, stroke var(--t-hover) ease; }
+.assembleia b { font-size: 15px; line-height: 1.1; }
+.assembleia span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.assembleia:hover { background: var(--panel2); }
+.assembleia:hover path { fill: color-mix(in srgb, var(--tinta) 18%, var(--panel)); stroke: var(--fg); }
+.assembleia:active { transform: scale(0.97); }
+.assembleia.on { background: var(--tinta); color: var(--sobre-tinta); }
+.assembleia.on path { fill: var(--sobre-tinta); stroke: var(--sobre-tinta); }
+.assembleia.on span { color: color-mix(in srgb, var(--sobre-tinta) 75%, transparent); }
+.assembleias-mapa { width: 96px; height: auto; flex: none; }
+.assembleias-mapa path { fill: color-mix(in srgb, var(--muted) 18%, var(--panel)); stroke: var(--panel); stroke-width: 1.5; transition: fill var(--t-hover) ease; }
+.assembleias-mapa path.projeto { fill: color-mix(in srgb, var(--muted) 55%, var(--panel)); }
+.assembleias-mapa path.on { fill: var(--tinta); }
+/* passar o mouse numa silhueta acende o estado no mini-mapa */
+.assembleias:has([data-uf="AP"]:is(:hover, :focus-visible)) .assembleias-mapa [data-uf="AP"],
+.assembleias:has([data-uf="ES"]:is(:hover, :focus-visible)) .assembleias-mapa [data-uf="ES"],
+.assembleias:has([data-uf="MG"]:is(:hover, :focus-visible)) .assembleias-mapa [data-uf="MG"],
+.assembleias:has([data-uf="PE"]:is(:hover, :focus-visible)) .assembleias-mapa [data-uf="PE"],
+.assembleias:has([data-uf="RJ"]:is(:hover, :focus-visible)) .assembleias-mapa [data-uf="RJ"],
+.assembleias:has([data-uf="RR"]:is(:hover, :focus-visible)) .assembleias-mapa [data-uf="RR"] { fill: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .assembleia, .assembleia path, .assembleias-mapa path { transition: none; } }
+
 /* seletor desenhado como o Congresso Nacional (components/Congresso.tsx) */
 .congresso { width: 300px; height: auto; flex: none; overflow: visible; }
 .congresso-base { fill: color-mix(in srgb, var(--muted) 55%, var(--panel)); }

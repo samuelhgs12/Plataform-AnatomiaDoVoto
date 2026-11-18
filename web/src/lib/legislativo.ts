@@ -100,6 +100,21 @@ export function vagasDaCasa(linhas: LinhaVagas[], ano: number, e: Escolha, ufs?:
     .reduce((s, l) => s + l.vagas, 0);
 }
 
+// ---------- Silhuetas dos estados (seletor das Assembleias) ----------
+
+/**
+ * Enquadramento (viewBox) de um contorno da malha do IBGE (src/lib/brasil-uf.ts, só comandos absolutos M/L/Z), com uma
+ * margem em fração do maior lado, para a silhueta ficar centralizada e inteira num quadrado.
+ */
+export function caixaDoContorno(d: string, margem = 0.08): { x: number; y: number; largura: number; altura: number } {
+  const nums = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  const xs = nums.filter((_, i) => i % 2 === 0), ys = nums.filter((_, i) => i % 2 === 1);
+  if (!xs.length) return { x: 0, y: 0, largura: 1, altura: 1 };
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const lado = Math.max(x1 - x0, y1 - y0) * (1 + 2 * margem);
+  return { x: (x0 + x1) / 2 - lado / 2, y: (y0 + y1) / 2 - lado / 2, largura: lado, altura: lado };
+}
+
 // ---------- Hemiciclo ----------
 
 export interface Ponto { x: number; y: number }

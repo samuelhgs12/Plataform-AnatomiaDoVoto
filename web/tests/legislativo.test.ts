@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  bancadas, cadeirasDaCasa, chaveCasa, classeCusto, classePartido, classeVies, espalhar, fileiras, fmtVies, hemiciclo, lerCasa, legislatura,
+  bancadas, caixaDoContorno, cadeirasDaCasa, chaveCasa, classeCusto, classePartido, classeVies, espalhar, fileiras, fmtVies, hemiciclo, lerCasa, legislatura,
   gruposDaLista, lugares, mediana, nomeCasa, faixaVies, ordenarCadeiras, posicaoNaEscala, raioInterno, RAIO_MAX_CADEIRA, textoCentral, quartis, resumo, semResultado, siglaNaComposicao, siglasNoArco, vagasDaCasa,
   type LinhaCadeira, type LinhaGastoPartido,
 } from "../src/lib/legislativo";
@@ -241,5 +241,14 @@ describe("gruposDaLista", () => {
   });
   it("respeita o filtro de faixa", () => {
     expect(gruposDaLista(cads, "custo", "cd").map((g) => g.titulo)).toEqual(["PD"]);
+  });
+});
+
+describe("caixaDoContorno", () => {
+  it("enquadra o contorno num quadrado centralizado, com margem", () => {
+    const c = caixaDoContorno("M10 20L30 20L30 60L10 60Z", 0);
+    expect(c).toEqual({ x: 0, y: 20, largura: 40, altura: 40 });
+    expect(caixaDoContorno("M0 0L10 0L10 10Z", 0.1).largura).toBeCloseTo(12);
+    expect(caixaDoContorno("")).toEqual({ x: 0, y: 0, largura: 1, altura: 1 });
   });
 });

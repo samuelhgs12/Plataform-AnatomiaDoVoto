@@ -14,6 +14,7 @@ import {
 } from "@/lib/legislativo";
 import { METODOLOGIA } from "@/lib/metodologia";
 import { AvisoApi } from "@/components/AvisoApi";
+import { Assembleias } from "@/components/Assembleias";
 import { Congresso } from "@/components/Congresso";
 import { DicaPlenario } from "@/components/DicaPlenario";
 import { Plenario, type CadeiraDesenho } from "@/components/Plenario";
@@ -66,6 +67,8 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
   const res = montarResumo(cadeiras, gastos, ano, escolha, ufsSem);
   const cortes = quartis(cadeiras.map((c) => c.gasto).filter((v): v is number => v !== null));
   const nome = nomeCasa(escolha);
+  // cadeiras de cada Assembleia no ano, para o seletor
+  const cadeirasAssembleia = Object.fromEntries(UFS_PROJETO.map((uf) => [uf, vagasDaCasa(vagas, ano, { casa: "assembleia", uf })]));
   const cargo = CARGO[escolha.casa];
 
   const href = (novo: Record<string, string | undefined>) => {
@@ -144,21 +147,13 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
         <nav className="leg-filtros" aria-label="Escolha a casa e o ano">
           <Congresso atual={escolha.casa === "assembleia" ? null : escolha.casa} hrefSenado={href({ casa: "senado" })} hrefCamara={href({ casa: "camara" })}
             cadeirasSenado={PLENARIO_NACIONAL.senado} cadeirasCamara={PLENARIO_NACIONAL.camara} />
-          <div className="leg-filtros-lado">
-          <div className="chips" role="list">
-
-            <span className="leg-rot">Assembleias</span>
-            {UFS_PROJETO.map((uf) => {
-              const on = escolha.casa === "assembleia" && escolha.uf === uf;
-              return <Link role="listitem" key={uf} className={`chip${on ? " on" : ""}`} href={href({ casa: `al-${uf.toLowerCase()}` })} aria-current={on ? "true" : undefined} title={nomeCasa({ casa: "assembleia", uf })}>{uf}</Link>;
-            })}
-          </div>
-          <div className="chips" role="list" aria-label="Eleição">
-            {ANOS_LEGISLATIVO.map((a) => <Link role="listitem" key={a} className={`chip${a === ano ? " on" : ""}`} href={href({ ano: String(a) })} aria-current={a === ano ? "true" : undefined}>{a}</Link>)}
-          </div>
-          </div>
+          <Assembleias ufs={UFS_PROJETO} atual={escolha.casa === "assembleia" ? escolha.uf : undefined}
+            href={(uf) => href({ casa: `al-${uf.toLowerCase()}` })} cadeiras={cadeirasAssembleia} />
         </nav>
         <div className="leg-alternar">
+          <nav className="alternar" aria-label="Eleição">
+            {ANOS_LEGISLATIVO.map((a) => <Link key={a} href={href({ ano: String(a) })} aria-current={a === ano ? "true" : undefined}>{a}</Link>)}
+          </nav>
           <nav className="alternar" aria-label="Leitura do plenário">
             {LEITURAS.map((l) => <Link key={l.id} href={href({ ver: l.id })} scroll={false} aria-current={l.id === leitura ? "true" : undefined}>{l.rotulo}</Link>)}
           </nav>
