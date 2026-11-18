@@ -1,9 +1,9 @@
 from typing import Literal
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Path, Query
 
 from .. import db
-from ..schemas import CandidatoLocal, Eleito
+from ..schemas import CandidatoLocal, Eleito, EleitoInstrucao
 
 router = APIRouter(tags=["locais"])
 
@@ -12,6 +12,13 @@ router = APIRouter(tags=["locais"])
 def eleitos_municipio(id_municipio: int, ano: int = Query(..., description="ano de eleição municipal (2000, 2004, ..., 2024)")):
     """Prefeito, vice e vereadores eleitos no município (eleição ordinária), com votos do 1º turno, gasto e recebido."""
     return db.consultar("eleitos_municipio", (id_municipio, ano))
+
+
+@router.get("/municipios/ibge/{cod_ibge}/eleitos", response_model=list[EleitoInstrucao])
+def eleitos_instrucao(cod_ibge: str = Path(..., pattern=r"^\d{7}$"), ano: int = Query(..., description="ano de eleição municipal")):
+    """Prefeito e vereadores eleitos no município (eleição ordinária), pelo código IBGE, com o grau de instrução e a
+    chave da foto (pergunta 4). Lista vazia se o município ou a eleição não existirem."""
+    return db.consultar("eleitos_instrucao", (cod_ibge, ano))
 
 
 @router.get("/municipios/{id_municipio}/candidatos", response_model=list[CandidatoLocal])

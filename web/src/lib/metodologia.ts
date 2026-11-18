@@ -3,7 +3,7 @@
 // já revisou nas páginas; para a /sobre há `resposta`, sem editar o original. As perguntas, no texto do dossiê, estão em
 // PERGUNTAS.
 
-export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p5" | "p8" | "p9" | "p10" | "candidato";
+export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p8" | "p9" | "p10" | "candidato";
 
 export interface Metodologia {
   id: IdMetodologia;
@@ -87,28 +87,17 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou", "Prestação final ou regularização"],
     calculo: [
       "Gasto por vaga: soma dos gastos declarados por todas as campanhas ao cargo, inclusive as derrotadas, ÷ número de vagas. Não é salário nem o custo do mandato. Cidades de porte semelhante: a mediana das cidades com eleitorado parecido; estado: soma de todos os gastos ÷ soma de todas as vagas.",
-      "Gasto por eleitor: a mesma soma de gastos ÷ eleitores aptos do lugar no 1º turno. Parte pública: dinheiro dos fundos Eleitoral e Partidário ÷ tudo o que as campanhas ao cargo receberam. No mapa, os estados ficam em três faixas (terços dos seis) e as cidades em faixas fixas, iguais em todos os estados e anos.",
-      "Cobertura: junto do número vai quantas candidaturas têm prestação de contas final na base. Quem não tem entra com zero nas somas (o valor é desconhecido, e o total pode estar incompleto). “Na base” não quer dizer contas aprovadas pela Justiça Eleitoral.",
-      "Onde o dinheiro foi gasto: as despesas em grupos de categoria do TSE (propaganda impressa e de rua, internet, rádio e TV, militância e eventos, pessoal, serviços, transporte, estrutura, outros). São valores contratados, não pagos, e o município é o da candidatura, não o do fornecedor.",
       "Todo o dinheiro de campanha (P2): o maior valor entre receitas e despesas declaradas, para considerar também campanhas que receberam material. Só o dinheiro público (P8): o que veio do Fundo Eleitoral e do Fundo Partidário, inclusive por meio de outro candidato.",
       "Prefeito, governador e senador: se quem teve o maior gasto declarado venceu. Ficam de fora disputas com um só candidato, prestação de contas incompleta, sem gasto ou com empate no maior gasto.",
       "Teste estatístico: comparação de duas proporções com 95% de confiança; o projeto só destaca diferenças de pelo menos 20% (regra do projeto). Sem diferença estatística não quer dizer sem relação; com diferença, não quer dizer causa.",
-      "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não tem a prestação final na base aparece como “Não informado”. Campanhas que não chegaram a disputar ficam fora daqui; a Pergunta 1 soma o gasto delas no custo da cadeira, e a página diz quanto é quando há diferença.",
-      "Eleição anterior: a variação é nominal, sem correção pela inflação, e só entre eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
-      "Quanto cada partido gastou: a soma dos gastos declarados pelas campanhas do partido ao cargo, no mesmo recorte do número (cidade, porte, estado ou os seis). Quanto custou um voto: esse gasto ÷ votos nominais no 1º turno (o voto só na legenda não entra).",
-      "Quartis: os candidatos que entregaram as contas e declararam algum gasto, em quatro grupos de tamanho aproximado, do que menos ao que mais gastou, comparando cada um com os do mesmo recorte (valores iguais ficam no mesmo grupo). Quem não declarou gasto e quem não entregou as contas aparecem à parte. Numa cidade, só com pelo menos 8 candidatos com gasto (não vale para prefeito).",
-      "Ano a ano: o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar; valores da época, e as partes (parte pública, fatia dos 25% que mais gastaram) comparadas em pontos percentuais.",
-      "Quem mais gastou: as 10 campanhas de maior gasto declarado no recorte, entre todos os que disputaram ou só entre os eleitos; a parte pública é o que veio do Fundo Eleitoral e do Fundo Partidário no que a campanha recebeu.",
-      "Cada cadeira: gasto de todas as campanhas ao cargo ÷ cadeiras em disputa no recorte; o eleito típico é a mediana do gasto dos eleitos que entregaram as contas.",
-      "Dependeu do dinheiro público: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário. “De cada 100” arredonda pelos maiores restos para somar 100; com menos de 20 pessoas, mostra a conta de verdade (ex.: 2 de 3).",
-      "Propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo mesmo dicionário da Pergunta 9; o tamanho da palavra é o valor contratado. Dá para ver todos os candidatos ou só os eleitos; o filtro de porte não se aplica à nuvem.",
+      "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não entregou a prestação final aparece como “Não informado”. Valores sem correção pela inflação: compare eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
     ],
     limites: [
       "Mostra que dinheiro e vitória andam juntos, não que o dinheiro fez ganhar: quem já tem mais chance também arrecada mais.",
       "Não há receitas nem despesas antes de 2018 na base.",
       "Valores sem correção pela inflação.",
     ],
-    sql: ["api/app/analises/municipios.sql", "api/app/analises/dinheiro.sql", "api/app/analises/q1.sql", "api/app/analises/q2.sql", "api/app/analises/q8.sql"],
+    sql: ["api/app/analises/municipios.sql", "api/app/analises/q1.sql", "api/app/analises/q2.sql", "api/app/analises/q8.sql"],
   },
 
   p1: {
@@ -181,6 +170,34 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
       "Com diferença estatística, não quer dizer causa.",
     ],
     sql: ["api/app/analises/q8.sql"],
+  },
+
+  p4: {
+    id: "p4",
+    resposta: "No mapa, a parte da população de 18 anos ou mais de cada município (Censo 2022) com o grau de instrução escolhido. Ao passar o mouse, o grau do prefeito eleito e o grau mais comum na população; no painel, os eleitos (prefeito e vereadores) de 2020 ou 2024 ao lado da população.",
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/?ver=instrucao" }],
+    anos: "2020 e 2024",
+    cargos: "Prefeito e vereador eleitos",
+    dados: [
+      "candidatura, nivel_instrucao, eleicao, cargo, rotulo_resultado e municipio (banco bdr_final)",
+      "populacao_instrucao: pessoas de 18 anos ou mais por grau de instrução, Censo 2022 (IBGE, SIDRA 10061)",
+    ],
+    recorte: ["Eleições municipais ordinárias em volta do Censo 2022", "Só os eleitos, titulares (sem vices)", UFS],
+    calculo: [
+      "O IBGE publica quatro grupos de instrução: sem instrução e fundamental incompleto, fundamental completo e médio incompleto, médio completo e superior incompleto, e superior completo. Os rótulos do TSE, mais detalhados (analfabeto, “lê e escreve”, fundamental incompleto…), entram nesses quatro grupos.",
+      "A cor do mapa é a parte da população de 18 anos ou mais no grau escolhido: um recorte dos quatro grupos, acumulado do menor ao maior grau: “sem o fundamental completo”, “fundamental completo ou mais”, “médio completo ou mais” ou “superior completo”. Os grupos somados aparecem contornados nas barras do painel. Cores em quintos: cada cor reúne um quinto dos municípios dos seis estados.",
+      "Grau mais comum na população: o grupo com mais gente no município (no empate, o mais baixo).",
+      "Para um estado ou os seis juntos, as pessoas e os eleitos são somados antes da divisão.",
+      "Eleito: o resultado final da candidatura (2º turno, quando houve).",
+    ],
+    limites: [
+      "Os quatro grupos do IBGE não separam, por exemplo, quem é analfabeto de quem não terminou o fundamental: o detalhe do TSE se perde.",
+      "O grau do eleito é o que ele declarou no registro da candidatura, sem conferência; o da população é a resposta ao Censo.",
+      "A população adulta inclui os mais velhos, que estudaram menos; os eleitos não têm a mesma distribuição de idade.",
+      "Quem não informou a instrução ao TSE fica de fora da conta dos eleitos.",
+      "Município sem prefeito eleito na eleição ordinária (eleição anulada, por exemplo) aparece sem prefeito.",
+    ],
+    sql: ["api/app/analises/q4.sql"],
   },
 
   p5: {
@@ -273,11 +290,35 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 };
 
 /** As dez perguntas de pesquisa, no texto do dossiê. Sem `id`, a plataforma ainda não responde: a /sobre diz "Em breve". */
+/**
+ * O "Como calculamos" da camada Dinheiro do mapa (VisaoDinheiro): além da regra da análise, as medidas e os blocos que só
+ * o mapa mostra (gasto por eleitor, cada cadeira, quartis, quem mais gastou...). A página /analises/dinheiro e a /sobre
+ * usam METODOLOGIA.dinheiro.
+ */
+export const CALCULO_MAPA_DINHEIRO: string[] = [
+      "Gasto por vaga: soma dos gastos declarados por todas as campanhas ao cargo, inclusive as derrotadas, ÷ número de vagas. Não é salário nem o custo do mandato. Cidades de porte semelhante: a mediana das cidades com eleitorado parecido; estado: soma de todos os gastos ÷ soma de todas as vagas.",
+      "Gasto por eleitor: a mesma soma de gastos ÷ eleitores aptos do lugar no 1º turno. Parte pública: dinheiro dos fundos Eleitoral e Partidário ÷ tudo o que as campanhas ao cargo receberam. No mapa, os estados ficam em três faixas (terços dos seis) e as cidades em faixas fixas, iguais em todos os estados e anos.",
+      "Cobertura: junto do número vai quantas candidaturas têm prestação de contas final na base. Quem não tem entra com zero nas somas (o valor é desconhecido, e o total pode estar incompleto). “Na base” não quer dizer contas aprovadas pela Justiça Eleitoral.",
+      "Onde o dinheiro foi gasto: as despesas em grupos de categoria do TSE (propaganda impressa e de rua, internet, rádio e TV, militância e eventos, pessoal, serviços, transporte, estrutura, outros). São valores contratados, não pagos, e o município é o da candidatura, não o do fornecedor.",
+      "Todo o dinheiro de campanha (P2): o maior valor entre receitas e despesas declaradas, para considerar também campanhas que receberam material. Só o dinheiro público (P8): o que veio do Fundo Eleitoral e do Fundo Partidário, inclusive por meio de outro candidato.",
+      "Prefeito, governador e senador: se quem teve o maior gasto declarado venceu. Ficam de fora disputas com um só candidato, prestação de contas incompleta, sem gasto ou com empate no maior gasto.",
+      "Teste estatístico: comparação de duas proporções com 95% de confiança; o projeto só destaca diferenças de pelo menos 20% (regra do projeto). Sem diferença estatística não quer dizer sem relação; com diferença, não quer dizer causa.",
+      "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não tem a prestação final na base aparece como “Não informado”. Campanhas que não chegaram a disputar ficam fora daqui; a Pergunta 1 soma o gasto delas no custo da cadeira, e a página diz quanto é quando há diferença.",
+      "Eleição anterior: a variação é nominal, sem correção pela inflação, e só entre eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
+      "Quanto cada partido gastou: a soma dos gastos declarados pelas campanhas do partido ao cargo, no mesmo recorte do número (cidade, porte, estado ou os seis). Quanto custou um voto: esse gasto ÷ votos nominais no 1º turno (o voto só na legenda não entra).",
+      "Quartis: os candidatos que entregaram as contas e declararam algum gasto, em quatro grupos de tamanho aproximado, do que menos ao que mais gastou, comparando cada um com os do mesmo recorte (valores iguais ficam no mesmo grupo). Quem não declarou gasto e quem não entregou as contas aparecem à parte. Numa cidade, só com pelo menos 8 candidatos com gasto (não vale para prefeito).",
+      "Ano a ano: o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar; valores da época, e as partes (parte pública, fatia dos 25% que mais gastaram) comparadas em pontos percentuais.",
+      "Quem mais gastou: as 10 campanhas de maior gasto declarado no recorte, entre todos os que disputaram ou só entre os eleitos; a parte pública é o que veio do Fundo Eleitoral e do Fundo Partidário no que a campanha recebeu.",
+      "Cada cadeira: gasto de todas as campanhas ao cargo ÷ cadeiras em disputa no recorte; o eleito típico é a mediana do gasto dos eleitos que entregaram as contas.",
+      "Dependeu do dinheiro público: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário. “De cada 100” arredonda pelos maiores restos para somar 100; com menos de 20 pessoas, mostra a conta de verdade (ex.: 2 de 3).",
+      "Propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo mesmo dicionário da Pergunta 9; o tamanho da palavra é o valor contratado. Dá para ver todos os candidatos ou só os eleitos; o filtro de porte não se aplica à nuvem.",
+];
+
 export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [
   { n: 1, texto: "Qual é o custo por cadeira conquistada?", id: "p1" },
   { n: 2, texto: "Existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?", id: "p2" },
   { n: 3, texto: "Como as características socioeconômicas dos municípios se relacionam com votação partidária e abstenção?", id: "mapa" },
-  { n: 4, texto: "Grau de instrução dos candidatos versus o da população?" },
+  { n: 4, texto: "Grau de instrução dos candidatos versus o da população?", id: "p4" },
   { n: 5, texto: "Qual é a quantidade e a proporção de votos de legenda recebidos por cada partido?", id: "p5" },
   { n: 6, texto: "Qual a relação entre a idade da população do município com o viés político?" },
   { n: 7, texto: "Qual o viés político do município/região na linha do tempo?" },
@@ -319,6 +360,7 @@ export const ESCOPO: LinhaEscopo[] = [
   { dado: "Participação e abstenção", nota: "o mapa (pergunta 3)", anos: de(2008, 2024, "dado") },
   { dado: "Censo 2010", nota: "Atlas do Desenvolvimento Humano", anos: de(2008, 2012, "censo") },
   { dado: "Censo 2022", nota: "IBGE", anos: de(2020, 2024, "censo") },
+  { dado: "Instrução dos eleitos × população", nota: "pergunta 4, com o Censo 2022", anos: { 2020: "censo", 2024: "censo" } },
   { dado: "Voto de legenda", nota: "pergunta 5", anos: de(2018, 2024, "dado") },
   { dado: "Receitas e despesas", nota: "perguntas 1, 2, 8 e 9", anos: de(2018, 2024, "dado") },
   { dado: "Fotos dos candidatos", nota: "banco à parte (bdr_fotos)", anos: de(2018, 2024, "dado") },

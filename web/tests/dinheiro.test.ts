@@ -866,3 +866,13 @@ describe("camposDoHref", () => {
     expect(camposDoHref("/#mapa")).toEqual([]);
   });
 });
+
+describe("CALCULO_MAPA_DINHEIRO", () => {
+  it("o mapa explica as próprias medidas e começa pela regra da análise, sem mudar o texto da análise", async () => {
+    const { CALCULO_MAPA_DINHEIRO, METODOLOGIA } = await import("../src/lib/metodologia");
+    expect(CALCULO_MAPA_DINHEIRO[0]).toBe(METODOLOGIA.dinheiro.calculo[0]);
+    expect(CALCULO_MAPA_DINHEIRO.some((t) => t.startsWith("Gasto por eleitor"))).toBe(true);
+    expect(CALCULO_MAPA_DINHEIRO.some((t) => t.startsWith("Cada cadeira"))).toBe(true);
+    expect(METODOLOGIA.dinheiro.calculo.some((t) => t.startsWith("Gasto por eleitor"))).toBe(false);
+  });
+});

@@ -15,7 +15,7 @@ import {
 } from "@/lib/dinheiro";
 import { montarNuvem, type TermoNuvem } from "@/lib/nuvem";
 import { mostrarNuvem } from "@/lib/propaganda";
-import { METODOLOGIA } from "@/lib/metodologia";
+import { CALCULO_MAPA_DINHEIRO } from "@/lib/metodologia";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { NOME_UF } from "@/lib/financiamento";
 import { brlCentavos, compacto, inteiro, pct, reais } from "@/lib/format";
@@ -717,7 +717,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">
           <summary>Como calculamos</summary>
-          <ul>{METODOLOGIA.dinheiro.calculo.map((t) => <li key={t}>{t}</li>)}</ul>
+          <ul>{CALCULO_MAPA_DINHEIRO.map((t) => <li key={t}>{t}</li>)}</ul>
         </details>
 
         <ul className="atalhos s12">

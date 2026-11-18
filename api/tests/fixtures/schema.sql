@@ -300,6 +300,17 @@ CREATE TABLE censo_municipio (
     PRIMARY KEY (id_municipio, ano_referencia)
 );
 
+-- Pessoas por grau de instrução no Censo (pergunta 4), na escala de nivel_instrucao.nivel; grupos de idade de 18 anos ou mais.
+CREATE TABLE populacao_instrucao (
+    id_municipio    integer      NOT NULL REFERENCES municipio (id_municipio),
+    ano_referencia  smallint     NOT NULL,
+    nivel           smallint     NOT NULL,
+    grupo_idade     varchar      NOT NULL,
+    sexo            varchar      NOT NULL,
+    populacao       bigint       NOT NULL,
+    PRIMARY KEY (id_municipio, ano_referencia, nivel, grupo_idade, sexo)
+);
+
 CREATE TABLE populacao_idade (
     id_municipio    integer   NOT NULL REFERENCES municipio (id_municipio),
     ano_referencia  smallint  NOT NULL,
