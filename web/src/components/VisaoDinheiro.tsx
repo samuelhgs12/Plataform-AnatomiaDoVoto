@@ -126,10 +126,16 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
       ficha: uf ? ficha : undefined,
     };
   });
-  // ao entrar num estado, o mapa aproxima dele; as cidades (faixas fixas, iguais em todos os estados; fora do porte,
-  // apagadas) só nas municipais, porque nas gerais o dado é só por estado
+  // ao entrar num estado, o mapa aproxima dele e mostra as cidades: nas municipais, cada uma com o seu valor (faixas
+  // fixas, iguais em todos os estados; fora do porte, apagadas); nas gerais o dinheiro é só por estado, então as cidades
+  // aparecem só como desenho, todas na cor da faixa do estado, e a dica diz o nome e o valor do estado
   const caixa = uf ? CAIXA_UF[uf] : undefined;
-  const noMapaMun: MunicipioNoMapa[] = !municipal || !uf || !caixa ? [] : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
+  const vUf = uf ? valoresUf[ufs.indexOf(uf)] : null;
+  const noMapaMun: MunicipioNoMapa[] = !uf || !caixa ? [] : !municipal ? municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => ({
+    ibge: m.cod_ibge, classe: corPorFaixas(vUf, faixasUf), href: href({}),
+    dica: `${nomeMun.get(m.id_municipio)} · valor do estado: ${textoValor(vUf, aba, cargo)}${vUf === null ? "" : aba === "gasto" ? " por vaga" : aba === "eleitor" ? " por eleitor" : " público"}`,
+    atraso: Math.round(((CENTRO_MUNICIPIO[m.cod_ibge][0] - caixa[0]) / (caixa[2] - caixa[0])) * 100) / 100,
+  })) : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
     const linha = doAno.get(m.id_municipio);
     const v = valorCidade(linha, aba, cargo);
     return {
