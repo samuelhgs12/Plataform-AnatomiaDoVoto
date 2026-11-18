@@ -3,9 +3,9 @@ import {
   ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas,
   valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas,
   hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade, abaDe, anoAnterior, cidadesDoPorte,
-  coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, corTerco, diferencaRelativa,
-  faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, TERCOS, textoCurto, textoDiferenca, unidade, variacaoNominal,
-  coberturaSelo, descricaoFatias, fatias, larguraSelo, seloValor, seta, anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao,
+  coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, diferencaRelativa,
+  faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, textoDiferenca, unidade, variacaoNominal,
+  coberturaSelo, descricaoFatias, fatias, seloValor, seta, anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao,
   medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos, caminhoPecas,
   cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos,
   maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos, camposDoHref, hrefBuscaCandidato, caminhoBuscaCandidato, medidaDe, MEDIDAS_ANOS, MEIAS, PINTAR,
@@ -367,20 +367,6 @@ describe("referência, eleição anterior e o que a pergunta 1 soma a mais", () 
   });
 });
 
-describe("corTerco e textoCurto", () => {
-  it("três faixas: as classes das pontas e do meio; sem valor, 'sem'", () => {
-    const faixas = [10, 20];
-    expect([5, 10, 15, 25, null].map((v) => corTerco(v, faixas))).toEqual(["q0", "q2", "q2", "q4", "sem"]);
-    expect(TERCOS).toHaveLength(3);
-  });
-  it("escreve o valor curto para a legenda e o selo, conforme a medida", () => {
-    expect(textoCurto(222_000, "gasto")).toBe("R$ 222 mil");
-    expect(textoCurto(9.23, "eleitor")).toBe("R$ 9,2");
-    expect(textoCurto(24.6, "eleitor")).toBe("R$ 25");
-    expect(textoCurto(0.624, "publico")).toBe("62%");
-  });
-});
-
 describe("ordenarCandidatos", () => {
   const c = (o: Partial<{ nome_urna: string; votos: number; gasto: number; receita: number; receita_publica: number; prestou: boolean }>) => ({ nome_urna: "A", votos: 0, gasto: 0, receita: 0, receita_publica: 0, prestou: true, ...o });
   it("ordena pela medida, do maior para o menor, e quem não prestou contas vai para o fim nas ordens de dinheiro", () => {
@@ -452,14 +438,6 @@ describe("seloValor", () => {
     expect(seloValor(9.24, "eleitor")).toBe("9,2");
     expect(seloValor(0.734, "publico")).toBe("73%");
     expect(seloValor(null, "gasto")).toBe("");
-  });
-});
-
-describe("larguraSelo", () => {
-  it("cresce com o texto e nunca fica apertada", () => {
-    expect(larguraSelo("73%")).toBe(76);   // folga entre a sigla e o valor mesmo nos curtos
-    expect(larguraSelo("222 mil")).toBeGreaterThan(larguraSelo("46 mil"));
-    expect(larguraSelo("222 mil")).toBeGreaterThanOrEqual(90);
   });
 });
 

@@ -2,7 +2,7 @@
 // cargo e lugar, sem React. Os dados vêm de /api/analises/municipios (cidades e estados), q1, q2 e q8.
 
 import { pontosPercentuais, type Resposta } from "./estatistica";
-import { brlCentavos, compacto, reais } from "./format";
+import { brlCentavos, reais } from "./format";
 import { mediana, porteDe, PORTES, type CandidatoLocal, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
 
 /** As três abas (e "eleitor": o gasto por eleitor apto, só uma medida do mapa). `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
@@ -494,19 +494,6 @@ export function foraDaDisputa(estados: { ano: number; uf: string; cargo: string;
   return n > 0 && gasto > 0 ? { n, gasto } : null;
 }
 
-// ---------- as cores dos estados ----------
-
-/** Com só seis estados, três faixas (terços) dizem mais que cinco: as classes de cor das pontas e do meio. */
-export const TERCOS = ["q0", "q2", "q4"];
-/** Classe de cor de um estado pelas faixas dos terços (os cortes de `quantis(valores, 3)`). */
-export const corTerco = (v: number | null, faixas: number[]) => (v === null ? "sem" : TERCOS[Math.min(2, faixas.filter((c) => v >= c).length)]);
-/** O valor escrito na legenda e no selo do estado, para a medida que pinta o mapa. */
-export function textoCurto(v: number, aba: Aba): string {
-  if (aba === "eleitor") return `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: v < 10 ? 1 : 0 })}`;
-  if (aba === "publico") return `${Math.round(v * 100)}%`;
-  return `R$ ${compacto(v)}`;
-}
-
 // ---------- os candidatos ----------
 
 export const ORDENS_CANDIDATOS = [
@@ -635,9 +622,6 @@ export function seloValor(v: number | null, aba: Aba): string {
   if (v >= 1000) return `${num(v / 1e3)} mil`;
   return num(v);
 }
-
-/** Largura da pílula do selo (px): a sigla à esquerda e o valor ao lado, sem um passar por cima do outro. */
-export const larguraSelo = (valor: string) => Math.max(76, Math.round(40 + valor.length * 8.4));
 
 /** Um pedaço da barra empilhada: o valor, a parte do total (0 a 1) e a classe de cor. */
 export interface Fatia { chave: string; rotulo: string; valor: number; parte: number; cor: string }

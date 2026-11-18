@@ -5,8 +5,7 @@ import { seloUf } from "@/lib/mapa";
 import type { FichaDica } from "@/lib/dica";
 
 /** `ficha`: o conteúdo gráfico da dica (MapaVivo); sem ela, a dica mostra só o texto (`descricao`, `dica`). */
-/** `largura` (opcional, px): pílula mais larga para valores longos ("222 mil"); sem ela, a pílula padrão de 66 px. */
-export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string; ficha?: FichaDica; largura?: number }
+export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string; ficha?: FichaDica }
 export interface MunicipioNoMapa { ibge: string; classe: string; href: string; dica: string; atraso: number; ficha?: FichaDica }
 
 interface Props {
