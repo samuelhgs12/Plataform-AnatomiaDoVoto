@@ -34,7 +34,7 @@ type Lista = { opcoes: [string, string][]; atual?: string; params: Record<string
 
 /**
  * Camada Dinheiro (perguntas 1, 2, 8 e 9), com os mesmos filtros da análise (a eleição fica nos anos embaixo do mapa): o cargo, o estado, a cidade
- * (municipais, com um estado escolhido) e o porte da cidade (municipais); `painel` leva aos números embaixo do mapa.
+ * (municipais, com um estado escolhido) e o porte da cidade (municipais).
  */
 export interface CamadaDinheiro {
   cargos: { rotulo: string; href: string; on: boolean }[];
@@ -43,7 +43,6 @@ export interface CamadaDinheiro {
   estado: Lista;
   cidade?: Lista;
   porte?: Lista;
-  painel: string;
 }
 
 export interface CamadaInstrucao {
@@ -133,8 +132,7 @@ export function CamadasMapa({ modo, hrefs, legenda, comparar, comparativos, inst
           {dinheiro.porte && (
             <EscolhaMunicipio nome="porte" rotulo="Porte da cidade" vazio="Todos os portes" opcoes={dinheiro.porte.opcoes} atual={dinheiro.porte.atual} params={dinheiro.porte.params} />
           )}
-          {dinheiro.estado.atual ? <a className="camada-ir" href={dinheiro.painel}>Ver os números, os candidatos e as comparações ↓</a>
-            : <p className="camadas-apoio">Selecione um estado no mapa ou na lista para ver os dados.</p>}
+          {!dinheiro.estado.atual && <p className="camadas-apoio">Selecione um estado no mapa ou na lista para ver os dados.</p>}
         </div>
       )}
 

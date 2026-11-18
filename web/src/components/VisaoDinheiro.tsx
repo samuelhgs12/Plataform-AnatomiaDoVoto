@@ -288,13 +288,11 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     posicao: posMun >= 0 ? `${posMun + 1}ª de ${inteiro(cidadesUf.length)} cidades` : null,
     extra: eleitoPrefeito ? `Eleito: ${eleitoPrefeito.nome_urna} (${eleitoPrefeito.partido}), ${eleitoPrefeito.prestou === false ? "sem prestação de contas final" : `gastou ${reais(eleitoPrefeito.gasto)}`}`
       : candidatos ? `${inteiro(linhas.length)} candidatos, ${inteiro(eleitos.length)} eleitos` : null,
-    ir: tem("cand") ? { href: "#dinheiro-cand", texto: "Ver os candidatos ↓" } : { href: "#dinheiro-painel", texto: "Ver os detalhes ↓" },
   } : uf ? {
     rotulo: `Estado · ${cargo}${porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}`, nome: lugar,
     valor: textoValor(principal, aba, cargo), unidade: unidadeCurta,
     posicao: posUf >= 0 ? `${posUf + 1}º de ${ufs.length} estados` : null,
     extra: null,
-    ir: !municipal && tem("cand") ? { href: "#dinheiro-cand", texto: `${inteiro(eleitos.length)} eleitos ↓` } : { href: "#dinheiro-painel", texto: "Ver os detalhes ↓" },
   } : null;
   const propaganda = `/analises/dinheiro?${new URLSearchParams(Object.entries({ ano: String(ano), cargo, uf: uf ?? "", aba: "propaganda" }).filter(([, v]) => v))}`;
   const paramsMun = Object.fromEntries(new URL(href({ mun: null }), "http://x").searchParams);
@@ -330,7 +328,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
                 {semContas && <span className="cartao-aviso" title={semContas}>{seloContas!.texto}</span>}
               </p>
               {cartao.extra && <p className="cartao-linha">{cartao.extra}</p>}
-              <a className="cartao-ir" href={cartao.ir.href}>{cartao.ir.texto}</a>
             </aside>
           )}
         </div>

@@ -401,7 +401,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           atual: munDinheiro, params: paramsSem("mun"),
         } : undefined,
         porte: naDinheiro && ehMunicipal(escDinheiro.ano) ? { opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte, params: paramsSem("porte") } : undefined,
-        painel: hrefMapaDinheiro(escolhaDin, {}, "dinheiro-painel"),
       }}
       legenda={{
         anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",
