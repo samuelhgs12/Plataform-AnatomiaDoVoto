@@ -391,7 +391,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9"]
+    assert client.get("/api/analises").json() == ["legislativo", "municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -426,6 +426,24 @@ def test_eleitos_do_municipio_com_instrucao_pelo_cod_ibge(client):
     assert [x["id_candidatura"] for x in client.get("/api/municipios/ibge/2600002/eleitos?ano=2020").json()] == [5]
     assert client.get("/api/municipios/ibge/9999999/eleitos?ano=2020").json() == []
     assert client.get("/api/municipios/ibge/abc/eleitos?ano=2020").status_code == 422
+
+
+def test_legislativo_cadeiras_com_vies_gasto_e_renovacao(client):
+    dados = client.get("/api/analises/legislativo").json()
+    assert set(dados) == {"cadeiras", "vagas", "gasto_partido", "sem_resultado"}
+    cad = [dict(zip(dados["cadeiras"]["colunas"], l)) for l in dados["cadeiras"]["linhas"]]
+    # Ana: deputada federal pelo RJ eleita em 2018 (estreante) e reeleita em 2022; viés do PL na eleição de cada uma
+    ana = {(c["ano"], c["casa"]): c for c in cad if c["nome"] == "ANA ADVOGADA"}
+    assert set(ana) == {(2018, "camara"), (2022, "camara")}
+    assert (ana[2018, "camara"]["renovacao"], float(ana[2018, "camara"]["score"])) == ("estreante", 41.2)
+    assert (ana[2022, "camara"]["renovacao"], float(ana[2022, "camara"]["score"])) == ("reeleito", 49.34)
+    assert ana[2022, "camara"]["fonte"] == "bls"
+    # só eleitos: Maria (não eleita) e o suplente não ocupam cadeira
+    assert not [c for c in cad if c["nome"] in ("MARIA DA SILVA", "ZÉ DA SERRA")]
+    vagas = {(l[0], l[1], l[2]): l[3] for l in dados["vagas"]["linhas"]}
+    assert vagas[2022, "camara", "RJ"] == 46 and vagas[2022, "assembleia", "MG"] == 77
+    # Assembleia de MG em 2022: há candidatos e nenhum eleito na massa de teste
+    assert [2022, "assembleia", "MG", 2] in dados["sem_resultado"]["linhas"]
 
 
 def test_analise_so_as_tabelas_pedidas(client):
@@ -491,7 +509,7 @@ def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
              "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/api/candidaturas/5/disputa", "/openapi.json",
-             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10",
+             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10", "/api/analises/legislativo",
              "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022",
              "/api/municipios/2/candidatos?ano=2020&cargo=Prefeito"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]

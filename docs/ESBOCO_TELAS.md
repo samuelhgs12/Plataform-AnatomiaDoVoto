@@ -14,6 +14,7 @@ Estado: ✅ implementado no esqueleto · 🔲 a fazer.
 | `/analises/legenda` | Voto de legenda (P5): série histórica por partido e UF, comparação entre ciclos, mudanças nos partidos e tabela | ✅ · 🔲 mapa por município |
 | `/analises/retencao` | Retenção por turma de estreia (P10) | 🔲 (dados já em `/api/analises/q10`: `permanencia`) |
 | `/analises/trocas` | Trocas de partido por ano e matriz origem × destino (P10) | 🔲 (`/api/analises/q10`: `trocas`) |
+| `/legislativo` | Plenários do Senado, da Câmara e das Assembleias (2018, 2022, 2026): hemiciclo + tabela das bancadas em espelho (realce cruzado em CSS), leituras Viés, Custo, Partido e Renovação, recorte plenário inteiro / 6 estados, lista dos eleitos do partido escolhido | ✅ (`/api/analises/legislativo`) |
 | `/sobre` | As dez perguntas do dossiê em ordem (texto em `PERGUNTAS`, `src/lib/metodologia.ts`): a respondida abre (`<details>`) com o que mostra, "Como calculamos", "O que isso não mostra", "Ver a resposta" e o detalhe técnico com tabelas e SQL; a que falta mostra "Em breve". Depois: caminho dos dados, matriz anos × dado, regras gerais, qualidade, privacidade e fotos | ✅ |
 
 ## Perfil do candidato

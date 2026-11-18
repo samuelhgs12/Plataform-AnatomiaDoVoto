@@ -15,6 +15,7 @@ export const CHAVE_MENU = "menu";
 const ITENS: { href: string; rotulo: string; icone: NomeIcone; ativo: (p: string) => boolean }[] = [
   { href: "/", rotulo: "Mapa", icone: "mapa", ativo: (p) => p === "/" },
   { href: "/candidatos", rotulo: "Candidatos", icone: "candidatos", ativo: (p) => p.startsWith("/candidato") },
+  { href: "/legislativo", rotulo: "Legislativo", icone: "plenario", ativo: (p) => p.startsWith("/legislativo") },
   { href: "/analises", rotulo: "Análises", icone: "analises", ativo: (p) => p.startsWith("/analises") },
   { href: "/sobre", rotulo: "Sobre os dados", icone: "sobre", ativo: (p) => p === "/sobre" },
 ];

@@ -27,6 +27,10 @@
   --f1: #2a78d6; --f2: #1baf7a; --f3: #eb6834; --f4: #6250d6; --f5: #e87ba4; --pub: #2a78d6; --priv: #eb6834; --fx2: #86b6ef; --fx3: #f5b08f;
   /* Pergunta 9: tipos de propaganda (física, audiovisual, digital). Matizes livres na P8 e na P10; claridades diferentes */
   --pp-fis: #8a4b2f; --pp-av: #a87708; --pp-dig: #0b7f8f; --pp-outra: #6f6f69;
+  /* Legislativo: viés em sete faixas, violeta (esquerda) · ardósia (centro) · petróleo (direita), sem cor de partido;
+     gasto do eleito em quatro azuis (quartos da casa) */
+  --ve3: #4c2a94; --ve2: #7a55c8; --ve1: #a993dc; --vc: #a7b0bf; --vd1: #86c1c7; --vd2: #2f8f9b; --vd3: #0b5f6b;
+  --cu1: #c3d4f6; --cu2: #85a5ea; --cu3: #4470d6; --cu4: #1f3f9e;
 
   --raio: 8px; --gap: 8px; --margem: 16px;
   --t-pequeno: 14px; --t-corpo: 17px;
@@ -52,6 +56,8 @@
     --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
     --fx2: #6da7ec; --fx3: #f0a07a;
     --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93;
+    --ve3: #c9b6ff; --ve2: #9d82ea; --ve1: #6c55ad; --vc: #56607a; --vd1: #2d7480; --vd2: #3fb0bd; --vd3: #8ee3ec;
+    --cu1: #2b3d66; --cu2: #3c5fb5; --cu3: #6f97f2; --cu4: #b9cfff;
     color-scheme: dark;
   }
 }
@@ -65,6 +71,8 @@
   --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
   --fx2: #6da7ec; --fx3: #f0a07a;
   --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93;
+  --ve3: #c9b6ff; --ve2: #9d82ea; --ve1: #6c55ad; --vc: #56607a; --vd1: #2d7480; --vd2: #3fb0bd; --vd3: #8ee3ec;
+  --cu1: #2b3d66; --cu2: #3c5fb5; --cu3: #6f97f2; --cu4: #b9cfff;
   color-scheme: dark;
 }
 
@@ -2096,3 +2104,125 @@ a.q-ver:active { transform: scale(0.98); }
   border-radius: 999px; background: var(--noite2); color: var(--sobre-noite); font-weight: 600; }
 .palco-dinheiro[aria-busy="true"] .carregando-mapa { display: block; }
 .palco-dinheiro[aria-busy="true"] .mapa-abst { opacity: 0.45; transition: opacity 0.2s ease; }
+
+/* ---------- Legislativo (app/legislativo, components/Plenario.tsx) ----------
+   O hemiciclo e a tabela das bancadas são a mesma coisa: o realce cruzado vem de regras :has geradas na página. As
+   cadeiras não mudam de lugar entre as leituras; só a cor, que varre o arco da esquerda para a direita (--atraso). */
+.leg-topo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 32px; align-items: end; padding: 28px 28px 24px; margin-bottom: var(--gap); }
+.leg-titulo h1 { margin-bottom: 6px; }
+.leg-sub { color: var(--muted); margin: 0; font-size: 17px; }
+.leg-filtros { grid-column: 1; display: grid; gap: 10px; }
+.leg-filtros .chips { align-items: center; }
+.leg-sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
+.leg-rot { font-size: var(--t-pequeno); color: var(--muted); font-weight: 500; margin-right: 2px; }
+.leg-alternar { grid-column: 2; grid-row: 1 / span 2; display: grid; gap: 10px; justify-items: end; align-self: end; }
+.alternar { display: inline-flex; background: var(--panel2); border-radius: var(--raio); padding: 3px; gap: 2px; }
+.alternar a { padding: 7px 14px; border-radius: 6px; font-size: 15px; font-weight: 500; text-decoration: none; color: var(--muted); white-space: nowrap;
+  transition: background-color var(--t-hover) ease, color var(--t-hover) ease; }
+.alternar a:hover { color: var(--fg); }
+.alternar a[aria-current] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px color-mix(in srgb, var(--marinho-900) 16%, transparent); }
+
+.leg-corpo { align-items: start; }
+.leg-plenario { position: sticky; top: var(--gap); }
+.leg-plenario { padding: 20px 24px 22px; }
+.plenario-caixa { position: relative; }
+.plenario { display: block; width: 100%; height: auto; overflow: visible; }
+.cad { transition: fill 420ms var(--ease-out) var(--atraso, 0ms), opacity var(--t-hover) ease; cursor: pointer; }
+.cad.apagada { opacity: 0.14; }
+.plenario a:hover .cad { stroke: var(--fg); stroke-width: 2; }
+.cad-vazia { fill: none; stroke: var(--o); stroke-width: 1.2; }
+.cad-vazia.sem-resultado { stroke: var(--warn); stroke-dasharray: 2.5 2; }
+.cad-sigla { font: 600 22px var(--fonte), system-ui, sans-serif; fill: var(--muted); letter-spacing: 0.01em; transition: opacity var(--t-hover) ease; }
+.plen-numero { font: 600 96px var(--fonte), system-ui, sans-serif; fill: var(--fg); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.plen-numero.longo { font-size: 70px; }
+.plen-legenda-texto { display: none; }
+.plen-legenda { font: 500 25px var(--fonte), system-ui, sans-serif; fill: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .cad { transition: none; } }
+
+/* cores das leituras, nas cadeiras (fill) e nas amostras (background) */
+.cad.v-e3 { fill: var(--ve3); } .cad.v-e2 { fill: var(--ve2); } .cad.v-e1 { fill: var(--ve1); } .cad.v-c { fill: var(--vc); }
+.cad.v-d1 { fill: var(--vd1); } .cad.v-d2 { fill: var(--vd2); } .cad.v-d3 { fill: var(--vd3); } .cad.v-nd { fill: var(--o); }
+.cad.c-1 { fill: var(--cu1); } .cad.c-2 { fill: var(--cu2); } .cad.c-3 { fill: var(--cu3); } .cad.c-4 { fill: var(--cu4); }
+.cad.c-nd { fill: var(--o); }
+/* leitura Partido: cinco matizes sem vermelho e sem azul, para nenhuma bancada parecer a cor do próprio partido */
+.cad.p-0 { fill: var(--f2); } .cad.p-1 { fill: var(--f4); } .cad.p-2 { fill: var(--pp-av); } .cad.p-3 { fill: var(--f5); } .cad.p-4 { fill: var(--pp-fis); }
+.cad.r-reeleito { fill: var(--f1); } .cad.r-ja_eleito { fill: var(--f2); } .cad.r-estreante { fill: var(--f3); }
+.amostra { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: none; vertical-align: -1px; margin-right: 8px; background: var(--o); }
+.amostra.v-e3 { background: var(--ve3); } .amostra.v-e2 { background: var(--ve2); } .amostra.v-e1 { background: var(--ve1); } .amostra.v-c { background: var(--vc); }
+.amostra.v-d1 { background: var(--vd1); } .amostra.v-d2 { background: var(--vd2); } .amostra.v-d3 { background: var(--vd3); }
+.amostra.c-1 { background: var(--cu1); } .amostra.c-2 { background: var(--cu2); } .amostra.c-3 { background: var(--cu3); } .amostra.c-4 { background: var(--cu4); }
+.amostra.vazia { background: transparent; box-shadow: inset 0 0 0 1.5px var(--o); }
+.amostra.c-nd { background: var(--o); }
+.amostra.vazia.sem-resultado { box-shadow: inset 0 0 0 1.5px var(--warn); }
+.amostra.p-0 { background: var(--f2); } .amostra.p-1 { background: var(--f4); } .amostra.p-2 { background: var(--pp-av); } .amostra.p-3 { background: var(--f5); } .amostra.p-4 { background: var(--pp-fis); }
+.amostra.r-reeleito { background: var(--f1); } .amostra.r-ja_eleito { background: var(--f2); } .amostra.r-estreante { background: var(--f3); }
+
+.leg-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; font-size: var(--t-pequeno); color: var(--muted); }
+.leg-legenda ul { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; margin: 0; padding: 0; }
+.leg-legenda li { display: inline-flex; align-items: center; }
+.leg-legenda .amostra { margin-right: 6px; }
+.leg-polo { font-weight: 600; color: var(--fg); }
+.leg-escala { display: grid; grid-template-columns: auto minmax(160px, 420px) auto; align-items: center; gap: 4px 10px; }
+.leg-barra { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); height: 12px; }
+.leg-barra > .amostra:first-child { border-radius: 6px 0 0 6px; } .leg-barra > .amostra:nth-child(7) { border-radius: 0 6px 6px 0; }
+.leg-media { position: absolute; top: -5px; bottom: -5px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--fg); box-shadow: 0 0 0 2px var(--panel); }
+.leg-barra .amostra { width: auto; height: 100%; border-radius: 0; margin: 0; }
+.leg-marcas { grid-column: 2; display: flex; justify-content: space-between; font-size: 12px; margin: 0 -10px; }
+.leg-legenda .leg-legenda-vazias { margin-left: auto; }
+.leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 12px 0 0; max-width: 72ch; }
+.leg-nota.aviso-causa { box-shadow: inset 3px 0 0 var(--warn); }
+
+.dica-cadeira { position: absolute; transform: translate(-50%, calc(-100% - 10px)); pointer-events: none; z-index: 2;
+  background: var(--tinta); color: var(--sobre-tinta); border-radius: 6px; padding: 8px 12px; font-size: 14px; line-height: 1.35;
+  display: grid; white-space: nowrap; box-shadow: 0 6px 18px color-mix(in srgb, var(--marinho-950) 28%, transparent); }
+.dica-cadeira span { opacity: 0.8; }
+.dica-cadeira .dica-valor { opacity: 1; font-weight: 600; }
+
+.leg-bancadas { padding: 22px 24px; }
+.leg-bancadas .manchete { margin-bottom: 18px; }
+.leg-tabela { max-height: none; overflow-x: auto; }
+.leg-tabela th abbr { text-decoration: none; cursor: help; }
+.leg-tabela table { font-size: 15px; }
+.leg-tabela :is(th, td) { padding: 9px 7px; }
+.leg-tabela thead th { line-height: 1.2; vertical-align: bottom; }
+.leg-tabela thead th { background: var(--panel); }
+.leg-tabela :is(th, td):not(:first-child) { text-align: right; }
+.leg-tabela tbody th { color: var(--fg); font-size: 15px; font-weight: 600; }
+.leg-tabela tbody th a { text-decoration: none; display: inline-flex; align-items: center; }
+.leg-tabela tbody th a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.leg-tabela tbody tr { transition: background-color var(--t-hover) ease; }
+.leg-tabela tbody tr[aria-current] { background: var(--panel2); }
+.leg-tabela tbody tr[aria-current] th a { text-decoration: underline; text-underline-offset: 0.2em; }
+.leg-tabela abbr { text-decoration: none; color: var(--muted); margin-left: 2px; cursor: help; }
+
+.leg-membros-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.leg-membros-topo h2 { margin: 0; }
+.leg-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 24px; }
+.leg-lista li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.leg-lista li .amostra { align-self: center; grid-row: 1 / span 2; }
+.leg-lista a { font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.leg-lista a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.leg-lista .muted { grid-column: 2; font-size: var(--t-pequeno); }
+.leg-lista-valor { grid-column: 3; grid-row: 1 / span 2; align-self: center; font-size: var(--t-pequeno); text-align: right; padding-left: 12px; }
+
+@media (max-width: 1100px) {
+  .leg-topo { grid-template-columns: 1fr; }
+  .leg-alternar { grid-column: 1; grid-row: auto; justify-items: start; }
+  .leg-corpo > .s7, .leg-corpo > .s5 { grid-column: 1 / -1; }
+  .leg-plenario { position: static; }
+}
+@media (max-width: 640px) {
+  .leg-topo { padding: 22px 18px 18px; }
+  .leg-plenario, .leg-bancadas { padding: 16px; }
+  .alternar { max-width: 100%; flex-wrap: wrap; }
+  .plen-numero { font-size: 118px; }
+  .plen-numero.longo { font-size: 84px; }
+  .plen-legenda { display: none; }
+  .plen-legenda-texto { display: block; text-align: center; margin: 2px 0 0; font-size: var(--t-pequeno); color: var(--muted); }
+  .cad-sigla { font-size: 40px; }
+  .leg-marcas span:not(:first-child):not(:last-child) { visibility: hidden; }
+  .so-largo { display: none; }
+  .leg-plenario { position: static; }
+  .leg-escala { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .leg-legenda .leg-legenda-vazias { margin-left: 0; }
+}

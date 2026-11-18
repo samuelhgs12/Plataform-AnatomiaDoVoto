@@ -279,13 +279,20 @@ CREATE TABLE perfil_eleitorado (
 
 -- ------------------------------ IBGE E VIÉS (preenchidos depois) --------------------
 
+-- Viés por partido e eleição, da pesquisa BLS com parlamentares (fonte: bls, bls_fusao, bls_onda_vizinha ou editorial).
 CREATE TABLE vies_partido (
-    id_vies      bigint         PRIMARY KEY,
-    id_partido   integer       NOT NULL REFERENCES partido (id_partido),
-    ano_eleicao  smallint      NOT NULL,
-    score        numeric(6,2)  NOT NULL,           -- -100 (esquerda) a +100 (direita)
-    versao       varchar(30)   NOT NULL,
-    UNIQUE (id_partido, ano_eleicao, versao)
+    id_vies           bigint         PRIMARY KEY,
+    id_partido        integer        NOT NULL REFERENCES partido (id_partido),
+    ano_eleicao       smallint       NOT NULL,
+    legislatura       smallint       NOT NULL,
+    score             numeric(6,2)   NOT NULL,           -- -100 (esquerda) a +100 (direita)
+    score_bruto       numeric(9,6),
+    erro_padrao       numeric(6,2),
+    n_deputados       integer,
+    fonte             varchar        NOT NULL,
+    onda_referencia   smallint,
+    versao_algoritmo  varchar        NOT NULL,
+    UNIQUE (id_partido, ano_eleicao, versao_algoritmo)
 );
 
 -- A PK inclui o ano (o DER original tinha só id_municipio, o que permitia um único ano por município).
