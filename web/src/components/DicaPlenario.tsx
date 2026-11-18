@@ -1,13 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fotoDaPessoa } from "@/lib/foto-candidato";
+import { iniciais } from "@/lib/format";
+import { FotoCandidato } from "./FotoCandidato";
 
-interface Dica { nome: string; detalhe: string; valor: string; x: number; y: number }
+/** Campos que cada cadeira leva em data-* (montados em app/legislativo/page.tsx). */
+interface Ficha {
+  nome: string; partido: string; id: string; faixa: string; faixaRotulo: string; vies: string; gasto: string;
+  renovacao: string; eleito: string; bancada: string;
+}
+interface Dica { ficha: Ficha; x: number; y: number; abaixo: boolean }
+
+const ler = (el: Element): Ficha => {
+  const d = (k: string) => el.getAttribute(`data-${k}`) ?? "";
+  return { nome: d("n"), partido: d("s"), id: d("id"), faixa: d("f"), faixaRotulo: d("fr"), vies: d("vies"), gasto: d("g"), renovacao: d("r"), eleito: d("e"), bancada: d("bc") };
+};
 
 /**
- * Dica do hemiciclo: ao passar o mouse numa cadeira, mostra quem a ocupa e o valor na leitura. Sem JS, a cadeira tem o
- * <title> nativo; com JS, os <title> saem (para não aparecerem duas dicas) e esta assume. Lê os data-* das cadeiras do
- * elemento `alvo`, que precisa de position: relative.
+ * Ficha da cadeira: ao passar o mouse, mostra foto, partido, faixa e valor do viés, gasto de campanha, renovação e a
+ * bancada. Sem JS, a cadeira tem o <title> nativo; com JS, os <title> saem (para não aparecerem duas dicas) e esta
+ * assume. Lê os data-* das cadeiras do elemento `alvo`, que precisa de position: relative.
  */
 export function DicaPlenario({ alvo }: { alvo: string }) {
   const [dica, setDica] = useState<Dica | null>(null);
@@ -20,10 +33,9 @@ export function DicaPlenario({ alvo }: { alvo: string }) {
       const cad = (e.target as Element).closest?.("[data-n]");
       if (!cad) { setDica(null); return; }
       const b = caixa.getBoundingClientRect(), c = cad.getBoundingClientRect();
-      setDica({
-        nome: cad.getAttribute("data-n") ?? "", detalhe: cad.getAttribute("data-s") ?? "", valor: cad.getAttribute("data-v") ?? "",
-        x: c.left + c.width / 2 - b.left, y: c.top - b.top,
-      });
+      const y = c.top - b.top;
+      // perto do topo do bloco, a ficha abre para baixo da cadeira, para não sair do bloco
+      setDica({ ficha: ler(cad), x: c.left + c.width / 2 - b.left, y: y < 230 ? c.bottom - b.top : y, abaixo: y < 230 });
     };
     const sair = () => setDica(null);
     caixa.addEventListener("pointerover", sobre);
@@ -32,11 +44,28 @@ export function DicaPlenario({ alvo }: { alvo: string }) {
   }, [alvo]);
 
   if (!dica) return null;
+  const f = dica.ficha;
   return (
-    <div className="dica-cadeira" style={{ left: dica.x, top: dica.y }} aria-hidden="true">
-      <b>{dica.nome}</b>
-      <span>{dica.detalhe}</span>
-      <span className="dica-valor">{dica.valor}</span>
+    <div className={`dica-cadeira${dica.abaixo ? " abaixo" : ""}`} style={{ left: dica.x, top: dica.y }} aria-hidden="true">
+      <div className="dica-topo">
+        <span className="dica-foto">
+          <FotoCandidato url={fotoDaPessoa({ id_candidato: Number(f.id) })} alt="" lazy={false}>
+            <span className="dica-iniciais">{iniciais(f.nome)}</span>
+          </FotoCandidato>
+        </span>
+        <span className="dica-quem">
+          <b>{f.nome}</b>
+          <span>{f.partido}</span>
+          <span>{f.eleito}</span>
+        </span>
+      </div>
+      <dl className="dica-dados">
+        {f.faixaRotulo && <><dt>Viés</dt><dd><span className={`amostra v-${f.faixa}`} />{f.faixaRotulo} · {f.vies}</dd></>}
+        <dt>Gasto</dt><dd>{f.gasto}</dd>
+        <dt>Mandato</dt><dd>{f.renovacao}</dd>
+      </dl>
+      <p className="dica-bancada">{f.bancada}</p>
+      <p className="dica-acao">Clique para abrir o perfil</p>
     </div>
   );
 }

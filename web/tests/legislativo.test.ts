@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bancadas, cadeirasDaCasa, chaveCasa, classeCusto, classePartido, classeVies, espalhar, fileiras, fmtVies, hemiciclo, lerCasa, legislatura,
-  lugares, mediana, nomeCasa, ordenarBancadas, posicaoNaEscala, quartis, resumo, semResultado, siglaNaComposicao, siglasNoArco, vagasDaCasa,
+  lugares, mediana, nomeCasa, faixaVies, posicaoNaEscala, quartis, resumo, semResultado, siglaNaComposicao, siglasNoArco, vagasDaCasa,
   type LinhaCadeira, type LinhaGastoPartido,
 } from "../src/lib/legislativo";
 
@@ -94,8 +94,9 @@ describe("siglasNoArco", () => {
 });
 
 describe("classes de cor", () => {
-  it("separa o viés em sete faixas com centro de −10 a +10", () => {
-    expect([-80, -45, -20, -10, 10, 20, 45, 80].map(classeVies)).toEqual(["v-e3", "v-e2", "v-e1", "v-c", "v-c", "v-d1", "v-d2", "v-d3"]);
+  it("separa o viés em cinco faixas iguais, com cortes simétricos em ±20 e ±60", () => {
+    expect([-80, -60, -45, -20, 0, 20, 45, 60, 80].map(faixaVies)).toEqual(["e", "ce", "ce", "c", "c", "c", "cd", "cd", "d"]);
+    expect(classeVies(-69)).toBe("v-e");
     expect(classeVies(null)).toBe("v-nd");
   });
   it("põe o gasto no quarto da casa", () => {
@@ -105,8 +106,10 @@ describe("classes de cor", () => {
     expect(classeCusto(null, q)).toBe("c-nd");
     expect(quartis([])).toBeNull();
   });
-  it("roda cinco cores de partido", () => {
-    expect([0, 4, 5].map(classePartido)).toEqual(["p-0", "p-4", "p-0"]);
+  it("usa a cor do partido pela sigla, cinza se não houver", () => {
+    expect(classePartido("PC do B")).toBe("par-pcdob");
+    expect(classePartido("UNIÃO")).toBe("par-uniao");
+    expect(classePartido("XYZ")).toBe("par-outro");
   });
 });
 
@@ -130,20 +133,14 @@ describe("bancadas", () => {
     const [so] = bancadas([c({ casa: "senado", sigla: "PS", ano_eleicao: 2018 })], [], 2022, { casa: "senado" });
     expect(so.custoPorCadeira).toBeNull();
   });
-  it("ordena a tabela conforme a leitura", () => {
-    const b = bancadas([c({ sigla: "A", score: -1 }), c({ sigla: "B", score: 5 }), c({ sigla: "B", score: 5 })], [g({ sigla: "A", gasto: 900 }), g({ sigla: "B", gasto: 100 })], 2022, { casa: "camara" });
-    expect(ordenarBancadas(b, "vies").map((x) => x.sigla)).toEqual(["A", "B"]);
-    expect(ordenarBancadas(b, "partido").map((x) => x.sigla)).toEqual(["B", "A"]);
-    expect(ordenarBancadas(b, "custo").map((x) => x.sigla)).toEqual(["A", "B"]);
-  });
 });
 
 describe("resumo", () => {
-  it("dá o viés médio, os três grupos e o custo da cadeira sem os estados sem resultado", () => {
+  it("dá o viés médio, as cadeiras por faixa e o custo da cadeira sem os estados sem resultado", () => {
     const cads = [c({ score: -40 }), c({ score: 5 }), c({ score: 50, renovacao: "reeleito" })];
     const r = resumo(cads, [g({ gasto: 3000, eleitos: 3 }), g({ uf: "AP", gasto: 500, eleitos: 0 })], 2022, { casa: "camara" }, ["AP"]);
     expect(r.viesMedio).toBeCloseTo(5);
-    expect([r.esquerda, r.centro, r.direita]).toEqual([1, 1, 1]);
+    expect(r.porFaixa).toEqual({ e: 0, ce: 1, c: 1, cd: 1, d: 0 });
     expect(r.custoCadeira).toBe(1000);
     expect(r.reeleitos).toBe(1);
     expect(resumo([], [], 2022, { casa: "camara" }).custoCadeira).toBeNull();
@@ -172,11 +169,11 @@ describe("siglaNaComposicao", () => {
 });
 
 describe("posicaoNaEscala", () => {
-  it("põe o viés na barra de sete faixas iguais", () => {
+  it("põe o viés na barra, linear de −100 a +100", () => {
     expect(posicaoNaEscala(-100)).toBe(0);
     expect(posicaoNaEscala(0)).toBeCloseTo(0.5);
     expect(posicaoNaEscala(100)).toBe(1);
-    expect(posicaoNaEscala(20)).toBeCloseTo(4.5 / 7);
+    expect(posicaoNaEscala(20)).toBeCloseTo(0.6);
     expect(posicaoNaEscala(250)).toBe(1);
   });
   it("bancada com nomes juntados tem o viés médio das cadeiras", () => {

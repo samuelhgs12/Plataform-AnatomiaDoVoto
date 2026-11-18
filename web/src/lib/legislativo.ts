@@ -179,21 +179,28 @@ export function lugares(cadeiras: LinhaCadeira[], total: number, semResultadoN =
 
 // ---------- Cores de cada leitura (classes CSS; as cores moram em globals.css) ----------
 
-/** Sete faixas do viés: e3 (≤ −60) … c (−10 a +10) … d3 (> +60). */
-export function classeVies(score: number | null): string {
-  if (score === null) return "v-nd";
-  if (score < -60) return "v-e3";
-  if (score < -30) return "v-e2";
-  if (score < -10) return "v-e1";
-  if (score <= 10) return "v-c";
-  if (score <= 30) return "v-d1";
-  if (score <= 60) return "v-d2";
-  return "v-d3";
+export type Faixa = "e" | "ce" | "c" | "cd" | "d";
+
+/**
+ * Cinco faixas iguais de 40 pontos: esquerda (< −60), centro-esquerda (−60 a −20), centro (−20 a +20), centro-direita
+ * (+20 a +60) e direita (> +60). Os cortes são simétricos: −60 e +60 ficam no centro-esquerda e no centro-direita; −20 e
+ * +20, no centro.
+ */
+export function faixaVies(score: number): Faixa {
+  if (score < -60) return "e";
+  if (score < -20) return "ce";
+  if (score <= 20) return "c";
+  if (score <= 60) return "cd";
+  return "d";
 }
-export const FAIXAS_VIES: { classe: string; rotulo: string }[] = [
-  { classe: "v-e3", rotulo: "−100 a −60" }, { classe: "v-e2", rotulo: "−60 a −30" }, { classe: "v-e1", rotulo: "−30 a −10" },
-  { classe: "v-c", rotulo: "−10 a +10" }, { classe: "v-d1", rotulo: "+10 a +30" }, { classe: "v-d2", rotulo: "+30 a +60" }, { classe: "v-d3", rotulo: "+60 a +100" },
+export const FAIXAS_VIES: { id: Faixa; rotulo: string; de: string; ate: string }[] = [
+  { id: "e", rotulo: "Esquerda", de: "−100", ate: "−60" }, { id: "ce", rotulo: "Centro-esquerda", de: "−60", ate: "−20" },
+  { id: "c", rotulo: "Centro", de: "−20", ate: "+20" }, { id: "cd", rotulo: "Centro-direita", de: "+20", ate: "+60" },
+  { id: "d", rotulo: "Direita", de: "+60", ate: "+100" },
 ];
+export const ROTULO_FAIXA = Object.fromEntries(FAIXAS_VIES.map((f) => [f.id, f.rotulo])) as Record<Faixa, string>;
+
+export const classeVies = (score: number | null) => (score === null ? "v-nd" : `v-${faixaVies(score)}`);
 
 /** Quartis (25%, 50%, 75%) de uma lista de valores, por interpolação linear. */
 export function quartis(valores: number[]): [number, number, number] | null {
@@ -212,8 +219,20 @@ export function classeCusto(gasto: number | null, cortes: [number, number, numbe
   return gasto <= cortes[0] ? "c-1" : gasto <= cortes[1] ? "c-2" : gasto <= cortes[2] ? "c-3" : "c-4";
 }
 
-/** Cor da bancada na leitura Partido: cinco cores em rodízio, na ordem do hemiciclo (vizinhos nunca repetem). */
-export const classePartido = (indice: number) => `p-${indice % 5}`;
+/**
+ * Cor da bancada na leitura Partido: a cor aproximada da identidade do partido (classe `par-<sigla>` em globals.css);
+ * sigla sem cor cadastrada fica cinza (`par-outro`). "PC do B" → "par-pcdob", "UNIÃO" → "par-uniao".
+ */
+export const slugPartido = (sigla: string) => sigla.normalize("NFD").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+export const PARTIDOS_COM_COR = new Set([
+  "agir", "avante", "cidadania", "dc", "dem", "democrata", "mdb", "novo", "patriota", "pcdob", "pdt", "phs", "pl", "pmb", "pmn", "pode", "pp",
+  "ppl", "pps", "pr", "prb", "prd", "pros", "prp", "prtb", "psb", "psc", "psd", "psdb", "psl", "psol", "pt", "ptb", "ptc", "pv", "rede",
+  "republicanos", "solidariedade", "uniao",
+]);
+export function classePartido(sigla: string): string {
+  const s = slugPartido(sigla);
+  return PARTIDOS_COM_COR.has(s) ? `par-${s}` : "par-outro";
+}
 
 export const classeRenovacao = (r: Renovacao) => `r-${r}`;
 
@@ -241,15 +260,8 @@ function mediaScore(cs: LinhaCadeira[]): number | null {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 
-/** Onde um viés cai na barra da legenda (0 a 1): as sete faixas têm a mesma largura, então é a faixa mais a fração dentro dela. */
-export function posicaoNaEscala(score: number): number {
-  const cortes = [-100, -60, -30, -10, 10, 30, 60, 100];
-  const s = Math.max(-100, Math.min(100, score));
-  for (let i = 0; i < 7; i++) {
-    if (s <= cortes[i + 1]) return (i + (s - cortes[i]) / (cortes[i + 1] - cortes[i])) / 7;
-  }
-  return 1;
-}
+/** Onde um viés cai na barra da legenda (0 a 1): as faixas são iguais, então a barra é linear de −100 a +100. */
+export const posicaoNaEscala = (score: number) => (Math.max(-100, Math.min(100, score)) + 100) / 200;
 
 export function mediana(v: number[]): number | null {
   if (!v.length) return null;
@@ -288,13 +300,6 @@ export function bancadas(cadeiras: LinhaCadeira[], gastos: LinhaGastoPartido[], 
   });
 }
 
-/** Ordem da tabela em cada leitura: viés (esquerda → direita), custo por cadeira (maior primeiro), demais pelo tamanho. */
-export function ordenarBancadas(b: Bancada[], leitura: Leitura): Bancada[] {
-  if (leitura === "vies") return b;
-  if (leitura === "custo") return [...b].sort((x, y) => (y.custoPorCadeira ?? -1) - (x.custoPorCadeira ?? -1) || y.cadeiras - x.cadeiras);
-  return [...b].sort((x, y) => y.cadeiras - x.cadeiras || x.sigla.localeCompare(y.sigla));
-}
-
 // ---------- Números da casa ----------
 
 export interface Resumo {
@@ -302,7 +307,8 @@ export interface Resumo {
   partidos: number;
   /** média do viés das cadeiras (cada cadeira pesa igual) */
   viesMedio: number | null;
-  esquerda: number; centro: number; direita: number;
+  /** cadeiras em cada faixa do viés */
+  porFaixa: Record<Faixa, number>;
   /** custo da cadeira (pergunta 1): gasto de todas as campanhas ao cargo ÷ cadeiras em disputa no ano */
   custoCadeira: number | null;
   gastoMediano: number | null;
@@ -312,7 +318,6 @@ export interface Resumo {
 
 /**
  * Números da casa. `ufsSemResultado` ficam fora do custo da cadeira: há gasto, mas não há eleitos para dividir.
- * Centro: viés entre −10 e +10 (a mesma faixa neutra das cores).
  */
 export function resumo(cadeiras: LinhaCadeira[], gastos: LinhaGastoPartido[], ano: number, e: Escolha, ufsSemResultado: string[] = []): Resumo {
   const scores = cadeiras.map((c) => c.score).filter((v): v is number => v !== null);
@@ -322,9 +327,7 @@ export function resumo(cadeiras: LinhaCadeira[], gastos: LinhaGastoPartido[], an
     cadeiras: cadeiras.length,
     partidos: new Set(cadeiras.map((c) => c.sigla)).size,
     viesMedio: scores.length ? scores.reduce((s, v) => s + v, 0) / scores.length : null,
-    esquerda: scores.filter((s) => s < -10).length,
-    centro: scores.filter((s) => s >= -10 && s <= 10).length,
-    direita: scores.filter((s) => s > 10).length,
+    porFaixa: Object.fromEntries(FAIXAS_VIES.map((f) => [f.id, scores.filter((s) => faixaVies(s) === f.id).length])) as Record<Faixa, number>,
     custoCadeira: eleitos > 0 ? g.reduce((s, l) => s + l.gasto, 0) / eleitos : null,
     gastoMediano: mediana(cadeiras.map((c) => c.gasto).filter((v): v is number => v !== null)),
     semPrestacao: g.reduce((s, l) => s + l.sem_prestacao, 0),

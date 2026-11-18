@@ -27,9 +27,16 @@
   --f1: #2a78d6; --f2: #1baf7a; --f3: #eb6834; --f4: #6250d6; --f5: #e87ba4; --pub: #2a78d6; --priv: #eb6834; --fx2: #86b6ef; --fx3: #f5b08f;
   /* Pergunta 9: tipos de propaganda (física, audiovisual, digital). Matizes livres na P8 e na P10; claridades diferentes */
   --pp-fis: #8a4b2f; --pp-av: #a87708; --pp-dig: #0b7f8f; --pp-outra: #6f6f69;
-  /* Legislativo: viés em sete faixas, violeta (esquerda) · ardósia (centro) · petróleo (direita), sem cor de partido;
+  /* Legislativo: viés em cinco faixas, vermelho (esquerda) · cinza (centro) · azul (direita), a convenção usual;
      gasto do eleito em quatro azuis (quartos da casa) */
-  --ve3: #4c2a94; --ve2: #7a55c8; --ve1: #a993dc; --vc: #a7b0bf; --vd1: #86c1c7; --vd2: #2f8f9b; --vd3: #0b5f6b;
+  --vi-e: #b2182b; --vi-ce: #e48066; --vi-c: #b5bcc8; --vi-cd: #6aa6d2; --vi-d: #1f5fa8;
+  /* cores aproximadas da identidade visual de cada partido (leitura Partido do Legislativo); não vêm dos dados */
+  --par-pt: #c4122d; --par-pcdob: #8f1d21; --par-psol: #e3a500; --par-rede: #1f9e98; --par-psb: #f39200; --par-pdt: #d1495b;
+  --par-pv: #00994d; --par-cidadania: #d6247f; --par-pros: #f7931e; --par-mdb: #2f8f3e; --par-avante: #ee7d00; --par-psdb: #0067b1;
+  --par-solidariedade: #f26522; --par-psd: #e8a317; --par-pode: #2bb24c; --par-ptb: #3d3d3d; --par-pl: #1d3f8f; --par-pp: #3a8dde;
+  --par-republicanos: #00539f; --par-psc: #00a04b; --par-patriota: #00843d; --par-uniao: #0b2c7a; --par-novo: #f47920;
+  --par-dem: #7cb342; --par-psl: #2a3a8c; --par-phs: #7b3f98; --par-pmn: #c1272d; --par-dc: #1a5ea8; --par-prtb: #10804a;
+  --par-pmb: #e03c8a; --par-ppl: #d21f2b; --par-prp: #1f4e9c; --par-agir: #0072bc; --par-prd: #1c3f94; --par-democrata: #5b7fbf;
   --cu1: #c3d4f6; --cu2: #85a5ea; --cu3: #4470d6; --cu4: #1f3f9e;
 
   --raio: 8px; --gap: 8px; --margem: 16px;
@@ -56,7 +63,7 @@
     --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
     --fx2: #6da7ec; --fx3: #f0a07a;
     --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93;
-    --ve3: #c9b6ff; --ve2: #9d82ea; --ve1: #6c55ad; --vc: #56607a; --vd1: #2d7480; --vd2: #3fb0bd; --vd3: #8ee3ec;
+    --vi-e: #ff6b62; --vi-ce: #c4705c; --vi-c: #56607a; --vi-cd: #4d86b8; --vi-d: #6fb0ff;
     --cu1: #2b3d66; --cu2: #3c5fb5; --cu3: #6f97f2; --cu4: #b9cfff;
     color-scheme: dark;
   }
@@ -71,7 +78,7 @@
   --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
   --fx2: #6da7ec; --fx3: #f0a07a;
   --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93;
-  --ve3: #c9b6ff; --ve2: #9d82ea; --ve1: #6c55ad; --vc: #56607a; --vd1: #2d7480; --vd2: #3fb0bd; --vd3: #8ee3ec;
+  --vi-e: #ff6b62; --vi-ce: #c4705c; --vi-c: #56607a; --vi-cd: #4d86b8; --vi-d: #6fb0ff;
   --cu1: #2b3d66; --cu2: #3c5fb5; --cu3: #6f97f2; --cu4: #b9cfff;
   color-scheme: dark;
 }
@@ -2106,8 +2113,9 @@ a.q-ver:active { transform: scale(0.98); }
 .palco-dinheiro[aria-busy="true"] .mapa-abst { opacity: 0.45; transition: opacity 0.2s ease; }
 
 /* ---------- Legislativo (app/legislativo, components/Plenario.tsx) ----------
-   O hemiciclo e a tabela das bancadas são a mesma coisa: o realce cruzado vem de regras :has geradas na página. As
-   cadeiras não mudam de lugar entre as leituras; só a cor, que varre o arco da esquerda para a direita (--atraso). */
+   O plenário é o centro da página. Passar o mouse numa cadeira destaca a bancada (regras :has geradas na página) e abre
+   a ficha (DicaPlenario). As cadeiras não mudam de lugar entre as leituras; só a cor, que varre o arco da esquerda para
+   a direita (--atraso). */
 .leg-topo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 32px; align-items: end; padding: 28px 28px 24px; margin-bottom: var(--gap); }
 .leg-titulo h1 { margin-bottom: 6px; }
 .leg-sub { color: var(--muted); margin: 0; font-size: 17px; }
@@ -2122,107 +2130,85 @@ a.q-ver:active { transform: scale(0.98); }
 .alternar a:hover { color: var(--fg); }
 .alternar a[aria-current] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px color-mix(in srgb, var(--marinho-900) 16%, transparent); }
 
-.leg-corpo { align-items: start; }
-.leg-plenario { position: sticky; top: var(--gap); }
-.leg-plenario { padding: 20px 24px 22px; }
-.plenario-caixa { position: relative; }
+.leg-plenario { padding: 28px 32px 26px; margin-bottom: var(--gap); }
+.plenario-caixa { position: relative; max-width: 1180px; margin: 0 auto; }
 .plenario { display: block; width: 100%; height: auto; overflow: visible; }
 .cad { transition: fill 420ms var(--ease-out) var(--atraso, 0ms), opacity var(--t-hover) ease; cursor: pointer; }
-.cad.apagada { opacity: 0.14; }
-.plenario a:hover .cad { stroke: var(--fg); stroke-width: 2; }
+.plenario a:hover .cad { stroke: var(--fg); stroke-width: 2.5; }
 .cad-vazia { fill: none; stroke: var(--o); stroke-width: 1.2; }
 .cad-vazia.sem-resultado { stroke: var(--warn); stroke-dasharray: 2.5 2; }
-.cad-sigla { font: 600 22px var(--fonte), system-ui, sans-serif; fill: var(--muted); letter-spacing: 0.01em; transition: opacity var(--t-hover) ease; }
+.cad-sigla { font: 600 21px var(--fonte), system-ui, sans-serif; fill: var(--muted); letter-spacing: 0.01em; transition: opacity var(--t-hover) ease; }
 .plen-numero { font: 600 96px var(--fonte), system-ui, sans-serif; fill: var(--fg); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .plen-numero.longo { font-size: 70px; }
-.plen-legenda-texto { display: none; }
-.plen-legenda { font: 500 25px var(--fonte), system-ui, sans-serif; fill: var(--muted); }
+.plen-legenda { font: 500 24px var(--fonte), system-ui, sans-serif; fill: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .cad { transition: none; } }
 
 /* cores das leituras, nas cadeiras (fill) e nas amostras (background) */
-.cad.v-e3 { fill: var(--ve3); } .cad.v-e2 { fill: var(--ve2); } .cad.v-e1 { fill: var(--ve1); } .cad.v-c { fill: var(--vc); }
-.cad.v-d1 { fill: var(--vd1); } .cad.v-d2 { fill: var(--vd2); } .cad.v-d3 { fill: var(--vd3); } .cad.v-nd { fill: var(--o); }
-.cad.c-1 { fill: var(--cu1); } .cad.c-2 { fill: var(--cu2); } .cad.c-3 { fill: var(--cu3); } .cad.c-4 { fill: var(--cu4); }
-.cad.c-nd { fill: var(--o); }
-/* leitura Partido: cinco matizes sem vermelho e sem azul, para nenhuma bancada parecer a cor do próprio partido */
-.cad.p-0 { fill: var(--f2); } .cad.p-1 { fill: var(--f4); } .cad.p-2 { fill: var(--pp-av); } .cad.p-3 { fill: var(--f5); } .cad.p-4 { fill: var(--pp-fis); }
+.cad.v-e { fill: var(--vi-e); } .cad.v-ce { fill: var(--vi-ce); } .cad.v-c { fill: var(--vi-c); } .cad.v-cd { fill: var(--vi-cd); } .cad.v-d { fill: var(--vi-d); } .cad.v-nd { fill: var(--o); }
+.amostra.v-e { background: var(--vi-e); } .amostra.v-ce { background: var(--vi-ce); } .amostra.v-c { background: var(--vi-c); } .amostra.v-cd { background: var(--vi-cd); } .amostra.v-d { background: var(--vi-d); }
+.cad.c-1 { fill: var(--cu1); } .cad.c-2 { fill: var(--cu2); } .cad.c-3 { fill: var(--cu3); } .cad.c-4 { fill: var(--cu4); } .cad.c-nd { fill: var(--o); }
+.amostra.c-1 { background: var(--cu1); } .amostra.c-2 { background: var(--cu2); } .amostra.c-3 { background: var(--cu3); } .amostra.c-4 { background: var(--cu4); } .amostra.c-nd { background: var(--o); }
 .cad.r-reeleito { fill: var(--f1); } .cad.r-ja_eleito { fill: var(--f2); } .cad.r-estreante { fill: var(--f3); }
-.amostra { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: none; vertical-align: -1px; margin-right: 8px; background: var(--o); }
-.amostra.v-e3 { background: var(--ve3); } .amostra.v-e2 { background: var(--ve2); } .amostra.v-e1 { background: var(--ve1); } .amostra.v-c { background: var(--vc); }
-.amostra.v-d1 { background: var(--vd1); } .amostra.v-d2 { background: var(--vd2); } .amostra.v-d3 { background: var(--vd3); }
-.amostra.c-1 { background: var(--cu1); } .amostra.c-2 { background: var(--cu2); } .amostra.c-3 { background: var(--cu3); } .amostra.c-4 { background: var(--cu4); }
-.amostra.vazia { background: transparent; box-shadow: inset 0 0 0 1.5px var(--o); }
-.amostra.c-nd { background: var(--o); }
-.amostra.vazia.sem-resultado { box-shadow: inset 0 0 0 1.5px var(--warn); }
-.amostra.p-0 { background: var(--f2); } .amostra.p-1 { background: var(--f4); } .amostra.p-2 { background: var(--pp-av); } .amostra.p-3 { background: var(--f5); } .amostra.p-4 { background: var(--pp-fis); }
 .amostra.r-reeleito { background: var(--f1); } .amostra.r-ja_eleito { background: var(--f2); } .amostra.r-estreante { background: var(--f3); }
+/* leitura Partido: a cor aproximada da identidade de cada partido (tokens --par-* no topo); sem cor cadastrada, cinza */
+.cad.par-outro { fill: var(--o); }
+.cad.par-agir { fill: var(--par-agir); } .cad.par-avante { fill: var(--par-avante); } .cad.par-cidadania { fill: var(--par-cidadania); }
+.cad.par-dc { fill: var(--par-dc); } .cad.par-dem { fill: var(--par-dem); } .cad.par-democrata { fill: var(--par-democrata); }
+.cad.par-mdb { fill: var(--par-mdb); } .cad.par-novo { fill: var(--par-novo); } .cad.par-patriota { fill: var(--par-patriota); }
+.cad.par-pcdob { fill: var(--par-pcdob); } .cad.par-pdt { fill: var(--par-pdt); } .cad.par-phs { fill: var(--par-phs); }
+.cad.par-pl { fill: var(--par-pl); } .cad.par-pmb { fill: var(--par-pmb); } .cad.par-pmn { fill: var(--par-pmn); }
+.cad.par-pode { fill: var(--par-pode); } .cad.par-pp { fill: var(--par-pp); } .cad.par-ppl { fill: var(--par-ppl); }
+.cad.par-pps { fill: var(--par-cidadania); } .cad.par-pr { fill: var(--par-pl); } .cad.par-prb { fill: var(--par-republicanos); }
+.cad.par-prd { fill: var(--par-prd); } .cad.par-pros { fill: var(--par-pros); } .cad.par-prp { fill: var(--par-prp); }
+.cad.par-prtb { fill: var(--par-prtb); } .cad.par-psb { fill: var(--par-psb); } .cad.par-psc { fill: var(--par-psc); }
+.cad.par-psd { fill: var(--par-psd); } .cad.par-psdb { fill: var(--par-psdb); } .cad.par-psl { fill: var(--par-psl); }
+.cad.par-psol { fill: var(--par-psol); } .cad.par-pt { fill: var(--par-pt); } .cad.par-ptb { fill: var(--par-ptb); }
+.cad.par-ptc { fill: var(--par-agir); } .cad.par-pv { fill: var(--par-pv); } .cad.par-rede { fill: var(--par-rede); }
+.cad.par-republicanos { fill: var(--par-republicanos); } .cad.par-solidariedade { fill: var(--par-solidariedade); } .cad.par-uniao { fill: var(--par-uniao); }
+.amostra { display: inline-block; width: 11px; height: 11px; border-radius: 50%; flex: none; vertical-align: -1px; margin-right: 8px; background: var(--o); }
+.amostra.vazia { background: transparent; box-shadow: inset 0 0 0 1.5px var(--o); }
+.amostra.vazia.sem-resultado { box-shadow: inset 0 0 0 1.5px var(--warn); }
 
-.leg-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; font-size: var(--t-pequeno); color: var(--muted); }
+/* embaixo do plenário: a frase-resumo à esquerda, a legenda à direita */
+.leg-rodape { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 48px; align-items: start; max-width: 1180px; margin: 18px auto 0; }
+.leg-rodape .manchete { margin: 0; }
+.leg-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: var(--t-pequeno); color: var(--muted); }
 .leg-legenda ul { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; margin: 0; padding: 0; }
 .leg-legenda li { display: inline-flex; align-items: center; }
 .leg-legenda .amostra { margin-right: 6px; }
 .leg-polo { font-weight: 600; color: var(--fg); }
-.leg-escala { display: grid; grid-template-columns: auto minmax(160px, 420px) auto; align-items: center; gap: 4px 10px; }
-.leg-barra { position: relative; display: grid; grid-template-columns: repeat(7, 1fr); height: 12px; }
-.leg-barra > .amostra:first-child { border-radius: 6px 0 0 6px; } .leg-barra > .amostra:nth-child(7) { border-radius: 0 6px 6px 0; }
-.leg-media { position: absolute; top: -5px; bottom: -5px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--fg); box-shadow: 0 0 0 2px var(--panel); }
+.leg-escala { display: grid; width: 100%; gap: 6px; }
+.leg-barra { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); height: 14px; }
 .leg-barra .amostra { width: auto; height: 100%; border-radius: 0; margin: 0; }
-.leg-marcas { grid-column: 2; display: flex; justify-content: space-between; font-size: 12px; margin: 0 -10px; }
-.leg-legenda .leg-legenda-vazias { margin-left: auto; }
-.leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 12px 0 0; max-width: 72ch; }
-.leg-nota.aviso-causa { box-shadow: inset 3px 0 0 var(--warn); }
+.leg-barra > .amostra:first-child { border-radius: 7px 0 0 7px; } .leg-barra > .amostra:nth-child(5) { border-radius: 0 7px 7px 0; }
+.leg-media { position: absolute; top: -6px; bottom: -6px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--fg); box-shadow: 0 0 0 2px var(--panel); }
+.leg-faixas { display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; color: var(--fg); font-weight: 500; }
+.leg-marcas { display: flex; justify-content: space-between; font-size: 12px; margin: -2px -8px 0; }
+.leg-legenda-vazias { margin-top: 4px !important; }
+.leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 14px auto 0; max-width: 1180px; }
+.leg-nota.aviso-causa { box-shadow: inset 3px 0 0 var(--warn); padding-left: 12px; }
 
-.dica-cadeira { position: absolute; transform: translate(-50%, calc(-100% - 10px)); pointer-events: none; z-index: 2;
-  background: var(--tinta); color: var(--sobre-tinta); border-radius: 6px; padding: 8px 12px; font-size: 14px; line-height: 1.35;
-  display: grid; white-space: nowrap; box-shadow: 0 6px 18px color-mix(in srgb, var(--marinho-950) 28%, transparent); }
-.dica-cadeira span { opacity: 0.8; }
-.dica-cadeira .dica-valor { opacity: 1; font-weight: 600; }
-
-.leg-bancadas { padding: 22px 24px; }
-.leg-bancadas .manchete { margin-bottom: 18px; }
-.leg-tabela { max-height: none; overflow-x: auto; }
-.leg-tabela th abbr { text-decoration: none; cursor: help; }
-.leg-tabela table { font-size: 15px; }
-.leg-tabela :is(th, td) { padding: 9px 7px; }
-.leg-tabela thead th { line-height: 1.2; vertical-align: bottom; }
-.leg-tabela thead th { background: var(--panel); }
-.leg-tabela :is(th, td):not(:first-child) { text-align: right; }
-.leg-tabela tbody th { color: var(--fg); font-size: 15px; font-weight: 600; }
-.leg-tabela tbody th a { text-decoration: none; display: inline-flex; align-items: center; }
-.leg-tabela tbody th a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
-.leg-tabela tbody tr { transition: background-color var(--t-hover) ease; }
-.leg-tabela tbody tr[aria-current] { background: var(--panel2); }
-.leg-tabela tbody tr[aria-current] th a { text-decoration: underline; text-underline-offset: 0.2em; }
-.leg-tabela abbr { text-decoration: none; color: var(--muted); margin-left: 2px; cursor: help; }
-
-.leg-membros-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
-.leg-membros-topo h2 { margin: 0; }
-.leg-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 24px; }
-.leg-lista li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.leg-lista li .amostra { align-self: center; grid-row: 1 / span 2; }
-.leg-lista a { font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
-.leg-lista a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
-.leg-lista .muted { grid-column: 2; font-size: var(--t-pequeno); }
-.leg-lista-valor { grid-column: 3; grid-row: 1 / span 2; align-self: center; font-size: var(--t-pequeno); text-align: right; padding-left: 12px; }
+/* ficha da cadeira */
+.dica-cadeira { position: absolute; transform: translate(-50%, calc(-100% - 12px)); pointer-events: none; z-index: 3; width: 300px;
+  background: var(--tinta); color: var(--sobre-tinta); border-radius: var(--raio); padding: 14px 16px 12px; font-size: 14px; line-height: 1.35;
+  display: grid; gap: 10px; box-shadow: 0 10px 28px color-mix(in srgb, var(--marinho-950) 32%, transparent); }
+.dica-cadeira.abaixo { transform: translate(-50%, 12px); }
+.dica-topo { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 12px; align-items: center; }
+.dica-foto { width: 52px; height: 66px; border-radius: 6px; overflow: hidden; background: color-mix(in srgb, var(--sobre-tinta) 14%, transparent); display: grid; place-items: center; }
+.dica-foto .foto-cand { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dica-iniciais { font-weight: 600; font-size: 18px; }
+.dica-quem { display: grid; gap: 1px; min-width: 0; }
+.dica-quem b { font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
+.dica-quem span { color: color-mix(in srgb, var(--sobre-tinta) 72%, transparent); font-size: 13px; }
+.dica-dados { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--sobre-tinta) 18%, transparent); }
+.dica-dados dt { color: color-mix(in srgb, var(--sobre-tinta) 65%, transparent); font-size: 13px; }
+.dica-dados dd { margin: 0; font-weight: 600; display: flex; align-items: center; }
+.dica-dados .amostra { margin-right: 6px; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--sobre-tinta) 40%, transparent); }
+.dica-bancada { margin: 0; font-size: 13px; color: color-mix(in srgb, var(--sobre-tinta) 80%, transparent); }
+.dica-acao { margin: 0; font-size: 12px; color: color-mix(in srgb, var(--sobre-tinta) 60%, transparent); }
 
 @media (max-width: 1100px) {
   .leg-topo { grid-template-columns: 1fr; }
   .leg-alternar { grid-column: 1; grid-row: auto; justify-items: start; }
-  .leg-corpo > .s7, .leg-corpo > .s5 { grid-column: 1 / -1; }
-  .leg-plenario { position: static; }
-}
-@media (max-width: 640px) {
-  .leg-topo { padding: 22px 18px 18px; }
-  .leg-plenario, .leg-bancadas { padding: 16px; }
-  .alternar { max-width: 100%; flex-wrap: wrap; }
-  .plen-numero { font-size: 118px; }
-  .plen-numero.longo { font-size: 84px; }
-  .plen-legenda { display: none; }
-  .plen-legenda-texto { display: block; text-align: center; margin: 2px 0 0; font-size: var(--t-pequeno); color: var(--muted); }
-  .cad-sigla { font-size: 40px; }
-  .leg-marcas span:not(:first-child):not(:last-child) { visibility: hidden; }
-  .so-largo { display: none; }
-  .leg-plenario { position: static; }
-  .leg-escala { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .leg-legenda .leg-legenda-vazias { margin-left: 0; }
+  .leg-rodape { grid-template-columns: 1fr; }
 }

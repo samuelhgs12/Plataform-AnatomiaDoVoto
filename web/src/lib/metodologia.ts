@@ -303,13 +303,14 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     calculo: [
       "Cada cadeira é um eleito. Câmara e Assembleias: os eleitos do ano. Senado: a composição da legislatura, com os eleitos no ano e os eleitos quatro anos antes (o mandato é de oito anos).",
       "Viés: o do partido pelo qual a pessoa foi eleita, na eleição em que foi eleita, de −100 (esquerda) a +100 (direita), com o erro padrão da pesquisa. Os senadores eleitos em 2014, antes da pesquisa, levam o viés de 2018 do mesmo partido (o PMDB, que virou MDB em 2017, leva o do MDB). O viés médio da casa é a média das cadeiras, cada uma pesando igual. Partido que só mudou de nome (PMDB → MDB, PRB → Republicanos, PR → PL, PPS → Cidadania, PTC → Agir) aparece com o nome em vigor no ano da composição; fusões e incorporações ficam separadas.",
-      "As cadeiras ficam em ordem de viés, da esquerda para a direita; as cores do viés vão do violeta ao petróleo, sem as cores de nenhum partido. Nas leituras de custo, partido e renovação, as cadeiras não mudam de lugar: só a cor muda.",
+      "Faixas do viés, cinco de 40 pontos cada: esquerda (abaixo de −60), centro-esquerda (−60 a −20), centro (−20 a +20), centro-direita (+20 a +60) e direita (acima de +60). As cores seguem a convenção usual, do vermelho (esquerda) ao azul (direita); são as faixas do score, não uma classificação oficial dos partidos.",
+      "As cadeiras ficam em ordem de viés, da esquerda para a direita. Nas leituras de custo, partido e renovação, as cadeiras não mudam de lugar: só a cor muda. Na leitura Partido, as cores são aproximações da identidade visual de cada partido, escolhidas pelo projeto (não vêm dos dados).",
       "Custo da cadeira (pergunta 1): gasto de todas as campanhas ao cargo, inclusive as derrotadas e as que não chegaram a disputar, ÷ cadeiras em disputa no ano. Por partido, o gasto das campanhas do partido ÷ cadeiras que ele ganhou. Na cadeira, o gasto do próprio eleito, colorido pelo quarto da casa em que ele está.",
       "Renovação: reeleito venceu para a mesma casa e estado na eleição anterior (no Senado, oito anos antes); já eleito venceu outra eleição na base, para qualquer cargo, desde 1998; estreante não tem vitória na base.",
     ],
     limites: [
       "Só seis estados: o plenário inteiro da Câmara e do Senado mostra as outras cadeiras em contorno, sem partido.",
-      "O viés é do partido, não de cada parlamentar; e nem todo partido foi medido em toda onda da pesquisa (a tabela marca com * os valores que vêm de outra onda, de fusão ou de um partido de referência).",
+      "O viés é do partido, não de cada parlamentar; e nem todo partido foi medido em toda onda da pesquisa (a ficha de cada cadeira avisa quando o valor vem de outra onda, de fusão ou de um partido de referência).",
       "Quem assumiu como suplente não aparece: a cadeira é de quem foi eleito.",
       "Estreante quer dizer sem vitória na base (desde 1998 e só nestes seis estados), não sem carreira política.",
       "Valores de campanha sem correção pela inflação; não há despesas antes de 2018.",

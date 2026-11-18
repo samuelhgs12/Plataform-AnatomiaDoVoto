@@ -1,14 +1,15 @@
 import { hemiciclo, siglasNoArco, type Lugar } from "@/lib/legislativo";
 
 export interface CadeiraDesenho {
-  /** classe de cor da leitura (v-*, c-*, p-*, r-*) */
+  /** classe de cor da leitura (v-*, c-*, par-*, r-*) */
   classe: string;
-  /** índice da bancada, para o realce cruzado com a tabela */
+  /** índice da bancada: passar o mouse numa cadeira destaca a bancada inteira */
   bancada: number;
-  /** texto da dica: nome, partido e UF, e o valor na leitura */
-  nome: string; detalhe: string; valor: string;
+  /** texto do <title> (dica sem JS) */
+  titulo: string;
+  /** campos da ficha que a DicaPlenario lê, cada um vira data-<chave> */
+  ficha: Record<string, string>;
   href: string;
-  apagada?: boolean;
 }
 
 export interface RotuloBancada { bancada: number; sigla: string }
@@ -17,8 +18,8 @@ export interface RotuloBancada { bancada: number; sigla: string }
 const W = 1200, H = 590, CX = 600, CY = 560, R = 470, MARGEM = 110;
 
 /**
- * Hemiciclo da casa (componente de servidor, sem JS). Cada cadeira é um link para o perfil; o realce cruzado com a
- * tabela das bancadas é CSS (`:has`, regras geradas na página). `lugares` já vem na ordem do hemiciclo; as cadeiras de
+ * Hemiciclo da casa (componente de servidor, sem JS). Cada cadeira é um link para o perfil; passar o mouse destaca a
+ * bancada (CSS `:has`, regras geradas na página) e a DicaPlenario mostra a ficha a partir dos data-*. `lugares` já vem na ordem do hemiciclo; as cadeiras de
  * outros estados e as sem resultado só têm contorno. As siglas das maiores bancadas ficam do lado de fora do arco.
  */
 export function Plenario({ lugares, desenho, rotulos, numero, legenda, titulo }: {
@@ -43,9 +44,9 @@ export function Plenario({ lugares, desenho, rotulos, numero, legenda, titulo }:
     angulos.get(d.bancada)!.push(Math.atan2(-p.y, p.x));
     return (
       <a key={i} href={d.href} tabIndex={-1}>
-        <circle className={`cad ${d.classe}${d.apagada ? " apagada" : ""}`} data-b={d.bancada} data-n={d.nome} data-s={d.detalhe} data-v={d.valor}
+        <circle className={`cad ${d.classe}`} data-b={d.bancada} {...Object.fromEntries(Object.entries(d.ficha).map(([k, v]) => [`data-${k}`, v]))}
           style={{ "--atraso": `${atraso}ms` } as React.CSSProperties} cx={x.toFixed(1)} cy={y.toFixed(1)} r={r.toFixed(2)}>
-          <title>{`${d.nome} · ${d.detalhe} · ${d.valor}`}</title>
+          <title>{d.titulo}</title>
         </circle>
       </a>
     );
