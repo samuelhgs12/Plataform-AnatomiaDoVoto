@@ -2063,6 +2063,73 @@ a.q-ver:active { transform: scale(0.98); }
 /* camada Dinheiro do mapa: a lista de candidatos no painel escuro */
 .dinheiro-cand .rotulo { margin: 14px 0 4px; }
 .dinheiro-cand .linhas-cand li { border-bottom-color: var(--line); }
+
+/* Dinheiro: os dados aparecem após escolher um estado; as demais camadas mantêm seu comportamento. */
+.palco-dinheiro .mapa-abst .uf.dinheiro-neutro { fill: var(--noite-linha); }
+.dinheiro-inicial .etiqueta-sigla { transform: translateX(15px); }
+.dinheiro-inicial .etiqueta-valor { display: none; }
+.dinheiro-cand .custo-voto-candidato { color: var(--brilho); font-weight: 600; margin-top: 5px; }
+.dinheiro-cand .linhas-cand .despesas-candidato { grid-column: 2 / -1; }
+.despesas-candidato > summary { cursor: pointer; min-height: 44px; padding: 12px 0; color: var(--brilho); font-size: 14px; font-weight: 600; }
+.despesas-candidato-corpo { padding: 14px; margin-bottom: 8px; border: 1px solid var(--noite-linha); border-radius: var(--raio); background: var(--noite); }
+.despesas-candidato-corpo p { font-size: 14px; }
+.despesas-candidato-corpo button { color: var(--brilho); background: transparent; border: 1px solid var(--noite-linha); border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+.despesas-candidato-totais { display: flex; flex-wrap: wrap; gap: 12px 28px; margin-bottom: 14px; font-size: 14px; color: var(--noite-muted); }
+.despesas-candidato-totais b { display: block; margin-top: 4px; font-size: 18px; color: var(--sobre-noite); font-variant-numeric: tabular-nums; }
+.despesas-candidato-tabela { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+.despesas-candidato-tabela th, .despesas-candidato-tabela td { border-bottom: 1px solid var(--noite-linha); padding: 10px 8px; text-align: left; vertical-align: top; }
+.despesas-candidato-tabela thead th { font-size: 12px; color: var(--noite-muted); }
+.despesas-candidato-tabela tbody th { width: 60%; font-weight: 500; }
+.despesas-candidato-tabela .num { text-align: right; white-space: nowrap; }
+.despesas-candidato-tabela small { display: block; margin-top: 3px; font-size: 12px; color: var(--noite-muted); }
+.despesa-trilho { display: block; height: 5px; margin-top: 8px; border-radius: 3px; background: var(--noite3); overflow: hidden; }
+.despesa-trilho i { display: block; height: 100%; background: var(--brilho); }
+.despesas-candidato-nota { margin-bottom: 0; color: var(--noite-muted); line-height: 1.5; }
+.mg-identidade { display: flex; align-items: center; gap: 10px; }
+.mg-identidade .avatar { width: 40px; height: 48px; flex-shrink: 0; border-radius: 6px; overflow: hidden; font-size: 14px; }
+.mg-identidade .foto-cand { width: 100%; height: 100%; object-fit: cover; }
+.maiores-tabela .mg-custo-mobile { display: none; }
+.maiores-tabela .mg-detalhes > td { padding: 0 8px 4px; }
+/* a linha das despesas faz parte do candidato de cima: sem borda entre as duas e com o botão baixo */
+.maiores-tabela tr:has(+ .mg-detalhes) > * { border-bottom: 0; }
+.maiores-tabela .mg-detalhes .despesas-candidato > summary { min-height: 32px; padding: 0 0 8px 47px; font-size: 13px; }
+/* pergunta 1: busca de um candidato pelo nome */
+.din-busca-form { display: flex; gap: 8px; max-width: 640px; margin: 4px 0 12px; }
+.din-busca-form input[type=search] { flex: 1; min-width: 0; min-height: 44px; background: var(--noite); color: var(--sobre-noite); box-shadow: inset 0 0 0 1px var(--noite-linha); }
+.din-busca-form input[type=search]::placeholder { color: var(--noite-muted); }
+.din-busca-form input[type=search]:focus { box-shadow: inset 0 0 0 2px var(--brilho); }
+.din-busca-form button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; font: inherit; font-weight: 650; cursor: pointer; color: var(--noite); background: var(--brilho); }
+.din-busca-form button:focus-visible { outline: 2px solid var(--sobre-noite); outline-offset: 2px; }
+.din-busca .rotulo { margin: 8px 0 4px; }
+/* camada Dinheiro, eleições gerais: o estado aproximado não tem cidades por cima, então fica com a cor da faixa dele
+   (a regra do mapa escurece o estado para as cidades aparecerem, o que aqui o deixaria preto) */
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q0 { fill: var(--q0); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q1 { fill: var(--q1); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q2 { fill: var(--q2); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q3 { fill: var(--q3); }
+.palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q4 { fill: var(--q4); }
+/* autocompletar da busca: a lista abre embaixo do campo, clara sobre o painel escuro (como a busca da aba Candidato) */
+.din-busca-form.combo { max-width: 640px; flex-wrap: wrap; }
+.din-busca-campo { position: relative; flex: 1; min-width: 0; display: flex; }
+.din-busca-lista { top: 100%; background: var(--sobre-noite); color: var(--noite); }
+.din-busca-lista li[aria-selected="true"] { background: color-mix(in srgb, var(--noite) 10%, var(--sobre-noite)); }
+.din-busca-nome { display: block; font-weight: 650; }
+.din-busca-nome mark { background: color-mix(in srgb, var(--brilho) 40%, transparent); color: inherit; border-radius: 2px; }
+.din-busca-lista small { display: block; margin-top: 2px; font-size: 13px; color: color-mix(in srgb, var(--noite) 70%, var(--sobre-noite)); }
+.din-busca-status { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--noite-muted); }
+.din-busca-status:empty { display: none; }
+.linhas-lugar { margin-left: 6px; color: var(--noite-muted); font-size: 12.5px; }
+/* a tabela de despesas mostra todas as categorias, sem rolagem dentro da rolagem */
+.tabela-rolar:has(> .despesas-candidato-tabela) { max-height: none; }
+.maiores-tabela .despesas-candidato-tabela th { min-width: 0; white-space: normal; }
+@media (max-width: 620px) {
+  .dinheiro-cand .linhas-cand .despesas-candidato { grid-column: 1 / -1; }
+  .despesas-candidato-corpo { padding: 10px; }
+  .despesas-candidato-tabela { font-size: 12px; }
+  .despesas-candidato-tabela th, .despesas-candidato-tabela td { padding: 8px 4px; }
+  .maiores-tabela .mg-custo-mobile { display: block; color: var(--brilho); }
+  .maiores-tabela .mg-detalhes .despesas-candidato > summary { padding-left: 0; }
+}
 .camadas-apoio a.camada-link { color: var(--sobre-noite); text-decoration: underline; text-underline-offset: 3px; }
 .dinheiro-barras .barras li.link > a { margin-inline: 0; }   /* no painel, a barra clicável não passa da borda */
 .dinheiro-barras .barras.compacto li { grid-template-columns: minmax(0, 10em) minmax(48px, 1fr) auto; gap: 12px; min-width: 0; }
@@ -2086,5 +2153,297 @@ a.q-ver:active { transform: scale(0.98); }
 .dinheiro-metodo ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
 .dinheiro-comp summary, .dinheiro-comp summary h3, .dinheiro-comp h3, .dinheiro-comp h4 { color: var(--fg); }
 .bloco.noite .ver-todos > summary { color: var(--sobre-noite); }
-#dinheiro-painel .painel-num { font-size: clamp(30px, 2vw + 12px, 46px); overflow-wrap: anywhere; }   /* "R$ 28 milhões" cabe no cabeçalho */
 
+/* camada Dinheiro: cartão do lugar por cima do mapa (aparece no clique, sem rolar) e aviso enquanto a página troca */
+.cartao-lugar { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); z-index: 3; width: min(270px, 34%); padding: 16px 18px; border-radius: 12px;
+  background: var(--noite2); color: var(--sobre-noite); box-shadow: 0 12px 32px rgb(0 0 0 / 0.35); border: 1px solid var(--noite-linha); }
+.cartao-lugar h2 { margin: 2px 0 6px; font-size: 24px; line-height: 1.1; padding-right: 24px; }
+.cartao-rotulo { margin: 0; font-size: 12px; color: var(--noite-muted); }
+.cartao-valor { margin: 0 0 6px; color: var(--noite-muted); font-size: 14px; }
+.cartao-valor b { display: block; font-size: 30px; line-height: 1.1; color: var(--brilho); }
+.cartao-linha { margin: 0 0 4px; font-size: 14px; }
+.cartao-fechar { position: absolute; top: 8px; right: 12px; font-size: 22px; line-height: 1; color: var(--noite-muted); text-decoration: none; }
+.cartao-fechar:hover { color: var(--sobre-noite); }
+.carregando-mapa { display: none; position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; margin: 0; padding: 8px 16px;
+  border-radius: 999px; background: var(--noite2); color: var(--sobre-noite); font-weight: 600; }
+.palco-dinheiro[aria-busy="true"] .carregando-mapa { display: block; }
+.palco-dinheiro[aria-busy="true"] .mapa-abst, .palco-dinheiro[aria-busy="true"] .cartao-lugar { opacity: 0.45; transition: opacity 0.2s ease; }
+@media (max-width: 1000px) {
+  .cartao-lugar { display: none; }   /* no celular não há lado livre no mapa; o painel logo abaixo mostra o mesmo resumo */
+}
+.palco-dinheiro:has(.cartao-lugar) .lupa-dica { display: none; }   /* a dica da roda ficaria atrás do cartão */
+
+/* camada Dinheiro: o que pinta o mapa (chips na base do mapa), a ordem dos candidatos, a cobertura e os grupos de despesa */
+.ord-cand { margin: 6px 0 10px; }
+.bloco.noite .chips .chip { background: var(--noite2); color: var(--fg); border-color: transparent; }
+.bloco.noite .chips .chip.on { background: var(--brilho); color: var(--noite); }
+.cartao-aviso { color: var(--amarelo-400); }
+.dinheiro-grupos .barras.compacto li { grid-template-columns: minmax(0, 16em) minmax(48px, 1fr) auto; }
+.dinheiro-grupos .barras-rotulo small { display: block; color: var(--muted); font-size: 12px; }
+@media (max-width: 700px) { .dinheiro-grupos .barras-rotulo small { display: none; } }   /* no celular, só o nome do grupo */
+
+.dinheiro-grupos a, .dinheiro-cand .muted a { color: var(--brilho); }
+
+/* painel da camada Dinheiro: navegação por seções, fichas do cabeçalho e o bloco "de onde veio e para onde foi" */
+.painel-nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.painel-nav a { padding: 6px 12px; border-radius: 999px; background: var(--panel); color: var(--fg); font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid var(--line); }
+.painel-nav a:hover { background: var(--panel2); }
+
+/* camada Dinheiro, leitura de relance: a legenda com título, o cartão em selos, o cabeçalho do painel, os números grandes,
+   as notas em selos e as barras 100% de origem e destino. Rótulos pequenos em caixa alta; números grandes e tabulares. */
+.legenda-dinheiro { display: grid; gap: 8px; }
+.legenda-dinheiro .legenda-q { gap: 4px; }
+.legenda-dinheiro .legenda-q li { padding-right: 10px; }
+.legenda-titulo { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 13px; font-weight: 600; color: var(--sobre-noite); }
+.legenda-titulo span { font-size: 12px; font-weight: 500; color: var(--noite-muted); cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
+.cartao-selos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.cartao-selos:empty { display: none; }
+.cartao-selos span { padding: 3px 10px; border-radius: 999px; background: var(--noite3); font-size: 12.5px; font-weight: 600; }
+.cartao-selos .cartao-aviso { cursor: help; }
+.cartao-valor { line-height: 1.35; }
+
+.din-cab { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding: 12px 4px 4px; }
+.din-cab h2 { margin: 4px 0 0; font-size: clamp(30px, 1.6vw + 16px, 46px); font-weight: 700; line-height: 1.02; letter-spacing: -0.03em; }
+.din-cab .escolha-mun { min-width: min(280px, 100%); }
+.din-kicker, .din-kpi small, .empilhada figcaption span { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
+.din-kicker { margin: 0; color: var(--muted); }
+
+.din-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(118px, auto); gap: var(--gap); }
+.din-kpi { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border-radius: var(--raio); background: var(--noite); color: var(--sobre-noite); text-decoration: none; }
+.din-kpi small { color: var(--noite-muted); line-height: 1.3; }
+.din-kpi b { font-size: 28px; font-weight: 650; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.din-kpi > span { margin-top: auto; font-size: 13px; color: var(--noite-muted); }
+.din-kpi-principal { grid-column: span 2; grid-row: span 2; justify-content: center; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brilho) 45%, transparent), inset 0 4px 0 var(--brilho); }
+.din-kpi-principal small { font-size: 13px; }
+.din-kpi-principal > span { margin-top: 0; font-size: 15px; }
+.din-kpi-principal b { font-size: clamp(38px, 2.2vw + 14px, 68px); font-weight: 700; letter-spacing: -0.04em; color: var(--brilho); }
+.din-kpi-link { transition: background-color var(--t-hover) ease; }
+.din-kpi-link:hover { background: var(--noite2); }
+.din-kpi-link > span { color: var(--brilho); font-weight: 600; }
+.din-kpi .delta.sobe { color: var(--brilho); }
+.din-kpi .delta.desce { color: var(--fx2); }
+@media (max-width: 900px) { .din-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .din-kpi-principal { grid-column: 1 / -1; grid-row: auto; } }
+@media (max-width: 520px) { .din-kpi b { font-size: 22px; } .din-kpi { padding: 14px 16px; } }
+
+.din-notas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.din-notas li { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 13px; }
+.din-notas li[title] { cursor: help; }
+.din-notas .aviso { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.din-notas .ok { color: var(--ok); }
+
+.din-sec { margin: 0 0 16px; }
+.din-sec h3 { margin: 0; font-size: 21px; font-weight: 650; line-height: 1.2; letter-spacing: -0.01em; color: var(--sobre-noite); }
+.din-sec p { margin: 4px 0 0; font-size: 14px; color: var(--noite-muted); }
+.din-sec p b { color: var(--sobre-noite); }
+.din-rodape { margin: 16px 0 0; font-size: 12.5px; color: var(--noite-muted); }
+.din-rodape a { color: var(--brilho); }
+
+.empilhada { margin: 0 0 22px; }
+.empilhada figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.empilhada figcaption span { color: var(--noite-muted); }
+.empilhada figcaption b { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.emp-barra { display: flex; gap: 2px; height: 34px; border-radius: 8px; overflow: hidden; background: var(--noite2); }
+.emp-seg { display: flex; align-items: center; justify-content: center; flex-basis: 0; min-width: 3px; }
+.emp-seg em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--noite); }
+.emp-seg.o em { color: var(--sobre-noite); }
+.emp-legenda { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.emp-legenda li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; grid-template-areas: "cor nome pct" ". valor ."; align-items: center; column-gap: 10px; font-size: 14px; line-height: 1.3; }
+.emp-legenda i { grid-area: cor; } .emp-legenda span { grid-area: nome; } .emp-legenda b { grid-area: pct; }
+.emp-legenda i { width: 12px; height: 12px; border-radius: 3px; }
+.emp-legenda b { font-variant-numeric: tabular-nums; text-align: right; }
+.emp-legenda small { grid-area: valor; font-size: 12.5px; color: var(--noite-muted); font-variant-numeric: tabular-nums; }
+.empilhada .pub { background: var(--pub); } .empilhada .priv { background: var(--priv); } .empilhada .fx3 { background: var(--fx3); }
+.empilhada .o { background: var(--o); } .empilhada .f1 { background: var(--f1); } .empilhada .f2 { background: var(--f2); }
+.empilhada .f3 { background: var(--f3); } .empilhada .f4 { background: var(--f4); } .empilhada .f5 { background: var(--f5); }
+.din-origem .ver-todos { margin-top: 4px; }
+@media (max-width: 1000px) { #dinheiro-ranking, .din-origem { grid-column: 1 / -1; } }
+.legenda-titulo span { pointer-events: auto; }   /* a dica da escala aparece no mouse, mesmo com a base do palco deixando o clique passar */
+
+/* camada Dinheiro, as perguntas do painel: o número de cada pergunta, a tabela dos partidos, o custo do voto, os quartis
+   (três barras 100% alinhadas nas cores do mapa, do azul ao amarelo) e o mesmo cargo nos anos, lado a lado. */
+.din-num { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 10px; border-radius: 50%; background: var(--brilho); color: var(--noite); font-size: 14px; font-weight: 800; vertical-align: 2px; }
+.din-sec h3 { display: flex; align-items: center; }
+.din .delta.sobe { color: var(--brilho); } .din .delta.desce { color: var(--fx2); }
+
+.partidos-tabela, .quartis-tabela, .anos-cargo { width: 100%; border-collapse: collapse; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.partidos-tabela th, .partidos-tabela td, .quartis-tabela th, .quartis-tabela td, .anos-cargo th, .anos-cargo td { padding: 7px 8px; border-bottom: 1px solid var(--noite-linha); text-align: left; vertical-align: middle; }
+.partidos-tabela thead th, .quartis-tabela thead th, .anos-cargo thead th { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.partidos-tabela .num, .quartis-tabela .num, .anos-cargo .num { text-align: right; }
+.partidos-tabela tbody th { font-weight: 700; white-space: nowrap; width: 1%; }
+.partidos-tabela small, .quartis-tabela small { color: var(--noite-muted); font-size: 12.5px; }
+.pt-gasto { width: 60%; }
+.pt-gasto > div { display: grid; grid-template-columns: minmax(40px, 1fr) 118px 38px; align-items: center; gap: 10px; }
+.pt-gasto small { text-align: right; }
+.pt-trilho, .ac-trilho { display: block; height: 12px; border-radius: 3px; background: var(--noite2); overflow: hidden; }
+.pt-trilho i, .ac-trilho i { display: block; height: 100%; border-radius: 3px; background: var(--q3); }
+.pt-gasto b { font-weight: 650; white-space: nowrap; }
+.tabela-rolar:has(> .partidos-tabela) + .ver-todos { margin-top: 8px; }
+
+.voto-grande { margin: 4px 0 2px; display: flex; align-items: baseline; gap: 10px; }
+.voto-grande b { font-size: clamp(44px, 2.6vw + 18px, 72px); font-weight: 700; line-height: 1; letter-spacing: -0.04em; color: var(--brilho); font-variant-numeric: tabular-nums; }
+.voto-grande span { font-size: 15px; color: var(--noite-muted); }
+.voto-conta { margin: 0 0 18px; font-size: 14px; color: var(--noite-muted); }
+.din-voto .barras.compacto li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "rot val" "bar bar"; gap: 4px 12px; }
+.din-voto .barras-rotulo { grid-area: rot; font-size: 14.5px; } .din-voto .barras-valor { grid-area: val; text-align: right; } .din-voto .barras-trilho { grid-area: bar; height: 14px; }
+.din-voto .barras-barra.q1, .empilhada .q1, .empilhada-cor.q1 { background: var(--q1); }
+.din-voto .barras-barra.q2, .empilhada .q2, .empilhada-cor.q2 { background: var(--q2); }
+.din-voto .barras-barra.q3, .empilhada .q3, .empilhada-cor.q3 { background: var(--q3); }
+.din-voto .barras-barra.q4, .empilhada .q4, .empilhada-cor.q4 { background: var(--q4); }
+.empilhada-cor.o { background: var(--o); }
+
+.quartis { display: grid; gap: 4px; }
+.quartis-frase { margin: 0 0 16px; font-size: 19px; line-height: 1.4; }
+.quartis-frase em { font-style: normal; font-weight: 750; color: var(--q4); }
+.quartis-barras { display: grid; gap: 10px; margin-bottom: 18px; }
+.quartis-linha { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 12px; margin: 0; }
+.quartis-rot { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--noite-muted); line-height: 1.25; }
+.quartis-rot small { display: block; font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--sobre-noite); font-variant-numeric: tabular-nums; }
+.quartis-linha .emp-barra { height: 30px; }
+.empilhada-cor { display: inline-block; width: 11px; height: 11px; margin-right: 8px; border-radius: 3px; vertical-align: -1px; }
+
+.anos-cargo { min-width: 520px; }
+.anos-cargo tbody th { font-weight: 600; }
+.anos-cargo td { min-width: 150px; }
+.anos-cargo td b { display: block; margin-top: 4px; font-weight: 650; }
+.anos-cargo td:not(.on) b { color: var(--noite-muted); }
+.anos-cargo td:not(.on) .ac-trilho i { background: var(--q1); }
+.anos-cargo thead th a { color: var(--noite-muted); text-decoration: none; font-size: 14px; letter-spacing: 0; }
+.anos-cargo thead th.on a { color: var(--brilho); font-weight: 750; }
+.anos-cargo td.delta { font-size: 16px; font-weight: 700; white-space: nowrap; }
+
+@media (max-width: 1000px) { #dinheiro-voto { grid-column: 1 / -1; } }
+@media (max-width: 1000px) { #dinheiro-origem { grid-column: 1 / -1; } }
+@media (max-width: 620px) { .quartis-linha { grid-template-columns: 1fr; gap: 4px; } .pt-gasto { width: auto; } .pt-gasto > div { display: block; } .pt-gasto small, .pt-trilho, .pt-de { display: none; } .partidos-tabela { font-size: 13.5px; } .partidos-tabela tbody th { font-size: 12.5px; } .anos-cargo { min-width: 0; font-size: 13.5px; } .anos-cargo td { min-width: 0; } .anos-cargo th, .anos-cargo td { padding: 6px 4px; } .partidos-tabela th, .partidos-tabela td { padding: 6px 5px; } }
+.tabela-rolar:has(> .partidos-tabela), .tabela-rolar:has(> .anos-cargo) { max-height: none; }
+
+/* camada Dinheiro: quem mais gastou, cada cadeira, "de cada 100" e a nuvem de propaganda */
+.din-quem { margin: 0 0 12px; }
+.maiores-tabela, .cadeiras-tabela, .fundos-tabela { width: 100%; border-collapse: collapse; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+.maiores-tabela th, .maiores-tabela td, .cadeiras-tabela th, .cadeiras-tabela td, .fundos-tabela th, .fundos-tabela td { padding: 7px 8px; border-bottom: 1px solid var(--noite-linha); text-align: left; vertical-align: middle; }
+.maiores-tabela thead th, .cadeiras-tabela thead th, .fundos-tabela thead th { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.maiores-tabela .num, .cadeiras-tabela .num, .fundos-tabela .num { text-align: right; }
+.maiores-tabela tbody th { font-weight: 650; }
+.maiores-tabela tbody th a, .cadeiras-tabela tbody th a, .fundos-tabela tbody th a { color: var(--sobre-noite); }
+.maiores-tabela tbody th small { display: block; margin-top: 2px; font-weight: 500; font-size: 12.5px; color: var(--noite-muted); }
+.maiores-tabela .pt-gasto { width: 34%; } .maiores-tabela .pt-gasto > div { grid-template-columns: minmax(40px, 1fr) 118px; }
+.mg-pos { color: var(--noite-muted); width: 1%; }
+.mg-res { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: var(--noite2); color: var(--noite-muted); }
+.mg-res.eleito { background: var(--accent); color: var(--on-accent); }
+.cadeiras-tabela tbody tr.on th a, .fundos-tabela tbody tr.on th a { color: var(--brilho); font-weight: 750; }
+.cadeiras-tabela tbody tr:not(.on) .pt-trilho i { background: var(--q1); }
+.cadeiras-tabela .pt-gasto { width: 40%; } .cadeiras-tabela .pt-gasto > div { grid-template-columns: minmax(40px, 1fr) 118px; }
+.fundos-tabela { margin-top: 18px; max-width: 720px; }
+.tabela-rolar:has(> .maiores-tabela), .tabela-rolar:has(> .cadeiras-tabela), .tabela-rolar:has(> .fundos-tabela) { max-height: none; }
+
+.cem-par { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px 40px; }
+.cem { margin: 0; }
+.cem figcaption { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.cem figcaption b { font-size: 44px; line-height: 1; font-weight: 700; color: var(--sobre-noite); font-variant-numeric: tabular-nums; }
+.cem figcaption span { font-size: 14.5px; color: var(--noite-muted); max-width: 22ch; }
+.cem-grade { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-width: 300px; }
+.cem-grade i { aspect-ratio: 1; border-radius: 3px; }
+.cem-grade .pub, .cem-legenda .pub { background: var(--pub); } .cem-grade .fx2, .cem-legenda .fx2 { background: var(--fx2); }
+.cem-grade .priv, .cem-legenda .priv { background: var(--priv); } .cem-grade .o, .cem-legenda .o { background: var(--o); }
+.cem-grade .sc, .cem-legenda .sc { background: transparent; box-shadow: inset 0 0 0 1.5px var(--noite-muted); }
+.cem-legenda { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; font-size: 14px; color: var(--noite-muted); }
+.cem-legenda i { display: inline-block; width: 11px; height: 11px; margin-right: 8px; border-radius: 3px; vertical-align: -1px; }
+.cem-legenda b { color: var(--sobre-noite); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.cem-poucos { font-size: 18px; margin: 0; }
+
+/* a nuvem da P9 nasce para fundo claro: no painel escuro, os tons do tema escuro */
+.din { --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93; }
+.din-nuvem { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px 32px; align-items: center; }
+.din-nuvem .nuvem { margin: 0; }
+@media (max-width: 1000px) { .din-nuvem { grid-template-columns: 1fr; } }
+@media (max-width: 620px) {
+  .mg-pub, .cd-total { display: none; }
+  .maiores-tabela, .cadeiras-tabela, .fundos-tabela { font-size: 13.5px; }
+  .maiores-tabela th, .maiores-tabela td, .cadeiras-tabela th, .cadeiras-tabela td, .fundos-tabela th, .fundos-tabela td { padding: 6px 4px; }
+  .maiores-tabela .pt-gasto > div, .cadeiras-tabela .pt-gasto > div { display: block; }
+  .cem figcaption b { font-size: 36px; }
+}
+.maiores-tabela .num, .cadeiras-tabela .num, .fundos-tabela .num, .cadeiras-tabela tbody th { white-space: nowrap; }
+.maiores-tabela tbody th { min-width: 170px; }
+.maiores-tabela .pt-gasto { width: 26%; }
+.cem figcaption span { max-width: 30ch; }
+.cem-grade { max-width: 270px; }
+.cem-grade .o, .cem-legenda .o { background: var(--noite-muted); opacity: 0.55; }
+.din-pecas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-variant-numeric: tabular-nums; }
+.din-pecas li { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(30px, 1fr) 3.2em minmax(0, 7.5em); align-items: center; gap: 10px; font-size: 14.5px; }
+.din-pecas li > span:first-child { font-weight: 650; color: var(--sobre-noite); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.din-pecas-trilho { display: block; height: 10px; border-radius: 3px; background: var(--noite2); overflow: hidden; }
+.din-pecas-trilho i { display: block; height: 100%; border-radius: 3px; background: var(--q3); }
+.din-pecas b { text-align: right; } .din-pecas small { color: var(--noite-muted); font-size: 13px; white-space: nowrap; }
+@media (max-width: 620px) { .maiores-tabela tbody th { min-width: 0; } .maiores-tabela .mg-pos, .maiores-tabela thead th:first-child { display: none; } .maiores-tabela .pt-gasto b { font-size: 13px; } .mg-res { padding: 2px 6px; font-size: 11.5px; } }
+
+/* camada Dinheiro, acabamento: atalhos numa linha que acompanha a rolagem, números sem buraco na grade, uma cor só para
+   o dinheiro gasto (a do número grande), blocos 3 e 4 em largura cheia com duas colunas por dentro, cartões por cargo e
+   barras na tabela de quem dependeu do dinheiro público */
+.din .painel-nav { position: sticky; top: 0; z-index: 4; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 8px 0; background: var(--bg); }
+.din .painel-nav::-webkit-scrollbar { display: none; }
+.din .painel-nav a { flex: none; }
+.din-kpis > .din-kpi:nth-child(2):last-child { grid-column: span 2; }
+.din-kpis > .din-kpi:not(.din-kpi-principal):nth-child(4):last-child { grid-column: span 2; }
+@media (min-width: 901px) {
+  .din-kpis > .din-kpi:nth-child(2):last-child, .din-kpis:has(> :nth-child(3):last-child) > .din-kpi:not(.din-kpi-principal) { grid-row: span 2; }
+}
+.din-kpi:not(.din-kpi-principal) b { font-size: 24px; }
+
+.din .bloco.noite { padding: 26px 28px 24px; }
+.din-sec { padding-bottom: 14px; border-bottom: 1px solid var(--noite-linha); margin-bottom: 18px; }
+.din-sec h3 { font-size: 22px; }
+.din-sec p { font-size: 14.5px; line-height: 1.45; }
+.din-rodape { padding-top: 4px; }
+
+.din .pt-trilho, .din .fd-trilho, .din .din-pecas-trilho { background: color-mix(in srgb, var(--sobre-noite) 9%, transparent); }
+.din .pt-trilho i, .din .din-pecas-trilho i { background: var(--brilho); }
+.din .ac-trilho i { background: var(--brilho); }
+.din .mg-res.eleito { background: var(--confirma); color: var(--noite); }
+.din .emp-seg { overflow: hidden; }
+.din .emp-seg em { white-space: nowrap; }
+
+.din-duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 40px; align-items: start; }
+.din-duas .empilhada { margin-bottom: 4px; }
+.din-voto .din-duas { align-items: center; }
+
+.cadeiras { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; }
+.cadeiras a { display: flex; flex-direction: column; height: 100%; padding: 16px 18px; border-radius: var(--raio); background: var(--noite3); color: var(--sobre-noite); text-decoration: none; box-shadow: inset 0 0 0 1px var(--noite-linha); transition: background-color var(--t-hover) ease; }
+.cadeiras a:hover { background: var(--noite-linha); }
+.cadeiras a:focus-visible { outline: 2px solid var(--brilho); outline-offset: 2px; }
+.cadeiras li.on a { box-shadow: inset 0 0 0 2px var(--brilho); }
+.cd-cargo { font-size: 12px; font-weight: 650; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.cadeiras li.on .cd-cargo, .cadeiras li.on .cd-valor { color: var(--brilho); }
+.cd-valor { margin-top: 10px; font-size: 28px; white-space: nowrap; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.cd-un { margin-bottom: 12px; font-size: 13px; color: var(--noite-muted); }
+.cd-linha { margin-top: auto; font-size: 13px; line-height: 1.4; color: var(--noite-muted); }
+.cd-linha + .cd-linha { margin-top: 2px; }
+
+.din .fundos-tabela { max-width: none; }
+.fd-celula { white-space: nowrap; }
+.fd-trilho { display: inline-block; width: clamp(48px, 12vw, 140px); height: 8px; margin-right: 10px; border-radius: 4px; vertical-align: middle; overflow: hidden; }
+.fd-trilho i { display: block; height: 100%; border-radius: 4px; background: var(--pub); }
+.fd-celula b { font-weight: 650; font-variant-numeric: tabular-nums; }
+@media (max-width: 620px) {
+  .din .bloco.noite { padding: 20px 16px 18px; }
+  .fd-trilho { display: none; }
+  .cd-valor { font-size: 22px; }
+  .cadeiras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cadeiras a { padding: 14px; }
+}
+
+/* camada Dinheiro sem o mini-mapa (o mapa já está no palco, logo acima): o painel ocupa a largura toda e, na tela
+   larga, os blocos de meia largura (MEIAS, em src/lib/dinheiro.ts) dividem a linha; "dense" sobe o par para junto do
+   vizinho mesmo com um bloco inteiro entre eles no HTML */
+@media (min-width: 1001px) {
+  .observatorio > .painel.din { grid-column: 1 / -1; grid-auto-flow: row dense; }
+}
+@media (min-width: 1100px) {
+  .painel.din > .meia { grid-column: span 6; }
+}
+.painel.din > .meia .anos-cargo { min-width: 0; }
+.painel.din > .meia .anos-cargo td { min-width: 0; }
+.painel.din > .meia .anos-cargo td.delta { font-size: 14px; }
+.din .dinheiro-metodo > summary { color: var(--sobre-noite); }
+.din .dinheiro-metodo ul { color: var(--noite-muted); }
+/* na largura cheia, as legendas das barras 100% (origem e destino) em colunas, sem vão entre o nome e a parte */
+.painel.din > .din-origem:not(.meia) .emp-legenda { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 48px; }

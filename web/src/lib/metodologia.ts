@@ -291,6 +291,30 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 };
 
 /** As dez perguntas de pesquisa, no texto do dossiê. Sem `id`, a plataforma ainda não responde: a /sobre diz "Em breve". */
+/**
+ * O "Como calculamos" da camada Dinheiro do mapa (VisaoDinheiro): além da regra da análise, as medidas e os blocos que só
+ * o mapa mostra (gasto por eleitor, cada cadeira, quartis, quem mais gastou...). A página /analises/dinheiro e a /sobre
+ * usam METODOLOGIA.dinheiro.
+ */
+export const CALCULO_MAPA_DINHEIRO: string[] = [
+      "Gasto por vaga: soma dos gastos declarados por todas as campanhas ao cargo, inclusive as derrotadas, ÷ número de vagas. Não é salário nem o custo do mandato. Cidades de porte semelhante: a mediana das cidades com eleitorado parecido; estado: soma de todos os gastos ÷ soma de todas as vagas.",
+      "Gasto por eleitor: a mesma soma de gastos ÷ eleitores aptos do lugar no 1º turno. Parte pública: dinheiro dos fundos Eleitoral e Partidário ÷ tudo o que as campanhas ao cargo receberam. No mapa, os estados ficam em três faixas (terços dos seis) e as cidades em faixas fixas, iguais em todos os estados e anos.",
+      "Cobertura: junto do número vai quantas candidaturas têm prestação de contas final na base. Quem não tem entra com zero nas somas (o valor é desconhecido, e o total pode estar incompleto). “Na base” não quer dizer contas aprovadas pela Justiça Eleitoral.",
+      "Onde o dinheiro foi gasto: as despesas em grupos de categoria do TSE (propaganda impressa e de rua, internet, rádio e TV, militância e eventos, pessoal, serviços, transporte, estrutura, outros). São valores contratados, não pagos, e o município é o da candidatura, não o do fornecedor.",
+      "Todo o dinheiro de campanha (P2): o maior valor entre receitas e despesas declaradas, para considerar também campanhas que receberam material. Só o dinheiro público (P8): o que veio do Fundo Eleitoral e do Fundo Partidário, inclusive por meio de outro candidato.",
+      "Prefeito, governador e senador: se quem teve o maior gasto declarado venceu. Ficam de fora disputas com um só candidato, prestação de contas incompleta, sem gasto ou com empate no maior gasto.",
+      "Teste estatístico: comparação de duas proporções com 95% de confiança; o projeto só destaca diferenças de pelo menos 20% (regra do projeto). Sem diferença estatística não quer dizer sem relação; com diferença, não quer dizer causa.",
+      "Fonte: TSE (prestação de contas final ou regularização). Só titulares, eleições ordinárias e quem disputou; dinheiro de 2018 em diante. Quem não tem a prestação final na base aparece como “Não informado”. Campanhas que não chegaram a disputar ficam fora daqui; a Pergunta 1 soma o gasto delas no custo da cadeira, e a página diz quanto é quando há diferença.",
+      "Eleição anterior: a variação é nominal, sem correção pela inflação, e só entre eleições do mesmo tipo (vereador 2020 × 2024; deputado 2018 × 2022).",
+      "Quanto cada partido gastou: a soma dos gastos declarados pelas campanhas do partido ao cargo, no mesmo recorte do número (cidade, porte, estado ou os seis). Quanto custou um voto: esse gasto ÷ votos nominais no 1º turno (o voto só na legenda não entra).",
+      "Quartis: os candidatos que entregaram as contas e declararam algum gasto, em quatro grupos de tamanho aproximado, do que menos ao que mais gastou, comparando cada um com os do mesmo recorte (valores iguais ficam no mesmo grupo). Quem não declarou gasto e quem não entregou as contas aparecem à parte. Numa cidade, só com pelo menos 8 candidatos com gasto (não vale para prefeito).",
+      "Ano a ano: o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar; valores da época, e as partes (parte pública, fatia dos 25% que mais gastaram) comparadas em pontos percentuais.",
+      "Quem mais gastou: as 10 campanhas de maior gasto declarado no recorte, entre todos os que disputaram ou só entre os eleitos; a parte pública é o que veio do Fundo Eleitoral e do Fundo Partidário no que a campanha recebeu.",
+      "Cada cadeira: gasto de todas as campanhas ao cargo ÷ cadeiras em disputa no recorte; o eleito típico é a mediana do gasto dos eleitos que entregaram as contas.",
+      "Dependeu do dinheiro público: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário. “De cada 100” arredonda pelos maiores restos para somar 100; com menos de 20 pessoas, mostra a conta de verdade (ex.: 2 de 3).",
+      "Propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo mesmo dicionário da Pergunta 9; o tamanho da palavra é o valor contratado. Dá para ver todos os candidatos ou só os eleitos; o filtro de porte não se aplica à nuvem.",
+];
+
 export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [
   { n: 1, texto: "Qual é o custo por cadeira conquistada?", id: "p1" },
   { n: 2, texto: "Existe relação entre o patrimônio do candidato e a taxa de sucesso eleitoral?", id: "p2" },

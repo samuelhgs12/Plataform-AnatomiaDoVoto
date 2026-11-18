@@ -157,6 +157,14 @@ class Despesas(BaseModel):
     n_comparaveis: int
 
 
+class DespesasCandidato(BaseModel):
+    id_candidatura: int
+    prestou: bool
+    total: float | None
+    propaganda: float | None
+    categorias: list[CategoriaGasto]
+
+
 class CategoriaPropaganda(BaseModel):
     origem: str          # categoria original do TSE (origem_despesa)
     grupo: str           # propaganda_fisica, propaganda_audiovisual ou propaganda_digital
@@ -260,6 +268,11 @@ class CandidatoLocal(Eleito):
     """Um candidato (eleito ou não) a prefeito ou vereador num município. Só dados públicos da candidatura."""
     eleito: bool
     resultado: str
+
+
+class CandidatoBuscaDinheiro(CandidatoLocal):
+    """Um candidato achado pela busca da seção Dinheiro (P1); nas municipais, com a cidade."""
+    municipio: str | None = None
 
 
 class Saude(BaseModel):

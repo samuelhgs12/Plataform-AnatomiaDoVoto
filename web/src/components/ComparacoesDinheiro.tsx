@@ -97,7 +97,7 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
             <h4>Gasto por vaga</h4>
             <BarrasH compacto titulo={`Gasto por vaga de ${cargo} em cada estado, ${ano}`}
               linhas={estadosGasto.map((e) => ({ chave: e.uf, rotulo: e.nome, valor: e.valor ?? 0, classe: !uf || uf === e.uf ? "pub" : "fx2",
-                texto: e.valor === null ? "Não informado" : reais(e.valor), subtexto: e.conta ? `${reais(e.conta.gasto)} ÷ ${inteiro(e.conta.vagas)} vagas` : "",
+                texto: e.valor === null ? "Não informado" : reais(e.valor), subtexto: !noite && e.conta ? `${reais(e.conta.gasto)} ÷ ${inteiro(e.conta.vagas)} vagas` : "",
                 href: hrefUf(e.uf), atual: uf === e.uf }))} />
           </div>}
           <div className="dinheiro-barras">
@@ -119,10 +119,10 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
           <summary><Titulo id="h-comp">Quem teve mais dinheiro se elegeu mais?</Titulo></summary>
           <p className="comparacao-sub">{uf ? nomeUf : "Seis estados"} · {cargo.toLowerCase()} · {ano} · todos os candidatos{uf ? " do estado" : ""}{mun ? ` (não só de ${lugar})` : ""}. Cada candidato é comparado com os concorrentes da mesma disputa.</p>
           <div className="chips" role="group" aria-label="Medir pelo">
-            <Link href={hrefMedir("recursos")} scroll={false} className={`chip${medir === "recursos" ? " on" : ""}`} aria-current={medir === "recursos" ? "true" : undefined}>Todo o dinheiro</Link>
+            <Link href={hrefMedir("recursos")} scroll={false} className={`chip${medir === "recursos" ? " on" : ""}`} aria-current={medir === "recursos" ? "true" : undefined}>{noite && majoritario ? "Quem mais gastou" : "Todo o dinheiro"}</Link>
             <Link href={hrefMedir("publico")} scroll={false} className={`chip${medir === "publico" ? " on" : ""}`} aria-current={medir === "publico" ? "true" : undefined}>Só o dinheiro público</Link>
           </div>
-          <p className="escala">{medir === "recursos" ? "Todo o dinheiro: o maior valor entre o que o candidato recebeu e o que gastou (considera também quem ganhou material de campanha)." : "Dinheiro público: o que veio do Fundo Eleitoral e do Fundo Partidário."}</p>
+          <p className="escala">{medir === "recursos" ? (noite && majoritario ? `Para ${cargo.toLowerCase()}, a medida é o gasto declarado de cada candidato: se o que mais gastou na disputa venceu.` : "Todo o dinheiro: o maior valor entre o que o candidato recebeu e o que gastou (considera também quem ganhou material de campanha).") : "Dinheiro público: o que veio do Fundo Eleitoral e do Fundo Partidário."}{noite && " A escolha vale só para esta comparação, não para as cores do mapa."}</p>
 
           {medir === "recursos" && majoritario ? (
             maior.disputas === 0 ? <p className="muted">Sem disputas comparáveis.</p> : (

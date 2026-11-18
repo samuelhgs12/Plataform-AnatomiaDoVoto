@@ -391,7 +391,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9"]
+    assert client.get("/api/analises").json() == ["dinheiro", "municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -478,9 +478,25 @@ def test_eleitos_do_estado(client):
     assert client.get("/api/estados/MG/eleitos?ano=2022").json() == []   # Maria disputou e não se elegeu
 
 
+def test_analise_dinheiro_despesas_em_grupos(client):
+    """Onde o dinheiro foi gasto: grupos de categoria do TSE por eleição, cargo, UF e município; sem transferências nem
+    prestação parcial. 'Serviços advocatícios' cai no grupo dos serviços profissionais."""
+    t = client.get("/api/analises/dinheiro?tabela=despesas").json()["despesas"]
+    assert t["colunas"] == ["ano", "cargo", "uf", "id_municipio", "grupo", "valor", "despesas"]
+    linhas = {tuple(l[:5]): l[5:] for l in t["linhas"]}
+    assert linhas[(2020, "Vereador", "MG", 1, "propaganda_fisica")] == [3000.0, 1]     # a parcial (500) fica de fora
+    assert linhas[(2020, "Vereador", "MG", 1, "propaganda_digital")] == [1500.0, 1]
+    assert linhas[(2020, "Vereador", "MG", 1, "profissionais")] == [1000.0, 1]
+    assert linhas[(2020, "Prefeito", "PE", 2, "propaganda_digital")] == [4000.0, 1]
+    assert not any(l[4] == "transferencia" for l in t["linhas"])
+    assert sum(v[0] for v in linhas.values()) == 3000 + 1500 + 1000 + 4000 + 1000
+
+
 def test_analise_municipios(client):
     dados = client.get("/api/analises/municipios").json()
     assert set(dados) == {"municipios", "resumo", "estados"}
+    # estados: eleitorado (gasto por eleitor) e o gasto de quem não chegou a disputar (o que a pergunta 1 soma a mais)
+    assert {"eleitorado", "nao_disputou_com_gasto", "gasto_nao_disputou"} <= set(dados["estados"]["colunas"])
     resumo = [dict(zip(dados["resumo"]["colunas"], l)) for l in dados["resumo"]["linhas"]]
     # Alvorada (MG) 2020: Maria eleita vereadora; gasto sem a transferência de 700 nem a prestação parcial
     alvorada = next(r for r in resumo if r["id_municipio"] == 1 and r["ano"] == 2020)
@@ -610,3 +626,63 @@ def test_votos_por_municipio(client):
     r = client.get("/api/candidaturas/10/votos-municipio").json()
     assert [(x["id_municipio"], x["votos"], x["posicao"]) for x in r] == [(1, 3000, 2), (4, 2000, 1)]
     assert client.get("/api/candidaturas/999/votos-municipio").status_code == 404
+
+
+def test_analise_dinheiro_cargos_e_maiores(client):
+    """Camada Dinheiro: cada cadeira e "de cada 100" (tabela cargos) e quem mais gastou (tabela maiores), por recorte."""
+    dados = client.get("/api/analises/dinheiro?tabela=cargos&tabela=maiores").json()
+    cargos = [dict(zip(dados["cargos"]["colunas"], l)) for l in dados["cargos"]["linhas"]]
+    ver = next(c for c in cargos if (c["ano"], c["cargo"], c["uf"], c["porte"]) == (2020, "Vereador", "MG", None))
+    # Maria: eleita, gastou 5500 (sem a transferência nem a parcial) e recebeu mais da metade do Fundo Eleitoral
+    assert (ver["candidatos"], ver["eleitos"], ver["gasto"], ver["gasto_eleitos"], ver["mediana_eleito"]) == (1, 1, 5500.0, 5500.0, 5500.0)
+    assert (ver["maioria"], ver["el_maioria"], ver["nada"] + ver["parte"] + ver["sem_receita"] + ver["sem_contas"]) == (1, 1, 0)
+    # deputado estadual de MG em 2022: dois candidatos sem prestação final, nenhum eleito
+    dep = next(c for c in cargos if (c["ano"], c["cargo"], c["uf"], c["porte"]) == (2022, "Deputado estadual", "MG", None))
+    assert (dep["candidatos"], dep["eleitos"], dep["sem_contas"], dep["mediana_eleito"]) == (2, 0, 2, None)
+    # os seis estados (uf nula) somam os estados
+    assert next(c for c in cargos if (c["ano"], c["cargo"], c["uf"], c["porte"]) == (2020, "Vereador", None, None))["gasto"] == 5500.0
+
+    maiores = [dict(zip(dados["maiores"]["colunas"], l)) for l in dados["maiores"]["linhas"]]
+    # nunca dados pessoais além do nome de urna
+    assert not {"titulo_eleitoral", "nome_civil", "dt_nascimento", "cpf"} & set(dados["maiores"]["colunas"])
+    mg = [m for m in maiores if (m["ano"], m["cargo"], m["uf"], m["porte"]) == (2020, "Vereador", "MG", None)]
+    assert [(m["so_eleitos"], m["pos"], m["nome_urna"], m["gasto"]) for m in sorted(mg, key=lambda m: m["so_eleitos"])] == [
+        (False, 1, "MARIA PROFESSORA", 5500.0), (True, 1, "MARIA PROFESSORA", 5500.0)]
+    assert mg[0]["municipio"] == "Alvorada"
+    # quem não declarou gasto não entra na lista
+    assert not [m for m in maiores if m["ano"] == 2022 and m["cargo"] == "Deputado estadual"]
+
+
+def test_pecas_dinheiro_todos_eleitos_e_cidade(client):
+    from app import pecas_eleitos, pecas_geral
+
+    pecas_geral.reiniciar()
+    pecas_eleitos.reiniciar()
+    r = client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&eleitos=true")
+    assert r.status_code == 202 and r.json() == {"estado": "preparando"} and "cache-control" not in r.headers
+    pecas_geral.preparar()
+    pecas_eleitos.preparar()
+    todos = client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&uf=MG").json()
+    eleitos = client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&uf=MG&eleitos=true").json()
+    assert todos == client.get("/api/propaganda/pecas?ano=2020&cargo=Vereador&uf=MG").json()   # a mesma nuvem da P9
+    assert eleitos == todos and {p["termo"] for p in eleitos} == {"santinho", "adesivo", "redes"}   # Maria se elegeu
+    assert client.get("/api/dinheiro/pecas?ano=2024&cargo=Vereador&uf=RJ&eleitos=true").json() == []
+    # numa cidade: calculada na hora, com e sem o filtro dos eleitos; só peças, nunca a descrição
+    cidade = client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&mun=1").json()
+    assert [(p["termo"], p["centavos"]) for p in cidade] == [(p["termo"], p["centavos"]) for p in todos]
+    assert client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&mun=1&eleitos=true").json() == cidade
+    assert client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&mun=3").json() == []
+    assert "Impressão" not in str(cidade)
+    pecas_geral.reiniciar()
+    pecas_eleitos.reiniciar()
+
+
+def test_pecas_eleitos_falha_vira_503(client, monkeypatch):
+    from app import pecas_eleitos
+
+    pecas_eleitos.reiniciar()
+    monkeypatch.setattr(pecas_eleitos, "_linhas_do_banco", lambda: (_ for _ in ()).throw(RuntimeError("banco fora")))
+    pecas_eleitos.preparar()
+    r = client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&eleitos=true")
+    assert r.status_code == 503 and r.json() == {"estado": "erro"}
+    pecas_eleitos.reiniciar()
