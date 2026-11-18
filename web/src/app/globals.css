@@ -2208,7 +2208,9 @@ a.q-ver:active { transform: scale(0.98); }
 .leg-faixas { display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; color: var(--fg); font-weight: 500; }
 .leg-marcas { display: flex; justify-content: space-between; font-size: 12px; margin: -2px -8px 0; }
 .leg-legenda-vazias { margin-top: 4px !important; justify-content: center; width: 100%; }
-.leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 14px auto 0; max-width: 760px; text-align: center; }
+.leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 14px auto 0; max-width: 60ch; text-align: center; }
+/* "Como calculamos": medida de leitura confortável */
+.leg > .card ul { max-width: 62ch; text-wrap: pretty; }
 .leg-nota.aviso-causa { box-shadow: inset 3px 0 0 var(--warn); padding-left: 12px; }
 
 /* lista das cadeiras: a alternativa em texto ao hemiciclo (teclado e leitor de tela), fechada por padrão */
