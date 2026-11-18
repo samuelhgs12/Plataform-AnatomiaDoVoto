@@ -987,6 +987,39 @@ a.linha:hover { background: var(--panel2); }
   .compara-regua .compara-taxa, .composicao-barra { animation: revela 900ms var(--ease-expo) 150ms both; }
 }
 @keyframes revela { from { clip-path: inset(0 100% 0 0); } }
+/* Comparar › Instrução: os quatro graus em barras de 100%, do menos (escuro) ao mais estudo (claro), nas cores dos
+   quintos do mapa; os graus da medida que pinta o mapa vêm contornados */
+.ni-1 { background: var(--q1); } .ni-2 { background: var(--q2); } .ni-3 { background: var(--q3); } .ni-4 { background: var(--q4); }
+.niveis { display: grid; gap: 14px; margin-bottom: 16px; }
+.niveis-legenda { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--noite-muted); }
+.niveis-legenda li { display: flex; align-items: center; gap: 6px; }
+.niveis-legenda i { width: 12px; height: 12px; border-radius: 2px; }
+.niveis-linhas { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.niveis-linhas li { display: grid; gap: 5px; }
+.niveis-rotulo { margin: 0; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.niveis-rotulo small { color: var(--noite-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.niveis-barra { display: flex; gap: 2px; height: 22px; border-radius: 5px; overflow: hidden; }
+.niveis-barra i { flex: var(--p) 1 0; min-width: 3px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  font-style: normal; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.niveis-barra .ni-3, .niveis-barra .ni-4 { color: var(--noite); }
+.niveis-barra i.marca { box-shadow: inset 0 0 0 2px var(--sobre-noite); }
+@media (prefers-reduced-motion: no-preference) { .niveis-barra { animation: revela 900ms var(--ease-expo) 150ms both; } }
+/* os eleitos do município (detalhes da Instrução): cartões com a foto, como no catálogo de candidatos, no escuro */
+.eleitos-inst { display: grid; gap: 18px; margin-bottom: 14px; }
+.eleitos-inst h4 { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--noite-muted); }
+.ei-grade { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.eleito-inst { display: flex; gap: 12px; align-items: center; padding: 8px; border-radius: 8px; background: var(--noite2); color: var(--sobre-noite); text-decoration: none;
+  box-shadow: inset 0 0 0 1px var(--noite-linha); transition: background-color var(--t-hover) ease; }
+.eleitos-inst > section:first-child .eleito-inst { max-width: 360px; }
+a.eleito-inst:hover { background: var(--noite3); }
+a.eleito-inst:focus-visible { outline: 2px solid var(--brilho); outline-offset: 2px; }
+.eleito-inst.na-medida { box-shadow: inset 0 0 0 2px var(--q4); }
+.eleito-inst .avatar { width: 48px; height: 64px; font-size: 17px; border-radius: 6px; }
+.eleito-inst > div { min-width: 0; display: grid; gap: 3px; justify-items: start; }
+.ei-nome { margin: 0; font-weight: 600; font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+.ei-grau { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--noite-muted); }
+.ei-grau i { flex: none; width: 10px; height: 10px; border-radius: 2px; }
+.ei-grau .ni-sem { box-shadow: inset 0 0 0 1px var(--noite-muted); }
 /* ficha fixa do município escolhido: o cartão da dica, no escuro e maior, e a faixa com todos os municípios do estado */
 .ficha-mun { display: grid; gap: 20px; align-content: start; }
 .ficha-mun .dica-titulo { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
@@ -1446,7 +1479,6 @@ a.linha:hover { background: var(--panel2); }
 .secao-contexto { margin: 140px 0 32px; }
 .secao-contexto .titulo-secao { margin-bottom: 12px; }
 .secao-contexto .lead { max-width: 60ch; }
-.proximas { margin: 24px 4px 0; }
 .nota-fonte { font-size: var(--t-pequeno); max-width: 120ch; margin: 16px 4px 0; }
 .lista { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
 .acao-bloco { display: flex; align-items: flex-end; font-size: var(--t-lead); font-weight: 600; min-height: 220px; }

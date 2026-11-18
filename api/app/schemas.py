@@ -226,6 +226,21 @@ class CandidatoDisputa(BaseModel):
     pct_publica: float | None
 
 
+class EleitoInstrucao(BaseModel):
+    """Prefeito ou vereador eleito, com o grau de instrução (pergunta 4, detalhes do mapa). Só dados públicos."""
+    cargo: str
+    id_candidato: int | None
+    id_candidatura: int
+    nome_urna: str | None
+    partido: str | None
+    ano: int
+    ue: str             # com o sequencial, a chave da foto em /api/fotos
+    sequencial: str
+    escolaridade: str | None   # o rótulo original do TSE
+    nivel: int | None          # escala comum de 4 níveis (nulo = não informou)
+    votos: int
+
+
 class Eleito(BaseModel):
     """Um eleito de um município ou estado (página /municipios). Só dados públicos da candidatura."""
     cargo: str

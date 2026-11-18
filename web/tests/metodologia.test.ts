@@ -37,7 +37,7 @@ describe("METODOLOGIA", () => {
 
   it("toda análise de api/app/analises usada pelas páginas aparece em alguma metodologia", () => {
     const citadas = new Set(todas.flatMap((m) => m.sql));
-    for (const q of ["q1", "q2", "q5", "q8", "q9", "q10", "municipios"]) expect(citadas).toContain(`api/app/analises/${q}.sql`);
+    for (const q of ["q1", "q2", "q4", "q5", "q8", "q9", "q10", "municipios"]) expect(citadas).toContain(`api/app/analises/${q}.sql`);
   });
 
   it("o primeiro link de cada pergunta respondida leva à resposta", () => {
@@ -57,8 +57,8 @@ describe("PERGUNTAS", () => {
     expect([...usadas, "dinheiro"].sort()).toEqual(Object.keys(METODOLOGIA).sort());
   });
 
-  it("4, 6 e 7 ainda não têm resposta", () => {
-    expect(PERGUNTAS.filter((p) => !p.id).map((p) => p.n)).toEqual([4, 6, 7]);
+  it("6 e 7 ainda não têm resposta", () => {
+    expect(PERGUNTAS.filter((p) => !p.id).map((p) => p.n)).toEqual([6, 7]);
   });
 });
 
