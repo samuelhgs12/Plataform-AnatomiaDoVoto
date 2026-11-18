@@ -4,7 +4,7 @@ import { lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
 import { NOME_UF, ordenarCargos, semPrestacao, TIPO_ELEICAO, type Filtros } from "@/lib/financiamento";
 import {
-  correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, maiorGastador, MEDIDAS, respostaGasto, respostaMaior, sucessoPorGasto,
+  correlacaoDe, daMedida, efeitoDoCargo, ehMajoritario, forcaCorrelacao, maiorGastador, MEDIDA_PADRAO, MEDIDAS, medidaDe, respostaGasto, respostaMaior, sucessoPorGasto,
   type LinhaCorrelacao, type LinhaGastoFaixa, type LinhaMaiorGasto, type Medida,
 } from "@/lib/gastos";
 import { inteiro, pct } from "@/lib/format";
@@ -17,7 +17,8 @@ import { FOTOS } from "@/lib/fotos";
 import { explicacao } from "@/lib/estatistica";
 import { METODOLOGIA } from "@/lib/metodologia";
 
-export const metadata: Metadata = { title: "Recursos de campanha e sucesso eleitoral" };
+const TITULO = "Patrimônio e sucesso eleitoral";
+export const metadata: Metadata = { title: TITULO };
 export const dynamic = "force-dynamic";
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
@@ -28,11 +29,25 @@ const vezes = (v: number) => (v >= 10 ? inteiro(v) : v.toLocaleString("pt-BR", {
 const emCada100 = (p: number) => (p > 0 && p < 0.005 ? "menos de 1" : String(Math.round(p * 100)));
 const r2 = (r: number) => r.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const lista = (itens: string[]) => itens.join(", ").replace(/, ([^,]*)$/, " e $1");
-/** Como cada medida aparece nas frases. */
-const TEXTO: Record<Medida, { muito: string; pouco: string; nada: string; muitosPl: string; poucosPl: string; nadaPl: string; comMais: string; nome: string }> = {
-  recursos: { muito: "teve muitos recursos", pouco: "teve poucos", nada: "não declarou nada", muitosPl: "tiveram muitos recursos", poucosPl: "tiveram poucos", nadaPl: "não declararam nada", comMais: "com mais recursos", nome: "recursos" },
-  gasto: { muito: "gastou muito", pouco: "gastou pouco", nada: "não declarou gasto", muitosPl: "gastaram muito", poucosPl: "gastaram pouco", nadaPl: "não declararam gasto", comMais: "que mais gastou", nome: "gasto" },
-  receita: { muito: "recebeu muito", pouco: "recebeu pouco", nada: "não declarou receita", muitosPl: "receberam muito", poucosPl: "receberam pouco", nadaPl: "não declararam receita", comMais: "que mais recebeu", nome: "receita" },
+/**
+ * Como cada medida aparece nas frases. `oQue`: o sujeito ("Se o patrimônio não importasse"); `zero`: o que é o grupo
+ * "nada declarado"; `causa`: o aviso de que andar junto não é causa; `campanha`: medida da prestação de contas.
+ */
+interface TextoMedida {
+  muito: string; pouco: string; nada: string; muitosPl: string; poucosPl: string; nadaPl: string; comMais: string; nome: string;
+  oQue: string; zero: string; causa: string; campanha: boolean;
+}
+const CAUSA_DINHEIRO = "recursos e vitória andam juntos, mas isso não prova que o dinheiro faz ganhar. Quem já tem mais chance (quem já tem mandato, por exemplo) também consegue arrecadar e gastar mais.";
+const DINHEIRO = { oQue: "o dinheiro", zero: "prestou contas com valor zero", causa: CAUSA_DINHEIRO, campanha: true };
+const TEXTO: Record<Medida, TextoMedida> = {
+  patrimonio: {
+    muito: "tinha muito patrimônio", pouco: "tinha pouco", nada: "não declarou bens", muitosPl: "tinham muito patrimônio", poucosPl: "tinham pouco",
+    nadaPl: "não declararam bens", comMais: "com mais patrimônio", nome: "patrimônio", oQue: "o patrimônio", zero: "nenhum bem na declaração", campanha: false,
+    causa: "patrimônio e vitória andam juntos, mas isso não prova que ser rico faz ganhar. Quem tem mais patrimônio também costuma ter mais dinheiro de campanha, mais contatos e, muitas vezes, já um mandato.",
+  },
+  recursos: { muito: "teve muitos recursos", pouco: "teve poucos", nada: "não declarou nada", muitosPl: "tiveram muitos recursos", poucosPl: "tiveram poucos", nadaPl: "não declararam nada", comMais: "com mais recursos", nome: "recursos", ...DINHEIRO },
+  gasto: { muito: "gastou muito", pouco: "gastou pouco", nada: "não declarou gasto", muitosPl: "gastaram muito", poucosPl: "gastaram pouco", nadaPl: "não declararam gasto", comMais: "que mais gastou", nome: "gasto", ...DINHEIRO },
+  receita: { muito: "recebeu muito", pouco: "recebeu pouco", nada: "não declarou receita", muitosPl: "receberam muito", poucosPl: "receberam pouco", nadaPl: "não declararam receita", comMais: "que mais recebeu", nome: "receita", ...DINHEIRO },
 };
 
 export default async function Gastos({ searchParams }: { searchParams: SP }) {
@@ -41,13 +56,13 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
   if (!dados?.faixas) {
     return (
       <>
-        <Cabecalho titulo="Recursos de campanha e sucesso eleitoral" foto={FOTOS.confirma} />
+        <Cabecalho titulo={TITULO} foto={FOTOS.confirma} />
         <AvisoApi voltar="/analises/gastos" />
       </>
     );
   }
-  // medida: recursos (padrão), só gasto ou só receita; as três tabelas trazem as três
-  const medida: Medida = MEDIDAS.some((m) => m.chave === um(sp.medida)) ? (um(sp.medida) as Medida) : "recursos";
+  // medida: o patrimônio (padrão, a da pergunta) ou, para comparar, o dinheiro de campanha; as três tabelas trazem todas
+  const medida: Medida = medidaDe(um(sp.medida));
   const t = TEXTO[medida];
   const faixas = daMedida(comoObjetos<LinhaGastoFaixa>(dados.faixas), medida);
   const maiores = daMedida(comoObjetos<LinhaMaiorGasto>(dados.maior_gasto), medida);
@@ -66,12 +81,12 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
 
   const href = (novo: Record<string, string | undefined>, ancora = "sucesso") => {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ ano: String(ano), cargo, uf, medida: medida === "recursos" ? undefined : medida, ...novo })) if (v) p.set(k, v);
+    for (const [k, v] of Object.entries({ ano: String(ano), cargo, uf, medida: medida === MEDIDA_PADRAO ? undefined : medida, ...novo })) if (v) p.set(k, v);
     return `/analises/gastos?${p.toString()}#${ancora}`;
   };
 
-  // Cargos com muitos candidatos (vereador, deputados): taxa de eleição por grupo de recursos.
-  // Cargos com poucos (prefeito, governador, senador, presidente): "o que teve mais recursos venceu?".
+  // Cargos com muitos candidatos (vereador, deputados): taxa de eleição por grupo da medida.
+  // Cargos com poucos (prefeito, governador, senador, presidente): "o que tinha mais venceu?".
   // Na visão "todos os cargos", as colunas usam só os de muitos candidatos, onde dividir em quartos faz sentido.
   const majoritario = ehMajoritario(cargo);
   const proporcionais = cargosDoAno.filter((c) => !ehMajoritario(c));
@@ -91,11 +106,12 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
 
   return (
     <>
-      <Cabecalho titulo="Recursos de campanha e sucesso eleitoral" pergunta="Existe relação entre o volume de recursos/gastos e a taxa de sucesso eleitoral?" foto={FOTOS.confirma}>
+      <Cabecalho titulo={TITULO} pergunta="Existe relação entre o patrimônio do candidato e a taxa de sucesso eleitoral?" foto={FOTOS.confirma}>
         <p className="lead">
-          Separamos os candidatos pelo dinheiro que tiveram na campanha, comparando cada um só com os concorrentes da mesma disputa:
-          a cidade, para prefeito e vereador; o estado, para os demais. Depois vimos quantos de cada grupo se elegeram. Dá para medir pelo
-          gasto, pela receita ou pelos dois juntos. Dados de 2018 a 2024.
+          Separamos os candidatos pelo patrimônio que declararam ao registrar a candidatura, comparando cada um só com os concorrentes da
+          mesma disputa: a cidade, para prefeito e vereador; o estado, para os demais. Depois vimos quantos de cada grupo se elegeram.
+          Para comparar, dá para trocar o patrimônio pelo dinheiro da campanha (gasto, receita ou os dois juntos, de 2018 em diante).
+          {anos.length > 0 && ` Dados de ${anos[0]} a ${anos[anos.length - 1]}.`}
         </p>
       </Cabecalho>
 
@@ -121,7 +137,7 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
         <span className="rotulo">Medida</span>
         <div className="chips">
           {MEDIDAS.map((m) => (
-            <Link key={m.chave} className={`chip${medida === m.chave ? " on" : ""}`} href={href({ medida: m.chave === "recursos" ? undefined : m.chave })} title={m.explicacao}>{m.rotulo}</Link>
+            <Link key={m.chave} className={`chip${medida === m.chave ? " on" : ""}`} href={href({ medida: m.chave === MEDIDA_PADRAO ? undefined : m.chave })} title={m.explicacao}>{m.rotulo}</Link>
           ))}
         </div>
       </nav>
@@ -130,20 +146,20 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
         <section id="sucesso" className="bloco s8" aria-labelledby="h-suc">
           <h2 id="h-suc">A resposta</h2>
           {majoritario ? (
-            maior.disputas === 0 ? <p className="muted">Sem disputas com recursos declarados para essa combinação.</p> : (
+            maior.disputas === 0 ? <p className="muted">Sem disputas com valores declarados para essa combinação.</p> : (
               <>
                 <p className={`resposta-curta${explicacao(respostaMaior(maior)) ? " longa" : ""}`}>{respostaMaior(maior)}</p>
                 <p className="manchete pequena">
                   Nas {inteiro(maior.disputas)} {maior.disputas === 1 ? "disputa" : "disputas"} para {cargo!.toLowerCase()}{onde} em {ano}, o candidato {t.comMais}
                   {" "}venceu em <b>{pct(maior.pct, 0)}</b> ({inteiro(maior.venceu)} {maior.venceu === 1 ? "vez" : "vezes"}).
-                  {" "}Se o dinheiro não importasse, venceria em cerca de {pct(maior.pctSorteio, 0)}.
+                  {" "}Se {t.oQue} não importasse, venceria em cerca de {pct(maior.pctSorteio, 0)}.
                 </p>
                 {explicacao(respostaMaior(maior)) && <p className="escala">{explicacao(respostaMaior(maior))}</p>}
-                <p className="escala">Barra cheia = 100% das disputas. O sorteio considera quantos candidatos e quantas vagas havia em cada disputa. Só entram disputas em que todos os candidatos entregaram a prestação de contas final.</p>
+                <p className="escala">Barra cheia = 100% das disputas. O sorteio considera quantos candidatos e quantas vagas havia em cada disputa.{t.campanha ? " Só entram disputas em que todos os candidatos entregaram a prestação de contas final." : " Disputas em que ninguém declarou bens, ou com empate no maior valor, ficam de fora."}</p>
                 <BarrasH compacto max={1} titulo={`O candidato ${t.comMais} venceu, comparado com um sorteio`}
                   linhas={[
                     { chave: "real", rotulo: `O ${t.comMais} venceu`, valor: maior.pct, classe: "pub", trilhoCheio: true, texto: pct(maior.pct, 0), subtexto: `${inteiro(maior.venceu)} de ${inteiro(maior.disputas)} disputas` },
-                    { chave: "sorteio", rotulo: "Se fosse sorteio", valor: maior.pctSorteio, classe: "fx5", trilhoCheio: true, texto: pct(maior.pctSorteio, 0), subtexto: "chance de vencer sem o dinheiro importar" },
+                    { chave: "sorteio", rotulo: "Se fosse sorteio", valor: maior.pctSorteio, classe: "fx5", trilhoCheio: true, texto: pct(maior.pctSorteio, 0), subtexto: `chance de vencer sem ${t.oQue} importar` },
                   ]} />
                 {maior.disputas < 10 && <p className="escala">Poucas disputas: cada uma muda muito o percentual.</p>}
               </>
@@ -170,7 +186,7 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
               </p>
               <Colunas titulo={`Parte dos candidatos que se elegeu, por ${t.nome}`} max={tetoColunas} casas={(p) => (p > 0 && p < 0.01 ? 1 : 0)}
                 colunas={grupos.map((g) => ({
-                  chave: g.chave, rotulo: g.rotulo, linhas: [g.detalhe, `${inteiro(g.eleitos)} eleitos de ${inteiro(g.candidaturas)}`],
+                  chave: g.chave, rotulo: g.rotulo, linhas: [g.chave === "nada" ? t.zero : g.detalhe, `${inteiro(g.eleitos)} eleitos de ${inteiro(g.candidaturas)}`],
                   parte: g.candidaturas ? g.taxa : null, vazia: "ninguém neste grupo", classe: g.classe || undefined,
                 }))} />
             </>
@@ -189,20 +205,19 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
               <p>de quem já tinha o cargo estava entre os que mais têm (cerca de 1/4 de cada disputa).</p>
             </div>
           )}
-          <div className="bloco"><p className="aviso-causa"><b>Atenção:</b> recursos e vitória andam juntos, mas isso não prova que o dinheiro faz ganhar.
-            Quem já tem mais chance (quem já tem mandato, por exemplo) também consegue arrecadar e gastar mais.</p></div>
+          <div className="bloco"><p className="aviso-causa"><b>Atenção:</b> {t.causa}</p></div>
         </aside>
       </div>
 
       {efeito && efeito.com.candidaturas > 0 && efeito.sem.candidaturas > 0 && (
         <section id="cargo" className="card" aria-labelledby="h-cargo">
-          <h2 id="h-cargo">Dinheiro ou já estar no cargo?</h2>
+          <h2 id="h-cargo">{t.nome === "patrimônio" ? "Patrimônio" : "Dinheiro"} ou já estar no cargo?</h2>
           <p className="manchete pequena">
             Entre os que mais têm (cerca de 1/4 de cada disputa), quem já tinha o cargo se elegeu em <b>{taxa(efeito.com.taxa)}</b> dos casos; quem não tinha, em <b>{taxa(efeito.sem.taxa)}</b>.
           </p>
           <p className="muted">
-            Quem já está no cargo costuma estar entre os que têm mais recursos e também tem mais chance de vencer. Por isso, parte da vantagem
-            de quem tem muito dinheiro vem de já ter o mandato, e não só do dinheiro. “Já tinha o cargo” = foi eleito para o mesmo cargo, no mesmo município
+            Quem já está no cargo costuma estar entre os que têm mais {t.nome} e também tem mais chance de vencer. Por isso, parte da vantagem
+            de quem tem muito {t.nome} vem de já ter o mandato, e não só {t.oQue.replace(/^o /, "do ")}. “Já tinha o cargo” = foi eleito para o mesmo cargo, no mesmo município
             ou estado, na eleição anterior (isso não garante que ainda estivesse no mandato).
           </p>
           <p className="escala">Só os que mais têm em cada disputa. Barra cheia = 100% eleitos.</p>
@@ -226,8 +241,8 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
             })()}
           </p>
           <p className="muted">
-            A correlação vai de −1 a 1: perto de 1, quem tem mais dinheiro tem mais votos; perto de 0, não há relação; negativa, quem tem
-            mais dinheiro tem menos votos. Ela compara a posição de cada candidato no dinheiro com a posição nos votos, dentro da própria
+            A correlação vai de −1 a 1: perto de 1, quem tem mais {t.nome} tem mais votos; perto de 0, não há relação; negativa, quem tem
+            mais {t.nome} tem menos votos. Ela compara a posição de cada candidato no {t.nome} com a posição nos votos, dentro da própria
             disputa. A barra mostra só a parte positiva (de 0 a 1); valores negativos aparecem escritos com o sinal.
           </p>
           <BarrasH compacto max={1} titulo={`Correlação entre ${t.nome} e votos, por cargo`}

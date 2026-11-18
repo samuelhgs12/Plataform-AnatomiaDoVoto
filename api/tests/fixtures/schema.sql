@@ -254,6 +254,18 @@ CREATE TABLE despesa_campanha (
     data_prestacao_contas   date
 );
 
+-- Bens declarados no registro da candidatura (patrimônio = soma de valor_bem; pergunta 2)
+CREATE TABLE bem_candidato (
+    id_bem            bigint        PRIMARY KEY,
+    id_candidatura    bigint        NOT NULL REFERENCES candidatura (id_candidatura),
+    ordem             integer,
+    cd_tipo_bem       smallint,
+    tipo_bem          varchar(150),
+    descricao_bem     text,
+    valor_bem         numeric(18,2),
+    data_atualizacao  date
+);
+
 -- ------------------------------ ELEITORADO ------------------------------------------
 
 CREATE TABLE faixa_etaria (

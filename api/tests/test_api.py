@@ -428,6 +428,19 @@ def test_eleitos_do_municipio_com_instrucao_pelo_cod_ibge(client):
     assert client.get("/api/municipios/ibge/abc/eleitos?ano=2020").status_code == 422
 
 
+def test_q2_patrimonio_desde_2006_e_dinheiro_desde_2018(client):
+    t = client.get("/api/analises/q2?tabela=faixas").json()["faixas"]
+    linhas = [dict(zip(t["colunas"], l)) for l in t["linhas"]]
+    anos = lambda m: {l["ano"] for l in linhas if l["medida"] == m}
+    assert 2016 in anos("patrimonio")                       # o patrimônio existe antes das prestações de contas
+    assert min(anos("gasto")) >= 2018 and min(anos("recursos")) >= 2018
+    # sem bens = patrimônio zero (faixa 0), nunca "desconhecido" (-1)
+    assert all(l["faixa"] >= 0 for l in linhas if l["medida"] == "patrimonio")
+    # deputado em MG, 2022: Maria (R$ 350 mil em bens) acima do rival, que não declarou nenhum
+    mg = {l["faixa"]: l["candidaturas"] for l in linhas if l["medida"] == "patrimonio" and l["ano"] == 2022 and l["uf"] == "MG"}
+    assert mg == {0: 1, 1: 1}
+
+
 def test_analise_so_as_tabelas_pedidas(client):
     r = client.get("/api/analises/q10?tabela=fluxo&tabela=mapa")
     assert r.status_code == 200 and set(r.json()) == {"fluxo", "mapa"}

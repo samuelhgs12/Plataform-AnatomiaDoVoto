@@ -6,9 +6,9 @@ import { enquadrar, nomeProprio, quantis } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
-  abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corTerco,
-  coberturaSelo, diferencaRelativa, ehMunicipal, fatias, larguraSelo, seloValor, seta, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
-  camposDoHref, caminhoBuscaCandidato, MEDIDAS_ANOS, MEIAS, medidaDe, termoBuscaCandidato, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, TERCOS, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
+  abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corPorFaixas,
+  coberturaSelo, diferencaRelativa, ehMunicipal, fatias, seloValor, seta, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
+  camposDoHref, caminhoBuscaCandidato, MEDIDAS_ANOS, MEIAS, medidaDe, termoBuscaCandidato, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosDoRecorte, cargosDoAno, deCada100, fraseDependeram, parteDependeu, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
   type Aba, type LinhaCargo, type LinhaDespesa, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
@@ -55,6 +55,8 @@ const MAX_LISTA = 40;
  * (pergunta 9) fica em /analises/dinheiro. Lê as análises `municipios` e `dinheiro` e os candidatos da API; as contas
  * são de src/lib/dinheiro.ts.
  */
+const QUINTOS = ["q0", "q1", "q2", "q3", "q4"];
+
 export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const { ano, cargo, porte, pintar, medir } = escolhaMapaDinheiro(sp);
   const aba: Aba = abaDe(pintar);
@@ -110,21 +112,22 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const contaUf = (u?: string) => (porte ? valorDoPorte(resumo, ano, u, porte, "gasto", cargo).conta : contaGastoEstado(estados, ano, u, cargo));
   const valoresUf = ufs.map((u) => valorUf(u));
   const conhecidos = valoresUf.flatMap((v) => v ?? []);
-  const faixasUf = quantis(conhecidos, 3);
+  const faixasUf = quantis(conhecidos, 5);
   const [minUf, maxUf] = [Math.min(...conhecidos), Math.max(...conhecidos)];
   const noMapaUf: EstadoNoMapa[] = ufs.map((u, i) => {
     const v = valoresUf[i];
-    const ficha: FichaDica = { titulo: NOME_UF[u] ?? u, sub: `${cargo} · ${ano}${porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}`, medidas: v === null ? [] : [{ rotulo: medidaInfo.rotulo, valor: textoValor(v, aba, cargo), cores: TERCOS, p: naRegua(v, faixasUf, minUf, maxUf) }] };
+    const ficha: FichaDica = { titulo: NOME_UF[u] ?? u, sub: `${cargo} · ${ano}${porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}`, medidas: v === null ? [] : [{ rotulo: medidaInfo.rotulo, valor: textoValor(v, aba, cargo), cores: QUINTOS, p: naRegua(v, faixasUf, minUf, maxUf) }] };
     // o selo do estado é curto e sem "R$" (a unidade está no título e na legenda): "222 mil", "14", "62%"; a pílula cresce com ele
     const selo = uf ? seloValor(v, aba) : "";
     return {
-      uf: u, classe: uf ? corTerco(v, faixasUf) : "dinheiro-neutro", href: href({ uf: u === uf ? null : u }), sigla: u, valor: selo, largura: uf ? larguraSelo(selo) : undefined,
+      uf: u, classe: uf ? corPorFaixas(v, faixasUf) : "dinheiro-neutro", href: href({ uf: u === uf ? null : u }), sigla: u, valor: uf ? selo || "—" : "",   // o selo do estado alarga para caber (seloUf)
       descricao: uf ? `${NOME_UF[u] ?? u}: ${textoValor(v, aba, cargo)} ${unidade(aba, cargo)} em ${ano}` : `Selecionar ${NOME_UF[u] ?? u}`,
       ficha: uf ? ficha : undefined,
     };
   });
-  // cidades do estado aberto (só nas municipais): faixas fixas, iguais em todos os estados; fora do porte, apagadas
-  const caixa = uf ? CAIXA_UF[uf] : undefined;
+  // cidades do estado aberto (só nas municipais): faixas fixas, iguais em todos os estados; fora do porte, apagadas.
+  // Nas gerais o dado é só por estado: o mapa fica nos seis estados e só o contorno marca o escolhido
+  const caixa = uf && municipal ? CAIXA_UF[uf] : undefined;
   const noMapaMun: MunicipioNoMapa[] = !municipal || !uf || !caixa ? [] : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
     const linha = doAno.get(m.id_municipio);
     const v = valorCidade(linha, aba, cargo);
@@ -134,15 +137,18 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
       atraso: Math.round(((CENTRO_MUNICIPIO[m.cod_ibge][0] - caixa[0]) / (caixa[2] - caixa[0])) * 100) / 100,
     };
   });
-  const legenda = uf && municipal ? legendaCidade(aba, cargo) : legendaPorFaixas(faixasUf, (v) => seloValor(v, aba), TERCOS);
+  // "Não informado" só entra na legenda quando algum lugar à vista está sem dado, como "sem votos" nas outras camadas
+  const algumSem = uf && municipal ? noMapaMun.some((m) => m.classe.split(" ").includes("sem")) : valoresUf.includes(null);
+  const legenda = (uf && municipal ? legendaCidade(aba, cargo) : legendaPorFaixas(faixasUf, (v) => seloValor(v, aba), aba === "gasto" ? "R$ " : "")).filter((l) => l.classe !== "sem" || algumSem);
   // com um estado aberto, o cartão do lugar fica na faixa da direita do mapa: o enquadramento ganha essa faixa vazia,
-  // e o estado vai para a esquerda, sem ficar embaixo do cartão
-  const quadro: [number, number, number, number] | undefined = caixa ? [caixa[0], caixa[1], caixa[2] + (caixa[2] - caixa[0]) * 0.8, caixa[3]] : undefined;
-  const camera = enquadrar(quadro ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA], TELA.larg, TELA.alt, caixa ? 0.06 : 0.02);
+  // e o lugar vai para a esquerda, sem ficar embaixo do cartão (nas gerais, os seis estados)
+  const base: [number, number, number, number] = caixa ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA];
+  const quadro: [number, number, number, number] | undefined = uf ? [base[0], base[1], base[2] + (base[2] - base[0]) * (caixa ? 0.8 : 0.7), base[3]] : undefined;
+  const camera = enquadrar(quadro ?? base, TELA.larg, TELA.alt, caixa ? 0.06 : 0.02);
   const centro = mun ? CENTRO_MUNICIPIO[mun.cod_ibge] : undefined;
   const mapaPalco = (
     <MapaAbstencao
-      titulo={`${medidaInfo.rotulo} de ${cargoMin}: ${lugar}, ${ano}`} camera={camera} estados={noMapaUf} uf={uf} municipios={noMapaMun}
+      titulo={`${medidaInfo.rotulo} de ${cargoMin}: ${lugar}, ${ano}`} camera={camera} estados={noMapaUf} uf={uf} zoom={municipal} municipios={noMapaMun}
       destaque={mun && centro ? { ibge: mun.cod_ibge, nome: lugar, x: centro[0], y: centro[1] } : undefined}
     />
   );
@@ -295,7 +301,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
   return (
     <>
-      <MapaVivo className={`palco s12 palco-dinheiro${!uf ? " dinheiro-inicial" : ""}`} estado={uf}>
+      <MapaVivo className={`palco s12 palco-dinheiro${!uf ? " dinheiro-inicial" : ""}`} estado={municipal ? uf : undefined}>
         {menu}
         <div className="palco-topo">
           <div>
@@ -330,17 +336,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </div>
 
         <div className="palco-base">
-          {uf && <div className="legenda-dinheiro">
-            <p className="legenda-titulo">
-              {medidaInfo.rotulo}{aba === "publico" ? "" : " (R$)"}
-              <span title={uf && municipal ? "As mesmas faixas em todos os estados e anos." : "Os seis estados em três faixas, recalculadas a cada ano e cargo. Para comparar anos, use os números."}>
-                {uf && municipal ? "faixas fixas" : "3 faixas entre os estados"}
-              </span>
-            </p>
-            <ul className="legenda-q" aria-label={uf && municipal ? `Cores: faixas fixas de ${medidaInfo.rotulo.toLowerCase()}` : `Cores: três faixas dos estados por ${medidaInfo.rotulo.toLowerCase()}, relativas ao ano e ao cargo`}>
-              {legenda.map((l) => <li key={l.texto} className={l.classe === "sem" ? "legenda-sem" : undefined}><i className={l.classe} />{l.texto}</li>)}
-            </ul>
-          </div>}
+          {uf && <ul className="legenda-q" aria-label={uf && municipal ? `Cores: faixas fixas de ${medidaInfo.rotulo.toLowerCase()}` : `Cores: cada uma reúne um quinto dos estados por ${medidaInfo.rotulo.toLowerCase()}`}>
+            {legenda.map((l) => <li key={l.texto} className={l.classe === "sem" ? "legenda-sem" : undefined}><i className={l.classe} />{l.texto}</li>)}
+          </ul>}
           <div className="anos" role="group" aria-label="Ano da eleição">
             {ANOS_DINHEIRO.map((a) => (
               <Link key={a} scroll={false} href={href({ ano: a })} className={`ano${a === ano ? " on" : ""}`} aria-current={a === ano ? "true" : undefined}>
