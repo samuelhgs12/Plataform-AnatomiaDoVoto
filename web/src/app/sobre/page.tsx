@@ -73,7 +73,7 @@ export default function Sobre() {
         <ul className="perguntas">
           {TAMBEM.map((t) => (
             <li key={t.id}>
-              <Pergunta ancora={t.id} marca={<Icone nome="mapa" className="q-n" />} rotuloSr="" texto={t.texto} id={t.id} />
+              <Pergunta ancora={t.id} marca={<Icone nome={t.icone} className="q-n" />} rotuloSr="" texto={t.texto} id={t.id} />
             </li>
           ))}
         </ul>

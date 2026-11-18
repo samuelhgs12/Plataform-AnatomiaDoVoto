@@ -3,7 +3,7 @@
 // já revisou nas páginas; para a /sobre há `resposta`, sem editar o original. As perguntas, no texto do dossiê, estão em
 // PERGUNTAS.
 
-export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p8" | "p9" | "p10" | "candidato";
+export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p8" | "p9" | "p10" | "candidato" | "legislativo";
 
 export interface Metodologia {
   id: IdMetodologia;
@@ -288,6 +288,36 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     ],
     sql: ["api/app/queries/votos_municipio.sql", "api/app/queries/candidato_mapa.sql"],
   },
+  legislativo: {
+    id: "legislativo",
+    resposta: "Quem ocupa as cadeiras do Senado, da Câmara e das Assembleias dos seis estados em 2018, 2022 e 2026: o viés ideológico de cada partido, o que as campanhas gastaram por cadeira e quantos eleitos já tinham mandato.",
+    formula: { resultado: "custo da cadeira", parcelas: ["gasto de todas as campanhas ao cargo", "cadeiras em disputa"], operador: "÷" },
+    ondeVer: [{ rotulo: "Ver o Legislativo", href: "/legislativo" }],
+    anos: "2018, 2022 e 2026",
+    cargos: "Senador, deputado federal e deputado estadual",
+    dados: [
+      "vies_partido: viés de cada partido por eleição, da pesquisa com parlamentares (Brazilian Legislative Surveys), de −100 a +100",
+      "candidatura, eleicao, rotulo_resultado, partido e vagas",
+      "vw_despesa_candidatura (sobre despesa_campanha), como na pergunta 1",
+    ],
+    recorte: ["Eleitos titulares", "Eleições ordinárias", `Só ${UFS}: da Câmara, 150 das 513 cadeiras; do Senado, 18 das 81`],
+    calculo: [
+      "Cada cadeira é um eleito. Câmara e Assembleias: os eleitos do ano. Senado: a composição da legislatura, com os eleitos no ano e os eleitos quatro anos antes (o mandato é de oito anos).",
+      "Viés: o do partido pelo qual a pessoa foi eleita, na eleição em que foi eleita, de −100 (esquerda) a +100 (direita), com o erro padrão da pesquisa. Os senadores eleitos em 2014, antes da pesquisa, levam o viés de 2018 do mesmo partido (o PMDB, que virou MDB em 2017, leva o do MDB). O viés médio da casa é a média das cadeiras, cada uma pesando igual. Partido que só mudou de nome (PMDB → MDB, PRB → Republicanos, PR → PL, PPS → Cidadania, PTC → Agir) aparece com o nome em vigor no ano da composição; fusões e incorporações ficam separadas.",
+      "Faixas do viés, cinco de 40 pontos cada: esquerda (abaixo de −60), centro-esquerda (−60 a −20), centro (−20 a +20), centro-direita (+20 a +60) e direita (acima de +60). As cores seguem a convenção usual, do vermelho (esquerda) ao azul (direita); são as faixas do score, não uma classificação oficial dos partidos.",
+      "As cadeiras ficam em ordem de viés, da esquerda para a direita. Na leitura Renovação, elas se agrupam em blocos (reeleitos, já eleitos e estreantes, cada bloco na ordem do viés); na leitura Custo, podem ser ordenadas do maior para o menor gasto (ou o contrário) e filtradas por faixa do viés, que apaga as cadeiras das outras faixas. Na leitura Partido, as cores são aproximações da identidade visual de cada partido, escolhidas pelo projeto (não vêm dos dados).",
+      "Custo da cadeira (pergunta 1): gasto de todas as campanhas ao cargo, inclusive as derrotadas e as que não chegaram a disputar, ÷ cadeiras em disputa no ano. Por partido, o gasto das campanhas do partido ÷ cadeiras que ele ganhou. Na cadeira, o gasto do próprio eleito, colorido pelo quarto da casa em que ele está.",
+      "Renovação: reeleito venceu para a mesma casa e estado na eleição anterior (no Senado, oito anos antes); já eleito venceu outra eleição na base, para qualquer cargo, desde 1998; estreante não tem vitória na base.",
+    ],
+    limites: [
+      "Só seis estados: o plenário inteiro da Câmara e do Senado mostra as outras cadeiras em contorno, sem partido.",
+      "O viés é do partido, não de cada parlamentar; e nem todo partido foi medido em toda onda da pesquisa (a ficha de cada cadeira avisa quando o valor vem de outra onda, de fusão ou de um partido de referência).",
+      "Quem assumiu como suplente não aparece: a cadeira é de quem foi eleito.",
+      "Estreante quer dizer sem vitória na base (desde 1998 e só nestes seis estados), não sem carreira política.",
+      "Valores de campanha sem correção pela inflação; não há despesas antes de 2018.",
+    ],
+    sql: ["api/app/analises/legislativo.sql"],
+  },
 };
 
 /** As dez perguntas de pesquisa, no texto do dossiê. Sem `id`, a plataforma ainda não responde: a /sobre diz "Em breve". */
@@ -329,8 +359,9 @@ export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [
 ];
 
 /** Fora das dez perguntas, mas com metodologia própria na /sobre. */
-export const TAMBEM: { texto: string; id: IdMetodologia }[] = [
-  { texto: "Onde um candidato teve votos, município a município?", id: "candidato" },
+export const TAMBEM: { texto: string; id: IdMetodologia; icone: "mapa" | "plenario" }[] = [
+  { texto: "Onde um candidato teve votos, município a município?", id: "candidato", icone: "mapa" },
+  { texto: "Quem ocupa as cadeiras do Legislativo, com que viés e a que custo?", id: "legislativo", icone: "plenario" },
 ];
 
 /** Regras que valem para todas as análises (antes "Como lemos os dados" na /sobre). */

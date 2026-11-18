@@ -66,7 +66,7 @@ Todo gráfico tem `role="img"` + `aria-label` (ou tabela equivalente) e não dep
 
 ## Testes do web
 
-- Vitest (`vitest.config.ts` inclui `tests/**/*.test.ts`): `web/tests/legenda.test.ts` para `src/lib/legenda.ts` e
+- Vitest (`vitest.config.ts` inclui `tests/**/*.test.ts`): `web/tests/legenda.test.ts` para `src/lib/legenda.ts`, `web/tests/legislativo.test.ts` para `src/lib/legislativo.ts` e
   `web/tests/lib.test.ts` para o resto; um `describe` por função de `src/lib`, com uma fábrica de linha
   (`const l = (o: Partial<Linha>) => ({...padrão, ...o})`) e poucas linhas inventadas.
 - Só lógica pura é testada (sem render de componente). Antes do PR: `npm run lint && npm run typecheck && npm test && npm run build`.

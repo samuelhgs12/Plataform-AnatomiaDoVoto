@@ -67,3 +67,11 @@ INSERT INTO populacao_instrucao (id_municipio, ano_referencia, nivel, grupo_idad
   (1, 2022, 1, '18 a 19', 'FEMININO', 35), (1, 2022, 1, '20 a 24', 'MASCULINO', 25), (1, 2022, 4, '20 a 24', 'FEMININO', 40),
   (4, 2022, 4, '20 a 24', 'FEMININO', 99),   -- sem cod_ibge: fora do mapa
   (1, 2010, 4, '20 a 24', 'FEMININO', 7);    -- outro Censo
+-- viés por partido (Legislativo): PL e PSD em 2018 e 2022; o PT só em 2022, por fonte editorial e sem erro padrão
+INSERT INTO vies_partido (id_vies, id_partido, ano_eleicao, legislatura, score, erro_padrao, fonte, onda_referencia, versao_algoritmo) VALUES
+  (1, 4, 2018, 55, 41.20, 3.90, 'bls', 2017, 'bls9_cascata_v1'), (2, 4, 2022, 56, 49.34, 3.80, 'bls', 2021, 'bls9_cascata_v1'),
+  (3, 2, 2018, 55, 39.91, 3.67, 'bls', 2017, 'bls9_cascata_v1'), (4, 2, 2022, 56, 29.59, 3.68, 'bls', 2021, 'bls9_cascata_v1'),
+  (5, 3, 2022, 56, -69.11, NULL, 'editorial', 2021, 'bls9_cascata_v1');
+-- vagas (Legislativo)
+INSERT INTO vagas (id_vagas, ano, id_cargo, uf, id_municipio, qt_vagas) VALUES
+  (1, 2018, 6, 'RJ', NULL, 46), (2, 2022, 6, 'RJ', NULL, 46), (3, 2022, 7, 'MG', NULL, 77);
