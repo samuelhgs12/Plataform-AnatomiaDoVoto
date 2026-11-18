@@ -2120,7 +2120,7 @@ a.q-ver:active { transform: scale(0.98); }
    a ficha (DicaPlenario). As cadeiras não mudam de lugar entre as leituras; só a cor, que varre o arco da esquerda para
    a direita (--atraso). */
 .leg-topo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 32px; align-items: end; padding: 28px 28px 24px; margin-bottom: var(--gap); }
-.leg-titulo h1 { margin-bottom: 6px; }
+.leg-titulo h1 { margin-bottom: 6px; text-wrap: balance; }
 .leg-sub { color: var(--muted); margin: 0; font-size: 17px; }
 .leg-filtros { grid-column: 1; display: flex; align-items: flex-end; gap: 12px 28px; flex-wrap: wrap; }
 .leg-filtros-lado { display: grid; gap: 10px; padding-bottom: 6px; }
