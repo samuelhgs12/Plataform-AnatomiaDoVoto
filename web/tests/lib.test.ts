@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LinhaLegenda } from "../src/lib/legenda";
 import { agrupar, candidatoNaPaleta, filtrarPaleta, indicePaleta } from "../src/lib/paleta";
-import { anoNaLegenda, casasDosCortes, conjunto, escalaDoMaior, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, situacaoComparativo } from "../src/lib/mapa";
+import { anoNaLegenda, casasDosCortes, conjunto, escalaDoMaior, dinheiroTotal, doCargo, faixasFixas, legendaPorUf, medirLegenda, rankingPartidos, resumoCamadas, seloUf, situacaoComparativo } from "../src/lib/mapa";
 import {
   censoDoAno, classe, compararComReferencia, composicaoEleitorado, corMunicipio, correlacao, distribuicao, extremosAbstencao, reguaIndicador, enquadrar, formatarIndicador, indicadorNoCenso, indicadoresDoCenso, indicadoresPorMunicipio, lerCorrelacao, mediaPonderada, nomeProprio, posicao, quantis,
   rotulosFaixas, serieAbstencao, somarParticipacao, taxaDe, tendencia, type LinhaParticipacao,
@@ -12,7 +12,7 @@ import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
 import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { fotoDaBusca, fotoDaPessoa, fotoDoPerfil, urlFoto } from "../src/lib/foto-candidato";
-import { compacto, iniciais, pctSinal, reais } from "../src/lib/format";
+import { compacto, curto, iniciais, pctSinal, reais } from "../src/lib/format";
 import {
   MEDIDAS, contarNaMedida, grauDoEleito, linhasNiveis, medidaDe, parteNaMedida, perfilEleitos, perfilPopulacao, porMunicipio, predominante, rotuloNivel,
   separarEleitos, type EleitoInstrucao, type LinhaEleitosInstrucao, type LinhaPopulacaoInstrucao, type LinhaPrefeito,
@@ -730,5 +730,26 @@ describe("instrução (pergunta 4)", () => {
     expect(contarNaMedida(vereadores, medidaDe("superior"))).toEqual({ n: 1, de: 2 });   // quem não informou não conta
     expect(contarNaMedida(vereadores, medidaDe("medio"))).toEqual({ n: 2, de: 2 });
     expect(separarEleitos([]).prefeito).toBeNull();
+  });
+});
+
+describe("curto", () => {
+  it("só usa casa decimal abaixo de 10", () => {
+    expect(curto(222_800)).toBe("223 mil");
+    expect(curto(9_540)).toBe("9,5 mil");
+    expect(curto(5_120_000)).toBe("5,1 mi");
+    expect(curto(999_700)).toBe("1 mi");
+    expect(curto(850)).toBe("850");
+  });
+});
+
+describe("seloUf", () => {
+  it("mantém o selo padrão até 4 caracteres e, depois, alarga com o valor colado na sigla", () => {
+    expect(seloUf("16%")).toEqual({ larg: 66, xSigla: -15, xValor: 13 });
+    expect(seloUf("100%")).toEqual({ larg: 66, xSigla: -15, xValor: 13 });
+    const s = seloUf("223 mil");
+    expect(s.larg).toBeGreaterThan(66);
+    expect(s.xSigla - -s.larg / 2).toBe(18);                          // a sigla fica à mesma distância da borda
+    expect(s.xValor - (7 * 7.5) / 2 - (s.xSigla + 10)).toBe(5);       // o valor começa logo depois da sigla
   });
 });

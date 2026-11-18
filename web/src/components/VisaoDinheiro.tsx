@@ -12,7 +12,7 @@ import {
 import { METODOLOGIA } from "@/lib/metodologia";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { NOME_UF } from "@/lib/financiamento";
-import { compacto, inteiro, reais } from "@/lib/format";
+import { curto, inteiro, reais } from "@/lib/format";
 import { centrarLupa, TELA } from "@/lib/lupa";
 import { disputaPrefeito, porteDe, PORTES, type CandidatoLocal, type Eleito, type LinhaEstado, type LinhaMunicipio, type LinhaResumo } from "@/lib/territorio";
 import { BarrasH } from "./BarrasH";
@@ -86,12 +86,13 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     const v = valoresUf[i];
     const ficha: FichaDica = { titulo: NOME_UF[u] ?? u, sub: `${cargo} · ${ano}${porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}`, medidas: v === null ? [] : [{ rotulo: "Gasto por vaga", valor: reais(v), cores: QUINTOS, p: naRegua(v, faixasUf, minUf, maxUf) }] };
     return {
-      uf: u, classe: corPorFaixas(v, faixasUf), href: href({ uf: u === uf ? null : u }), sigla: u, valor: v === null ? "" : compacto(v),   // "222 mil", "5,1 mi": cabe no selo do estado
+      uf: u, classe: corPorFaixas(v, faixasUf), href: href({ uf: u === uf ? null : u }), sigla: u, valor: v === null ? "—" : curto(v),   // "223 mil", "5,1 mi": o selo do estado alarga para caber
       descricao: `${NOME_UF[u] ?? u}: ${textoValor(v, "gasto", cargo)} por vaga de ${cargoMin} em ${ano}`, ficha,
     };
   });
-  // cidades do estado aberto (só nas municipais): faixas fixas em reais, iguais em todos os estados; fora do porte, apagadas
-  const caixa = uf ? CAIXA_UF[uf] : undefined;
+  // cidades do estado aberto (só nas municipais): faixas fixas em reais, iguais em todos os estados; fora do porte, apagadas.
+  // Nas gerais o dado é só por estado: como na legenda, o mapa fica nos seis estados e só o contorno marca o escolhido
+  const caixa = uf && municipal ? CAIXA_UF[uf] : undefined;
   const noMapaMun: MunicipioNoMapa[] = !municipal || !uf || !caixa ? [] : municipios.filter((m) => m.uf === uf && CENTRO_MUNICIPIO[m.cod_ibge]).map((m) => {
     const linha = doAno.get(m.id_municipio);
     const v = valorCidade(linha, "gasto", cargo);
@@ -101,12 +102,14 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
       atraso: Math.round(((CENTRO_MUNICIPIO[m.cod_ibge][0] - caixa[0]) / (caixa[2] - caixa[0])) * 100) / 100,
     };
   });
-  const legenda = uf && municipal ? legendaCidade("gasto", cargo) : legendaPorFaixas(faixasUf, (v) => `R$ ${compacto(v)}`);
+  // "Não informado" só entra na legenda quando algum lugar à vista está sem dado, como "sem votos" nas outras camadas
+  const algumSem = uf && municipal ? noMapaMun.some((m) => m.classe.split(" ").includes("sem")) : valoresUf.includes(null);
+  const legenda = (uf && municipal ? legendaCidade("gasto", cargo) : legendaPorFaixas(faixasUf, curto, "R$ ")).filter((l) => l.classe !== "sem" || algumSem);
   const camera = enquadrar(caixa ?? [0, 0, MAPA_LARGURA, MAPA_ALTURA], TELA.larg, TELA.alt, caixa ? 0.06 : 0.02);
   const centro = mun ? CENTRO_MUNICIPIO[mun.cod_ibge] : undefined;
   const mapaPalco = (
     <MapaAbstencao
-      titulo={`Gasto por vaga de ${cargoMin}: ${lugar}, ${ano}`} camera={camera} estados={noMapaUf} uf={uf} municipios={noMapaMun}
+      titulo={`Gasto por vaga de ${cargoMin}: ${lugar}, ${ano}`} camera={camera} estados={noMapaUf} uf={uf} zoom={municipal} municipios={noMapaMun}
       destaque={mun && centro ? { ibge: mun.cod_ibge, nome: lugar, x: centro[0], y: centro[1] } : undefined}
     />
   );
@@ -146,12 +149,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
   return (
     <>
-      <MapaVivo className="palco s12 palco-dinheiro" estado={uf}>
+      <MapaVivo className="palco s12" estado={municipal ? uf : undefined}>
         {menu}
         <div className="palco-topo">
           <div>
-            <h1 id="h-mapa">Quanto as campanhas gastaram por vaga em {ano}</h1>
-            <p className="palco-sobre">{cargo} · {municipal ? (uf ? "por cidade" : "por estado; clique para ver as cidades") : "eleição geral, por estado"}{porteInfo ? ` · só cidades de ${porteInfo.rotulo}` : ""}</p>
+            <h1 id="h-mapa">Gasto por vaga em {ano}</h1>
+            <p className="palco-sobre">Quanto as campanhas gastaram · {cargo} · {municipal ? (uf ? "por cidade" : "por estado; clique para ver as cidades") : "eleição geral, por estado"}{porteInfo ? ` · só cidades de ${porteInfo.rotulo}` : ""}</p>
           </div>
           <nav className="trilha" aria-label="Onde você está no mapa">
             <a href={href({ uf: null })} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>
@@ -163,7 +166,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         <div className="palco-mapa">
           {mapaPalco}
           {!uf && <p className="palco-dica" aria-hidden="true">{municipal ? "Clique num estado para ver as cidades" : "Clique num estado para ver os eleitos"}</p>}
-          <p className="carregando-mapa" aria-hidden="true">Carregando…</p>
         </div>
 
         <div className="palco-base">

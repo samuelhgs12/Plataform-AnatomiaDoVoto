@@ -139,24 +139,32 @@ export function corCidade(v: number | null, aba: Aba, cargo: string): string {
 }
 
 const mil = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toLocaleString("pt-BR")} mi` : `${v / 1000} mil`);
+/**
+ * Intervalo com a unidade escrita uma vez quando as duas pontas a têm igual: "40–46 mil", "20–40%"; senão, "500 mil–1 mi".
+ */
+export function intervalo(a: string, b: string): string {
+  const u = (t: string) => t.replace(/^[\d.,]+/, "");
+  return u(a) === u(b) ? `${a.slice(0, a.length - u(a).length)}–${b}` : `${a}–${b}`;
+}
+
+/**
+ * Itens de uma legenda em faixas: "até R$ 2 mil", "2–5 mil", ..., "25 mil ou mais". O prefixo (R$) vai só no primeiro
+ * item, para a legenda caber ao lado dos anos, como nas outras camadas do mapa.
+ */
+function itensFaixas(faixas: number[], fmt: (v: number) => string, pre: string): { classe: string; texto: string }[] {
+  return [
+    { classe: "q0", texto: `até ${pre}${fmt(faixas[0])}` },
+    ...faixas.slice(1).map((v, i) => ({ classe: `q${i + 1}`, texto: intervalo(fmt(faixas[i]), fmt(v)) })),
+    { classe: `q${faixas.length}`, texto: `${fmt(faixas[faixas.length - 1])} ou mais` },
+  ];
+}
+
 /** Itens da legenda do mapa, com "Não informado" sempre separado de zero. */
 export function legendaCidade(aba: Aba, cargo: string): { classe: string; texto: string }[] {
   const sem = { classe: "sem", texto: aba === "resultado" && cargo === "Prefeito" ? "Não comparável" : "Não informado" };
   const f = faixasDe(aba, cargo);
   if (!f) return [{ classe: "q4", texto: "Quem mais gastou venceu" }, { classe: "q0", texto: "Perdeu" }, sem];
-  const t = aba === "gasto" ? (v: number) => mil(v) : (v: number) => `${Math.round(v * 100)}%`;
-  const pre = aba === "gasto" ? "R$ " : "";
-  // intervalo curto quando as duas pontas têm a mesma unidade: "R$ 2–5 mil", "20–40%"; senão, "R$ 500 mil–1 mi"
-  const intervalo = (a: number, b: number) => {
-    const [ta, tb] = [t(a), t(b)], ua = ta.replace(/^[\d.,]+/, ""), ub = tb.replace(/^[\d.,]+/, "");
-    return ua === ub ? `${ta.slice(0, ta.length - ua.length)}–${tb}` : `${ta}–${tb}`;
-  };
-  return [
-    { classe: "q0", texto: `até ${pre}${t(f[0])}` },
-    ...f.slice(1).map((v, i) => ({ classe: `q${i + 1}`, texto: `${pre}${intervalo(f[i], v)}` })),
-    { classe: `q${f.length}`, texto: `${pre}${t(f[f.length - 1])} ou mais` },
-    sem,
-  ];
+  return [...(aba === "gasto" ? itensFaixas(f, mil, "R$ ") : itensFaixas(f, (v) => `${Math.round(v * 100)}%`, "")), sem];
 }
 
 /** O valor escrito, com a unidade; null vira "Não informado" (nunca zero). */
@@ -275,16 +283,11 @@ export function contaGastoEstado(estados: { ano: number; uf: string; cargo: stri
 
 /**
  * Legenda com os limites escritos (para as faixas dos estados, que vêm da distribuição dos seis): "até R$ 40 mil",
- * "R$ 40 mil–R$ 60 mil"... e "Não informado". `fmt` escreve um valor da camada.
+ * "40–46 mil"... e "Não informado". `fmt` escreve um valor da camada; `pre` vai só no primeiro item.
  */
-export function legendaPorFaixas(faixas: number[], fmt: (v: number) => string): { classe: string; texto: string }[] {
+export function legendaPorFaixas(faixas: number[], fmt: (v: number) => string, pre = ""): { classe: string; texto: string }[] {
   if (!faixas.length) return [{ classe: "sem", texto: "Não informado" }];
-  return [
-    { classe: "q0", texto: `até ${fmt(faixas[0])}` },
-    ...faixas.slice(1).map((v, i) => ({ classe: `q${i + 1}`, texto: `${fmt(faixas[i])}–${fmt(v)}` })),
-    { classe: `q${faixas.length}`, texto: `${fmt(faixas[faixas.length - 1])} ou mais` },
-    { classe: "sem", texto: "Não informado" },
-  ];
+  return [...itensFaixas(faixas, fmt, pre), { classe: "sem", texto: "Não informado" }];
 }
 
 /**
