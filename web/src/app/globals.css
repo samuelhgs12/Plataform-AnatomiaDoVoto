@@ -2122,7 +2122,24 @@ a.q-ver:active { transform: scale(0.98); }
 .leg-topo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 32px; align-items: end; padding: 28px 28px 24px; margin-bottom: var(--gap); }
 .leg-titulo h1 { margin-bottom: 6px; }
 .leg-sub { color: var(--muted); margin: 0; font-size: 17px; }
-.leg-filtros { grid-column: 1; display: grid; gap: 10px; }
+.leg-filtros { grid-column: 1; display: flex; align-items: flex-end; gap: 12px 28px; flex-wrap: wrap; }
+.leg-filtros-lado { display: grid; gap: 10px; padding-bottom: 6px; }
+
+/* seletor desenhado como o Congresso Nacional (components/Congresso.tsx) */
+.congresso { width: 300px; height: auto; flex: none; overflow: visible; }
+.congresso-base { fill: color-mix(in srgb, var(--muted) 55%, var(--panel)); }
+.congresso-alvo { fill: transparent; }
+.congresso-forma, .congresso-pe { fill: var(--panel); stroke: var(--muted); stroke-width: 2.5; stroke-linejoin: round;
+  transition: fill var(--t-hover) ease, stroke var(--t-hover) ease; }
+.congresso-nome { font: 600 18px var(--fonte), system-ui, sans-serif; fill: var(--muted); transition: fill var(--t-hover) ease; }
+.congresso-n { font: 500 15px var(--fonte), system-ui, sans-serif; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.congresso-casa { cursor: pointer; outline: none; }
+.congresso-casa:hover .congresso-forma, .congresso-casa:hover .congresso-pe { fill: color-mix(in srgb, var(--tinta) 14%, var(--panel)); stroke: var(--fg); }
+.congresso-casa:hover .congresso-nome { fill: var(--fg); }
+.congresso-casa.on .congresso-forma, .congresso-casa.on .congresso-pe { fill: var(--tinta); stroke: var(--tinta); }
+.congresso-casa.on .congresso-nome { fill: var(--fg); }
+.congresso-casa:focus-visible .congresso-alvo { stroke: var(--accent); stroke-width: 2.5; rx: 8px; }
+@media (prefers-reduced-motion: reduce) { .congresso-forma, .congresso-pe, .congresso-nome { transition: none; } }
 .leg-filtros .chips { align-items: center; }
 .leg-sep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
 .leg-rot { font-size: var(--t-pequeno); color: var(--muted); font-weight: 500; margin-right: 2px; }

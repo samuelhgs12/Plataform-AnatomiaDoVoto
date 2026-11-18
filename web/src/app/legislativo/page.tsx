@@ -14,6 +14,7 @@ import {
 } from "@/lib/legislativo";
 import { METODOLOGIA } from "@/lib/metodologia";
 import { AvisoApi } from "@/components/AvisoApi";
+import { Congresso } from "@/components/Congresso";
 import { DicaPlenario } from "@/components/DicaPlenario";
 import { Plenario, type CadeiraDesenho } from "@/components/Plenario";
 
@@ -141,10 +142,11 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
           </p>
         </div>
         <nav className="leg-filtros" aria-label="Escolha a casa e o ano">
+          <Congresso atual={escolha.casa === "assembleia" ? null : escolha.casa} hrefSenado={href({ casa: "senado" })} hrefCamara={href({ casa: "camara" })}
+            cadeirasSenado={PLENARIO_NACIONAL.senado} cadeirasCamara={PLENARIO_NACIONAL.camara} />
+          <div className="leg-filtros-lado">
           <div className="chips" role="list">
-            <Link role="listitem" className={`chip${escolha.casa === "senado" ? " on" : ""}`} href={href({ casa: "senado" })} aria-current={escolha.casa === "senado" ? "true" : undefined}>Senado</Link>
-            <Link role="listitem" className={`chip${escolha.casa === "camara" ? " on" : ""}`} href={href({ casa: "camara" })} aria-current={escolha.casa === "camara" ? "true" : undefined}>Câmara</Link>
-            <span className="leg-sep" aria-hidden="true" />
+
             <span className="leg-rot">Assembleias</span>
             {UFS_PROJETO.map((uf) => {
               const on = escolha.casa === "assembleia" && escolha.uf === uf;
@@ -153,6 +155,7 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
           </div>
           <div className="chips" role="list" aria-label="Eleição">
             {ANOS_LEGISLATIVO.map((a) => <Link role="listitem" key={a} className={`chip${a === ano ? " on" : ""}`} href={href({ ano: String(a) })} aria-current={a === ano ? "true" : undefined}>{a}</Link>)}
+          </div>
           </div>
         </nav>
         <div className="leg-alternar">
