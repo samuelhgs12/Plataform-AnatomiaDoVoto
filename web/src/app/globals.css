@@ -27,9 +27,10 @@
   --f1: #2a78d6; --f2: #1baf7a; --f3: #eb6834; --f4: #6250d6; --f5: #e87ba4; --pub: #2a78d6; --priv: #eb6834; --fx2: #86b6ef; --fx3: #f5b08f;
   /* Pergunta 9: tipos de propaganda (física, audiovisual, digital). Matizes livres na P8 e na P10; claridades diferentes */
   --pp-fis: #8a4b2f; --pp-av: #a87708; --pp-dig: #0b7f8f; --pp-outra: #6f6f69;
-  /* Legislativo: viés em cinco faixas, vermelho (esquerda) · cinza (centro) · azul (direita), a convenção usual;
+  /* Legislativo: viés em cinco faixas, vermelho (esquerda) · cinza (centro) · azul (direita), a convenção usual; faixas
+     vizinhas alternam claridade (escuro, claro, médio, claro, escuro) além do tom, para se separarem de relance;
      gasto do eleito em quatro azuis (quartos da casa) */
-  --vi-e: #b2182b; --vi-ce: #e48066; --vi-c: #b5bcc8; --vi-cd: #6aa6d2; --vi-d: #1f5fa8;
+  --vi-e: #b2182b; --vi-ce: #f26b43; --vi-c: #4b5563; --vi-cd: #3d97d6; --vi-d: #0f3f8f;
   /* cores aproximadas da identidade visual de cada partido (leitura Partido do Legislativo); não vêm dos dados */
   --par-pt: #c4122d; --par-pcdob: #8f1d21; --par-psol: #e3a500; --par-rede: #1f9e98; --par-psb: #f39200; --par-pdt: #d1495b;
   --par-pv: #00994d; --par-cidadania: #d6247f; --par-pros: #f7931e; --par-mdb: #2f8f3e; --par-avante: #ee7d00; --par-psdb: #0067b1;
@@ -63,7 +64,7 @@
     --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
     --fx2: #6da7ec; --fx3: #f0a07a;
     --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93;
-    --vi-e: #ff6b62; --vi-ce: #c4705c; --vi-c: #56607a; --vi-cd: #4d86b8; --vi-d: #6fb0ff;
+    --vi-e: #ff4d5e; --vi-ce: #ffa07a; --vi-c: #5f687b; --vi-cd: #6ec1ff; --vi-d: #3b7bff;
     --cu1: #2b3d66; --cu2: #3c5fb5; --cu3: #6f97f2; --cu4: #b9cfff;
     color-scheme: dark;
   }
@@ -78,7 +79,7 @@
   --f1: #3987e5; --f2: #199e70; --f3: #d95926; --f4: #9085e9; --f5: #d55181; --pub: #3987e5; --priv: #d95926;
   --fx2: #6da7ec; --fx3: #f0a07a;
   --pp-fis: #c98a66; --pp-av: #e0b03c; --pp-dig: #2fb7c6; --pp-outra: #9a9a93;
-  --vi-e: #ff6b62; --vi-ce: #c4705c; --vi-c: #56607a; --vi-cd: #4d86b8; --vi-d: #6fb0ff;
+  --vi-e: #ff4d5e; --vi-ce: #ffa07a; --vi-c: #5f687b; --vi-cd: #6ec1ff; --vi-d: #3b7bff;
   --cu1: #2b3d66; --cu2: #3c5fb5; --cu3: #6f97f2; --cu4: #b9cfff;
   color-scheme: dark;
 }
@@ -2135,11 +2136,11 @@ a.q-ver:active { transform: scale(0.98); }
 .plenario { display: block; width: 100%; height: auto; overflow: visible; }
 .cad { transition: fill 420ms var(--ease-out) var(--atraso, 0ms), opacity var(--t-hover) ease; cursor: pointer; }
 .plenario a:hover .cad { stroke: var(--fg); stroke-width: 2.5; }
+.cad.apagada { opacity: 0.12; }
 .cad-vazia { fill: none; stroke: var(--o); stroke-width: 1.2; }
 .cad-vazia.sem-resultado { stroke: var(--warn); stroke-dasharray: 2.5 2; }
 .cad-sigla { font: 600 21px var(--fonte), system-ui, sans-serif; fill: var(--muted); letter-spacing: 0.01em; transition: opacity var(--t-hover) ease; }
 .plen-numero { font: 600 96px var(--fonte), system-ui, sans-serif; fill: var(--fg); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-.plen-numero.longo { font-size: 70px; }
 .plen-legenda { font: 500 24px var(--fonte), system-ui, sans-serif; fill: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .cad { transition: none; } }
 
@@ -2169,9 +2170,13 @@ a.q-ver:active { transform: scale(0.98); }
 .amostra.vazia { background: transparent; box-shadow: inset 0 0 0 1.5px var(--o); }
 .amostra.vazia.sem-resultado { box-shadow: inset 0 0 0 1.5px var(--warn); }
 
-/* embaixo do plenário: a frase-resumo à esquerda, a legenda à direita */
-.leg-rodape { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 48px; align-items: start; max-width: 1180px; margin: 18px auto 0; }
-.leg-rodape .manchete { margin: 0; }
+/* controles da leitura Custo (em cima do plenário) e legenda centralizada embaixo */
+.leg-controles { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px; max-width: 1180px; margin: 0 auto 8px; }
+.leg-faixa .chip { padding: 7px 12px; font-size: 14px; }
+.leg-faixa .chip .amostra { margin-right: 0; }
+.leg-rodape { display: grid; justify-items: center; gap: 10px; max-width: 760px; margin: 14px auto 0; }
+.leg-rodape .leg-legenda { justify-content: center; }
+.leg-ordem { margin: 0; font-size: var(--t-pequeno); color: var(--muted); text-align: center; }
 .leg-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: var(--t-pequeno); color: var(--muted); }
 .leg-legenda ul { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; margin: 0; padding: 0; }
 .leg-legenda li { display: inline-flex; align-items: center; }
@@ -2184,8 +2189,8 @@ a.q-ver:active { transform: scale(0.98); }
 .leg-media { position: absolute; top: -6px; bottom: -6px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--fg); box-shadow: 0 0 0 2px var(--panel); }
 .leg-faixas { display: grid; grid-template-columns: repeat(5, 1fr); text-align: center; color: var(--fg); font-weight: 500; }
 .leg-marcas { display: flex; justify-content: space-between; font-size: 12px; margin: -2px -8px 0; }
-.leg-legenda-vazias { margin-top: 4px !important; }
-.leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 14px auto 0; max-width: 1180px; }
+.leg-legenda-vazias { margin-top: 4px !important; justify-content: center; width: 100%; }
+.leg-nota { font-size: var(--t-pequeno); color: var(--muted); margin: 14px auto 0; max-width: 760px; text-align: center; }
 .leg-nota.aviso-causa { box-shadow: inset 3px 0 0 var(--warn); padding-left: 12px; }
 
 /* ficha da cadeira */
@@ -2210,5 +2215,4 @@ a.q-ver:active { transform: scale(0.98); }
 @media (max-width: 1100px) {
   .leg-topo { grid-template-columns: 1fr; }
   .leg-alternar { grid-column: 1; grid-row: auto; justify-items: start; }
-  .leg-rodape { grid-template-columns: 1fr; }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bancadas, cadeirasDaCasa, chaveCasa, classeCusto, classePartido, classeVies, espalhar, fileiras, fmtVies, hemiciclo, lerCasa, legislatura,
-  lugares, mediana, nomeCasa, faixaVies, posicaoNaEscala, quartis, resumo, semResultado, siglaNaComposicao, siglasNoArco, vagasDaCasa,
+  lugares, mediana, nomeCasa, faixaVies, ordenarCadeiras, posicaoNaEscala, raioInterno, RAIO_MAX_CADEIRA, textoCentral, quartis, resumo, semResultado, siglaNaComposicao, siglasNoArco, vagasDaCasa,
   type LinhaCadeira, type LinhaGastoPartido,
 } from "../src/lib/legislativo";
 
@@ -179,5 +179,51 @@ describe("posicaoNaEscala", () => {
   it("bancada com nomes juntados tem o viés médio das cadeiras", () => {
     const [b] = bancadas([c({ sigla: "R", score: 40 }), c({ sigla: "R", score: 50 })], [], 2022, { casa: "camara" });
     expect(b.score).toBe(45);
+  });
+});
+
+describe("hemiciclo sem sobreposição", () => {
+  it("em qualquer tamanho de casa, nenhuma cadeira encosta em outra e o raio tem teto", () => {
+    for (const n of [3, 18, 24, 30, 70, 77, 81, 142, 150, 274, 513]) {
+      const { pontos, raio } = hemiciclo(n);
+      expect(raio).toBeLessThanOrEqual(RAIO_MAX_CADEIRA);
+      let menor = Infinity;
+      for (let i = 0; i < pontos.length; i++) for (let j = i + 1; j < pontos.length; j++)
+        menor = Math.min(menor, Math.hypot(pontos[i].x - pontos[j].x, pontos[i].y - pontos[j].y));
+      expect(menor, `n=${n}`).toBeGreaterThanOrEqual(2 * raio * 1.1);
+    }
+  });
+  it("casas pequenas têm vão central maior", () => {
+    expect(raioInterno(24)).toBeGreaterThan(raioInterno(513));
+  });
+});
+
+describe("textoCentral", () => {
+  it("encolhe o número e a legenda até caberem no vão", () => {
+    const largo = textoCentral(200, "+12,9", "viés médio: centro");
+    expect(largo).toEqual({ numero: 96, legenda: 24 });
+    const estreito = textoCentral(90, "R$ 2,3 mi", "custo de uma cadeira");
+    expect(estreito.numero).toBeLessThan(96);
+    expect(estreito.legenda).toBeLessThan(24);
+    // o número cabe na largura do arco interno na altura dele
+    const topo = estreito.legenda * 1.6 + estreito.numero * 0.78;
+    expect("R$ 2,3 mi".length * estreito.numero * 0.6 / 2).toBeLessThanOrEqual(Math.sqrt(90 * 90 - topo * topo));
+  });
+});
+
+describe("ordenarCadeiras", () => {
+  const cads = [
+    c({ nome: "A", renovacao: "estreante", gasto: 300 }), c({ nome: "B", renovacao: "reeleito", gasto: null }),
+    c({ nome: "C", renovacao: "ja_eleito", gasto: 100 }), c({ nome: "D", renovacao: "reeleito", gasto: 200 }),
+  ];
+  const nomes = (l: LinhaCadeira[]) => l.map((x) => x.nome);
+  it("na Renovação, forma blocos contíguos mantendo a ordem do viés dentro de cada um", () => {
+    expect(nomes(ordenarCadeiras(cads, "renovacao"))).toEqual(["B", "D", "C", "A"]);
+  });
+  it("no Custo, ordena pelo gasto com os sem dado no fim; padrão mantém a ordem", () => {
+    expect(nomes(ordenarCadeiras(cads, "custo", "maior"))).toEqual(["A", "D", "C", "B"]);
+    expect(nomes(ordenarCadeiras(cads, "custo", "menor"))).toEqual(["C", "D", "A", "B"]);
+    expect(nomes(ordenarCadeiras(cads, "custo"))).toEqual(["A", "B", "C", "D"]);
+    expect(nomes(ordenarCadeiras(cads, "vies", "maior"))).toEqual(["A", "B", "C", "D"]);
   });
 });

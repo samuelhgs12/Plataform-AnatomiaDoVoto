@@ -104,16 +104,31 @@ export function vagasDaCasa(linhas: LinhaVagas[], ano: number, e: Escolha, ufs?:
 
 export interface Ponto { x: number; y: number }
 
-/** Número de fileiras para n cadeiras: o espaço entre fileiras fica perto do espaço entre cadeiras. */
-export const fileiras = (n: number) => Math.max(1, Math.round(Math.sqrt(0.273 * n)));
+/**
+ * Raio interno do hemiciclo (fração do externo): casas pequenas ganham um vão central maior, para o número do centro
+ * caber sem encostar nas cadeiras; a Câmara (513) fica com o vão clássico.
+ */
+export const raioInterno = (n: number) => (n <= 40 ? 0.56 : n <= 120 ? 0.5 : 0.42);
+
+/** Maior raio de uma cadeira (fração do raio externo): numa casa de 18 cadeiras, elas não viram bolas gigantes. */
+export const RAIO_MAX_CADEIRA = 0.045;
+
+/**
+ * Número de fileiras para n cadeiras: o espaço entre fileiras fica perto do espaço entre cadeiras. Com raio interno i,
+ * f·(f − 1) ≈ 2n(1 − i) / (π(1 + i)).
+ */
+export function fileiras(n: number, interno = raioInterno(n)): number {
+  return Math.max(1, Math.round(Math.sqrt((2 * n * (1 - interno)) / (Math.PI * (1 + interno))) + 0.5));
+}
 
 /**
  * Posições de n cadeiras num semicírculo de raio 1 (centro em 0,0; y negativo para cima), da esquerda para a direita
- * pelo ângulo, fileira a fileira proporcional ao comprimento do arco. `raio` é o raio de cada cadeira.
+ * pelo ângulo, fileira a fileira proporcional ao comprimento do arco. `raio` é o raio de cada cadeira e `interno`, o
+ * raio da fileira de dentro.
  */
-export function hemiciclo(n: number, interno = 0.4): { pontos: Ponto[]; raio: number } {
-  if (n <= 0) return { pontos: [], raio: 0 };
-  const f = fileiras(n);
+export function hemiciclo(n: number, interno = raioInterno(n)): { pontos: Ponto[]; raio: number; interno: number } {
+  if (n <= 0) return { pontos: [], raio: 0, interno };
+  const f = fileiras(n, interno);
   const raios = Array.from({ length: f }, (_, i) => (f === 1 ? 1 : interno + ((1 - interno) * i) / (f - 1)));
   const soma = raios.reduce((s, r) => s + r, 0);
   const por = raios.map((r) => Math.round((n * r) / soma));
@@ -127,9 +142,54 @@ export function hemiciclo(n: number, interno = 0.4): { pontos: Ponto[]; raio: nu
     }
   });
   lista.sort((a, b) => b.ang - a.ang || a.p.y - b.p.y);
-  const passoArco = (Math.PI * soma) / n;
+  // o menor espaço real entre cadeiras vizinhas numa fileira (a de dentro é a mais apertada)
+  const passoArco = Math.min(...raios.map((r, i) => (por[i] > 1 ? (Math.PI * r) / (por[i] - 1) : Infinity)));
   const passoFileira = f === 1 ? passoArco : (1 - interno) / (f - 1);
-  return { pontos: lista.map((l) => l.p), raio: Math.min(passoArco, passoFileira) * 0.42 };
+  return { pontos: lista.map((l) => l.p), raio: Math.min(RAIO_MAX_CADEIRA, Math.min(passoArco, passoFileira) * 0.42), interno };
+}
+
+/**
+ * Tamanho das duas linhas do centro (o número e a legenda), em unidades do desenho, para caberem no vão do hemiciclo
+ * sem encostar nas cadeiras. `vao` = raio da fileira de dentro menos o raio de uma cadeira; as letras têm ~0,6 da altura
+ * de largura. A legenda fica com a base na linha das cadeiras de baixo, o número logo acima.
+ */
+export function textoCentral(vao: number, numero: string, legenda: string, maxNumero = 96, maxLegenda = 24): { numero: number; legenda: number } {
+  const larg = (txt: string, fs: number) => txt.length * fs * 0.6;
+  let legendaFs = maxLegenda;
+  while (legendaFs > 12 && larg(legenda, legendaFs) > vao * 1.7) legendaFs -= 1;
+  let numeroFs = maxNumero;
+  // o número precisa caber na largura do vão na altura em que está (o arco interno fecha para cima)
+  const cabe = (fs: number) => {
+    const topo = legendaFs * 1.6 + fs * 0.78;          // do pé da legenda ao topo do número
+    if (topo >= vao) return false;
+    return larg(numero, fs) / 2 <= Math.sqrt(vao * vao - topo * topo) * 0.92;
+  };
+  while (numeroFs > 20 && !cabe(numeroFs)) numeroFs -= 2;
+  return { numero: numeroFs, legenda: legendaFs };
+}
+
+/**
+ * Onde pôr o rótulo de cada grupo do lado de fora do arco: no ângulo médio das cadeiras dele (radianos, 0 = direita,
+ * π = esquerda). Na ordem dada (o maior primeiro), um rótulo que encostaria num já posto fica de fora: o espaço que cada
+ * um ocupa no arco depende da largura do texto no topo (rótulos horizontais) e da altura nos lados.
+ */
+export function siglasNoArco(
+  grupos: { bancada: number; angulos: number[]; largura?: number }[], raio = 1, altura = 0,
+): { bancada: number; angulo: number }[] {
+  const postas: { bancada: number; angulo: number; largura: number }[] = [];
+  const minimo = (a: number, la: number, b: number, lb: number) => {
+    if (!raio || (!la && !lb && !altura)) return 0.16;
+    const meio = (a + b) / 2;
+    return ((la + lb) / 2 * Math.abs(Math.sin(meio)) + altura * 1.3 * Math.abs(Math.cos(meio)) + altura * 0.4) / raio;
+  };
+  for (const g of grupos) {
+    if (!g.angulos.length) continue;
+    const angulo = g.angulos.reduce((s, v) => s + v, 0) / g.angulos.length;
+    const largura = g.largura ?? 0;
+    if (postas.some((p) => Math.abs(p.angulo - angulo) < minimo(p.angulo, p.largura, angulo, largura))) continue;
+    postas.push({ bancada: g.bancada, angulo, largura });
+  }
+  return postas.map(({ bancada, angulo }) => ({ bancada, angulo }));
 }
 
 /** Índices em que `k` itens ficam espalhados por igual entre `total` posições, na mesma ordem. */
@@ -137,21 +197,6 @@ export function espalhar(k: number, total: number): number[] {
   if (k <= 0) return [];
   if (k >= total) return Array.from({ length: total }, (_, i) => i);
   return Array.from({ length: k }, (_, i) => Math.floor(((i + 0.5) * total) / k));
-}
-
-/**
- * Onde pôr a sigla de cada bancada do lado de fora do arco: no ângulo médio das cadeiras dela (radianos, 0 = direita,
- * π = esquerda). Siglas mais próximas que `minimo` da última posta são puladas, na ordem dada (a maior primeiro).
- */
-export function siglasNoArco(bancadas: { bancada: number; angulos: number[] }[], minimo = 0.16): { bancada: number; angulo: number }[] {
-  const postas: { bancada: number; angulo: number }[] = [];
-  for (const b of bancadas) {
-    if (!b.angulos.length) continue;
-    const angulo = b.angulos.reduce((s, v) => s + v, 0) / b.angulos.length;
-    if (postas.some((p) => Math.abs(p.angulo - angulo) < minimo)) continue;
-    postas.push({ bancada: b.bancada, angulo });
-  }
-  return postas;
 }
 
 export type Lugar =
@@ -175,6 +220,32 @@ export function lugares(cadeiras: LinhaCadeira[], total: number, semResultadoN =
   }
   for (const j of espalhar(semResultadoN, livres.length)) out[livres[j]] = { tipo: "sem_resultado" };
   return out;
+}
+
+// ---------- Ordem das cadeiras ----------
+
+export type Ordem = "padrao" | "maior" | "menor";
+const ORDEM_RENOVACAO: Renovacao[] = ["reeleito", "ja_eleito", "estreante"];
+
+/**
+ * A ordem em que as cadeiras ocupam o hemiciclo, da esquerda para a direita. Padrão: o viés do partido (como vem de
+ * cadeirasDaCasa). Renovação: blocos contíguos de reeleitos, já eleitos e estreantes (dentro de cada um, a ordem do
+ * viés). Custo com `ordem`: do maior para o menor gasto ou o contrário, sem dado de gasto no fim.
+ */
+export function ordenarCadeiras(cadeiras: LinhaCadeira[], leitura: Leitura, ordem: Ordem = "padrao"): LinhaCadeira[] {
+  const pos = new Map(cadeiras.map((c, i) => [c, i]));
+  const estavel = (a: LinhaCadeira, b: LinhaCadeira) => pos.get(a)! - pos.get(b)!;
+  if (leitura === "renovacao") {
+    return [...cadeiras].sort((a, b) => ORDEM_RENOVACAO.indexOf(a.renovacao) - ORDEM_RENOVACAO.indexOf(b.renovacao) || estavel(a, b));
+  }
+  if (leitura === "custo" && ordem !== "padrao") {
+    const s = ordem === "maior" ? -1 : 1;
+    return [...cadeiras].sort((a, b) => {
+      if (a.gasto === null || b.gasto === null) return (a.gasto === null ? 1 : 0) - (b.gasto === null ? 1 : 0) || estavel(a, b);
+      return s * (a.gasto - b.gasto) || estavel(a, b);
+    });
+  }
+  return cadeiras;
 }
 
 // ---------- Cores de cada leitura (classes CSS; as cores moram em globals.css) ----------

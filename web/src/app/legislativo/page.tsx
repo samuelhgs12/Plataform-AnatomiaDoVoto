@@ -7,9 +7,10 @@ import { compacto, inteiro, pct, reais } from "@/lib/format";
 import {
   ANOS_LEGISLATIVO, FAIXAS_VIES, LEITURAS, PLENARIO_NACIONAL, ROTULO_FAIXA, ROTULO_FONTE, ROTULO_RENOVACAO, UFS_PROJETO,
   bancadas as montarBancadas, cadeirasDaCasa, chaveCasa, classeCusto, classePartido, classeRenovacao, classeVies, faixaVies, fmtVies,
-  lerCasa, legislatura, lugares as montarLugares, nomeCasa, posicaoNaEscala, quartis, resumo as montarResumo, semResultado,
-  siglaNaComposicao, vagasDaCasa,
-  type Bancada, type Escolha, type Leitura, type LinhaCadeira, type LinhaGastoPartido, type LinhaSemResultado, type LinhaVagas, type Recorte,
+  lerCasa, legislatura, lugares as montarLugares, mediana, nomeCasa, ordenarCadeiras, posicaoNaEscala, quartis, resumo as montarResumo,
+  semResultado, siglaNaComposicao, vagasDaCasa,
+  type Bancada, type Escolha, type Faixa, type Leitura, type LinhaCadeira, type LinhaGastoPartido, type LinhaSemResultado, type LinhaVagas,
+  type Ordem, type Recorte,
 } from "@/lib/legislativo";
 import { METODOLOGIA } from "@/lib/metodologia";
 import { AvisoApi } from "@/components/AvisoApi";
@@ -49,12 +50,16 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
   const leitura: Leitura = LEITURAS.some((l) => l.id === um(sp.ver)) ? (um(sp.ver) as Leitura) : "vies";
   const nacional = escolha.casa !== "assembleia";
   const recorte: Recorte = nacional && um(sp.recorte) === "estados" ? "estados" : "inteiro";
+  // só na leitura Custo: ordem das cadeiras pelo gasto e filtro por faixa do viés
+  const ordem: Ordem = leitura === "custo" && (um(sp.ordem) === "maior" || um(sp.ordem) === "menor") ? (um(sp.ordem) as Ordem) : "padrao";
+  const faixaPedida = um(sp.faixa);
+  const faixa: Faixa | undefined = leitura === "custo" && FAIXAS_VIES.some((f) => f.id === faixaPedida) ? (faixaPedida as Faixa) : undefined;
 
   const cadeiras = cadeirasDaCasa(todas, ano, escolha);
   const ufsSem = semResultado(semRes, ano, escolha);
   const vagasSem = vagasDaCasa(vagas, ano, escolha, ufsSem);
   const total = recorte === "inteiro" && nacional ? PLENARIO_NACIONAL[escolha.casa as "senado" | "camara"] : cadeiras.length + vagasSem;
-  const lugares = montarLugares(cadeiras, total, vagasSem);
+  const lugares = montarLugares(ordenarCadeiras(cadeiras, leitura, ordem), total, vagasSem);
   const lista = montarBancadas(cadeiras, gastos, ano, escolha);
   const indice = new Map(lista.map((b, i) => [b.sigla, i]));
   const res = montarResumo(cadeiras, gastos, ano, escolha, ufsSem);
@@ -64,7 +69,8 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
 
   const href = (novo: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const atual = { casa: chaveCasa(escolha), ano: String(ano), ver: leitura, recorte: recorte === "estados" ? "estados" : undefined };
+    const atual = { casa: chaveCasa(escolha), ano: String(ano), ver: leitura, recorte: recorte === "estados" ? "estados" : undefined,
+      ordem: ordem === "padrao" ? undefined : ordem, faixa };
     for (const [k, v] of Object.entries({ ...atual, ...novo })) if (v && !(k === "casa" && v === "camara") && !(k === "ano" && v === "2022") && !(k === "ver" && v === "vies")) p.set(k, v);
     const q = p.toString();
     return `/legislativo${q ? `?${q}` : ""}`;
@@ -82,6 +88,8 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
     const vies = c.score === null ? "" : `${fmtVies(c.score, 0)}${c.erro_padrao !== null ? ` ± ${Math.round(c.erro_padrao)}` : ""}${c.fonte && c.fonte !== "bls" ? ` (${ROTULO_FONTE[c.fonte] ?? c.fonte})` : ""}`;
     return {
       classe: classeDe(c), bancada: indice.get(c.sigla)!, href: `/candidato/${c.id_candidato}`,
+      grupo: leitura === "renovacao" ? c.renovacao : c.sigla,
+      apagada: faixa !== undefined && (c.score === null || faixaVies(c.score) !== faixa),
       titulo: `${c.nome} · ${c.sigla} · ${c.uf}${c.score !== null ? ` · ${ROTULO_FAIXA[faixaVies(c.score)]} (${fmtVies(c.score, 0)})` : ""}`,
       ficha: {
         n: c.nome, s: `${c.sigla} · ${NOME_UF[c.uf] ?? c.uf}`, id: String(c.id_candidato), e: `Eleito em ${c.ano_eleicao}`,
@@ -90,32 +98,28 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
       },
     };
   };
-  const maiores = lista.filter((b) => b.cadeiras >= Math.max(2, cadeiras.length * 0.04)).map((b) => ({ bancada: indice.get(b.sigla)!, sigla: b.sigla }));
+  // rótulos de fora do arco: os blocos na Renovação; as maiores bancadas nas outras leituras (sem rótulo quando o Custo
+  // reordena as cadeiras pelo gasto, porque aí os partidos se espalham)
+  const rotulos = leitura === "renovacao"
+    ? (["reeleito", "ja_eleito", "estreante"] as const).filter((r) => cadeiras.some((c) => c.renovacao === r))
+        .map((r) => ({ grupo: r, texto: `${ROTULO_RENOVACAO[r]} · ${cadeiras.filter((c) => c.renovacao === r).length}` }))
+    : ordem !== "padrao" ? []
+    : [...lista].sort((a, b) => b.cadeiras - a.cadeiras).filter((b) => b.cadeiras >= Math.max(2, cadeiras.length * 0.03))
+        .map((b) => ({ grupo: b.sigla, texto: b.sigla }));
+  const gastoTipicoFaixa = faixa ? mediana(cadeiras.filter((c) => c.score !== null && faixaVies(c.score) === faixa && c.gasto !== null).map((c) => c.gasto!)) : null;
 
   const centro = (() => {
     if (!cadeiras.length) return { numero: "", legenda: "sem resultado na base" };
     if (leitura === "vies") return { numero: fmtVies(res.viesMedio), legenda: `viés médio: ${ROTULO_FAIXA[faixaVies(res.viesMedio ?? 0)].toLowerCase()}` };
+    if (leitura === "custo" && faixa) return { numero: gastoTipicoFaixa === null ? "—" : mi(gastoTipicoFaixa), legenda: `gasto típico: ${ROTULO_FAIXA[faixa].toLowerCase()}` };
     if (leitura === "custo") return { numero: res.custoCadeira === null ? "—" : mi(res.custoCadeira), legenda: "custo de uma cadeira" };
     if (leitura === "partido") return { numero: String(res.partidos), legenda: res.partidos === 1 ? "partido" : "partidos" };
     return { numero: pct(res.reeleitos / res.cadeiras, 0), legenda: "reeleitos" };
   })();
 
-  const maior = [...lista].sort((a, b) => b.cadeiras - a.cadeiras)[0];
-  const manchete = (() => {
-    if (!cadeiras.length) return null;
-    if (leitura === "vies") {
-      const partes = FAIXAS_VIES.filter((f) => res.porFaixa[f.id] > 0).map((f) => <span key={f.id}><b>{inteiro(res.porFaixa[f.id])}</b> de {f.rotulo.toLowerCase()}</span>);
-      return <>Das {inteiro(res.cadeiras)} cadeiras: {partes.map((p, i) => <span key={i}>{i > 0 && (i === partes.length - 1 ? " e " : ", ")}{p}</span>)}.</>;
-    }
-    if (leitura === "custo") return res.custoCadeira === null ? <>Não há gastos de campanha na base para esta composição.</> : <>Somando as campanhas de todos os candidatos a {cargo}{escolha.uf ? "" : " dos seis estados"}, cada cadeira disputada em {ano} custou <b>{reais(res.custoCadeira)}</b>. {res.gastoMediano !== null && <>O eleito típico gastou <b>{reais(res.gastoMediano)}</b>.</>}</>;
-    if (leitura === "partido") return <><b>{res.partidos}</b> partidos dividem as {inteiro(res.cadeiras)} cadeiras. A maior bancada é a do <b>{maior.sigla}</b>, com {inteiro(maior.cadeiras)} ({pct(maior.cadeiras / res.cadeiras, 0)}).</>;
-    return <><b>{inteiro(res.reeleitos)}</b> foram reeleitos para a casa, <b>{inteiro(res.jaEleitos)}</b> já tinham vencido outra eleição desde 1998 e <b>{inteiro(res.estreantes)}</b> estreiam.</>;
-  })();
-
   // passar o mouse numa cadeira destaca a bancada inteira, só com CSS: uma regra por bancada
   const realce = lista.map((_, i) =>
-    `.leg:has(.cad[data-b="${i}"]:hover) .cad:not([data-b="${i}"]){opacity:.18}` +
-    `.leg:has(.cad[data-b="${i}"]:hover) .cad-sigla:not([data-b="${i}"]){opacity:.3}`,
+    `.leg:has(.cad[data-b="${i}"]:hover) .cad:not([data-b="${i}"]){opacity:.18}`,
   ).join("");
 
   return (
@@ -159,15 +163,34 @@ export default async function Legislativo({ searchParams }: { searchParams: SP }
 
       <section className="bloco leg-plenario" id="plenario" aria-labelledby="h-plen">
         <h2 id="h-plen" className="sr-only">Plenário</h2>
+        {leitura === "custo" && cadeiras.length > 0 && (
+          <div className="leg-controles">
+            <nav className="alternar" aria-label="Ordem das cadeiras">
+              {([["padrao", "Ordem do viés"], ["maior", "Maior gasto"], ["menor", "Menor gasto"]] as const).map(([id, rot]) => (
+                <Link key={id} href={href({ ordem: id === "padrao" ? undefined : id })} scroll={false} aria-current={ordem === id ? "true" : undefined}>{rot}</Link>
+              ))}
+            </nav>
+            <nav className="chips leg-faixa" aria-label="Filtrar por faixa do viés">
+              <Link className={`chip${!faixa ? " on" : ""}`} href={href({ faixa: undefined })} scroll={false} aria-current={!faixa ? "true" : undefined}>Todos</Link>
+              {FAIXAS_VIES.map((f) => (
+                <Link key={f.id} className={`chip${faixa === f.id ? " on" : ""}`} href={href({ faixa: faixa === f.id ? undefined : f.id })} scroll={false} aria-current={faixa === f.id ? "true" : undefined}>
+                  <span className={`amostra v-${f.id}`} aria-hidden="true" />{f.rotulo}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
         <div className="plenario-caixa" id="plenario-caixa">
-          <Plenario lugares={lugares} desenho={desenho} rotulos={maiores} numero={centro.numero} legenda={centro.legenda}
+          <Plenario lugares={lugares} desenho={desenho} rotulos={rotulos} numero={centro.numero} legenda={centro.legenda}
             titulo={`${nome}, ${ano}: ${inteiro(cadeiras.length)} cadeiras na base${total > cadeiras.length ? ` de ${inteiro(total)}` : ""}, coloridas por ${LEITURAS.find((l) => l.id === leitura)!.rotulo.toLowerCase()}.`} />
           <DicaPlenario alvo="plenario-caixa" />
         </div>
-        <div className="leg-rodape">
-          {manchete && <p className="manchete pequena">{manchete}</p>}
-          {cadeiras.length > 0 && <Legenda leitura={leitura} cortes={cortes} media={res.viesMedio} fora={lugares.some((l) => l.tipo === "fora")} semResultado={ufsSem.length > 0} />}
-        </div>
+        {cadeiras.length > 0 && (
+          <div className="leg-rodape">
+            <Legenda leitura={leitura} cortes={cortes} media={res.viesMedio} fora={lugares.some((l) => l.tipo === "fora")} semResultado={ufsSem.length > 0} />
+            {ordem !== "padrao" && <p className="leg-ordem">Cadeiras do {ordem === "maior" ? "maior para o menor" : "menor para o maior"} gasto, da esquerda para a direita; sem dado de gasto no fim.</p>}
+          </div>
+        )}
         {ufsSem.length > 0 && (
           <p className="leg-nota aviso-causa">
             <b>Sem resultado na base:</b> {ufsSem.map((u) => NOME_UF[u]).join(", ")} em {ano}. Há {cargo === "senador" ? "candidaturas" : "candidatos"}, mas nenhum eleito carregado; essas {inteiro(vagasSem)} cadeiras aparecem tracejadas.
@@ -219,7 +242,7 @@ function Legenda({ leitura, cortes, media, fora, semResultado }: { leitura: Leit
     : [];
   return (
     <div className="leg-legenda">
-      {leitura === "custo" && <span className="leg-polo">Gasto do eleito</span>}
+      {leitura === "custo" && <span className="leg-polo">Gasto do eleito (quartos da casa)</span>}
       <ul>
         {itens.map((it) => <li key={it.classe}><span className={`amostra ${it.classe}`} aria-hidden="true" />{it.rotulo}</li>)}
         {leitura === "partido" && <li>Cores aproximadas da identidade de cada partido. Passe o mouse numa cadeira para ver a bancada.</li>}
