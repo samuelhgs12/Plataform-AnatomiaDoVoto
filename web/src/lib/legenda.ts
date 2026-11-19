@@ -1,4 +1,4 @@
-// Lógica da página de votos de legenda (pergunta 5). Tudo aqui é puro: a página só desenha o que sai destas funções.
+// Lógica do voto de legenda (pergunta 5), na camada Legenda do mapa. Tudo aqui é puro: a página só desenha o que sai daqui.
 // As siglas renomeadas já chegam unificadas pelo SQL (api/app/analises/q5.sql); fusões chegam separadas e só são
 // somadas quando o usuário liga "juntar", usando a tabela linhagem.
 import { pct, pctSinal } from "./format";
@@ -12,8 +12,6 @@ export interface EventoPartido { partido: string; ano: number; tipo: TipoEvento;
 export interface Linhagem { partido: string; sucessor: string; atual: string; ano: number }
 
 export const TODOS = "Todos";
-export const PADRAO_PARTIDOS = ["PT", "PL", "NOVO"];
-export const MAX_PARTIDOS = 3;
 export const CICLOS = ["geral", "municipal"] as const;
 export const CARGOS = ["ambos", "estadual", "federal"] as const;
 export const ORDENS = ["soma", "recente", "anterior", "crescimento"] as const;
@@ -69,15 +67,6 @@ export function serie(linhas: LinhaLegenda[], partidos: string[]): Serie[] {
   return [{ partido: TODOS, pontos: pontosDe(linhas, anos) }, ...partidos.map((p) => ({ partido: p, pontos: pontosDe(linhas.filter((l) => l.partido === p), anos) }))];
 }
 
-/** Todos os partidos das linhas, do que tem mais votos de legenda para o que tem menos (tabela completa). */
-export function tabelaPartidos(linhas: LinhaLegenda[]): Serie[] {
-  const anos = anosDe(linhas);
-  const total = new Map<string, number>();
-  for (const l of linhas) total.set(l.partido, (total.get(l.partido) ?? 0) + l.votos_legenda);
-  return [...total].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([partido]) => ({ partido, pontos: pontosDe(linhas.filter((l) => l.partido === partido), anos) }));
-}
-
 /** Quebra os pontos em trechos de anos seguidos (dentro de `anos`): onde o partido some, a linha é interrompida. */
 export function trechos<T extends { ano: number }>(pontos: T[], anos: number[]): T[][] {
   const res: T[][] = [];
@@ -111,38 +100,12 @@ export function faixaEventos(partidos: string[], eventos: EventoPartido[]): Even
     .sort((a, b) => a.ano - b.ano || partidos.indexOf(a.partido) - partidos.indexOf(b.partido));
 }
 
-export interface EntradaIndice { sigla: string; numero: number; partido: string }
-
-/** Índice para a busca por sigla ou número. Recebe as linhas SEM juntar (para manter as siglas antigas);
- *  com juntar, a sigla antiga aponta para o partido atual (DEM → UNIÃO). */
-export function indicePartidos(linhas: LinhaLegenda[], juntar: boolean, linhagem: Linhagem[]): EntradaIndice[] {
-  const suc = porPartido(linhagem);
-  const indice = new Map<string, EntradaIndice>();
-  for (const l of linhas) {
-    const k = `${l.partido}|${l.numero}`;
-    if (!indice.has(k)) indice.set(k, { sigla: l.partido, numero: l.numero, partido: (juntar && suc.get(l.partido)?.atual) || l.partido });
-  }
-  return [...indice.values()].sort((a, b) => a.sigla.localeCompare(b.sigla, "pt-BR") || a.numero - b.numero);
-}
-
-const semAcento = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-
-/** Entradas que casam com o termo (número exato ou sigla começando pelo termo, sem acento nem maiúsculas),
- *  uma por partido de destino, fora os já escolhidos. */
-export function buscarPartido(indice: EntradaIndice[], termo: string, escolhidos: string[] = []): EntradaIndice[] {
-  const t = semAcento(termo.trim());
-  if (!t) return [];
-  const vistos = new Set(escolhidos);
-  return indice.filter((e) => {
-    if (vistos.has(e.partido) || (String(e.numero) !== t && !semAcento(e.sigla).startsWith(t))) return false;
-    vistos.add(e.partido);
-    return true;
-  });
-}
-
 /** Os n partidos com mais votos de legenda que ainda não foram escolhidos. */
 export function sugestoes(linhas: LinhaLegenda[], selecionados: string[], n = 5): string[] {
-  return tabelaPartidos(linhas).map((s) => s.partido).filter((p) => !selecionados.includes(p)).slice(0, n);
+  const total = new Map<string, number>();
+  for (const l of linhas) total.set(l.partido, (total.get(l.partido) ?? 0) + l.votos_legenda);
+  return [...total].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([p]) => p)
+    .filter((p) => !selecionados.includes(p)).slice(0, n);
 }
 
 /** As duas eleições mais recentes do ciclo nas linhas, ou null se não houver duas. */
@@ -234,48 +197,4 @@ export function resumoCiclos({ anos, pares }: Comparacao): string {
   if (alta) s += ` Maior alta: ${alta.partido} (${pctSinal(alta.variacao!)}).`;
   if (queda) s += ` Maior queda: ${queda.partido} (${pctSinal(queda.variacao!)}).`;
   return s;
-}
-
-export interface ParametrosLegenda { uf?: string; juntar: boolean; p: string[]; ciclo: Ciclo; cargo: CargoCiclo; ordem: OrdemCiclo; todos: boolean }
-type SP = Record<string, string | string[] | undefined>;
-
-const lista = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v != null ? [v] : []);
-const escolha = <T extends string>(v: string | undefined, opcoes: readonly T[], padrao: T): T => (opcoes.find((o) => o === v) ?? padrao);
-const booleano = (v: string | undefined, padrao: boolean) => (v === "1" || v === "true" ? true : v === "0" || v === "false" ? false : padrao);
-
-/**
- * Lê e valida os parâmetros da URL; valor inválido volta ao padrão. p aceita `p=PT&p=PL` ou `p=PT,PL`, até 3 partidos;
- * `p=` vazio é uma escolha válida (nenhum partido, só "Todos"). Com `opcoes`, UF e partidos precisam existir nos dados
- * (a sigla é casada sem diferenciar maiúsculas). todos=1 mostra todos os partidos na comparação de ciclos.
- */
-export function lerParametros(sp: SP, opcoes: { ufs?: string[]; partidos?: string[] } = {}): ParametrosLegenda {
-  const uf = lista(sp.uf)[0]?.toUpperCase();
-  const canonico = (s: string) => (opcoes.partidos ? opcoes.partidos.find((x) => x.toLowerCase() === s.toLowerCase()) : s);
-  const pedidos = lista(sp.p).flatMap((v) => v.split(",")).map((s) => s.trim()).filter(Boolean);
-  const p = [...new Set(pedidos.map(canonico).filter((s): s is string => !!s))].slice(0, MAX_PARTIDOS);
-  const vazio = sp.p != null && !pedidos.length;
-  return {
-    uf: uf && /^[A-Z]{2}$/.test(uf) && (!opcoes.ufs || opcoes.ufs.includes(uf)) ? uf : undefined,
-    juntar: booleano(lista(sp.juntar)[0], false),
-    p: p.length || vazio ? p : [...PADRAO_PARTIDOS],
-    ciclo: escolha(lista(sp.ciclo)[0], CICLOS, "geral"),
-    cargo: escolha(lista(sp.cargo)[0], CARGOS, "ambos"),
-    ordem: escolha(lista(sp.ordem)[0], ORDENS, "soma"),
-    todos: booleano(lista(sp.todos)[0], false),
-  };
-}
-
-/** URL da página com os parâmetros atuais trocados por `mudanca`; omite o que está no padrão. */
-export function hrefLegenda(atual: ParametrosLegenda, mudanca: Partial<ParametrosLegenda> = {}): string {
-  const n = { ...atual, ...mudanca };
-  const q = new URLSearchParams();
-  if (n.uf) q.set("uf", n.uf);
-  if (n.juntar) q.set("juntar", "1");
-  if (n.p.join(",") !== PADRAO_PARTIDOS.join(",")) q.set("p", n.p.join(","));
-  if (n.ciclo !== "geral") q.set("ciclo", n.ciclo);
-  if (n.cargo !== "ambos") q.set("cargo", n.cargo);
-  if (n.ordem !== "soma") q.set("ordem", n.ordem);
-  if (n.todos) q.set("todos", "1");
-  const s = q.toString();
-  return `/analises/legenda${s ? `?${s}` : ""}`;
 }

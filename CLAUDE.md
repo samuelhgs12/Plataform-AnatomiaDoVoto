@@ -17,7 +17,7 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
   em `src/lib/legenda.ts`). O resultado fica no cache da API e do Next (dados históricos).
 - Na página (componente de servidor, `async`): `await lerAnalise("q5", ["legenda"])` (`src/lib/api.ts`, devolve `null`
   se a API não responder) → `comoObjetos<Linha>(dados.tabela)` → função de `src/lib/<assunto>.ts`.
-- Se a tabela faltar, mostre o `card aviso` dizendo que a API não respondeu (veja `analises/legenda`).
+- Se a tabela faltar, mostre o `card aviso` dizendo que a API não respondeu (veja a camada Legenda em `app/page.tsx`).
 - O texto de metodologia ("Como calculamos", fonte, limites) mora só em `src/lib/metodologia.ts`: a página da análise e a
   `/sobre` leem de lá (`METODOLOGIA.<id>.calculo`). Mudou a regra no `.sql`? Mude o texto ali, não na página.
 - Exceção provisória: o mapa da página inicial ainda é JSON estático (`pipeline/export_static.py` → `web/public/data/mapa.json`,
@@ -43,8 +43,8 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
 
 - `searchParams` é uma `Promise` (Next 16): `const sp = await searchParams`; normalize com `um()` (pega o 1º valor
   de arrays) e **valide contra as opções que existem nos dados** (ex.: `ufs.includes(uf)`), senão ignore o filtro.
-- Análises usam `export const dynamic = "force-dynamic"` e filtros como `<Link className="chip">` (classe `on` no ativo);
-  um helper `href(nova)` mescla o estado atual com a mudança via `URLSearchParams` (veja `analises/legenda`).
+- Páginas com filtros (o mapa, candidatos, legislativo) usam `export const dynamic = "force-dynamic"` e filtros como `<Link className="chip">` (classe `on` no ativo);
+  um helper `href(nova)` mescla o estado atual com a mudança via `URLSearchParams` (veja o `href` de `app/page.tsx`).
 
 ## Quando usar componente cliente (`"use client"`)
 
@@ -52,8 +52,7 @@ Só com estado/eventos/efeitos do navegador: `Filters` e `EscolhaMunicipio` (tam
 `router.push` + `useTransition`, com `<noscript>` de fallback), `SearchBox` (sugestões via `fetch('/api/busca')`),
 `BuscaNome` (abre/fecha), `MenuLateral` (recolhe em trilho com o botão ou a tecla `[`; gaveta no celular; estado em `<html data-menu>`), `PaletaBusca` (Ctrl K: páginas, estados e municípios de `/indice/municipios` filtrados por `src/lib/paleta.ts`, candidatos da `/api/busca`; a caixa nasce do botão por View Transition) `MapaVivo` (navegação sem recarregar, dica e zoom do mapa da página inicial) e `FotoCandidato` (foto de `/api/fotos`;
 se a imagem falhar, volta às iniciais; URLs e escolha da foto em `src/lib/foto-candidato.ts`). Gráficos
-(`MapaAbstencao`, `Dispersao`, `BarrasH`, `BarraPecas`, `NuvemPalavras`) e `PartyChip` são componentes de servidor sem JS
-(`SpendBars` e `WordList` também, mas estão sem uso).
+(`MapaAbstencao`, `Dispersao`, `BarrasH`, `BarraPecas`, `NuvemPalavras`) e `PartyChip` são componentes de servidor sem JS.
 
 ## Design visual
 

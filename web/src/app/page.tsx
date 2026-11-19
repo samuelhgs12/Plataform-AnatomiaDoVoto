@@ -14,7 +14,7 @@ import { apiGetOpcional, lerAnalise } from "@/lib/api";
 import { comoObjetos, lerEstatico } from "@/lib/data";
 import { NOME_UF } from "@/lib/financiamento";
 import {
-  CARGOS, anosDe as anosDaLegenda, cicloDoAno, compararCiclos, cortesTom, faixaEventos, filtrar, hrefLegenda, resolverSelecao, resumoCiclos, resumoSerie, serie as serieLegenda,
+  CARGOS, anosDe as anosDaLegenda, cicloDoAno, compararCiclos, cortesTom, faixaEventos, filtrar, resolverSelecao, resumoCiclos, resumoSerie, serie as serieLegenda,
   sugestoes, type CargoCiclo, type EventoPartido, type LinhaLegenda, type Linhagem,
 } from "@/lib/legenda";
 import {
@@ -106,6 +106,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const cargo = CARGOS.find((c) => c === um(sp.cargo)) ?? "ambos";
   // juntar: os votos dos partidos que se fundiram passam para o atual (DEM e PSL → UNIÃO), como na análise da pergunta 5
   const juntar = naLegenda && um(sp.juntar) === "1";
+  const todosCiclos = naLegenda && um(sp.todos) === "1";   // a comparação entre ciclos com todos os partidos
   const legendaVista = filtrar(legenda, { juntar, linhagem });
   const pedido = legenda.find((l) => l.partido === um(sp.p))?.partido;
   const partido = pedido && resolverSelecao([pedido], juntar, linhagem)[0];
@@ -126,11 +127,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const pediuCruzar = um(sp.cor) === "cruzar";
   const cruzar = comCenso && !!uf && !naLegenda && pediuCruzar;
 
-  type Estado = { ver?: Visao; ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null; p?: string | null; cargo?: CargoCiclo; juntar?: boolean; med?: string };
+  type Estado = { ver?: Visao; ano?: number; uf?: string | null; mun?: number | null; ind?: string; cor?: string | null; p?: string | null; cargo?: CargoCiclo; juntar?: boolean; todos?: boolean; med?: string };
   const params = (nova: Estado) => {
     const n = {
       ver: ver === "candidato" || ver === "dinheiro" ? "abstencao" : ver, ano: naLegenda ? anoLeg! : naInstrucao ? anoInst : ano, uf, mun: mun?.id_municipio, ind: indPedido,
-      cor: pediuCruzar && ver === "abstencao" ? "cruzar" : null, p: partido, cargo, juntar, med: medida.chave, ...nova,
+      cor: pediuCruzar && ver === "abstencao" ? "cruzar" : null, p: partido, cargo, juntar, todos: todosCiclos, med: medida.chave, ...nova,
     };
     if (nova.uf !== undefined && nova.mun === undefined) n.mun = null;   // trocar de estado solta o município
     const leg = n.ver === "legenda", inst = n.ver === "instrucao";
@@ -142,6 +143,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       if (n.p) p.set("p", n.p);
       if (n.cargo !== "ambos") p.set("cargo", n.cargo);
       if (n.juntar) p.set("juntar", "1");
+      if (n.todos) p.set("todos", "1");
     } else if (inst) {
       if (n.uf && n.mun) p.set("mun", String(n.mun));
       if (n.med !== MEDIDA_PADRAO.chave) p.set("med", n.med);
@@ -281,7 +283,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const disputaCad = cad && uf ? montarDisputa(dadosCad, { ano: anoLeg!, cargo: cargoDaLista(cargo), uf }) : null;
   const puxadoresCad = disputaCad ? puxadores(disputaCad) : [];
   const cargosCad = (["federal", "estadual"] as const).map((c) => ({ rotulo: `Dep. ${c}`, href: href({ cargo: c }), on: cargoDaLista(cargo) === cargoDaLista(c) }));
-  const hrefAnalise = `/analises/legenda${(() => { const q = new URLSearchParams(); if (uf) q.set("uf", uf); if (juntar) q.set("juntar", "1"); if (partido) q.set("p", partido); const t = q.toString(); return t ? `?${t}` : ""; })()}`;
   // trocar de visão mantém o estado; o ano vai para o mais perto que a outra visão tem
   // camada Dinheiro: o ano e o cargo dela (2018 a 2024; a pergunta 2, 2006 a 2024); ao sair dela, a abstenção fica no mesmo ano
   const escDinheiro = escolhaMapaDinheiro(naDinheiro ? sp : { ano: String(naLegenda ? anoLeg : naInstrucao ? anoInst : ano) });
@@ -369,7 +370,6 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const resumoLeg = resumoSerie(seriesLeg);
   const cortesSerie = Object.fromEntries(escolhidosSerie.map((p) => [p, cortesTom(p, eventosLeg, juntar)]));
   const comparacaoLeg = anoLeg === undefined ? null : compararCiclos(linhasSerie, { ciclo: cicloDoAno(anoLeg), cargo, ordem: "soma" }, linhagem);
-  const hrefTodosCiclos = hrefLegenda({ uf, juntar, p: escolhidosSerie, ciclo: anoLeg === undefined ? "geral" : cicloDoAno(anoLeg), cargo, ordem: "soma", todos: true });
 
   // visão candidato: cand e campanha validados contra os dados da API; inválidos (ou API fora) voltam à busca
   const idCand = naCandidato && /^\d+$/.test(um(sp.cand) ?? "") ? Number(um(sp.cand)) : undefined;
@@ -715,12 +715,11 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               <div className="bloco noite s12">
                 <h3>De um ciclo para o outro</h3>
                 <p className="r-texto">{resumoCiclos(comparacaoLeg)}</p>
-                <ComparaCiclos comparacao={comparacaoLeg} limite={8} todos={false} hrefAlternar={hrefTodosCiclos} />
+                <ComparaCiclos comparacao={comparacaoLeg} limite={8} todos={todosCiclos} hrefAlternar={href({ todos: !todosCiclos })} />
               </div>
             )}
 
             <ul className="atalhos s12">
-              <li><Link href={hrefAnalise}>Análise completa do voto de legenda</Link></li>
               <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
             </ul>
           </div>

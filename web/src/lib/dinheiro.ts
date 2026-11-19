@@ -36,25 +36,6 @@ export interface Recorte {
 type SP = Record<string, string | string[] | undefined>;
 const um = (v: SP[string]) => (Array.isArray(v) ? v[0] : v);
 
-/** Lê e valida o recorte da URL contra as opções que existem; o que não existe é ignorado (e, se for o cargo, avisado). */
-export function lerRecorte(sp: SP, op: { anos: number[]; ufs: string[]; municipios: LinhaMunicipio[] }): Recorte {
-  const pedido = Number(um(sp.ano));
-  const ano = op.anos.includes(pedido) ? pedido : op.anos[op.anos.length - 1];
-  const cargos = cargosDoAno(ano);
-  const cargoPedido = um(sp.cargo);
-  const cargo = cargoPedido && cargos.includes(cargoPedido) ? cargoPedido : cargos[0];
-  const uf = op.ufs.includes(um(sp.uf) ?? "") ? um(sp.uf) : undefined;
-  const munPedido = op.municipios.find((m) => String(m.id_municipio) === um(sp.mun) && (!uf || m.uf === uf));
-  const mun = ehMunicipal(ano) ? munPedido : undefined;
-  const aba = ABAS.some((a) => a.chave === um(sp.aba)) ? (um(sp.aba) as Aba) : "gasto";
-  return {
-    ano, cargo, aba, vista: um(sp.vista) === "lista" ? "lista" : "mapa",
-    uf: uf ?? mun?.uf, mun,
-    cargoTrocado: cargoPedido && cargoPedido !== cargo ? cargoPedido : undefined,
-    munIgnorado: !!munPedido && !mun,
-  };
-}
-
 /** Eleições com prestação de contas no banco (não há receitas nem despesas antes de 2018). */
 export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024, 2026];
 
@@ -183,16 +164,6 @@ export function opcoesMunicipio(municipios: { cod_ibge: string; uf: string; nome
 /** O estado de um município pelo código do IBGE (para abrir a cidade escolhida na lista dos seis estados). */
 export function ufDoMunicipio(municipios: { cod_ibge: string; uf: string }[], cod: string | undefined): string | undefined {
   return cod ? municipios.find((m) => m.cod_ibge === cod)?.uf : undefined;
-}
-
-/** Endereço da área com o recorte atual e as mudanças (null apaga). Trocar o estado solta a cidade. */
-export function hrefDinheiro(r: Recorte, novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "aba" | "vista", string | number | null>> = {}, ancora?: string): string {
-  const atual: Record<string, string | number | null | undefined> = {
-    ano: r.ano, cargo: r.cargo, uf: r.uf, mun: "uf" in novo ? null : r.mun?.id_municipio, aba: r.aba === "gasto" ? null : r.aba, vista: r.vista === "lista" ? "lista" : null,
-  };
-  const p = new URLSearchParams();
-  for (const [k, v] of Object.entries({ ...atual, ...novo })) if (v !== null && v !== undefined && v !== "") p.set(k, String(v));
-  return `/analises/dinheiro?${p}${ancora ? `#${ancora}` : ""}`;
 }
 
 /**

@@ -47,20 +47,10 @@ export const FAIXAS_PUBLICO = [
   { faixa: 4, rotulo: "Recebeu muito", detalhe: "cerca de 1/4, os que mais receberam", curto: "mais receberam" },
 ];
 
-/** `frase` completa "X em cada 10 candidatos ..." na manchete da seção. */
-export const FAIXAS: { chave: Faixa; rotulo: string; descricao: string; frase: string; classe: string }[] = [
-  { chave: "so_publico", rotulo: "Só dinheiro público", descricao: "todo o dinheiro veio dos fundos públicos", frase: "fizeram a campanha só com dinheiro público", classe: "fx1" },
-  { chave: "mais_publico", rotulo: "Mais público que privado", descricao: "mais da metade veio dos fundos públicos", frase: "usaram mais dinheiro público que privado", classe: "fx2" },
-  { chave: "mais_privado", rotulo: "Mais privado que público", descricao: "mais da metade veio de doações ou do próprio bolso", frase: "usaram mais dinheiro privado que público", classe: "fx3" },
-  { chave: "so_privado", rotulo: "Só dinheiro privado", descricao: "nenhum real veio dos fundos públicos", frase: "fizeram a campanha só com dinheiro privado", classe: "fx4" },
-  { chave: "sem_receita", rotulo: "Não recebeu nada", descricao: "não declarou ter recebido dinheiro", frase: "não declararam ter recebido dinheiro", classe: "fx5" },
-];
-
 export const NOME_UF: Record<string, string> = { AP: "Amapá", ES: "Espírito Santo", MG: "Minas Gerais", PE: "Pernambuco", RJ: "Rio de Janeiro", RR: "Roraima" };
 
 /** Cargos na ordem de importância (do mais alto ao mais baixo), para listas e filtros. */
 export const ORDEM_CARGOS = ["Presidente", "Governador", "Senador", "Deputado federal", "Deputado estadual", "Prefeito", "Vereador"];
-export const TIPO_ELEICAO = (ano: number) => (ano % 4 === 2 ? "eleição geral" : "eleição municipal");
 
 export interface Filtros { ano?: number; cargo?: string; uf?: string }
 
@@ -117,24 +107,6 @@ export function porUf(linhas: LinhaFontes[], f: Omit<Filtros, "uf">): { uf: stri
     .sort((a, b) => b.soma.publico / b.soma.total - a.soma.publico / a.soma.total || a.uf.localeCompare(b.uf));
 }
 
-/**
- * Frases de mudança comparando eleição geral com geral e municipal com municipal (anos alternados não são comparáveis):
- * "de 66% em 2018 para 81% em 2022 (subiu 15 pontos)". Só gera frase para o tipo que tem pelo menos 2 eleições com dados.
- */
-export function descreverMudancas(evolucao: { ano: number; soma: Soma }[]): { tipo: string; texto: string }[] {
-  const saida: { tipo: string; texto: string }[] = [];
-  for (const [tipo, resto] of [["gerais", 2], ["municipais", 0]] as const) {
-    const anos = evolucao.filter((e) => e.ano % 4 === resto && e.soma.total > 0);
-    if (anos.length < 2) continue;
-    const [a, b] = [anos[0], anos[anos.length - 1]];
-    const pa = Math.round((a.soma.publico / a.soma.total) * 100), pb = Math.round((b.soma.publico / b.soma.total) * 100);
-    const d = pb - pa;
-    const variacao = d === 0 ? "ficou igual" : `${d > 0 ? "subiu" : "caiu"} ${Math.abs(d)} ${Math.abs(d) === 1 ? "ponto" : "pontos"}`;
-    saida.push({ tipo, texto: `o dinheiro público foi de ${pa}% em ${a.ano} para ${pb}% em ${b.ano} (${variacao}).` });
-  }
-  return saida;
-}
-
 /** Uma soma por partido, do que mais recebeu ao que menos recebeu. */
 export function porPartido(linhas: LinhaFontes[], f: Filtros): { partido: string; soma: Soma }[] {
   const mapa = new Map<string, Soma>();
@@ -145,18 +117,6 @@ export function porPartido(linhas: LinhaFontes[], f: Filtros): { partido: string
     acumular(s, l);
   }
   return [...mapa.entries()].map(([partido, soma]) => ({ partido, soma })).filter((p) => p.soma.total > 0).sort((a, b) => b.soma.total - a.soma.total);
-}
-
-/**
- * Ordena os partidos para o gráfico: "valor" (quem recebeu mais) ou "publico" (quem mais dependeu de dinheiro público).
- * Na ordem por % público, partidos com menos de `minimoParte` do dinheiro total ficam de fora: com valores muito
- * pequenos o percentual engana (um partido com R$ 5 mil, todo público, apareceria no topo).
- */
-export function ordenarPartidos<T extends { partido: string; soma: Soma }>(partidos: T[], ordem: "valor" | "publico", minimoParte = 0.005): T[] {
-  if (ordem === "valor") return [...partidos].sort((a, b) => b.soma.total - a.soma.total);
-  const total = partidos.reduce((a, p) => a + p.soma.total, 0);
-  return partidos.filter((p) => p.soma.total >= total * minimoParte)
-    .sort((a, b) => b.soma.publico / b.soma.total - a.soma.publico / a.soma.total || b.soma.total - a.soma.total);
 }
 
 /** Faixa dos candidatos sem prestação de contas final (perguntas 2 e 8): o valor é desconhecido, não zero. */
@@ -210,19 +170,6 @@ export function respostaSucesso(g: ReturnType<typeof sucessoTresGrupos>) {
   return { base, curta, vezes: base.taxa > 0 ? g.muito.taxa / base.taxa : null };
 }
 
-/** Que parte dos candidatos os eleitos eram, e que parte do dinheiro público eles receberam. */
-export function parteDosEleitos(linhas: LinhaFontes[], f: Filtros) {
-  let cand = 0, candEleitos = 0, pub = 0, pubEleitos = 0;
-  for (const l of linhas) {
-    if (!passa(l, f)) continue;
-    const p = l.fundo_eleitoral + l.fundo_partidario;
-    cand += l.candidaturas;
-    pub += p;
-    if (l.eleito) { candEleitos += l.candidaturas; pubEleitos += p; }
-  }
-  return { candidatos: cand, eleitos: candEleitos, pctCandidatos: cand ? candEleitos / cand : 0, publico: pub, publicoEleitos: pubEleitos, pctPublico: pub ? pubEleitos / pub : 0 };
-}
-
 /** Quantas candidaturas em cada faixa de dependência do dinheiro público. `eleito` undefined = todas. */
 export function contarFaixas(linhas: LinhaFaixa[], f: Filtros, eleito?: boolean): { porFaixa: Record<Faixa, number>; total: number } {
   const porFaixa: Record<Faixa, number> = { so_publico: 0, mais_publico: 0, mais_privado: 0, so_privado: 0, sem_receita: 0 };
@@ -268,17 +215,6 @@ export function deCada100(valores: number[]): number[] {
     falta -= 1;
   }
   return inteiros;
-}
-
-/** "R$ 14 de cada R$ 100"; um valor que existe mas arredonda para zero vira "menos de R$ 1 de cada R$ 100". */
-export const textoDe100 = (n: number, valor: number) => (n === 0 && valor > 0 ? "menos de R$ 1 de cada R$ 100" : `R$ ${n} de cada R$ 100`);
-
-/** "3 em cada 10 candidatos": arredonda uma proporção para uma fração simples de dizer em voz alta. */
-export function emCada10(p: number, plural = "candidatos", singular = "candidato"): string {
-  const n = Math.round(p * 10);
-  if (n <= 0) return p > 0 ? `menos de 1 em cada 10 ${plural}` : `nenhum ${singular}`;
-  if (n >= 10) return p < 1 ? `quase todos os ${plural}` : `todos os ${plural}`;
-  return `${n} em cada 10 ${plural}`;
 }
 
 export interface ResumoCampanha {

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { ANALISES } from "@/lib/analises";
 import { Icone, type NomeIcone } from "./Icone";
 import { Nome, Simbolo } from "./Logotipo";
 import { abrirBusca } from "./PaletaBusca";
@@ -16,10 +15,8 @@ const ITENS: { href: string; rotulo: string; icone: NomeIcone; ativo: (p: string
   { href: "/", rotulo: "Mapa", icone: "mapa", ativo: (p) => p === "/" },
   { href: "/candidatos", rotulo: "Candidatos", icone: "candidatos", ativo: (p) => p.startsWith("/candidato") },
   { href: "/legislativo", rotulo: "Legislativo", icone: "plenario", ativo: (p) => p.startsWith("/legislativo") },
-  { href: "/analises", rotulo: "Análises", icone: "analises", ativo: (p) => p.startsWith("/analises") },
   { href: "/sobre", rotulo: "Sobre os dados", icone: "sobre", ativo: (p) => p === "/sobre" },
 ];
-const SUBITENS = ANALISES.filter((a) => a.href.startsWith("/analises/"));
 
 // <html data-menu> é a fonte da verdade (o script do layout o põe antes da pintura); o React só o observa
 const observarMenu = (avisar: () => void) => {
@@ -100,20 +97,11 @@ export function MenuLateral() {
               const atual = it.ativo(caminho);
               return (
                 <li key={it.href}>
-                  <Link href={it.href} className="menu-item" data-rotulo={it.rotulo} aria-current={atual && (it.href !== "/analises" || caminho === "/analises") ? "page" : undefined}
+                  <Link href={it.href} className="menu-item" data-rotulo={it.rotulo} aria-current={atual ? "page" : undefined}
                     data-secao={atual ? "" : undefined}>
                     <Icone nome={it.icone} />
                     <span className="menu-rotulo">{it.rotulo}</span>
                   </Link>
-                  {it.href === "/analises" && (
-                    <ul className="menu-sub">
-                      {SUBITENS.map((a) => (
-                        <li key={a.href}>
-                          <Link href={a.href} className="menu-subitem" aria-current={caminho === a.href ? "page" : undefined}>{a.curto}</Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </li>
               );
             })}

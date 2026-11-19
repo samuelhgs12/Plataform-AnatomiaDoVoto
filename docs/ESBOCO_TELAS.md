@@ -7,11 +7,9 @@ Estado: ✅ implementado no esqueleto · 🔲 a fazer.
 
 | Rota | Tela | Estado |
 |---|---|---|
-| `/` | Início: **mapa** no centro com duas visões (`?ver=legenda`). **Abstenção**: estados → municípios com zoom; ano; painel com a série, os indicadores do Censo 2010 em 2008, 2010 e 2012 e os do Censo 2022 (IBGE) em 2020, 2022 e 2024 e a dispersão indicador × abstenção. **Voto de legenda** (2018–2024, só por estado): a cor mostra a parte dos votos dada só à legenda, ou, com um partido escolhido (`?p=`), a parte dele entre os votos só na legenda, em faixas fixas; painel com a série, os partidos com mais voto de legenda e o cargo (deputados federal/estadual). **Comparar › Idade** (P6, `?ver=idade`): idade do eleitorado (TSE, 2018–2026) ou da população de 16+ (Censo 2022, em 2020–2024) em quintos; painel com a dispersão idade × idade dos votados ou × viés, por cargo. **Comparar › Viés** (P7, `?ver=vies`): viés dos votos (média dos scores dos partidos ponderada pelos votos) em nove faixas fixas do vermelho ao azul; painel com a linha do tempo 2018–2026 e os municípios mais à esquerda e à direita do estado. Depois, a busca e as análises | ✅ · 🔲 legenda por município |
+| `/` | Início: **mapa** no centro com duas visões (`?ver=legenda`). **Abstenção**: estados → municípios com zoom; ano; painel com a série, os indicadores do Censo 2010 em 2008, 2010 e 2012 e os do Censo 2022 (IBGE) em 2020, 2022 e 2024 e a dispersão indicador × abstenção. **Voto de legenda** (P5, 2018–2026, só por estado): a cor mostra a parte dos votos dada só à legenda, ou, com um partido escolhido (`?p=`), a parte dele entre os votos só na legenda, em faixas fixas; painel com a série, os partidos com mais voto de legenda, a comparação entre ciclos (`?todos=1` mostra todos os partidos), o cargo (deputados federal/estadual) e, com um estado escolhido, quem puxou quem (deputados de 2018, 2022 e 2026). **Comparar › Idade** (P6, `?ver=idade`): idade do eleitorado (TSE, 2018–2026) ou da população de 16+ (Censo 2022, em 2020–2024) em quintos; painel com a dispersão idade × idade dos votados ou × viés, por cargo. **Comparar › Viés** (P7, `?ver=vies`): viés dos votos (média dos scores dos partidos ponderada pelos votos) em nove faixas fixas do vermelho ao azul; painel com a linha do tempo 2018–2026 e os municípios mais à esquerda e à direita do estado. Depois, a busca e as análises | ✅ · 🔲 legenda por município |
 | `/candidatos` | Candidatos de uma eleição: padrão = ano mais recente; presidente em ano de eleição geral, prefeito em ano municipal; cargo estadual/municipal sem UF pede a escolha do estado antes de listar. Cards com a miniatura da foto do TSE (sem foto, as iniciais), partido, resultado, votos; paginação | ✅ |
 | `/candidato/[id]` | Perfil: cabeçalho + KPIs, carreira (P10), receitas (P8), propaganda por categoria (P9) | ✅ (💡 custo por voto e percentil: 🔲) |
-| `/analises/financiamento` | Recursos públicos × sucesso eleitoral (P8): taxa de eleição por faixa de dinheiro público, parte do dinheiro público com os eleitos, eleito × não eleito típico; contexto: de onde vem o dinheiro, evolução, estados, partidos | ✅ (`/api/analises/q8`) |
-| `/analises/legenda` | Voto de legenda (P5): série histórica por partido e UF, comparação entre ciclos, mudanças nos partidos e tabela | ✅ · 🔲 mapa por município |
 | `/analises/retencao` | Retenção por turma de estreia (P10) | 🔲 (dados já em `/api/analises/q10`: `permanencia`) |
 | `/analises/trocas` | Trocas de partido por ano e matriz origem × destino (P10) | 🔲 (`/api/analises/q10`: `trocas`) |
 | `/legislativo` | Plenários do Senado, da Câmara e das Assembleias (2018, 2022, 2026): hemiciclo + tabela das bancadas em espelho (realce cruzado em CSS), leituras Viés, Custo, Partido e Renovação, recorte plenário inteiro / 6 estados, lista dos eleitos do partido escolhido | ✅ (`/api/analises/legislativo`) |
@@ -23,6 +21,9 @@ Cabeçalho com resumo da carreira; carreira eleitoral (P10) com as trocas de par
 a campanha investiu em propaganda (P9: categorias do TSE, os três tipos e a tabela com os valores exatos). P8 e P9 mostram
 a mesma campanha (`?campanha=`). As páginas `/analises/propaganda` e `/analises/pos-mandato` saíram: repetiam a busca de
 candidato que o perfil já tem.
+
+A aba **Análises** saiu (`/analises`, `/analises/dinheiro`, `/custo-cadeira`, `/gastos`, `/financiamento` e `/legenda`), e com ela a
+`/municipios`: as perguntas 1, 2, 5, 8 e 9 vivem nas camadas do mapa da página inicial (Legenda e Dinheiro).
 
 ## Acessibilidade (pontos de revisão em todo PR)
 

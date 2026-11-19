@@ -1,6 +1,5 @@
 // Busca rápida (Ctrl K): páginas, análises, estados e municípios do mapa, filtrados no navegador. Os candidatos vêm da
 // API (/api/busca) e entram depois, na mesma lista. Tudo aqui é puro: o componente PaletaBusca só desenha.
-import { ANALISES } from "./analises";
 import { normalizarBusca } from "./busca";
 import { fotoDaBusca } from "./foto-candidato";
 import { NOME_UF } from "./financiamento";
@@ -32,8 +31,9 @@ const PAGINAS: ItemPaleta[] = [
   { tipo: "pagina", titulo: "Mapa do gasto por vaga", detalhe: "Página inicial · dinheiro das campanhas", href: "/?ver=dinheiro#mapa" },
   { tipo: "pagina", titulo: "Candidatos", detalhe: "Listagem por eleição", href: "/candidatos" },
   { tipo: "pagina", titulo: "Legislativo", detalhe: "Senado, Câmara e Assembleias: viés, custo e renovação", href: "/legislativo" },
-  ...ANALISES.filter((a) => a.href.startsWith("/analises/")).map((a): ItemPaleta => ({ tipo: "pagina", titulo: a.titulo, detalhe: `Análise · ${a.pergunta}`, href: a.href })),
-  { tipo: "pagina", titulo: "Todas as análises", detalhe: "Análises", href: "/analises" },
+  { tipo: "pagina", titulo: "Mapa: patrimônio elege?", detalhe: "Página inicial · patrimônio e voto", href: "/?ver=dinheiro&pintar=voto#mapa" },
+  { tipo: "pagina", titulo: "Mapa do dinheiro público", detalhe: "Página inicial · fundos eleitoral e partidário", href: "/?ver=dinheiro&pintar=publico#mapa" },
+  { tipo: "pagina", titulo: "Mapa da propaganda", detalhe: "Página inicial · onde se investe em propaganda", href: "/?ver=dinheiro&pintar=propaganda#mapa" },
   { tipo: "pagina", titulo: "Sobre os dados", detalhe: "Fonte, escopo e privacidade", href: "/sobre" },
 ];
 

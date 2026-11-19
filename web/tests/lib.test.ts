@@ -18,7 +18,9 @@ import {
   separarEleitos, type EleitoInstrucao, type LinhaEleitosInstrucao, type LinhaPopulacaoInstrucao, type LinhaPrefeito,
 } from "../src/lib/instrucao";
 import { colunasSucessoP8, fontesPorResultado, fraseP8, p8DaCidade, type LinhaCidadeP8, sucessoDaCidade, prefeitoDaCidade, type LinhaCidadeSucesso, type LinhaCidadePrefeito, gruposP8, maioriaPublica, partePublica, partePublicaNosAnos, setaPP, tipicosP8, topoDaRegua, vezesMais } from "../src/lib/financiamento";
-import { respostaSucesso, resumoCampanhas, semPrestacao, SEM_PRESTACAO, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
+import {
+  respostaSucesso, resumoCampanhas, semPrestacao, SEM_PRESTACAO, contarFaixas, deCada100, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, type LinhaFaixa, type LinhaFontes, type LinhaMediana,
+} from "../src/lib/financiamento";
 
 describe("format", () => {
   it("abrevia números e gera iniciais", () => {
@@ -56,17 +58,6 @@ describe("financiamento (pergunta 8)", () => {
     expect(u.map((x) => x.uf)).toEqual(["MG", "PE"]);
     expect(u[0].soma.publico).toBe(700);
   });
-  it("compara geral com geral e municipal com municipal", () => {
-    const l = [fo({ ano: 2018, fundo_eleitoral: 582, fundo_partidario: 0 }), fo({ ano: 2022, fundo_eleitoral: 1279, fundo_partidario: 0 }), fo({ ano: 2024, cargo: "Vereador" })];
-    const m = descreverMudancas(porAno(l, {}));
-    expect(m).toEqual([{ tipo: "gerais", texto: "o dinheiro público foi de 66% em 2018 para 81% em 2022 (subiu 15 pontos)." }]);
-  });
-  it("ordena partidos por valor ou por % público, sem os muito pequenos", () => {
-    const l = [fo({ partido: "A" }), fo({ partido: "B", fundo_eleitoral: 5000 }), fo({ partido: "NANICO", fundo_eleitoral: 1, fundo_partidario: 0, doacoes_pessoas: 0, recursos_proprios: 0 })];
-    const p = porPartido(l, { ano: 2022 });
-    expect(ordenarPartidos(p, "valor").map((x) => x.partido)).toEqual(["B", "A", "NANICO"]);
-    expect(ordenarPartidos(p, "publico").map((x) => x.partido)).toEqual(["B", "A"]);
-  });
   it("calcula a taxa de eleição por faixa de dinheiro público", () => {
     const su = (o: Partial<LinhaSucesso>): LinhaSucesso => ({ ano: 2022, cargo: "Deputado federal", uf: "MG", faixa: 4, candidaturas: 100, eleitos: 22, publico_min: 200000, publico_max: 3000000, ...o });
     const r = sucessoPorFaixa([su({}), su({ uf: "PE", candidaturas: 100, eleitos: 18 }), su({ faixa: 0, candidaturas: 50, eleitos: 0, publico_min: 0, publico_max: 0 })], { ano: 2022 });
@@ -82,11 +73,6 @@ describe("financiamento (pergunta 8)", () => {
     expect(g.pouco.candidaturas).toBe(300);
     expect(g.pouco.taxa).toBeCloseTo(0.02);
     expect(g.muito.taxa).toBeCloseTo(0.22);
-  });
-  it("mede a parte do dinheiro público que ficou com os eleitos", () => {
-    const r = parteDosEleitos([fo({ eleito: true, candidaturas: 1 }), fo({ candidaturas: 9, fundo_eleitoral: 0, fundo_partidario: 300 })], { ano: 2022 });
-    expect(r.pctCandidatos).toBeCloseTo(0.1);
-    expect(r.pctPublico).toBeCloseTo(0.7);
   });
   it("divide em 100 sem sobrar nem faltar", () => {
     expect(deCada100([1, 1, 1])).toEqual([34, 33, 33]);
@@ -106,17 +92,6 @@ describe("financiamento (pergunta 8)", () => {
     expect(r.map((x) => x.cargo)).toEqual(["Prefeito", "Vereador"]);
     expect(r[1].eleito?.mediana_total).toBe(20000);
     expect(r[1].naoEleito?.mediana_total).toBe(2000);
-  });
-  it("escreve frações e valores para leigos", () => {
-    expect(emCada10(0.31)).toBe("3 em cada 10 candidatos");
-    expect(textoDe100(0, 2000)).toBe("menos de R$ 1 de cada R$ 100");
-    expect(textoDe100(14, 1)).toBe("R$ 14 de cada R$ 100");
-    expect(emCada10(0)).toBe("nenhum candidato");
-    expect(emCada10(0.97)).toBe("quase todos os candidatos");
-    expect(reais(1665900000)).toBe("R$ 1,7 bilhão");
-    expect(reais(2023700000)).toBe("R$ 2 bilhões");
-    expect(reais(120400000)).toBe("R$ 120 milhões");
-    expect(reais(20400)).toBe("R$ 20 mil");
   });
 });
 

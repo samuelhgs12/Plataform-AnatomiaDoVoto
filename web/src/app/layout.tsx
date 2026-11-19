@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <nav className="teclas-acao" aria-label="Rodapé">
               <Link href="/sobre" className="k-branco">Sobre os dados</Link>
-              <Link href="/analises" className="k-corrige">Análises</Link>
+              <Link href="/#mapa" className="k-corrige">Ver o mapa</Link>
               <Link href="/candidatos" className="k-confirma">Buscar um candidato</Link>
             </nav>
             <p className="creditos">

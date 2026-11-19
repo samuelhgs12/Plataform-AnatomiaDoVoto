@@ -354,7 +354,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const tituloRanking = rankingSeis ? "Nos seis estados"
     : aba === "gasto" ? (cargo === "Prefeito" && cidadesTopo.length ? "Onde a disputa custou mais" : "Onde se gastou mais por vaga")
     : aba === "eleitor" ? "Onde se gastou mais por eleitor" : "Onde o dinheiro público pesa mais";
-  const propaganda = `/analises/dinheiro?${new URLSearchParams(Object.entries({ ano: String(ano), cargo, uf: uf ?? "", aba: "propaganda" }).filter(([, v]) => v))}`;
   const paramsMun = Object.fromEntries(new URL(href({ mun: null }), "http://x").searchParams);
 
   return (
@@ -774,7 +773,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </details>
 
         {pintar !== "vaga" && <ul className="atalhos s12">
-          <li><Link href={propaganda}>Onde os candidatos investem em propaganda</Link></li>
           <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
         </ul>}
       </div>

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  coberturaDisputas, correlacaoDe, daMedida, medidaDe, efeitoDoCargo, ehMajoritario, forcaCorrelacao, grupo, maiorGastador, respostaGasto, respostaMaior, sucessoPorGasto,
-  type LinhaCorrelacao, type LinhaGastoFaixa, type LinhaMaiorGasto,
+  coberturaDisputas, daMedida, medidaDe, ehMajoritario, grupo, maiorGastador, respostaMaior, sucessoPorGasto, type LinhaGastoFaixa, type LinhaMaiorGasto,
 } from "../src/lib/gastos";
 import { semPrestacao } from "../src/lib/financiamento";
 
@@ -46,25 +45,6 @@ describe("sucessoPorGasto", () => {
   });
 });
 
-describe("respostaGasto", () => {
-  it("compara quem teve muitos recursos com quem teve poucos", () => {
-    const r = respostaGasto(sucessoPorGasto(linhas, { ano: 2022, uf: "MG", cargo: "Deputado federal" }));
-    expect(r.curta).toBe("Sim.");
-    expect(r.base.chave).toBe("pouco");
-    expect(r.vezes).toBeCloseTo((22 / 120) / (1 / 105));
-  });
-  it("usa 'nada declarado' quando não há ninguém no grupo 'pouco' e responde 'Não.' quando o topo perde", () => {
-    const r = respostaGasto(sucessoPorGasto([l({ faixa: 0, eleitos: 50 }), l({ faixa: 4, eleitos: 5 })], {}));
-    expect(r.base.chave).toBe("nada");
-    expect(r.curta).toBe("Não.");
-  });
-  it("não responde sem dados e não afirma com poucos candidatos", () => {
-    expect(respostaGasto(sucessoPorGasto([], {})).curta).toBeNull();
-    const poucos = respostaGasto(sucessoPorGasto([l({ faixa: 1, candidaturas: 4, eleitos: 0 }), l({ faixa: 4, candidaturas: 4, eleitos: 1 })], {}));
-    expect(poucos.curta).toBe("Sem diferença clara.");
-  });
-});
-
 describe("maiorGastador e respostaMaior", () => {
   const m = (o: Partial<LinhaMaiorGasto>): LinhaMaiorGasto => ({ medida: "recursos", ano: 2024, cargo: "Prefeito", uf: "MG", disputas: 100, maior_venceu: 60, maior_tinha_cargo: 30, chance_sorteio: 35, var_sorteio: 22, ...o });
   it("soma as disputas e compara com o sorteio", () => {
@@ -86,32 +66,6 @@ describe("maiorGastador e respostaMaior", () => {
     expect(ehMajoritario("Prefeito")).toBe(true);
     expect(ehMajoritario("Vereador")).toBe(false);
     expect(ehMajoritario(undefined)).toBe(false);
-  });
-});
-
-describe("efeitoDoCargo", () => {
-  it("compara, entre os que tiveram mais recursos, quem já tinha o cargo e quem não tinha", () => {
-    const r = efeitoDoCargo(linhas, { ano: 2022, uf: "MG" }, ["Deputado federal"]);
-    expect(r.com.taxa).toBeCloseTo(0.6);
-    expect(r.sem.taxa).toBeCloseTo(0.1);
-    expect(r.quemTinha).toBe(25);
-    expect(r.parteNoTopo).toBeCloseTo(0.8);
-  });
-});
-
-describe("correlacaoDe e forcaCorrelacao", () => {
-  const c = (o: Partial<LinhaCorrelacao>): LinhaCorrelacao => ({ medida: "recursos", ano: 2022, cargo: "Deputado federal", uf: null, n: 3000, correlacao: 0.75, ...o });
-  it("usa a linha sem UF para 'todas as UFs'", () => {
-    const linhasC = [c({}), c({ uf: "MG", correlacao: 0.6 })];
-    expect(correlacaoDe(linhasC, 2022, "Deputado federal")?.correlacao).toBe(0.75);
-    expect(correlacaoDe(linhasC, 2022, "Deputado federal", "MG")?.correlacao).toBe(0.6);
-    expect(correlacaoDe(linhasC, 2022, "Vereador")).toBeUndefined();
-  });
-  it("descreve a força em palavras", () => {
-    expect(forcaCorrelacao(0.05)).toBe("nenhuma relação");
-    expect(forcaCorrelacao(0.46)).toBe("relação moderada");
-    expect(forcaCorrelacao(0.75)).toBe("relação muito forte");
-    expect(forcaCorrelacao(-0.4)).toBe("relação moderada, inversa");
   });
 });
 

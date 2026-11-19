@@ -87,10 +87,10 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     id: "dinheiro",
     resposta: "Quanto as campanhas gastaram por vaga, cidade por cidade, e se quem teve mais dinheiro, ou mais dinheiro público, se elegeu mais. De 2018 a 2026.",
     ondeVer: [
-      { rotulo: "Ver a análise", href: "/analises/dinheiro" },
-      { rotulo: "Pergunta 1", href: "/analises/custo-cadeira" },
-      { rotulo: "Pergunta 2", href: "/analises/gastos" },
-      { rotulo: "Pergunta 8", href: "/analises/financiamento" },
+      { rotulo: "Ver no mapa", href: "/?ver=dinheiro#mapa" },
+      { rotulo: "Pergunta 1", href: "/?ver=dinheiro#mapa" },
+      { rotulo: "Pergunta 2", href: "/?ver=dinheiro&pintar=voto#mapa" },
+      { rotulo: "Pergunta 8", href: "/?ver=dinheiro&pintar=publico#mapa" },
     ],
     anos: "2018–2026",
     cargos: "Todos os cargos titulares",
@@ -115,7 +115,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     id: "p1",
     resposta: "Quanto todas as campanhas a um cargo gastaram, dividido pelo número de vagas, por ano e estado.",
     formula: { resultado: "custo da cadeira", parcelas: ["gasto de todas as campanhas ao cargo", "número de vagas"], operador: "÷" },
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/custo-cadeira" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/?ver=dinheiro#mapa" }],
     anos: "2018–2026",
     cargos: "Todos os cargos titulares",
     dados: ["vw_despesa_candidatura (sobre despesa_campanha)", "vagas", "candidatura, eleicao, cargo e rotulo_resultado"],
@@ -136,7 +136,6 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     resposta: "Se, na mesma disputa, quem declarou mais patrimônio se elegeu mais: a taxa de eleição do candidato sem bens até o mais rico, cidade por cidade, com e sem quem já tinha o cargo.",
     ondeVer: [
       { rotulo: "Ver a resposta no mapa", href: "/?ver=dinheiro&pintar=voto#mapa" },
-      { rotulo: "Gasto de campanha e vitória (análise anterior)", href: "/analises/gastos" },
     ],
     anos: "2006–2024",
     cargos: "Vereador, prefeito, deputados federal e estadual, governador e senador",
@@ -169,7 +168,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
   p8: {
     id: "p8",
     resposta: "Se eleitos e não eleitos usam dinheiro público e privado de forma diferente: quanto cada grupo recebeu, de onde veio e quantos dependeram dos fundos públicos.",
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/financiamento" }, { rotulo: "Ver no mapa", href: "/?ver=dinheiro&pintar=publico#mapa" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/?ver=dinheiro&pintar=publico#mapa" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
     anos: "2018–2026",
     cargos: "Todos os cargos titulares",
     dados: ["receita_campanha e fonte_recurso", "candidatura, eleicao, cargo e rotulo_resultado"],
@@ -288,7 +287,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     id: "p5",
     resposta: "Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2026, com as fusões e renomeações marcadas.",
     formula: { resultado: "proporção de legenda", parcelas: ["votos de legenda", "votos de legenda + votos nominais"], operador: "÷" },
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/legenda" }, { rotulo: "Voto de legenda no mapa", href: "/?ver=legenda" }],
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/?ver=legenda#mapa" }],
     anos: "2018–2026",
     cargos: "Deputado federal, deputado estadual e vereador",
     turno: "1º turno",
@@ -410,8 +409,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 /** As dez perguntas de pesquisa, no texto do dossiê. Sem `id`, a plataforma ainda não responde: a /sobre diz "Em breve". */
 /**
  * O "Como calculamos" da camada Dinheiro do mapa (VisaoDinheiro): além da regra da análise, as medidas e os blocos que só
- * o mapa mostra (gasto por eleitor, cada cadeira, quartis, quem mais gastou...). A página /analises/dinheiro e a /sobre
- * usam METODOLOGIA.dinheiro.
+ * o mapa mostra (gasto por eleitor, cada cadeira, quartis, quem mais gastou...). A /sobre usa METODOLOGIA.dinheiro.
  */
 export const CALCULO_MAPA_DINHEIRO: string[] = [
       "Gasto por vaga: soma dos gastos declarados por todas as campanhas ao cargo, inclusive as derrotadas, ÷ número de vagas. Não é salário nem o custo do mandato. Cidades de porte semelhante: a mediana das cidades com eleitorado parecido; estado: soma de todos os gastos ÷ soma de todas as vagas.",

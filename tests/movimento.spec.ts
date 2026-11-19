@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const PAGINAS = ['/', '/analises', '/analises/financiamento', '/analises/legenda', '/sobre'];
+const PAGINAS = ['/', '/legislativo', '/sobre'];
 
 /** Opacidade de cada bloco que se revela; nenhum pode ficar escondido. */
 const opacidades = (page: Page) =>

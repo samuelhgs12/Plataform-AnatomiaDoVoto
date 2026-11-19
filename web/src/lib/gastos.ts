@@ -3,7 +3,7 @@
 // declarado (a da pergunta, de 2006 em diante) e, para comparar, o dinheiro de campanha (2018 em diante): o gasto, a
 // receita (inclusive material doado por outros candidatos) e "recursos" (o maior dos dois).
 
-import { compararGrupos, responder, zContagem, type Resposta } from "./estatistica";
+import { responder, zContagem, type Resposta } from "./estatistica";
 import { passa, type Filtros } from "./financiamento";
 
 export type Medida = "patrimonio" | "recursos" | "gasto" | "receita";
@@ -28,8 +28,6 @@ export interface LinhaMaiorGasto {
   /** Disputas que ficaram de fora, por motivo (a cobertura que a página mostra). */
   excl_um_candidato?: number; excl_sem_prestacao?: number; excl_sem_gasto?: number; excl_empate?: number;
 }
-/** Correlação (de -1 a 1) entre a posição nos recursos e a posição nos votos dentro da disputa. uf null = todas as UFs. */
-export interface LinhaCorrelacao { medida: Medida; ano: number; cargo: string; uf: string | null; n: number; correlacao: number }
 
 export const GRUPOS_GASTO = [
   { chave: "nada", faixas: [0], rotulo: "Nada declarado", detalhe: "prestou contas com valor zero", classe: "fx5" },
@@ -65,17 +63,6 @@ export function sucessoPorGasto(linhas: LinhaGastoFaixa[], f: Filtros, op: { tin
 }
 
 export const grupo = (grupos: GrupoGasto[], chave: ChaveGrupo) => grupos.find((g) => g.chave === chave)!;
-
-/**
- * A resposta curta. Compara quem tem muito com quem tem pouco (cerca de 1/4 de cada ponta); se "pouco" estiver vazio,
- * com quem não declarou nada. A mesma comparação vale para a frase e para o gráfico; a resposta usa teste estatístico.
- */
-export function respostaGasto(grupos: GrupoGasto[]): { muito: GrupoGasto; base: GrupoGasto; curta: Resposta | null; vezes: number | null } {
-  const muito = grupo(grupos, "muito"), pouco = grupo(grupos, "pouco"), nada = grupo(grupos, "nada");
-  const base = pouco.candidaturas > 0 ? pouco : nada;
-  const curta = muito.candidaturas === 0 || base.candidaturas === 0 ? null : compararGrupos(muito, base).resposta;
-  return { muito, base, curta, vezes: base.taxa > 0 ? muito.taxa / base.taxa : null };
-}
 
 /** "O que teve mais recursos venceu?": soma das disputas majoritárias que passam no filtro. */
 export function maiorGastador(linhas: LinhaMaiorGasto[], f: Filtros) {
@@ -117,32 +104,4 @@ export function coberturaDisputas(m: ReturnType<typeof maiorGastador>): { analis
 export function respostaMaior(m: ReturnType<typeof maiorGastador>): Resposta | null {
   if (m.disputas === 0) return null;
   return responder(m.pct, m.pctSorteio, zContagem(m.venceu, m.sorteio, m.variancia));
-}
-
-/**
- * Já ter o cargo × recursos. Entre os que tiveram mais recursos, a taxa de quem já tinha o cargo e de quem não tinha,
- * e que parte de quem já tinha o cargo estava entre os que tiveram mais recursos.
- */
-export function efeitoDoCargo(linhas: LinhaGastoFaixa[], f: Filtros, cargos?: string[]) {
-  const com = grupo(sucessoPorGasto(linhas, f, { tinhaCargo: true, cargos }), "muito");
-  const sem = grupo(sucessoPorGasto(linhas, f, { tinhaCargo: false, cargos }), "muito");
-  let tinha = 0, tinhaNoTopo = 0;
-  for (const l of linhas) {
-    if (!passa(l, f) || !l.tinha_cargo || (cargos && !cargos.includes(l.cargo))) continue;
-    tinha += l.candidaturas;
-    if (l.faixa === 4) tinhaNoTopo += l.candidaturas;
-  }
-  return { com, sem, quemTinha: tinha, parteNoTopo: tinha ? tinhaNoTopo / tinha : 0 };
-}
-
-/** A correlação de um cargo num ano (uf ausente = a linha pré-calculada para todas as UFs). */
-export function correlacaoDe(linhas: LinhaCorrelacao[], ano: number, cargo: string, uf?: string): LinhaCorrelacao | undefined {
-  return linhas.find((l) => l.ano === ano && l.cargo === cargo && (l.uf ?? undefined) === uf);
-}
-
-/** Força da correlação em palavras (faixas usuais: 0,1 / 0,3 / 0,5 / 0,7). */
-export function forcaCorrelacao(r: number): string {
-  const a = Math.abs(r);
-  const forca = a < 0.1 ? "nenhuma relação" : a < 0.3 ? "relação fraca" : a < 0.5 ? "relação moderada" : a < 0.7 ? "relação forte" : "relação muito forte";
-  return a >= 0.1 && r < 0 ? `${forca}, inversa` : forca;
 }

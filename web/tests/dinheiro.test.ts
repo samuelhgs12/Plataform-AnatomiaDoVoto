@@ -1,19 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas,
-  valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas,
-  hrefDinheiro, legendaCidade, lerRecorte, qualificacao, referenciaDoPorte, textoValor, valorCidade, abaDe, anoAnterior, cidadesDoPorte,
-  coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, diferencaRelativa,
-  faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, textoDiferenca, unidade, variacaoNominal,
-  coberturaSelo, descricaoFatias, fatias, seloValor, seta, anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao,
-  medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos, caminhoPecas,
-  cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos,
-  maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos, quartisDeEleicao, fraseQuartis, medidaDe, MEDIDAS_ANOS, MEIAS, opcoesMunicipio, ufDoMunicipio, PINTAR, SECOES_GASTARAM, telaDe, TITULO_TELA,
-  SECOES, type ContagemFundos, type LinhaCargo, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type LinhaDespesa,
-  intervalo, barraPropaganda, parteDaPropaganda, GRUPOS_DESPESA, gastoComForaDaDisputa, foraDoRecorte, cargosComForaDaDisputa, hrefLegislativoCusto,
+  ANOS_DINHEIRO, cargosDoAno, classeComPorte, escolhaMapaDinheiro, hrefMapaDinheiro, contaGasto, mediaPorCandidato, mediasPorResultado, ordenarLinhas, valorDoPorte, contaGastoEstado, corCidade, corPorFaixas, ehMunicipal, legendaPorFaixas, maisRecebeuPublico, tresGrupos, valorDoEstado, fraseTaxas, legendaCidade, qualificacao, referenciaDoPorte, textoValor, valorCidade, abaDe, anoAnterior, cidadesDoPorte, coberturaCurta, composicaoDespesas, contasDaCidade, foraDaDisputaPorte, origemDoDinheiro, contasDoEstado, contasDoPorte, diferencaRelativa, faixasDe, foraDaDisputa, fraseCobertura, ordemCandidatos, ordenarCandidatos, textoDiferenca, unidade, variacaoNominal, coberturaSelo, descricaoFatias, fatias, seloValor, seta, anosDoCargo, barrasQuartis, custoPorVoto, faixaGasto, fraseConcentracao, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, setaMedida, totalPartidos, caminhoPecas, cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos, maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos, quartisDeEleicao, fraseQuartis, medidaDe, MEDIDAS_ANOS, MEIAS, opcoesMunicipio, ufDoMunicipio, PINTAR, SECOES_GASTARAM, telaDe, TITULO_TELA, SECOES, type ContagemFundos, type LinhaCargo, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type LinhaDespesa, intervalo, barraPropaganda, parteDaPropaganda, GRUPOS_DESPESA, gastoComForaDaDisputa, foraDoRecorte, cargosComForaDaDisputa, hrefLegislativoCusto,
 } from "../src/lib/dinheiro";
 import { reais } from "../src/lib/format";
-import type { CandidatoLocal, LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
+import type { CandidatoLocal, LinhaResumo } from "../src/lib/territorio";
 
 const r = (o: Partial<LinhaResumo>): LinhaResumo => ({
   ano: 2024, id_municipio: 1, uf: "PE", vereador_candidatos: 100, vereador_eleitos: 10, vereador_vagas: 10,
@@ -22,37 +12,12 @@ const r = (o: Partial<LinhaResumo>): LinhaResumo => ({
   prefeito_id_candidato: 7, prefeito_nome: "FULANO", prefeito_partido: "PFA", prefeito_votos: 5000, prefeito_gasto_eleito: 400_000,
   maior_venceu: true, eleitorado: 30_000, rec_mais_cand: 20, rec_mais_eleitos: 6, ...o,
 });
-const ms: LinhaMunicipio[] = [{ id_municipio: 1474, uf: "PE", nome: "RECIFE", cod_ibge: "2611606" }, { id_municipio: 3, uf: "RJ", nome: "NITERÓI", cod_ibge: "3303302" }];
-const op = { anos: [2018, 2020, 2022, 2024], ufs: ["PE", "RJ"], municipios: ms };
 
 describe("cargosDoAno e ehMunicipal", () => {
   it("dá os cargos de cada tipo de eleição", () => {
     expect(ehMunicipal(2024)).toBe(true);
     expect(cargosDoAno(2024)[0]).toBe("Vereador");
     expect(cargosDoAno(2022)).toContain("Deputado federal");
-  });
-});
-
-describe("lerRecorte", () => {
-  it("usa o ano mais recente, o primeiro cargo e a primeira aba por padrão", () => {
-    expect(lerRecorte({}, op)).toMatchObject({ ano: 2024, cargo: "Vereador", aba: "gasto", vista: "mapa", uf: undefined, mun: undefined });
-  });
-  it("troca o cargo incompatível com a eleição e avisa", () => {
-    expect(lerRecorte({ ano: "2022", cargo: "Prefeito" }, op)).toMatchObject({ cargo: "Deputado federal", cargoTrocado: "Prefeito" });
-  });
-  it("tira a cidade numa eleição geral e avisa; a cidade dá o estado", () => {
-    expect(lerRecorte({ ano: "2022", mun: "1474" }, op)).toMatchObject({ mun: undefined, munIgnorado: true });
-    expect(lerRecorte({ mun: "1474" }, op)).toMatchObject({ uf: "PE", mun: { id_municipio: 1474 } });
-    expect(lerRecorte({ uf: "RJ", mun: "1474" }, op).mun).toBeUndefined();
-  });
-});
-
-describe("hrefDinheiro", () => {
-  it("mantém o recorte e solta a cidade quando o estado muda", () => {
-    const rec = lerRecorte({ mun: "1474", aba: "publico" }, op);
-    expect(hrefDinheiro(rec, { cargo: "Prefeito" })).toBe("/analises/dinheiro?ano=2024&cargo=Prefeito&uf=PE&mun=1474&aba=publico");
-    expect(hrefDinheiro(rec, { uf: "RJ" })).toBe("/analises/dinheiro?ano=2024&cargo=Vereador&uf=RJ&aba=publico");
-    expect(hrefDinheiro(rec, { aba: null }, "mapa")).toBe("/analises/dinheiro?ano=2024&cargo=Vereador&uf=PE&mun=1474#mapa");
   });
 });
 
