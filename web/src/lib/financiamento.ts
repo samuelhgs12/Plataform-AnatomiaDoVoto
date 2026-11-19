@@ -2,7 +2,7 @@
 // Os dados vêm de GET /api/analises/q8 (api/app/analises/q8.sql).
 import { compararGrupos } from "./estatistica";
 import type { CarreiraItem, Receitas } from "./types";
-import { fatias, type Fatia } from "./dinheiro";
+import { fatias, MINIMO_CADA_100, type Fatia } from "./dinheiro";
 import { inteiro, reais } from "./format";
 
 export type Fonte = "fundo_eleitoral" | "fundo_partidario" | "doacoes_pessoas" | "recursos_proprios" | "outros_privados";
@@ -398,3 +398,115 @@ export function colunasSucessoP8(linhas: LinhaSucesso[], f: Filtros) {
   }));
   return { colunas, max: topoDaRegua(fx.filter((g) => g.candidaturas).map((g) => g.taxa)) };
 }
+
+// Pergunta 8 numa cidade (prefeito e vereador): tabela "cidades" do q8, uma linha por ano, cargo, município e resultado.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Eleitos ou não eleitos de um município (tabela cidades do q8). As somas por fonte não têm repasses; medianas e maioria pública contam o que cada um recebeu. */
+export interface LinhaCidadeP8 {
+  ano: number; cargo: string; uf: string; cod_ibge: string; eleito: boolean; candidaturas: number; maioria_publica: number;
+  mediana_total: number; mediana_publico: number; mediana_privado: number | null;
+  fundos_publicos: number; doacoes: number; proprios: number; outros: number;
+}
+
+/** "2 de 3": a contagem de um grupo com menos de MINIMO_CADA_100 pessoas (no lugar de "de cada 100"). */
+export interface ContagemP8 { n: number; de: number }
+
+/** A linha da cidade como uma Soma, para reaproveitar gruposP8 e partePublica (os dois fundos já vêm juntos). */
+function somaDaCidade(l: LinhaCidadeP8 | undefined): Soma {
+  const s = vazio();
+  if (!l) return s;
+  s.valores.fundo_eleitoral = l.fundos_publicos;
+  s.valores.doacoes_pessoas = l.doacoes;
+  s.valores.recursos_proprios = l.proprios;
+  s.valores.outros_privados = l.outros;
+  s.publico = l.fundos_publicos;
+  s.privado = l.doacoes + l.proprios + l.outros;
+  s.total = s.publico + s.privado;
+  s.candidaturas = l.candidaturas;
+  return s;
+}
+
+/**
+ * A P8 de uma cidade: os mesmos dados que a do estado (somas das barras, típicos, maioria pública e a parte pública
+ * na eleição anterior, ano − 4), só com as linhas do município. As medianas vêm das colunas (nunca de somas).
+ * Grupo com menos de MINIMO_CADA_100 pessoas: devolve também a contagem ("2 de 3"). null se a cidade não tem linha no ano.
+ */
+export function p8DaCidade(linhas: LinhaCidadeP8[], f: { ano: number; cargo: string; cod_ibge: string }) {
+  const da = (ano: number, eleito: boolean) => linhas.find((l) => l.ano === ano && l.cargo === f.cargo && String(l.cod_ibge) === f.cod_ibge && l.eleito === eleito);
+  const [le, ln] = [da(f.ano, true), da(f.ano, false)];
+  if (!le && !ln) return null;
+  const tipico = (l: LinhaCidadeP8 | undefined): TipicoP8 | null => (l ? { total: l.mediana_total, publico: l.mediana_publico, privado: l.mediana_privado ?? null } : null);
+  const maioria = (l: LinhaCidadeP8 | undefined) => (l && l.candidaturas > 0 ? l.maioria_publica / l.candidaturas : null);
+  const contagem = (l: LinhaCidadeP8 | undefined): ContagemP8 | null => (l && l.candidaturas < MINIMO_CADA_100 ? { n: l.maioria_publica, de: l.candidaturas } : null);
+  const somas = { eleitos: somaDaCidade(le), naoEleitos: somaDaCidade(ln) };
+  const antes = f.ano - 4;
+  const [ae, an] = [da(antes, true), da(antes, false)];
+  return {
+    somas,
+    tipicos: { eleito: tipico(le), naoEleito: tipico(ln) },
+    partes: { eleitos: partePublica(somas.eleitos), naoEleitos: partePublica(somas.naoEleitos) },
+    maioria: { eleitos: maioria(le), naoEleitos: maioria(ln) },
+    contagens: { eleitos: contagem(le), naoEleitos: contagem(ln) },
+    anos: ae || an ? {
+      antes,
+      eleitos: { antes: partePublica(somaDaCidade(ae)), depois: partePublica(somas.eleitos) },
+      naoEleitos: { antes: partePublica(somaDaCidade(an)), depois: partePublica(somas.naoEleitos) },
+    } : null,
+  };
+}
+
+// "E quem recebeu mais dinheiro público se elegeu mais?" numa cidade: tabelas cidades_sucesso (vereador) e
+// cidades_prefeito do q8. A faixa compara cada candidato só com os concorrentes da cidade (como na tabela sucesso).
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Vereadores de uma cidade numa faixa de dinheiro público recebido (−1 = sem prestação final; 0 = nada; 1 a 4 = quartos). */
+export interface LinhaCidadeSucesso { ano: number; cargo: string; uf: string; cod_ibge: string; faixa: number; candidaturas: number; eleitos: number }
+/** A disputa de prefeito de uma cidade: quem mais recebeu dinheiro público venceu? */
+export interface LinhaCidadePrefeito {
+  ano: number; uf: string; cod_ibge: string; candidaturas: number; todos_prestaram: boolean; maior_publico: number; n_topo: number; topo_venceu: boolean;
+}
+
+/** As linhas da cidade no formato da tabela sucesso (sem mínimo e máximo de valor), para usar sucessoPorFaixa e colunasSucessoP8. */
+const comoSucesso = (linhas: LinhaCidadeSucesso[], f: { ano: number; cargo: string; cod_ibge: string }): LinhaSucesso[] =>
+  linhas.filter((l) => l.ano === f.ano && l.cargo === f.cargo && String(l.cod_ibge) === f.cod_ibge)
+    .map((l) => ({ ano: l.ano, cargo: l.cargo, uf: l.uf, faixa: l.faixa, candidaturas: l.candidaturas, eleitos: l.eleitos, publico_min: 0, publico_max: 0 }));
+
+/**
+ * As faixas 0 a 4 de uma cidade, no formato de sucessoPorFaixa, e `pequena`: alguma faixa com candidatos tem menos de
+ * MINIMO_CADA_100 pessoas (aí a tela mostra contagens, não porcentagens). null sem linha da cidade.
+ */
+export function sucessoDaCidade(linhas: LinhaCidadeSucesso[], f: { ano: number; cargo: string; cod_ibge: string }) {
+  const da = comoSucesso(linhas, f);
+  if (!da.length) return null;
+  const faixas = sucessoPorFaixa(da, { ano: f.ano, cargo: f.cargo }).map((g) => ({ ...g, min: 0, max: 0 }));
+  return { faixas, pequena: faixas.some((g) => g.candidaturas > 0 && g.candidaturas < MINIMO_CADA_100) };
+}
+
+/** As colunas do recolhido para uma cidade (as mesmas do estado, colunasSucessoP8). */
+export const colunasSucessoCidade = (linhas: LinhaCidadeSucesso[], f: { ano: number; cargo: string; cod_ibge: string }) =>
+  colunasSucessoP8(comoSucesso(linhas, f), { ano: f.ano, cargo: f.cargo });
+
+/** "Recebeu muito: 3 eleitos de 9": uma linha por faixa com candidatos, para a cidade pequena. */
+export const contagensSucesso = (faixas: { rotulo: string; candidaturas: number; eleitos: number }[]): string[] =>
+  faixas.filter((g) => g.candidaturas > 0).map((g) => `${g.rotulo}: ${inteiro(g.eleitos)} ${g.eleitos === 1 ? "eleito" : "eleitos"} de ${inteiro(g.candidaturas)}`);
+
+export type ResultadoPrefeito = { resultado: "venceu" | "nao_venceu" } | { resultado: "nao_comparavel"; motivo: string };
+
+/**
+ * Prefeito numa cidade: quem mais recebeu dinheiro público venceu? Só comparável com 2+ candidatos, todos com
+ * prestação final, maior valor acima de 0 e sem empate no topo (a regra de maisRecebeuPublico). null sem linha.
+ */
+export function prefeitoDaCidade(linhas: LinhaCidadePrefeito[], f: { ano: number; cod_ibge: string }): ResultadoPrefeito | null {
+  const l = linhas.find((x) => x.ano === f.ano && String(x.cod_ibge) === f.cod_ibge);
+  if (!l) return null;
+  const motivo = l.candidaturas < 2 ? "um só candidato" : !l.todos_prestaram ? "prestação de contas incompleta"
+    : l.maior_publico <= 0 ? "ninguém recebeu dinheiro público" : l.n_topo > 1 ? "empate no topo" : null;
+  return motivo ? { resultado: "nao_comparavel", motivo } : { resultado: l.topo_venceu ? "venceu" : "nao_venceu" };
+}
+
+/** A frase do recolhido para o prefeito da cidade. */
+export const frasePrefeitoDaCidade = (r: ResultadoPrefeito): string =>
+  r.resultado === "venceu" ? "O candidato que mais recebeu dinheiro público venceu."
+    : r.resultado === "nao_venceu" ? "O candidato que mais recebeu dinheiro público não venceu."
+    : `Não dá para comparar: ${"motivo" in r ? r.motivo : ""}.`;

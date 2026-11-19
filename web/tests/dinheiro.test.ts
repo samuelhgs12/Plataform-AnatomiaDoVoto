@@ -10,7 +10,7 @@ import {
   cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos,
   maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos, quartisDeEleicao, fraseQuartis, medidaDe, MEDIDAS_ANOS, MEIAS, opcoesMunicipio, ufDoMunicipio, PINTAR, SECOES_GASTARAM, telaDe, TITULO_TELA,
   SECOES, type ContagemFundos, type LinhaCargo, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type LinhaDespesa,
-  intervalo, gastoComForaDaDisputa, foraDoRecorte, cargosComForaDaDisputa, hrefLegislativoCusto,
+  intervalo, barraPropaganda, parteDaPropaganda, GRUPOS_DESPESA, gastoComForaDaDisputa, foraDoRecorte, cargosComForaDaDisputa, hrefLegislativoCusto,
 } from "../src/lib/dinheiro";
 import { reais } from "../src/lib/format";
 import type { CandidatoLocal, LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
@@ -888,7 +888,7 @@ describe("parteDependeu e fraseDependeram", () => {
 describe("perguntas do menu: PINTAR, telaDe, medidaDe, SECOES, MEIAS e MEDIDAS_ANOS", () => {
   it("o menu tem uma pergunta por item, nesta ordem, sem número", () => {
     expect(PINTAR.map((p) => p.chave)).toEqual(["vaga", "voto", "publico", "propaganda"]);
-    expect(PINTAR.map((p) => p.rotulo)).toEqual(["Quanto custa uma cadeira?", "Patrimônio elege?", "Dinheiro público e privado", "Em que as campanhas gastaram?"]);
+    expect(PINTAR.map((p) => p.rotulo)).toEqual(["Quanto custa uma cadeira?", "Patrimônio elege?", "Dinheiro público e privado", "Onde se investe em propaganda?"]);
     expect(PINTAR.some((p) => /^\d|pergunta/i.test(p.rotulo))).toBe(false);
     expect(escolhaMapaDinheiro({ pintar: "gastou" }).pintar).toBe("vaga");
     expect(hrefMapaDinheiro({ ano: 2024, cargo: "Vereador" }, { pintar: "voto" })).toBe("/?ver=dinheiro&pintar=voto#mapa");
@@ -905,7 +905,7 @@ describe("perguntas do menu: PINTAR, telaDe, medidaDe, SECOES, MEIAS e MEDIDAS_A
     expect(telaDe("vaga")).toBe("vaga");
     expect(telaDe("publico")).toBe("publico");
     expect(telaDe("propaganda")).toBe("propaganda");
-    expect(TITULO_TELA).toEqual({ vaga: "Custo da cadeira", publico: "Dinheiro público e privado", propaganda: "Em que se gastou" });
+    expect(TITULO_TELA).toEqual({ vaga: "Custo da cadeira", publico: "Dinheiro público e privado", propaganda: "Propaganda" });
   });
   it("só a 8 pinta a parte pública; as outras telas, o gasto por vaga", () => {
     expect(medidaDe("publico").chave).toBe("publico");
@@ -984,5 +984,37 @@ describe("quartisDeEleicao e fraseQuartis", () => {
     expect(fraseQuartis(quartisDeEleicao(linhas))).toBe("Dos 25% com mais dinheiro, 30 em cada 100 se elegeram; dos 25% com menos dinheiro, 3 em cada 100: 10 vezes mais.");
     expect(fraseQuartis(quartisDeEleicao([l(4, 10, 3), l(1, 10, 2)]))).toBe("Dos 25% com mais dinheiro, 30 em cada 100 se elegeram; dos 25% com menos dinheiro, 20 em cada 100.");
     expect(fraseQuartis(quartisDeEleicao([l(4, 10, 3)]))).toBeNull();
+  });
+});
+
+describe("barraPropaganda", () => {
+  const termo = (por_tipo: { grupo: string; centavos: number }[]) => ({ por_tipo: por_tipo.map((p) => ({ ...p, despesas: 1 })) }) as never;
+  it("soma o por_tipo de todos os termos por tipo; grupo desconhecido vai para Outra propaganda", () => {
+    const f = barraPropaganda({ todos: [
+      termo([{ grupo: "propaganda_fisica", centavos: 10_000 }, { grupo: "propaganda_digital", centavos: 5_000 }]),
+      termo([{ grupo: "propaganda_fisica", centavos: 20_000 }, { grupo: "xyz", centavos: 1_000 }, { grupo: "", centavos: 1_000 }]),
+      termo([{ grupo: "propaganda_audiovisual", centavos: 3_000 }]),
+    ] });
+    expect(f.map((x) => [x.rotulo, x.valor, x.cor])).toEqual([
+      ["Impressos e rua", 300, "pp-fis"], ["Rádio, TV e vídeo", 30, "pp-av"], ["Internet", 50, "pp-dig"], ["Outra propaganda", 20, "pp-outra"],
+    ]);
+  });
+  it("grupos com valor 0 saem", () => {
+    expect(barraPropaganda({ todos: [termo([{ grupo: "propaganda_digital", centavos: 100 }])] }).map((x) => x.rotulo)).toEqual(["Internet"]);
+  });
+});
+
+describe("parteDaPropaganda", () => {
+  it("só os 3 grupos de propaganda entram no numerador; sem total, null", () => {
+    const g = [{ grupo: "propaganda_fisica", valor: 30 }, { grupo: "propaganda_digital", valor: 10 }, { grupo: "propaganda_audiovisual", valor: 10 },
+      { grupo: "pessoal", valor: 40 }, { grupo: "outros", valor: 10 }];
+    expect(parteDaPropaganda(g)).toEqual({ valor: 50, total: 100, parte: 0.5 });
+    expect(parteDaPropaganda([])).toBeNull();
+  });
+});
+
+describe("GRUPOS_DESPESA", () => {
+  it("o grupo outros diz o que tem dentro", () => {
+    expect(GRUPOS_DESPESA.find((g) => g.chave === "outros")?.rotulo).toBe("Taxas, multas e outros");
   });
 });

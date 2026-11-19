@@ -1,5 +1,5 @@
 import type { Fatia } from "@/lib/dinheiro";
-import type { TipicoP8 } from "@/lib/financiamento";
+import type { ContagemP8, TipicoP8 } from "@/lib/financiamento";
 import { curto, reais } from "@/lib/format";
 import { BarraEmpilhada } from "./BarraEmpilhada";
 import { Colunas, type Coluna } from "./Colunas";
@@ -12,11 +12,21 @@ export interface DadosP8 {
   barras: { titulo: string; total: string; fatias: Fatia[] }[];
   legenda: { chave: string; rotulo: string; cor: string }[];
   tipicos: { eleito: TipicoP8 | null; naoEleito: TipicoP8 | null };
+  /** Os nomes dos dois cartões do típico; sem eles, "Eleito" e "Não eleito" (prefeito na cidade: "Não eleitos (mediana de N)"). */
+  rotulosTipicos?: { eleito: string; naoEleito: string };
   maioria: { eleitos: number | null; naoEleitos: number | null };
+  /** Grupo pequeno (menos de MINIMO_CADA_100 pessoas, na cidade): a contagem no lugar da grade ("2 de 3 eleitos"). */
+  contagens?: { eleitos: ContagemP8 | null; naoEleitos: ContagemP8 | null };
   /** A parte pública na eleição anterior do mesmo tipo e na atual; null sem os dois anos. */
   anos: { antes: number; depois: number; grupos: { rotulo: string; antes: string; depois: string; seta: { texto: string; classe: string } }[] } | null;
   colunas: Coluna[];
   max: number;
+  /** Na cidade sem as tabelas dela: sem o recolhido "quem recebeu mais dinheiro público se elegeu mais?". */
+  semSucesso?: boolean;
+  /** Vereador numa cidade pequena: uma linha por faixa ("Recebeu muito: 3 eleitos de 9"), no lugar das colunas. */
+  sucessoContagens?: string[];
+  /** Prefeito numa cidade: a frase de sim ou não ("O candidato que mais recebeu dinheiro público venceu."). */
+  sucessoFrase?: string;
   /** Cargo, lugar e ano, para os títulos dos gráficos (leitores de tela). */
   recorte: string;
 }
@@ -35,11 +45,9 @@ export function PublicoPrivado({ d }: { d: DadosP8 }) {
   const temMaioria = d.maioria.eleitos !== null && d.maioria.naoEleitos !== null;
   const temTipicos = !!d.tipicos.eleito || !!d.tipicos.naoEleito;
   const tipico = (rotulo: string, t: TipicoP8 | null, destaque: boolean) => (
-    <div className={destaque ? "on" : undefined} role="group" aria-label={`${rotulo}: ${valorOuTraco(t?.total ?? null)}; público ${valorOuTraco(t?.publico ?? null)}; privado ${valorOuTraco(t?.privado ?? null)}`}>
+    <div className={destaque ? "on" : undefined} role="group" aria-label={`${rotulo}: ${valorOuTraco(t?.total ?? null)}`}>
       <small>{rotulo}</small>
       <b title={valorOuTraco(t?.total ?? null)}>{valorCurto(t?.total ?? null)}</b>
-      <span>público {valorOuTraco(t?.publico ?? null)}</span>
-      <span>privado {valorOuTraco(t?.privado ?? null)}</span>
     </div>
   );
   return (
@@ -66,8 +74,8 @@ export function PublicoPrivado({ d }: { d: DadosP8 }) {
             <section className="bloco noite">
               <h3>Candidato típico recebeu</h3>
               <div className="din-tipicos">
-                {tipico("Eleito", d.tipicos.eleito, true)}
-                {tipico("Não eleito", d.tipicos.naoEleito, false)}
+                {tipico(d.rotulosTipicos?.eleito ?? "Eleito", d.tipicos.eleito, true)}
+                {tipico(d.rotulosTipicos?.naoEleito ?? "Não eleito", d.tipicos.naoEleito, false)}
               </div>
             </section>
           )}
@@ -76,7 +84,9 @@ export function PublicoPrivado({ d }: { d: DadosP8 }) {
               <h3>Maioria do dinheiro foi pública</h3>
               <div className="p8-grades">
                 {/* um valor por grupo, o mesmo na grade e na legenda */}
-                {([["eleitos", "Eleitos", d.maioria.eleitos!], ["não eleitos", "Não eleitos", d.maioria.naoEleitos!]] as const).map(([quem, Quem, parte], i) => (
+                {([["eleitos", "Eleitos", d.maioria.eleitos!, d.contagens?.eleitos], ["não eleitos", "Não eleitos", d.maioria.naoEleitos!, d.contagens?.naoEleitos]] as const).map(([quem, Quem, parte, conta], i) => conta ? (
+                  <p key={quem} className="p8-contagem"><b>{conta.n} de {conta.de}</b> {quem}</p>
+                ) : (
                   <figure key={quem}>
                     <GradeCem destaque={i === 0} parte={parte} titulo={`${Quem} com a maioria do dinheiro pública, ${d.recorte}`} />
                     <figcaption>{Math.round(parte * 100)} de cada 100 {quem}</figcaption>
@@ -103,10 +113,12 @@ export function PublicoPrivado({ d }: { d: DadosP8 }) {
         </section>
       )}
 
-      <details id="p8-sucesso" className="bloco noite s12 p8-recolhido">
+      {!d.semSucesso && <details id="p8-sucesso" className="bloco noite s12 p8-recolhido">
         <summary>E quem recebeu mais dinheiro público se elegeu mais?</summary>
-        <Colunas titulo={`Parte dos candidatos que se elegeu, por quanto dinheiro público receberam, ${d.recorte}`} max={d.max} casas={(p) => (p > 0 && p < 0.01 ? 1 : 0)} colunas={d.colunas} />
-      </details>
+        {d.sucessoFrase ? <p>{d.sucessoFrase}</p>
+          : d.sucessoContagens ? <ul className="p8-contagens">{d.sucessoContagens.map((l) => <li key={l}>{l}</li>)}</ul>
+          : <Colunas titulo={`Parte dos candidatos que se elegeu, por quanto dinheiro público receberam, ${d.recorte}`} max={d.max} casas={(p) => (p > 0 && p < 0.01 ? 1 : 0)} colunas={d.colunas} />}
+      </details>}
     </>
   );
 }

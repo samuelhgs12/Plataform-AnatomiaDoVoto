@@ -2307,6 +2307,10 @@ a.q-ver:active { transform: scale(0.98); }
 .empilhada .pub { background: var(--pub); } .empilhada .priv { background: var(--priv); } .empilhada .fx3 { background: var(--fx3); }
 .empilhada .o { background: var(--o); } .empilhada .f1 { background: var(--f1); } .empilhada .f2 { background: var(--f2); }
 .empilhada .f3 { background: var(--f3); } .empilhada .f4 { background: var(--f4); } .empilhada .f5 { background: var(--f5); }
+/* P9: a barra de propaganda é a legenda da nuvem (as mesmas cores, --pp-*) */
+.empilhada .pp-fis, .emp-legenda i.pp-fis { background: var(--pp-fis); } .empilhada .pp-av, .emp-legenda i.pp-av { background: var(--pp-av); }
+.empilhada .pp-dig, .emp-legenda i.pp-dig { background: var(--pp-dig); } .empilhada .pp-outra, .emp-legenda i.pp-outra { background: var(--pp-outra); }
+.emp-seg.pp-fis em, .emp-seg.pp-av em, .emp-seg.pp-dig em, .emp-seg.pp-outra em { color: var(--noite); }
 .din-origem .ver-todos { margin-top: 4px; }
 @media (max-width: 1000px) { #dinheiro-ranking, .din-origem { grid-column: 1 / -1; } }
 .legenda-titulo span { pointer-events: auto; }   /* a dica da escala aparece no mouse, mesmo com a base do palco deixando o clique passar */

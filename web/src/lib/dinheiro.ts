@@ -5,6 +5,7 @@ import { pontosPercentuais, type Resposta } from "./estatistica";
 import { brlCentavos, reais } from "./format";
 import { mediana, porteDe, PORTES, type CandidatoLocal, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
 import { ANOS_PATRIMONIO, listaDe, type Lista } from "./patrimonio";
+import type { Nuvem } from "./nuvem";
 
 /** As três abas (e "eleitor": o gasto por eleitor apto, só uma medida do mapa). `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
 export type Aba = "gasto" | "resultado" | "publico" | "eleitor";
@@ -67,7 +68,7 @@ export const PINTAR: { chave: Pintar; rotulo: string }[] = [
   { chave: "vaga", rotulo: "Quanto custa uma cadeira?" },
   { chave: "voto", rotulo: "Patrimônio elege?" },
   { chave: "publico", rotulo: "Dinheiro público e privado" },
-  { chave: "propaganda", rotulo: "Em que as campanhas gastaram?" },
+  { chave: "propaganda", rotulo: "Onde se investe em propaganda?" },
 ];
 /** As telas da VisaoDinheiro: as perguntas do menu menos a 2 ("voto"), que é a VisaoPatrimonio. */
 export type Tela = Exclude<Pintar, "voto">;
@@ -77,7 +78,7 @@ export const telaDe = (pintar: Pintar): Tela => (pintar === "voto" ? "vaga" : pi
 export const TITULO_TELA: Record<Tela, string> = {
   vaga: "Custo da cadeira",
   publico: "Dinheiro público e privado",
-  propaganda: "Em que se gastou",
+  propaganda: "Propaganda",
 };
 /** As medidas que pintam o mapa (legenda, dicas e título do mapa). */
 export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba }[] = [
@@ -621,7 +622,7 @@ export const GRUPOS_DESPESA: { chave: string; rotulo: string; detalhe: string }[
   { chave: "profissionais", rotulo: "Advogados, contadores e pesquisas", detalhe: "serviços advocatícios e contábeis, pesquisas" },
   { chave: "transporte", rotulo: "Transporte e combustível", detalhe: "veículos, combustível, passagens" },
   { chave: "estrutura", rotulo: "Comitê e estrutura", detalhe: "aluguel, energia, telefone, materiais, alimentação" },
-  { chave: "outros", rotulo: "Outros", detalhe: "taxas, multas, doações de bens e o que não se encaixa" },
+  { chave: "outros", rotulo: "Taxas, multas e outros", detalhe: "taxas, multas, doações de bens e o que não se encaixa" },
   { chave: "sem_categoria", rotulo: "Sem categoria", detalhe: "despesas sem categoria do TSE na base" },
 ];
 
@@ -751,6 +752,32 @@ export function fatias(itens: { chave: string; rotulo: string; valor: number; co
     ...cabe.map((i, n) => ({ chave: i.chave, rotulo: i.rotulo, valor: i.valor, parte: i.valor / total, cor: i.cor ?? `f${n + 1}` })),
     ...(resto > 0 ? [{ chave: "outros", rotulo: outros, valor: resto, parte: resto / total, cor: "o" }] : []),
   ];
+}
+
+/** Os grupos da barra de propaganda (a legenda da nuvem), na ordem fixa; qualquer outro grupo cai em "Outra propaganda". */
+export const GRUPOS_PROPAGANDA: { chave: string; rotulo: string; cor: string }[] = [
+  { chave: "propaganda_fisica", rotulo: "Impressos e rua", cor: "pp-fis" },
+  { chave: "propaganda_audiovisual", rotulo: "Rádio, TV e vídeo", cor: "pp-av" },
+  { chave: "propaganda_digital", rotulo: "Internet", cor: "pp-dig" },
+  { chave: "outra", rotulo: "Outra propaganda", cor: "pp-outra" },
+];
+
+/** A barra da P9: o por_tipo de todos os termos da nuvem somado por grupo, em reais, nos grupos de GRUPOS_PROPAGANDA (zeros saem). */
+export function barraPropaganda(nuvem: Pick<Nuvem, "todos">): Fatia[] {
+  const soma = new Map<string, number>();
+  for (const t of nuvem.todos) for (const p of t.por_tipo) {
+    const g = GRUPOS_PROPAGANDA.some((x) => x.chave === p.grupo) ? p.grupo : "outra";
+    soma.set(g, (soma.get(g) ?? 0) + p.centavos);
+  }
+  return fatias(GRUPOS_PROPAGANDA.map((g) => ({ ...g, valor: (soma.get(g.chave) ?? 0) / 100 })), { fixo: true });
+}
+
+/** Quanto do gasto (saída de composicaoDespesas) foi para os 3 grupos de propaganda; null sem total. */
+export function parteDaPropaganda(grupos: { grupo: string; valor: number }[]): { valor: number; total: number; parte: number } | null {
+  const total = grupos.reduce((a, g) => a + g.valor, 0);
+  if (total <= 0) return null;
+  const valor = grupos.filter((g) => ["propaganda_fisica", "propaganda_digital", "propaganda_audiovisual"].includes(g.grupo)).reduce((a, g) => a + g.valor, 0);
+  return { valor, total, parte: valor / total };
 }
 
 /** O texto da barra empilhada para leitores de tela: "Título: Público 73%, Privado 27%." */

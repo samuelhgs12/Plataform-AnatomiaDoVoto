@@ -7,7 +7,7 @@ import { enquadrar, nomeProprio, quantis } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
-  abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, corCidade, corPorFaixas,
+  abaDe, ANOS_DINHEIRO, anoAnterior, barraPropaganda, parteDaPropaganda, cidadesDoPorte, classeComPorte, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, corCidade, corPorFaixas,
   diferencaRelativa, ehMunicipal, fatias, seloValor, seta, escolhaMapaDinheiro, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
   MEDIDAS_ANOS, MEIAS, medidaDe, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, opcoesMunicipio, ufDoMunicipio, referenciaDoPorte, telaDe, TITULO_TELA, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
@@ -19,7 +19,7 @@ import { mostrarNuvem } from "@/lib/propaganda";
 import { CALCULO_MAPA_DINHEIRO, CALCULO_P8_MAPA } from "@/lib/metodologia";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import {
-  colunasSucessoP8, fontesPorResultado, fraseP8, GRUPOS_P8, gruposP8, maioriaPublica, NOME_UF, partePublica, partePublicaNosAnos, setaPP, tipicosP8,
+  colunasSucessoP8, fontesPorResultado, p8DaCidade, type LinhaCidadeP8, colunasSucessoCidade, contagensSucesso, frasePrefeitoDaCidade, prefeitoDaCidade, sucessoDaCidade, type LinhaCidadePrefeito, type LinhaCidadeSucesso, fraseP8, GRUPOS_P8, gruposP8, maioriaPublica, NOME_UF, partePublica, partePublicaNosAnos, setaPP, tipicosP8,
   type LinhaFaixa as LinhaFaixaQ8, type LinhaFontes, type LinhaMediana, type LinhaSucesso,
 } from "@/lib/financiamento";
 import { brlCentavos, compacto, inteiro, pct, reais } from "@/lib/format";
@@ -77,12 +77,18 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const quem = quemDe(sp.quem);
   const porteInfo = porte ? PORTES.find((p) => p.chave === porte) : undefined;
   const municipal = ehMunicipal(ano);
-  const [dados, dadosDespesas, dadosPerguntas, dadosQ8] = await Promise.all([
+  // a P8 numa cidade (prefeito e vereador) lê também a tabela cidades do q8, numa chamada à parte: se a API ainda não a
+  // tiver, o resto do q8 continua vindo
+  const p8Cidade = tem("p8") && municipal && (cargo === "Prefeito" || cargo === "Vereador") && !!um(sp.mun);
+  const [dados, dadosDespesas, dadosPerguntas, dadosQ8, dadosQ8Cidades, dadosQ8Sucesso] = await Promise.all([
     lerAnalise("municipios", ["municipios", "resumo", "estados"]),
     lerAnalise("dinheiro", ["despesas"]),
     lerAnalise("dinheiro", ["partidos", "quartis", "cargos", "maiores"]),
     // a pergunta 8 (eleitos × não eleitos, no público e no privado) lê o q8, só na tela dela
     tem("p8") ? lerAnalise("q8", ["fontes", "faixas", "medianas", "sucesso"]) : Promise.resolve(null),
+    p8Cidade ? lerAnalise("q8", ["cidades"]) : Promise.resolve(null),
+    // "quem recebeu mais dinheiro público se elegeu mais?" na cidade: vereador em quartos, prefeito em sim ou não
+    p8Cidade ? lerAnalise("q8", [cargo === "Prefeito" ? "cidades_prefeito" : "cidades_sucesso"]) : Promise.resolve(null),
   ]);
   if (!dados?.resumo || !dados.estados || !dados.municipios) {
     return (
@@ -262,37 +268,57 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   );
   const variacaoVoto = totalVoto ? variacaoNominal(totalVoto.porVoto, votoAntes) : null;
 
-  // pergunta 8: eleitos × não eleitos, no público e no privado (q8 não tem município: numa cidade, os números do estado)
+  // pergunta 8: eleitos × não eleitos, no público e no privado. Prefeito e vereador numa cidade: os números da cidade
+  // (tabela cidades); sem ela, ou sem linha da cidade, os do estado, com um aviso.
+  const p8DeCidade = p8Cidade && mun && dadosQ8Cidades?.cidades
+    ? p8DaCidade(comoObjetos<LinhaCidadeP8>(dadosQ8Cidades.cidades), { ano, cargo, cod_ibge: mun.cod_ibge }) : null;
+  const p8NaCidade = !!p8DeCidade;
+  const p8SemCidade = p8Cidade && !!mun && !p8DeCidade;
   const dadosP8: DadosP8 | null = (() => {
     if (!tem("p8") || !dadosQ8?.fontes || !dadosQ8.faixas || !dadosQ8.medianas || !dadosQ8.sucesso) return null;
     const fontes = comoObjetos<LinhaFontes>(dadosQ8.fontes);
     const f = { ano, cargo, uf };
-    const somas = fontesPorResultado(fontes, f);
-    const tipicos = tipicosP8(comoObjetos<LinhaMediana>(dadosQ8.medianas), f);
-    const partes = { eleitos: partePublica(somas.eleitos), naoEleitos: partePublica(somas.naoEleitos) };
-    const nosAnos = antes !== null ? partePublicaNosAnos(fontes, { cargo, uf }, [antes, ano]) : null;
+    // na cidade, o recolhido usa as tabelas da cidade; sem elas (ou sem linha), fica escondido
+    const fCidade = mun ? { ano, cargo, cod_ibge: mun.cod_ibge } : null;
+    const vereadorCidade = p8NaCidade && fCidade && cargo === "Vereador" && dadosQ8Sucesso?.cidades_sucesso ? comoObjetos<LinhaCidadeSucesso>(dadosQ8Sucesso.cidades_sucesso) : null;
+    const faixasCidade = vereadorCidade && fCidade ? sucessoDaCidade(vereadorCidade, fCidade) : null;
+    const prefeitoCidade = p8NaCidade && fCidade && cargo === "Prefeito" && dadosQ8Sucesso?.cidades_prefeito
+      ? prefeitoDaCidade(comoObjetos<LinhaCidadePrefeito>(dadosQ8Sucesso.cidades_prefeito), fCidade) : null;
+    const sucesso = faixasCidade && vereadorCidade && fCidade ? colunasSucessoCidade(vereadorCidade, fCidade) : colunasSucessoP8(comoObjetos<LinhaSucesso>(dadosQ8.sucesso), f);
+    const somas = p8DeCidade?.somas ?? fontesPorResultado(fontes, f);
+    const tipicos = p8DeCidade?.tipicos ?? tipicosP8(comoObjetos<LinhaMediana>(dadosQ8.medianas), f);
+    const partes = p8DeCidade?.partes ?? { eleitos: partePublica(somas.eleitos), naoEleitos: partePublica(somas.naoEleitos) };
+    const anoAntes = p8DeCidade ? p8DeCidade.anos?.antes ?? null : antes;
+    const nosAnos = p8DeCidade ? p8DeCidade.anos : antes !== null ? partePublicaNosAnos(fontes, { cargo, uf }, [antes, ano]) : null;
     const grupos = nosAnos ? ([["Eleitos", nosAnos.eleitos], ["Não eleitos", nosAnos.naoEleitos]] as const) : [];
-    const temAnos = grupos.length > 0 && grupos.every(([, g]) => g.antes !== null && g.depois !== null);
-    const sucesso = colunasSucessoP8(comoObjetos<LinhaSucesso>(dadosQ8.sucesso), f);
+    const temAnos = anoAntes !== null && grupos.length > 0 && grupos.every(([, g]) => g.antes !== null && g.depois !== null);
+    const prefeitoNaCidade = p8NaCidade && cargo === "Prefeito";
+    const nNaoEleitos = p8DeCidade?.somas.naoEleitos.candidaturas ?? 0;
     return {
       resposta: fraseP8(tipicos, partes),
       barras: [{ titulo: "Eleitos", s: somas.eleitos }, { titulo: "Não eleitos", s: somas.naoEleitos }].map((b) => ({ titulo: b.titulo, total: reais(b.s.total), fatias: gruposP8(b.s) })),
       legenda: GRUPOS_P8.map((g) => ({ chave: g.chave, rotulo: g.rotulo, cor: g.cor })),
       tipicos,
-      maioria: maioriaPublica(comoObjetos<LinhaFaixaQ8>(dadosQ8.faixas), f),
+      rotulosTipicos: prefeitoNaCidade ? { eleito: "Eleito", naoEleito: `Não eleitos (mediana de ${inteiro(nNaoEleitos)})` } : undefined,
+      maioria: p8DeCidade?.maioria ?? maioriaPublica(comoObjetos<LinhaFaixaQ8>(dadosQ8.faixas), f),
+      contagens: p8DeCidade?.contagens,
       anos: temAnos ? {
-        antes: antes!, depois: ano,
+        antes: anoAntes!, depois: ano,
         grupos: grupos.map(([rotulo, g]) => ({ rotulo, antes: pct(g.antes!, 0), depois: pct(g.depois!, 0), seta: setaPP(g.antes, g.depois)! })),
       } : null,
-      colunas: sucesso.colunas, max: sucesso.max,
-      recorte: `${cargoMin}, ${uf ? NOME_UF[uf] ?? uf : "seis estados"}, ${ano}`,
+      // o recolhido "quem recebeu mais dinheiro público se elegeu mais?" é estadual: some na cidade
+      colunas: p8NaCidade && (!faixasCidade || faixasCidade.pequena) ? [] : sucesso.colunas, max: sucesso.max,
+      sucessoContagens: faixasCidade?.pequena ? contagensSucesso(faixasCidade.faixas) : undefined,
+      sucessoFrase: prefeitoCidade ? frasePrefeitoDaCidade(prefeitoCidade) : undefined,
+      semSucesso: p8NaCidade && !faixasCidade && !prefeitoCidade,
+      recorte: `${cargoMin}, ${p8NaCidade ? lugar : uf ? NOME_UF[uf] ?? uf : "seis estados"}, ${ano}`,
     };
   })();
 
   // onde o dinheiro foi gasto: os grupos de categoria do TSE no recorte (cidade, estado ou os seis)
   // com um porte (e sem cidade escolhida), só as despesas das cidades dele: o mesmo universo das receitas ao lado
   const grupos = despesas ? composicaoDespesas(despesas, { ano, cargo, uf, mun: mun?.id_municipio, muns: !mun && porte ? cidadesDoPorte(resumo, ano, uf, porte) : undefined }) : [];
-  const totalGrupos = grupos.reduce((a, g) => a + g.valor, 0);
+  const parteProp = parteDaPropaganda(grupos);
 
   // sem candidatos à vista: os estados lado a lado (ou, com um estado aberto, as cidades de maior valor)
   const estadosLista = ordenarLinhas(ufs.map((u, i) => ({ id: u, nome: NOME_UF[u] ?? u, valor: valoresUf[i], conta: contaUf(u) })), "valor");
@@ -313,7 +339,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const fatiasOrigem = !origem ? [] : fatias("naoPublico" in origem
     ? [{ chave: "pub", rotulo: "Público", valor: origem.publico, cor: "pub" }, { chave: "np", rotulo: "Não público", valor: origem.naoPublico, cor: "fx3" }]
     : [{ chave: "pub", rotulo: "Público", valor: origem.publico, cor: "pub" }, { chave: "priv", rotulo: "Privado", valor: origem.privado, cor: "priv" }, { chave: "nc", rotulo: "Sem fonte", valor: origem.naoClassificado, cor: "o" }], { fixo: true });
-  const fatiasDestino = fatias(grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, valor: g.valor })), { max: 5 });
   // a pergunta 1: o custo da cadeira com a conta por extenso, também para prefeito (1 cadeira)
   const p1 = pintar === "vaga";
   const rotuloPrincipal = p1 ? "Custo da cadeira" : aba === "gasto" && cargo === "Prefeito" && mun ? "Gasto na disputa" : medidaInfo.rotulo;
@@ -372,8 +397,13 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         {/* cabeçalho: onde estamos e a troca de cidade */}
         <header className="din-cab s12">
           <div>
-            {/* a P8 não separa por cidade nem por porte (o q8 é por estado): numa cidade, mostra o estado dela */}
-            {tem("p8") ? (
+            {/* a P8 não separa por porte; numa cidade, só prefeito e vereador com a tabela cidades (senão, o estado dela) */}
+            {tem("p8") && p8NaCidade ? (
+              <>
+                <p className="din-kicker">Município · {uf} · {cargo} · {ano}</p>
+                <h2>{lugar}</h2>
+              </>
+            ) : tem("p8") ? (
               <>
                 <p className="din-kicker">{uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"} · {cargo} · {ano}</p>
                 <h2>{uf ? NOME_UF[uf] ?? uf : "Os seis estados"}</h2>
@@ -394,6 +424,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </header>
 
         {/* pergunta 8: eleitos × não eleitos, no público e no privado */}
+        {tem("p8") && dadosP8 && p8SemCidade && <p className="muted s12">Números do estado: os desta cidade ainda não estão disponíveis.</p>}
         {tem("p8") && (dadosP8 ? <PublicoPrivado d={dadosP8} /> : (
           <div className="card aviso s12">
             <h2>Dinheiro público e privado indisponível</h2>
@@ -695,60 +726,46 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         )}
 
 
-        {/* o fim de "Dinheiro elege?" nas duas medidas: em que as campanhas gastaram (pergunta 9) */}
-        {tem("destino") && (fatiasDestino.length > 0 || tem("propaganda")) && (
-          <header className="din-divisao s12">
-            <h3>Em que as campanhas gastaram</h3>
-          </header>
-        )}
-        {tem("destino") && fatiasDestino.length > 0 && (
-          <section id="dinheiro-destino" className="bloco noite s12 din-origem">
-            <header className="din-sec">
-              <h3>Para onde foi o dinheiro</h3>
-              <p>Tudo o que as campanhas a {cargoMin} gastaram · {ano}</p>
-            </header>
-            <BarraEmpilhada titulo="Gasto" total={reais(totalGrupos)} fatias={fatiasDestino} valor={reais} />
-            {grupos.length > 0 && (
-              <details className="ver-todos dinheiro-grupos">
-                <summary>Todos os {grupos.length} grupos de despesa</summary>
-                <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} por grupo, ${ano}`}
-                  linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: reais(g.valor) }))} />
-              </details>
-            )}
-            <p className="din-rodape">Grupos de categoria de despesa do TSE · sem repasses entre candidatos · valores sem correção pela inflação</p>
-          </section>
-        )}
-
-        {/* o que se comprou em propaganda (nuvem de palavras), de todos ou só dos eleitos */}
+        {/* pergunta 9: onde se investe em propaganda. A barra usa os grupos e as cores da nuvem: é a legenda dela */}
         {tem("propaganda") && <section id="dinheiro-propaganda" className="bloco noite s12 din-propaganda">
-          <header className="din-sec">
-            <h3>O que se comprou em propaganda</h3>
-            {pecas?.todos[0] ? (
-              <p>Onde mais foi dinheiro: <b>{pecas.todos[0].termo}</b>, {reais(pecas.todos[0].centavos / 100)} ({pct(pecas.todos[0].parte, 0)} da propaganda de {quemTexto})</p>
-            ) : <p>{cargo} · {ano} · {quemTexto}</p>}
-          </header>
+          <p className="din-kicker">Propaganda</p>
+          {parteProp ? (
+            <>
+              <p className="p8-grande"><b>{pct(parteProp.parte, 0)} do gasto</b></p>
+              <p className="p8-frase">{reais(parteProp.valor)} de {reais(parteProp.total)} foram para propaganda.</p>
+            </>
+          ) : <p className="muted">Sem despesas declaradas neste recorte.</p>}
           {chipsQuem("dinheiro-propaganda")}
           {comNuvem && pecas ? (
-            <div className="din-nuvem">
-              <NuvemPalavras nuvem={pecas} />
-              <div>
-                <p className="rotulo">As maiores peças</p>
-                <ol className="din-pecas" aria-label={`As peças de propaganda de maior valor, ${cargoMin}, ${lugar}, ${ano}, ${quemTexto}`}>
-                  {pecas.todos.slice(0, 8).map((t) => (
-                    <li key={t.termo} title={t.explicacao ?? undefined}>
-                      <span>{t.termo}</span>
-                      <span className="din-pecas-trilho" aria-hidden="true"><i style={{ width: `${Math.round((t.centavos / pecas.todos[0].centavos) * 100)}%` }} /></span>
-                      <b>{pct(t.parte, 0)}</b><small>{reais(t.centavos / 100)}</small>
-                    </li>
-                  ))}
-                </ol>
-                <p className="din-rodape">Total em propaganda: {reais(pecas.totalCentavos / 100)}</p>
+            <>
+              <BarraEmpilhada titulo="De cada R$ 100 em propaganda" total={reais(pecas.totalCentavos / 100)} fatias={barraPropaganda(pecas)} valor={reais} />
+              <div className="din-nuvem">
+                <NuvemPalavras nuvem={pecas} />
+                <div>
+                  <p className="rotulo">As maiores peças</p>
+                  <ol className="din-pecas" aria-label={`As peças de propaganda de maior valor, ${cargoMin}, ${lugar}, ${ano}, ${quemTexto}`}>
+                    {pecas.todos.slice(0, 8).map((t) => (
+                      <li key={t.termo} title={t.explicacao ?? undefined}>
+                        <span>{t.termo}</span>
+                        <span className="din-pecas-trilho" aria-hidden="true"><i style={{ width: `${Math.round((t.centavos / pecas.todos[0].centavos) * 100)}%` }} /></span>
+                        <b>{pct(t.parte, 0)}</b><small>{reais(t.centavos / 100)}</small>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               </div>
-            </div>
+            </>
           ) : (
             <p className="muted">{pecasPreparando ? "A nuvem ainda está sendo calculada. Recarregue a página em um ou dois minutos." : recebidasPecas === null ? "A API não devolveu a propaganda agora. Recarregue a página para tentar de novo." : "Há poucas peças de propaganda declaradas neste recorte para uma nuvem."}</p>
           )}
-          <p className="din-rodape">O tamanho da palavra é o valor contratado · a cor é o tipo (material físico, rádio e TV, internet; cinza: não diz a peça){!mun && porte ? " · a nuvem não separa por porte: são todas as cidades do recorte" : ""} · <Link href={propaganda}>Propaganda em detalhe</Link></p>
+          {grupos.length > 0 && (
+            <details className="ver-todos dinheiro-grupos">
+              <summary>Todas as despesas da campanha</summary>
+              <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} por grupo, ${ano}`}
+                linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: reais(g.valor) }))} />
+            </details>
+          )}
+          <p><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Ver onde um candidato investiu em propaganda →</Link></p>
         </section>}
 
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">

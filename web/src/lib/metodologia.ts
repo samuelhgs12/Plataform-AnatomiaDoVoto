@@ -2,6 +2,7 @@
 // calculamos") e a página /sobre leem daqui, para as duas versões não divergirem. O texto de `calculo` é o que a equipe
 // já revisou nas páginas; para a /sobre há `resposta`, sem editar o original. As perguntas, no texto do dossiê, estão em
 // PERGUNTAS.
+import { MINIMO_CADA_100 } from "./dinheiro";
 
 export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p8" | "p9" | "p10" | "candidato" | "legislativo";
 
@@ -366,10 +367,11 @@ export const CALCULO_MAPA_DINHEIRO: string[] = [
 /** O "Como calculamos" da pergunta 8 no mapa (eleitos × não eleitos, no público e no privado: PublicoPrivado). */
 export const CALCULO_P8_MAPA: string[] = [
   "De onde veio: as somas de cada grupo (eleitos e não eleitos), sem os repasses entre candidatos, para o mesmo real não contar duas vezes. Fundos públicos = Fundo Eleitoral + Fundo Partidário.",
-  "Candidato típico: a mediana de cada grupo, contando o que cada um recebeu, inclusive de outros candidatos. Como cada valor é o do meio do seu grupo, público + privado não somam o total.",
+  "Candidato típico: a mediana do total recebido em cada grupo, contando o que cada um recebeu, inclusive de outros candidatos. A divisão entre público e privado está nas barras, que usam as somas de cada grupo.",
   "Maioria pública: mais da metade do que o candidato recebeu veio dos fundos. Quem não recebeu nada conta no total do grupo.",
   "Parte pública ao longo do tempo: valores da época, sem correção pela inflação; a diferença é em pontos percentuais (p.p.).",
-  "Na cidade, os números são do estado: as receitas não são separadas por município nesta análise.",
+  `Prefeito e vereador, com uma cidade escolhida: as contas são só dos candidatos daquela cidade. Com menos de ${MINIMO_CADA_100} pessoas num grupo, mostramos a contagem (ex.: 2 de 3) em vez de "de cada 100".`,
+  "Na cidade, 'quem recebeu mais dinheiro público' compara cada candidato só com os concorrentes daquela cidade. Para vereador, em quatro grupos de quem recebeu (com poucos candidatos, mostramos a contagem); para prefeito, se quem mais recebeu venceu, só quando todos entregaram as contas e não há empate.",
   "Andar junto não prova que o dinheiro faz ganhar: os partidos mandam mais dinheiro para quem já tem mais chance.",
 ];
 
