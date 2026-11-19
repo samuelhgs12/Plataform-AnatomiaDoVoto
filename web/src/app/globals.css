@@ -2115,15 +2115,6 @@ a.q-ver:active { transform: scale(0.98); }
 /* a linha das despesas faz parte do candidato de cima: sem borda entre as duas e com o botão baixo */
 .maiores-tabela tr:has(+ .mg-detalhes) > * { border-bottom: 0; }
 .maiores-tabela .mg-detalhes .despesas-candidato > summary { min-height: 32px; padding: 0 0 8px 47px; font-size: 13px; }
-/* pergunta 1: busca de um candidato pelo nome */
-.din-busca-form { display: flex; gap: 8px; max-width: 640px; margin: 4px 0 12px; }
-/* campo claro sobre o painel escuro: o nome digitado e as sugestões em alto contraste */
-.din-busca-form input[type=search] { flex: 1; min-width: 0; min-height: 48px; padding: 0 14px; border: 0; border-radius: 8px; font: inherit; font-size: 17px; background: var(--sobre-noite); color: var(--noite); box-shadow: inset 0 0 0 1px var(--noite-linha); }
-.din-busca-form input[type=search]::placeholder { color: var(--ardosia); }
-.din-busca-form input[type=search]:focus { outline: none; box-shadow: 0 0 0 3px var(--brilho); }
-.din-busca-form button { min-height: 48px; padding: 0 18px; border: 0; border-radius: 6px; font: inherit; font-weight: 650; cursor: pointer; color: var(--noite); background: var(--brilho); }
-.din-busca-form button:focus-visible { outline: 2px solid var(--sobre-noite); outline-offset: 2px; }
-.din-busca .rotulo { margin: 8px 0 4px; }
 /* camada Dinheiro, eleições gerais: o estado aproximado não tem cidades por cima, então fica com a cor da faixa dele
    (a regra do mapa escurece o estado para as cidades aparecerem, o que aqui o deixaria preto) */
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q0 { fill: var(--q0); }
@@ -2131,30 +2122,6 @@ a.q-ver:active { transform: scale(0.98); }
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q2 { fill: var(--q2); }
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q3 { fill: var(--q3); }
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q4 { fill: var(--q4); }
-/* autocompletar da busca: a lista abre embaixo do campo, clara sobre o painel escuro (como a busca da aba Candidato) */
-.din-busca-form.combo { max-width: 640px; flex-wrap: wrap; }
-.din-busca-campo { position: relative; flex: 1; min-width: 0; display: flex; }
-/* a lista: clara, com o nome grande; .din-busca-form na frente para vencer a regra genérica .combo ul (fundo do tema) */
-.din-busca-form .din-busca-lista { top: 100%; margin-top: 6px; padding: 6px; max-height: 420px; border-radius: 10px; background: var(--sobre-noite); color: var(--noite); box-shadow: 0 16px 40px rgb(0 0 0 / 0.45); }
-.din-busca-form .din-busca-lista li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 16px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--noite); }
-.din-busca-form .din-busca-lista li + li { margin-top: 2px; }
-.din-busca-form .din-busca-lista li[aria-selected="true"] { background: color-mix(in srgb, var(--brilho) 22%, var(--sobre-noite)); box-shadow: inset 4px 0 var(--brilho); }
-.din-busca-nome { display: block; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--noite); }
-.din-busca-nome mark { background: color-mix(in srgb, var(--brilho) 55%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
-.din-busca-lista small { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 3px; font-size: 14px; color: var(--ardosia); }
-.din-busca-lista .din-busca-nome, .din-busca-lista small { grid-column: 1; }
-.din-busca-valor { grid-row: 1 / span 2; grid-column: 2; text-align: right; font-size: 14px; line-height: 1.35; color: var(--ardosia); }
-.din-busca-valor b { display: block; font-size: 16px; color: var(--noite); }
-.din-busca-eleito { color: var(--verde-700); font-weight: 700; }
-.din-busca-form input[type=search]::-webkit-search-cancel-button { filter: brightness(0.25); cursor: pointer; }
-/* os resultados da busca: nome grande, sem sublinhado (só ao passar o mouse) e o resultado em cor legível */
-.din-busca .linhas-nome .din-abrir-candidato { font-size: 17px; font-weight: 700; color: var(--sobre-noite); text-decoration: none; }
-.din-busca .linhas-nome .din-abrir-candidato:hover { text-decoration: underline; color: var(--brilho); }
-.din-busca .linhas-nome small, .din-busca .linhas-cab { color: var(--noite-muted); font-size: 14px; }
-.din-busca .linhas-resultado b.eleito { color: var(--verde-400); }
-.din-busca-status { flex-basis: 100%; margin: 0; font-size: 14px; color: var(--sobre-noite); }
-.din-busca-status:empty { display: none; }
-.din-busca-ajuda { flex-basis: 100%; margin: 2px 0 0; color: var(--noite-muted); font-size: 14px; }
 .linhas-nome .din-abrir-candidato { border: 0; padding: 0; background: transparent; color: var(--fg); text-align: left; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .din-candidato-dialogo { width: min(800px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--noite-linha); border-radius: 12px; background: var(--noite2); color: var(--sobre-noite); box-shadow: 0 24px 80px rgb(0 0 0 / 0.5); }
 .din-candidato-dialogo::backdrop { background: rgb(5 10 19 / 0.78); }
@@ -2250,24 +2217,6 @@ a.q-ver:active { transform: scale(0.98); }
 .dinheiro-comp summary, .dinheiro-comp summary h3, .dinheiro-comp h3, .dinheiro-comp h4 { color: var(--fg); }
 .bloco.noite .ver-todos > summary { color: var(--sobre-noite); }
 
-/* camada Dinheiro: cartão do lugar por cima do mapa (aparece no clique, sem rolar) e aviso enquanto a página troca */
-.cartao-lugar { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); z-index: 3; width: min(270px, 34%); padding: 16px 18px; border-radius: 12px;
-  background: var(--noite2); color: var(--sobre-noite); box-shadow: 0 12px 32px rgb(0 0 0 / 0.35); border: 1px solid var(--noite-linha); }
-.cartao-lugar h2 { margin: 2px 0 6px; font-size: 24px; line-height: 1.1; padding-right: 24px; }
-.cartao-rotulo { margin: 0; font-size: 12px; color: var(--noite-muted); }
-.cartao-valor { margin: 0 0 6px; color: var(--noite-muted); font-size: 14px; }
-.cartao-valor b { display: block; font-size: 30px; line-height: 1.1; color: var(--brilho); }
-.cartao-linha { margin: 0 0 4px; font-size: 14px; }
-.cartao-fechar { position: absolute; top: 8px; right: 12px; font-size: 22px; line-height: 1; color: var(--noite-muted); text-decoration: none; }
-.cartao-fechar:hover { color: var(--sobre-noite); }
-.carregando-mapa { display: none; position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; margin: 0; padding: 8px 16px;
-  border-radius: 999px; background: var(--noite2); color: var(--sobre-noite); font-weight: 600; }
-.palco-dinheiro[aria-busy="true"] .carregando-mapa { display: block; }
-.palco-dinheiro[aria-busy="true"] .mapa-abst, .palco-dinheiro[aria-busy="true"] .cartao-lugar { opacity: 0.45; transition: opacity 0.2s ease; }
-@media (max-width: 1000px) {
-  .cartao-lugar { display: none; }   /* no celular não há lado livre no mapa; o painel logo abaixo mostra o mesmo resumo */
-}
-.palco-dinheiro:has(.cartao-lugar) .lupa-dica { display: none; }   /* a dica da roda ficaria atrás do cartão */
 
 /* camada Dinheiro: o que pinta o mapa (chips na base do mapa), a ordem dos candidatos, a cobertura e os grupos de despesa */
 .ord-cand { margin: 6px 0 10px; }

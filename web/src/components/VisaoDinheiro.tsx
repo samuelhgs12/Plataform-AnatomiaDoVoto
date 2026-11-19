@@ -9,7 +9,7 @@ import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
   abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, corCidade, corPorFaixas,
   diferencaRelativa, ehMunicipal, fatias, seloValor, seta, escolhaMapaDinheiro, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
-  camposDoHref, caminhoBuscaCandidato, MEDIDAS_ANOS, MEIAS, medidaDe, termoBuscaCandidato, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, MEDIR, lugarDoAchado, opcoesMunicipio, ufDoMunicipio, referenciaDoPorte, telaDe, TITULO_TELA, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
+  MEDIDAS_ANOS, MEIAS, medidaDe, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, MEDIR, opcoesMunicipio, ufDoMunicipio, referenciaDoPorte, telaDe, TITULO_TELA, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosDoRecorte, cargosDoAno, deCada100, fraseDependeram, parteDependeu, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
   type Aba, type LinhaCargo, type LinhaDespesa, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
@@ -30,7 +30,6 @@ import { CemCandidatos } from "./CemCandidatos";
 import { ComparacoesDinheiro } from "./ComparacoesDinheiro";
 import { EscolhaMunicipio } from "./EscolhaMunicipio";
 import { LinhasCandidatos, type LinhaCandidato } from "./LinhasCandidatos";
-import { BuscaCandidatoDinheiro } from "./BuscaCandidatoDinheiro";
 import { MapaAbstencao, type EstadoNoMapa, type MunicipioNoMapa } from "./MapaAbstencao";
 import { MaioresGastos } from "./MaioresGastos";
 import { MapaVivo } from "./MapaVivo";
@@ -229,12 +228,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const linhasCargo = dadosPerguntas?.cargos ? comoObjetos<LinhaCargo>(dadosPerguntas.cargos) : null;
   const linhasMaior = dadosPerguntas?.maiores ? comoObjetos<LinhaMaior>(dadosPerguntas.maiores) : null;
   const outroCargo = mun ? cargosDoAno(ano).find((c) => c !== cargo) : undefined;
-  // "Dinheiro elege?": a busca de um candidato pelo nome, no recorte (estado ou cidade, cargo e ano)
-  const nomeBusca = tem("busca") ? termoBuscaCandidato(um(sp.nome)) : null;
-  const [candsOutro, recebidasPecas, achados] = await Promise.all([
+  const [candsOutro, recebidasPecas] = await Promise.all([
     mun && outroCargo ? apiGetOpcional<CandidatoLocal[]>(`/municipios/${mun.id_municipio}/candidatos?ano=${ano}&cargo=${encodeURIComponent(outroCargo)}`) : Promise.resolve(null),
     tem("propaganda") ? apiGetOpcional<unknown>(caminhoPecas({ ano, cargo, uf, mun: mun?.id_municipio }, quem)) : Promise.resolve(null),
-    nomeBusca ? apiGetOpcional<(CandidatoLocal & { municipio?: string | null; uf?: string | null })[]>(caminhoBuscaCandidato({ q: nomeBusca, ano, cargo, uf, mun: mun?.id_municipio })) : Promise.resolve(null),
   ]);
   const vagasMun = (c: string) => (c === "Prefeito" ? 1 : linhaMun?.vereador_vagas ?? 0);
   const cargosLugar = mun
@@ -276,10 +272,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     : [];
   const posMun = mun ? cidadesUf.findIndex((c) => c.id === mun.id_municipio) : -1;
   const cidadesTopo = posMun >= 8 ? [...cidadesUf.slice(0, 7), cidadesUf[posMun]] : cidadesUf.slice(0, 8);
-  // cartão do lugar escolhido, por cima do mapa: o número, a posição e o atalho para a seção dele embaixo
-  const posUf = uf ? estadosLista.findIndex((e) => e.id === uf) : -1;
-  const unidadeCurta = aba === "gasto" ? (cargo === "Prefeito" && mun ? "gastos por todas as campanhas a prefeito" : `por vaga de ${cargoMin}`) : aba === "eleitor" ? "por eleitor apto" : "do dinheiro recebido veio de fundos públicos";
-  // só avisa no cartão do mapa quando faltam contas de verdade (abaixo de LIMIAR_CONTAS); acima, o painel só informa a parte
+  const posUf = uf ? estadosLista.findIndex((e) => e.id === uf) : -1;   // posição do estado, no painel
   // leitura de relance: a origem e o destino do dinheiro em barras 100%, com os grupos menores juntos em "Outros"
   const fatiasOrigem = !origem ? [] : fatias("naoPublico" in origem
     ? [{ chave: "pub", rotulo: "Público", valor: origem.publico, cor: "pub" }, { chave: "np", rotulo: "Não público", valor: origem.naoPublico, cor: "fx3" }]
@@ -290,18 +283,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     : aba === "gasto" ? "todas as campanhas a prefeito" : aba === "eleitor" ? "gasto ÷ eleitores aptos" : "do dinheiro recebido";
   const tituloRanking = aba === "gasto" ? (cargo === "Prefeito" && cidadesTopo.length ? "Onde a disputa custou mais" : "Onde se gastou mais por vaga")
     : aba === "eleitor" ? "Onde se gastou mais por eleitor" : "Onde o dinheiro público pesa mais";
-  const cartao = mun ? {
-    rotulo: `Município · ${uf} · ${cargo}`, nome: lugar,
-    valor: textoValor(principal, aba, cargo), unidade: unidadeCurta,
-    posicao: posMun >= 0 ? `${posMun + 1}ª de ${inteiro(cidadesUf.length)} cidades` : null,
-    extra: eleitoPrefeito ? `Eleito: ${eleitoPrefeito.nome_urna} (${eleitoPrefeito.partido}), ${eleitoPrefeito.prestou === false ? "sem prestação de contas final" : `gastou ${reais(eleitoPrefeito.gasto)}`}`
-      : candidatos ? `${inteiro(linhas.length)} candidatos, ${inteiro(eleitos.length)} eleitos` : null,
-  } : uf ? {
-    rotulo: `Estado · ${cargo}${porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}`, nome: lugar,
-    valor: textoValor(principal, aba, cargo), unidade: unidadeCurta,
-    posicao: posUf >= 0 ? `${posUf + 1}º de ${ufs.length} estados` : null,
-    extra: null,
-  } : null;
   const propaganda = `/analises/dinheiro?${new URLSearchParams(Object.entries({ ano: String(ano), cargo, uf: uf ?? "", aba: "propaganda" }).filter(([, v]) => v))}`;
   const paramsMun = Object.fromEntries(new URL(href({ mun: null }), "http://x").searchParams);
 
@@ -324,19 +305,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         <div className="palco-mapa">
           {mapaPalco}
           {!uf && <p className="palco-dica">Selecione um estado para explorar o dinheiro das campanhas, ou veja embaixo os seis comparados</p>}
-          <p className="carregando-mapa" aria-hidden="true">Carregando…</p>
-          {cartao && (
-            <aside className="cartao-lugar" aria-label={`Resumo: ${cartao.nome}`}>
-              <a className="cartao-fechar" href={href(mun ? { mun: null } : { uf: null })} data-mapa="" aria-label={mun ? "Voltar ao estado" : "Voltar aos seis estados"}>×</a>
-              <p className="cartao-rotulo">{cartao.rotulo} · {ano}</p>
-              <h2>{cartao.nome}</h2>
-              <p className="cartao-valor"><b>{cartao.valor}</b> {cartao.unidade}</p>
-              <p className="cartao-selos">
-                {cartao.posicao && <span>{cartao.posicao}</span>}
-              </p>
-              {cartao.extra && <p className="cartao-linha">{cartao.extra}</p>}
-            </aside>
-          )}
         </div>
 
         <div className="palco-base">
@@ -375,7 +343,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             {MEDIR.map((m) => (
               <Link key={m.chave} href={href({ medir: m.chave === "publico" ? "publico" : null }, "dinheiro-painel")} scroll={false}
                 className={`chip${m.chave === medir ? " on" : ""}`} aria-current={m.chave === medir ? "true" : undefined}>
-                {m.rotulo} <small>{m.numero}</small>
+                {m.rotulo}
               </Link>
             ))}
           </nav>
@@ -434,24 +402,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           noite escolhaFora ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir={medir} semGasto={!uf}
           hrefMedir={(m) => href({ medir: m === "publico" ? "publico" : null }, "comparar")} hrefUf={(u) => href({ uf: u })}
         />}
-
-        {/* "Dinheiro elege?" aplicada a uma pessoa: procurar um candidato e ver quanto gastou e recebeu, os votos, o custo do voto e as despesas por tipo */}
-        {tem("busca") && (
-          <section id="dinheiro-busca" className="bloco noite s12 din-busca">
-            <header className="din-sec">
-              <h3>Quanto gastou um candidato</h3>
-            </header>
-            <BuscaCandidatoDinheiro campos={camposDoHref(href({}))} recorte={{ ano, cargo, uf, mun: mun?.id_municipio }}
-              inicial={nomeBusca ?? ""} municipal={municipal} />
-            {!uf && <p className="din-rodape">Busca nos seis estados. Escolha um estado no mapa para procurar só nele.</p>}
-            {nomeBusca && (achados === null
-              ? <p className="card aviso" role="status">Não foi possível buscar agora: a API não respondeu. Tente de novo.</p>
-              : <div role="status" aria-live="polite">
-                  <p className="rotulo">{achados.length === 0 ? `Nenhum candidato a ${cargoMin} com "${nomeBusca}" no nome` : achados.length >= 20 ? `Os 20 primeiros com "${nomeBusca}" no nome (eleitos primeiro)` : `${inteiro(achados.length)} ${achados.length === 1 ? "candidato" : "candidatos"} com "${nomeBusca}" no nome`}</p>
-                  <div className="dinheiro-cand"><LinhasCandidatos detalhar linhas={mun ? achados.map((a) => ({ ...a, nome_urna: a.nome_urna && nomeProprio(a.nome_urna), municipio: null })) : achados.map((a) => ({ ...a, nome_urna: a.nome_urna && nomeProprio(a.nome_urna), municipio: lugarDoAchado({ cidade: a.municipio ? nomeProprio(a.municipio) : null, uf: a.uf }, { uf }) }))} ano={ano} vazio="" /></div>
-                </div>)}
-          </section>
-        )}
 
         {/* cada pergunta do menu mostra só os seus blocos (SECOES, em src/lib/dinheiro.ts); as pessoas que mais gastaram */}
         {tem("maiores") && <section id="dinheiro-maiores" className="bloco noite s12 din-maiores">
@@ -675,7 +625,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         {/* o fim de "Dinheiro elege?" nas duas medidas: em que as campanhas gastaram (pergunta 9) */}
         {tem("destino") && (fatiasDestino.length > 0 || tem("propaganda")) && (
           <header className="din-divisao s12">
-            <p className="din-kicker">Pergunta 9</p>
             <h3>Em que as campanhas gastaram</h3>
           </header>
         )}
