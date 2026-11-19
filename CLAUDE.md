@@ -24,7 +24,9 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
   lido com `lerEstatico("mapa")` de `src/lib/data.ts`; tabelas `municipios`, `participacao`, `indicadores` e `dicionario`, as duas últimas com a coluna `censo` (2010 ou 2022: `censoDoAno`),
   tipos em `src/lib/abstencao.ts`), porque parte dos dados ainda vem do TSE, fora do banco (decisão 10).
 - O que é **por candidatura** não é análise: fica no perfil (`candidato/[id]`), com um endpoint por bloco em
-  `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. P8:
+  `/api/candidaturas/<id>/...` e a mesma campanha escolhida (`?campanha=<id_candidatura>`) em todos os blocos. A evolução
+  do patrimônio é da pessoa, não de uma campanha: `/api/candidatos/<id>/patrimonio` → `evolucaoPatrimonio`
+  (`src/lib/patrimonio-perfil.ts`) → `PatrimonioCandidato`. P8:
   `receitas` → `DinheiroCampanha`; P9: `propaganda` (centavos inteiros) → `PropagandaCampanha` (lógica em `src/lib/propaganda.ts`
   e `src/lib/nuvem.ts`; desenho em `BarraPecas` e `NuvemPalavras`). A comparação com a campanha típica vem da análise q9:
   o perfil lê `referencia` e, só quando o grupo (cargo + ano + UF) tem menos de 30 campanhas, `parcelas`, para tirar a
