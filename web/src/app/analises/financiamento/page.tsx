@@ -107,7 +107,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
       <Cabecalho titulo="Dinheiro público e sucesso eleitoral" pergunta="Quem recebe mais dinheiro público para a campanha se elege mais?" foto={FOTOS.urna}>
         <p className="lead">
           Dinheiro público de campanha é o que sai dos impostos: o Fundo Eleitoral e o Fundo Partidário, que os partidos
-          dividem entre seus candidatos. Cruzamos quanto cada candidato recebeu com o resultado da eleição, de 2018 a 2024.
+          dividem entre seus candidatos. Cruzamos quanto cada candidato recebeu com o resultado da eleição, de 2018 a 2026.
         </p>
       </Cabecalho>
 
@@ -231,7 +231,7 @@ export default async function Financiamento({ searchParams }: { searchParams: SP
       {/* 2. Evolução */}
       <div className="quadro">
       <section className="bloco s6" aria-labelledby="h-evo">
-        <h2 id="h-evo">Como isso mudou de 2018 a 2024</h2>
+        <h2 id="h-evo">Como isso mudou de 2018 a 2026</h2>
         <p className="muted">Quanto do dinheiro de cada eleição veio de fonte pública{cargo ? ` (${cargo.toLowerCase()})` : ""}{uf ? ` em ${uf}` : ""}. Quanto mais alta a coluna, mais as campanhas dependeram de dinheiro público. Clique em uma coluna para ver aquele ano. Valores em reais da época, sem correção pela inflação.</p>
         {mudancas.length > 0 && (
           <ul className="manchete pequena mudancas">

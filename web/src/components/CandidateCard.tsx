@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { CandidaturaItem } from "@/lib/types";
-import { compacto, ROTULO_RESULTADO } from "@/lib/format";
+import { ROTULO_RESULTADO, textoVotos } from "@/lib/format";
 import { fotoDaPessoa } from "@/lib/foto-candidato";
 import { Avatar } from "./Avatar";
 import { PartyChip } from "./PartyChip";
@@ -18,7 +18,7 @@ export function CandidateCard({ c }: { c: CandidaturaItem }) {
       <div style={{ marginTop: 10, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
         <PartyChip sigla={c.partido} />
         <span className={`badge${c.eleito ? " eleito" : ""}`}>{ROTULO_RESULTADO[c.resultado] ?? c.resultado}</span>
-        <span className="muted" style={{ fontSize: 14 }}>{compacto(c.votos)} votos</span>
+        <span className="muted" style={{ fontSize: 14 }}>{textoVotos(c.votos, c.votos_2t)}</span>
       </div>
     </>
   );

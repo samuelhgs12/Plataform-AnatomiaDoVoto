@@ -18,7 +18,8 @@ const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function Candidatos({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const meta = await apiGet<Meta>("/meta", 86400);
+  // anos, cargos e UFs mudam a cada carga do banco (ex.: a de 2026): o mesmo cache de 1 h do resto, não um dia
+  const meta = await apiGet<Meta>("/meta");
   // sem filtros: a eleição mais recente; em ano de eleição geral o cargo padrão é presidente
   const sel = resolverSelecao(meta, um(sp.ano), um(sp.cargo), um(sp.uf));
   const faltaUf = exigeUf(sel.cargo) && !sel.uf;

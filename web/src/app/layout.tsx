@@ -10,7 +10,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "Anatomia do Voto", template: "%s · Anatomia do Voto" },
-  description: "Dados eleitorais do TSE (1998–2024) para AP, ES, MG, PE, RJ e RR: carreira, gastos de campanha e votos de legenda.",
+  description: "Dados eleitorais do TSE (1998–2026) para AP, ES, MG, PE, RJ e RR: carreira, gastos de campanha e votos de legenda.",
 };
 
 // General Sans (Indian Type Foundry, licença ITF Free Font), servida pelo próprio site: a build não depende de rede.

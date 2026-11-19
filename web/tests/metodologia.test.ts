@@ -85,12 +85,12 @@ describe("escopoEmTexto", () => {
     expect(escopoEmTexto(l({ anos: { 2012: "censo", 2008: "censo", 2010: "censo" } }))).toBe("comparado com 2008, 2010 e 2012");
   });
 
-  it("na matriz real: abstenção de 2008 a 2024, dinheiro de 2018 e cada Censo com os três anos dele", () => {
+  it("na matriz real: abstenção de 2008 a 2026, dinheiro de 2018 e cada Censo com os três anos dele", () => {
     const linha = (dado: string) => ESCOPO.find((e) => e.dado === dado)!;
-    expect(escopoEmTexto(linha("Participação e abstenção"))).toBe("2008–2024");
-    expect(escopoEmTexto(linha("Receitas e despesas"))).toBe("2018–2024");
+    expect(escopoEmTexto(linha("Participação e abstenção"))).toBe("2008–2026");
+    expect(escopoEmTexto(linha("Receitas e despesas"))).toBe("2018–2026");
     expect(escopoEmTexto(linha("Censo 2010"))).toBe("comparado com 2008, 2010 e 2012");
     expect(escopoEmTexto(linha("Censo 2022"))).toBe("comparado com 2020, 2022 e 2024");
-    expect(escopoEmTexto(linha("Candidaturas e votação"))).toBe("1998–2024");
+    expect(escopoEmTexto(linha("Candidaturas e votação"))).toBe("1998–2026");
   });
 });

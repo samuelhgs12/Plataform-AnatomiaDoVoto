@@ -56,7 +56,7 @@ export function lerRecorte(sp: SP, op: { anos: number[]; ufs: string[]; municipi
 }
 
 /** Eleições com prestação de contas no banco (não há receitas nem despesas antes de 2018). */
-export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
+export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024, 2026];
 
 /**
  * As perguntas da camada Dinheiro, na ordem do menu: uma pergunta do dossiê por item, sem número. A 1 (quanto custa uma
