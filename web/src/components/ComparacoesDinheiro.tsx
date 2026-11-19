@@ -2,10 +2,10 @@ import Link from "next/link";
 import { lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
 import {
-  contaGastoEstado, ehMajoritario, ehMunicipal, emCada100, mediaPorCandidato, mediasPorResultado, qualificacao, tresGrupos, valorCidade, valorDoEstado, valorDoPorte,
+  contaGastoEstado, ehMajoritario, ehMunicipal, emCada100, fraseQuartis, quartisDeEleicao, mediaPorCandidato, mediasPorResultado, qualificacao, tresGrupos, valorCidade, valorDoEstado, valorDoPorte,
 } from "@/lib/dinheiro";
 import { compararGrupos } from "@/lib/estatistica";
-import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
+import { NOME_UF, passa, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
 import { inteiro, reais } from "@/lib/format";
 import { coberturaDisputas, daMedida, maiorGastador, respostaMaior, sucessoPorGasto, type LinhaGastoFaixa, type LinhaMaiorGasto } from "@/lib/gastos";
 import { porteDe, PORTES, type LinhaEstado, type LinhaMunicipio, type LinhaResumo, type Porte } from "@/lib/territorio";
@@ -31,6 +31,8 @@ interface Props {
   noite?: boolean;
   /** sem o gráfico do gasto por vaga (quem chama já o mostra), só a média recebida por candidato */
   semGasto?: boolean;
+  /** a medida é escolhida fora do componente, para a tela toda (camada Dinheiro do mapa): sem os botões daqui */
+  escolhaFora?: boolean;
 }
 
 /**
@@ -39,7 +41,7 @@ interface Props {
  * se elegeu mais?" (perguntas 2 e 8 juntas, medindo por todo o dinheiro ou só pelo público). Lê as análises
  * municipios, q2 e q8 (em cache); as contas são de src/lib/dinheiro.ts, gastos.ts e financiamento.ts.
  */
-export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte, medir, hrefMedir, hrefUf, noite, semGasto }: Props) {
+export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte, medir, hrefMedir, hrefUf, noite, semGasto, escolhaFora }: Props) {
   const [dados, q2, q8] = await Promise.all([
     lerAnalise("municipios", ["resumo", "estados"]),
     lerAnalise("q2", ["faixas", "maior_gasto"]),
@@ -118,11 +120,11 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
         <details open={!mun} className="area-comparacao">
           <summary><Titulo id="h-comp">Quem teve mais dinheiro se elegeu mais?</Titulo></summary>
           <p className="comparacao-sub">{uf ? nomeUf : "Seis estados"} · {cargo.toLowerCase()} · {ano} · todos os candidatos{uf ? " do estado" : ""}{mun ? ` (não só de ${lugar})` : ""}. Cada candidato é comparado com os concorrentes da mesma disputa.</p>
-          <div className="chips" role="group" aria-label="Medir pelo">
+          {!escolhaFora && <div className="chips" role="group" aria-label="Medir pelo">
             <Link href={hrefMedir("recursos")} scroll={false} className={`chip${medir === "recursos" ? " on" : ""}`} aria-current={medir === "recursos" ? "true" : undefined}>{noite && majoritario ? "Quem mais gastou" : "Todo o dinheiro"}</Link>
             <Link href={hrefMedir("publico")} scroll={false} className={`chip${medir === "publico" ? " on" : ""}`} aria-current={medir === "publico" ? "true" : undefined}>Só o dinheiro público</Link>
-          </div>
-          <p className="escala">{medir === "recursos" ? (noite && majoritario ? `Para ${cargo.toLowerCase()}, a medida é o gasto declarado de cada candidato: se o que mais gastou na disputa venceu.` : "Todo o dinheiro: o maior valor entre o que o candidato recebeu e o que gastou (considera também quem ganhou material de campanha).") : "Dinheiro público: o que veio do Fundo Eleitoral e do Fundo Partidário."}{noite && " A escolha vale só para esta comparação, não para as cores do mapa."}</p>
+          </div>}
+          <p className="escala">{medir === "recursos" ? (noite && majoritario ? `Para ${cargo.toLowerCase()}, a medida é o gasto declarado de cada candidato: se o que mais gastou na disputa venceu.` : "Todo o dinheiro: o maior valor entre o que o candidato recebeu e o que gastou (considera também quem ganhou material de campanha).") : "Dinheiro público: o que veio do Fundo Eleitoral e do Fundo Partidário."}{noite && !escolhaFora && " A escolha vale só para esta comparação, não para as cores do mapa."}</p>
 
           {medir === "recursos" && majoritario ? (
             maior.disputas === 0 ? <p className="muted">Sem disputas comparáveis.</p> : (
@@ -146,6 +148,29 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
               ? { mais: recUf.mais, menos: recUf.menos, nada: recUf.nada, rotulos: ["Mais dinheiro", "Menos dinheiro", "Nenhum dinheiro declarado"], resp: respRec }
               : { mais: pubUf.muito, menos: pubUf.pouco, nada: pubUf.nada, rotulos: ["Mais dinheiro público", "Menos dinheiro público", "Nenhum dinheiro público"], resp: respPub.curta };
             const detalhes = ["os 25% com mais em cada disputa", "os demais que tiveram algum", medir === "recursos" ? "declararam zero" : "não receberam"];
+            // no mapa (noite): os quatro quartis de dinheiro, cada um com quantos de cada 100 se elegeram
+            if (noite) {
+              const quartis = quartisDeEleicao((medir === "recursos" ? faixasQ2 : sucesso).filter((l) => passa(l, f)), medir === "publico");
+              const frase = fraseQuartis(quartis);
+              const qual = medir === "recursos" ? "algum dinheiro de campanha" : "algum dinheiro público";
+              return quartis.length === 0 ? <p className="muted">Sem dados para este recorte.</p> : (
+                <>
+                  {frase && <p className="frase-comp">{frase}</p>}
+                  <div className="grades cinco">
+                    {quartis.map((q) => (
+                      <figure key={q.chave}>
+                        <figcaption className="grade-titulo"><b>{q.rotulo}</b><small>{q.quartil}</small></figcaption>
+                        <GradeCem parte={q.taxa} titulo={`${q.rotulo}: ${emCada100(q.taxa)} em cada 100 se elegeram`} destaque={q.chave === "q4"} />
+                        <figcaption><b>{emCada100(q.taxa)} em cada 100</b> se elegeram<small>{inteiro(q.eleitos)} de {inteiro(q.candidaturas)} candidatos</small></figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                  <p className="escala"><b>Quartil:</b> em cada disputa, os candidatos que tiveram {qual} foram postos em fila, do que menos ao que mais teve, e divididos em 4 grupos de tamanho parecido. O 4º quartil é o quarto do topo; o 1º, o quarto de baixo. Quem não teve nenhum aparece à parte, e quem não prestou contas fica de fora.</p>
+                  <p className="escala">{qualificacao(g.resp)}{medir === "publico" && " Os partidos costumam mandar mais dinheiro para quem já tem mais chance."}</p>
+                  {medir === "publico" && publico !== null && <p className="escala">De onde veio o dinheiro {emLugar}: R$ {Math.round(publico * 100)} de cada R$ 100 recebidos pelas campanhas a {cargo.toLowerCase()} foram públicos.</p>}
+                </>
+              );
+            }
             return g.mais.candidaturas === 0 ? <p className="muted">Sem dados para este recorte.</p> : (
               <>
                 <p className="frase-comp">De cada 100 candidatos com {medir === "recursos" ? "mais dinheiro" : "mais dinheiro público"}, <b>{emCada100(g.mais.taxa)} se elegeram</b>. Entre os que tiveram menos, {emCada100(g.menos.taxa)}{g.nada.candidaturas > 0 && <>; entre os que {medir === "recursos" ? "não declararam dinheiro" : "não receberam dinheiro público"}, {emCada100(g.nada.taxa)}</>}.</p>

@@ -58,12 +58,12 @@ export interface CandidatoLocal extends Eleito { eleito: boolean; resultado: str
 
 /** O que colore o mapa: uma pergunta de cada vez. */
 export type Indicador = "custo" | "publico" | "maior";
-export const INDICADORES: { chave: Indicador; pergunta: string; rotulo: string; explicacao: string }[] = [
-  { chave: "custo", pergunta: "Pergunta 1", rotulo: "Custo da cadeira de vereador",
+export const INDICADORES: { chave: Indicador; rotulo: string; explicacao: string }[] = [
+  { chave: "custo", rotulo: "Custo da cadeira de vereador",
     explicacao: "Tudo o que os candidatos a vereador gastaram na campanha, dividido pelo número de vagas na câmara." },
-  { chave: "publico", pergunta: "Pergunta 8", rotulo: "Dinheiro público nas campanhas",
+  { chave: "publico", rotulo: "Dinheiro público nas campanhas",
     explicacao: "Parte do dinheiro recebido pelos candidatos a prefeito e vereador que veio do Fundo Eleitoral e do Fundo Partidário." },
-  { chave: "maior", pergunta: "Pergunta 2", rotulo: "Quem mais gastou para prefeito venceu?",
+  { chave: "maior", rotulo: "Quem mais gastou para prefeito venceu?",
     explicacao: "Se o candidato a prefeito que mais gastou foi o eleito. Nos estados, em quantas cidades isso aconteceu." },
 ];
 

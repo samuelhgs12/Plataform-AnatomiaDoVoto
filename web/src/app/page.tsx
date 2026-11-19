@@ -33,7 +33,7 @@ import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { VisaoDinheiro } from "@/components/VisaoDinheiro";
 import { VisaoVies } from "@/components/VisaoVies";
 import { ANOS_CENSO_IDADE, MEDIDAS_IDADE, cargosDoAno as cargosVies, escolhaVies, paramsVies, type EscolhaVies } from "@/lib/vies";
-import { cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro, PINTAR } from "@/lib/dinheiro";
+import { cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro, opcoesMunicipio, PINTAR } from "@/lib/dinheiro";
 import { PORTES } from "@/lib/territorio";
 import { MiniMapa } from "@/components/MiniMapa";
 import { CartaoDica } from "@/components/CartaoDica";
@@ -414,8 +414,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         cargos: cargosDoAno(escDinheiro.ano).map((c) => ({ rotulo: c, href: hrefMapaDinheiro(escolhaDin, { cargo: c }), on: naDinheiro && c === escDinheiro.cargo })),
         pintar: PINTAR.map((p) => ({ rotulo: p.rotulo, href: hrefMapaDinheiro(escolhaDin, { pintar: p.chave }), on: naDinheiro && p.chave === escDinheiro.pintar })),
         estado: { opcoes: ufs.map((u) => [u, NOME_UF[u] ?? u] as [string, string]), atual: uf, params: paramsSem("uf", "mun") },
-        cidade: naDinheiro && uf && ehMunicipal(escDinheiro.ano) ? {
-          opcoes: municipios.filter((m) => m.uf === uf).map((m) => [m.cod_ibge, nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR")),
+        cidade: naDinheiro && ehMunicipal(escDinheiro.ano) ? {
+          opcoes: opcoesMunicipio(municipios.map((m) => ({ cod_ibge: m.cod_ibge, uf: m.uf, nome: nomeMun.get(m.id_municipio)! })), uf),
           atual: munDinheiro, params: paramsSem("mun"),
         } : undefined,
         porte: naDinheiro && ehMunicipal(escDinheiro.ano) ? { opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte, params: paramsSem("porte") } : undefined,

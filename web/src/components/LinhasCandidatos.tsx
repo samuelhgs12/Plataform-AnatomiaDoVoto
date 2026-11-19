@@ -6,12 +6,12 @@ import { brlCentavos, inteiro, pct, reais } from "@/lib/format";
 import { Avatar } from "./Avatar";
 import { FotoCandidato } from "./FotoCandidato";
 import { PartyChip } from "./PartyChip";
-import { DespesasDoCandidato } from "./DespesasDoCandidato";
+import { AbrirCandidatoDinheiro } from "./DetalhesCandidatoDinheiro";
 
 export interface LinhaCandidato {
   id_candidato: number | null; id_candidatura: number; nome_urna: string | null; partido: string | null;
   votos: number; gasto: number; receita: number; receita_publica: number;
-  eleito?: boolean; prestou?: boolean | null; municipio?: string | null; parteVotos?: number | null; maisGastou?: boolean;
+  eleito?: boolean; prestou?: boolean | null; municipio?: string | null; cargo?: string; parteVotos?: number | null; maisGastou?: boolean;
 }
 
 /**
@@ -23,7 +23,7 @@ export function LinhasCandidatos({ linhas, ano, vazio, detalhar = false }: { lin
   if (!linhas.length) return <p className="muted pequeno">{vazio}</p>;
   return (
     <ul className="linhas-cand">
-      <li className="linhas-cab" aria-hidden="true"><span /><span>Candidato</span><span>Resultado</span><span>Gastou na campanha</span><span>Recebeu para a campanha</span></li>
+      <li className="linhas-cab" aria-hidden="true"><span /><span>Candidato</span><span>Resultado</span><span>Gasto declarado</span><span>{detalhar ? "Por voto" : "Recebeu para a campanha"}</span></li>
       {linhas.map((c) => {
         const semDado = c.prestou === false;
         const nome = c.nome_urna ?? "Sem nome";
@@ -36,23 +36,20 @@ export function LinhasCandidatos({ linhas, ano, vazio, detalhar = false }: { lin
               </FotoCandidato>
             </span>
             <span className="linhas-nome">
-              {c.id_candidato ? <Link href={`/candidato/${c.id_candidato}?campanha=${c.id_candidatura}#dinheiro`}>{nome}</Link> : nome}
+              {detalhar ? <AbrirCandidatoDinheiro candidato={c} ano={ano} /> : c.id_candidato ? <Link href={`/candidato/${c.id_candidato}?campanha=${c.id_candidatura}#dinheiro`}>{nome}</Link> : nome}
               <small><PartyChip sigla={c.partido} />{c.maisGastou && <span className="selo">gastou mais</span>}{c.municipio && <span className="linhas-lugar">{c.municipio}</span>}</small>
             </span>
             <span className="linhas-resultado">
               {c.eleito === undefined ? null : <b className={c.eleito ? "eleito" : undefined}>{c.eleito ? "Eleito" : "Não eleito"}</b>}
-              <small>{c.votos > 0 ? `${inteiro(c.votos)} votos${c.parteVotos != null ? ` (${pct(c.parteVotos, 0)})` : ""}` : "votos não informados"}</small>
+              {!detalhar && <small>{c.votos > 0 ? `${inteiro(c.votos)} votos${c.parteVotos != null ? ` (${pct(c.parteVotos, 0)})` : ""}` : "votos não informados"}</small>}
             </span>
             {/* os dois valores juntos: no computador, cada um na sua coluna; no celular, uma faixa de duas colunas */}
             <span className="linhas-valores">
             <span className="linhas-valor">
               {semDado ? <><b>Não informado</b><small>sem prestação de contas</small></> : <><small className="linhas-verbo">Gastou</small><b>{reais(c.gasto)}</b></>}
-              {detalhar && <small className="custo-voto-candidato" title="Gasto declarado da campanha ÷ votos do 1º turno">
-                {semDado ? "Gasto por voto não informado" : porVoto === null ? "Gasto por voto indisponível: sem votos" : `${brlCentavos(porVoto)} por voto`}
-              </small>}
             </span>
             <span className="linhas-valor">
-              {semDado ? <b>Não informado</b> : c.receita <= 0 ? <><small className="linhas-verbo">Recebeu</small><b>R$ 0</b></> : (() => {
+              {detalhar ? <><small className="linhas-verbo">Por voto</small><b>{porVoto === null ? "Não disponível" : brlCentavos(porVoto)}</b></> : semDado ? <b>Não informado</b> : c.receita <= 0 ? <><small className="linhas-verbo">Recebeu</small><b>R$ 0</b></> : (() => {
                 const pub = Math.min(c.receita, c.receita_publica), priv = Math.max(0, c.receita - c.receita_publica);
                 return (
                   <>
@@ -67,7 +64,6 @@ export function LinhasCandidatos({ linhas, ano, vazio, detalhar = false }: { lin
               })()}
             </span>
             </span>
-            {detalhar && <DespesasDoCandidato key={c.id_candidatura} id={c.id_candidatura} nome={nome} />}
           </li>
         );
       })}

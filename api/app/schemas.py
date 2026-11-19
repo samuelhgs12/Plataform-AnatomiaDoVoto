@@ -270,11 +270,6 @@ class CandidatoLocal(Eleito):
     resultado: str
 
 
-class CandidatoBuscaDinheiro(CandidatoLocal):
-    """Um candidato achado pela busca da seção Dinheiro (P1); nas municipais, com a cidade."""
-    municipio: str | None = None
-
-
 class Saude(BaseModel):
     status: str
     db: str

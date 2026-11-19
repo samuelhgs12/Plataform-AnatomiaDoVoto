@@ -1853,6 +1853,9 @@ a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 /* Grades de 100 (quem teve mais dinheiro se elegeu mais?) */
 .grades { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 28px; margin: 16px 0 12px; }
 .grades.tres { grid-template-columns: repeat(3, minmax(0, 220px)); }
+/* quartis do mapa (camada Dinheiro): os quatro quartis e quem não teve dinheiro, lado a lado */
+.grades.cinco { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; max-width: 1000px; }
+.grades.cinco figure { grid-row: span 3; grid-template-rows: subgrid; }
 .grades figure { margin: 0; display: grid; gap: 8px; align-content: start; }
 .grades.tres figure { grid-row: span 3; grid-template-rows: subgrid; }   /* títulos de alturas diferentes não desalinham as grades */
 .grades figcaption { font-size: 14px; }
@@ -1865,6 +1868,7 @@ a.resumo-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 
 @media (max-width: 640px) {
   .grades { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
   .grades.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .grades.cinco { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .grade-cem { gap: 2px; }
 }
 
@@ -2117,14 +2121,6 @@ a.q-ver:active { transform: scale(0.98); }
 /* a linha das despesas faz parte do candidato de cima: sem borda entre as duas e com o botão baixo */
 .maiores-tabela tr:has(+ .mg-detalhes) > * { border-bottom: 0; }
 .maiores-tabela .mg-detalhes .despesas-candidato > summary { min-height: 32px; padding: 0 0 8px 47px; font-size: 13px; }
-/* pergunta 1: busca de um candidato pelo nome */
-.din-busca-form { display: flex; gap: 8px; max-width: 640px; margin: 4px 0 12px; }
-.din-busca-form input[type=search] { flex: 1; min-width: 0; min-height: 44px; background: var(--noite); color: var(--sobre-noite); box-shadow: inset 0 0 0 1px var(--noite-linha); }
-.din-busca-form input[type=search]::placeholder { color: var(--noite-muted); }
-.din-busca-form input[type=search]:focus { box-shadow: inset 0 0 0 2px var(--brilho); }
-.din-busca-form button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; font: inherit; font-weight: 650; cursor: pointer; color: var(--noite); background: var(--brilho); }
-.din-busca-form button:focus-visible { outline: 2px solid var(--sobre-noite); outline-offset: 2px; }
-.din-busca .rotulo { margin: 8px 0 4px; }
 /* camada Dinheiro, eleições gerais: o estado aproximado não tem cidades por cima, então fica com a cor da faixa dele
    (a regra do mapa escurece o estado para as cidades aparecerem, o que aqui o deixaria preto) */
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q0 { fill: var(--q0); }
@@ -2132,16 +2128,65 @@ a.q-ver:active { transform: scale(0.98); }
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q2 { fill: var(--q2); }
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q3 { fill: var(--q3); }
 .palco-dinheiro .mapa-abst[data-zoom="uf"]:not(:has(.municipios a)) .uf.on.q4 { fill: var(--q4); }
-/* autocompletar da busca: a lista abre embaixo do campo, clara sobre o painel escuro (como a busca da aba Candidato) */
-.din-busca-form.combo { max-width: 640px; flex-wrap: wrap; }
-.din-busca-campo { position: relative; flex: 1; min-width: 0; display: flex; }
-.din-busca-lista { top: 100%; background: var(--sobre-noite); color: var(--noite); }
-.din-busca-lista li[aria-selected="true"] { background: color-mix(in srgb, var(--noite) 10%, var(--sobre-noite)); }
-.din-busca-nome { display: block; font-weight: 650; }
-.din-busca-nome mark { background: color-mix(in srgb, var(--brilho) 40%, transparent); color: inherit; border-radius: 2px; }
-.din-busca-lista small { display: block; margin-top: 2px; font-size: 13px; color: color-mix(in srgb, var(--noite) 70%, var(--sobre-noite)); }
-.din-busca-status { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--noite-muted); }
-.din-busca-status:empty { display: none; }
+.linhas-nome .din-abrir-candidato { border: 0; padding: 0; background: transparent; color: var(--fg); text-align: left; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.din-candidato-dialogo { width: min(800px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--noite-linha); border-radius: 12px; background: var(--noite2); color: var(--sobre-noite); box-shadow: 0 24px 80px rgb(0 0 0 / 0.5); }
+.din-candidato-dialogo::backdrop { background: rgb(5 10 19 / 0.78); }
+.din-candidato-topo { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 24px; border-bottom: 1px solid var(--noite-linha); background: var(--noite2); color: var(--noite-muted); font-size: 13px; }
+.din-candidato-conteudo { padding: 28px; }
+.din-candidato-fechar { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border: 1px solid var(--noite-linha); border-radius: 8px; background: var(--noite); color: var(--sobre-noite); font: inherit; cursor: pointer; }
+.din-candidato-fechar span { font-size: 24px; line-height: 1; }
+.din-candidato-fechar:hover { border-color: var(--brilho); }
+.din-candidato-dialogo :is(button, a, summary):focus-visible, .linhas-nome .din-abrir-candidato:focus-visible { outline: 2px solid var(--brilho); outline-offset: 4px; }
+.din-candidato-cab { display: flex; align-items: center; gap: 18px; }
+.din-candidato-cab > div:last-child { min-width: 0; }
+.din-candidato-cab h2 { margin: 6px 0 10px; font-size: clamp(24px, 4vw, 34px); line-height: 1.12; }
+.din-candidato-cab p { margin: 0; }
+.din-candidato-eleicao { font-size: 14px; color: var(--noite-muted); }
+.din-candidato-identidade { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.din-candidato-resultado { padding: 4px 9px; border: 1px solid var(--noite-linha); border-radius: 20px; font-size: 12px; }
+.din-candidato-resultado[data-eleito="true"] { color: var(--brilho); border-color: color-mix(in srgb, var(--brilho) 40%, transparent); }
+.din-candidato-retrato { width: 84px; height: 112px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: var(--noite); }
+.din-candidato-retrato .foto-cand, .din-candidato-retrato .avatar { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.din-candidato-numeros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 24px 0 10px; }
+.din-candidato-numeros > div { padding: 16px; border: 1px solid var(--noite-linha); border-radius: 10px; background: var(--noite); }
+.din-candidato-numeros > div:last-child { border-color: color-mix(in srgb, var(--brilho) 50%, transparent); background: color-mix(in srgb, var(--brilho) 6%, var(--noite)); }
+.din-candidato-numeros small { display: block; margin-top: 6px; color: var(--noite-muted); font-size: 12px; }
+.din-candidato-numeros dt { color: var(--noite-muted); font-size: 13px; }
+.din-candidato-numeros dd { margin: 8px 0 0; font-size: 23px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.din-candidato-numeros > div:last-child dd { color: var(--brilho); }
+.din-candidato-nota { margin-bottom: 24px; font-size: 13px; line-height: 1.6; color: var(--noite-muted); }
+.din-candidato-rodape { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--noite-linha); color: var(--noite-muted); font-size: 12px; }
+.din-candidato-perfil { display: inline-flex; align-items: center; min-height: 44px; color: var(--brilho); font-size: 13px; font-weight: 600; }
+.din-candidato-dialogo .despesas-candidato { margin-top: 20px; border-top: 1px solid var(--noite-linha); }
+.din-candidato-dialogo .despesas-candidato > summary { color: var(--sobre-noite); font-size: 15px; }
+.din-candidato-calculo > summary, .despesas-candidato-metodo > summary { display: list-item; min-height: 44px; padding-block: 12px; color: var(--noite-muted); font-size: 13px; cursor: pointer; }
+.din-candidato-calculo .din-candidato-nota { margin-top: 0; margin-bottom: 12px; }
+.din-candidato-origem { display: flex; flex-wrap: wrap; gap: 16px 28px; margin: 8px 0 16px; font-size: 14px; }
+.din-candidato-origem dt { color: var(--noite-muted); font-size: 12px; }
+.din-candidato-origem dd { margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.din-candidato-rodape:empty { display: none; }
+.din-candidato-dialogo .despesas-candidato-totais { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.din-candidato-dialogo .despesas-candidato-totais > span { padding: 12px; border-radius: 8px; background: var(--noite2); }
+.despesas-candidato-totais small { display: block; margin-top: 5px; font-size: 12px; }
+.despesas-candidato-ordem { margin: 0 0 8px; color: var(--noite-muted); font-size: 12px !important; line-height: 1.5; }
+.din-candidato-dialogo .despesas-candidato-tabela tbody tr:hover { background: var(--noite2); }
+.din-candidato-dialogo .despesas-candidato-tabela tr[data-publicidade="true"] small { color: var(--brilho); }
+@media (max-width: 600px) {
+  .din-candidato-topo { padding-inline: 14px; }
+  .din-candidato-conteudo { padding: 20px 14px; }
+  .din-candidato-cab { gap: 12px; }
+  .din-candidato-retrato { width: 60px; height: 80px; }
+  .din-candidato-numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .din-candidato-numeros > div:last-child { grid-column: 1 / -1; }
+  .din-candidato-numeros dd { font-size: 21px; }
+  .din-candidato-numeros > div:last-child dd { font-size: 30px; }
+  .din-candidato-cab h2 { overflow-wrap: anywhere; }
+  .din-candidato-dialogo .despesas-candidato-totais { gap: 8px; }
+  .din-candidato-dialogo .despesas-candidato-totais > span { padding: 10px; }
+  .din-candidato-dialogo .despesas-candidato-totais b { font-size: 16px; overflow-wrap: anywhere; }
+  .din-candidato-dialogo .despesas-candidato-tabela tbody th { width: 48%; }
+  .din-candidato-dialogo .despesas-candidato-tabela .num { white-space: normal; }
+}
 .linhas-lugar { margin-left: 6px; color: var(--noite-muted); font-size: 12.5px; }
 /* a tabela de despesas mostra todas as categorias, sem rolagem dentro da rolagem */
 .tabela-rolar:has(> .despesas-candidato-tabela) { max-height: none; }
@@ -2178,24 +2223,6 @@ a.q-ver:active { transform: scale(0.98); }
 .dinheiro-comp summary, .dinheiro-comp summary h3, .dinheiro-comp h3, .dinheiro-comp h4 { color: var(--fg); }
 .bloco.noite .ver-todos > summary { color: var(--sobre-noite); }
 
-/* camada Dinheiro: cartão do lugar por cima do mapa (aparece no clique, sem rolar) e aviso enquanto a página troca */
-.cartao-lugar { position: absolute; right: 64px; top: 50%; transform: translateY(-50%); z-index: 3; width: min(270px, 34%); padding: 16px 18px; border-radius: 12px;
-  background: var(--noite2); color: var(--sobre-noite); box-shadow: 0 12px 32px rgb(0 0 0 / 0.35); border: 1px solid var(--noite-linha); }
-.cartao-lugar h2 { margin: 2px 0 6px; font-size: 24px; line-height: 1.1; padding-right: 24px; }
-.cartao-rotulo { margin: 0; font-size: 12px; color: var(--noite-muted); }
-.cartao-valor { margin: 0 0 6px; color: var(--noite-muted); font-size: 14px; }
-.cartao-valor b { display: block; font-size: 30px; line-height: 1.1; color: var(--brilho); }
-.cartao-linha { margin: 0 0 4px; font-size: 14px; }
-.cartao-fechar { position: absolute; top: 8px; right: 12px; font-size: 22px; line-height: 1; color: var(--noite-muted); text-decoration: none; }
-.cartao-fechar:hover { color: var(--sobre-noite); }
-.carregando-mapa { display: none; position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; margin: 0; padding: 8px 16px;
-  border-radius: 999px; background: var(--noite2); color: var(--sobre-noite); font-weight: 600; }
-.palco-dinheiro[aria-busy="true"] .carregando-mapa { display: block; }
-.palco-dinheiro[aria-busy="true"] .mapa-abst, .palco-dinheiro[aria-busy="true"] .cartao-lugar { opacity: 0.45; transition: opacity 0.2s ease; }
-@media (max-width: 1000px) {
-  .cartao-lugar { display: none; }   /* no celular não há lado livre no mapa; o painel logo abaixo mostra o mesmo resumo */
-}
-.palco-dinheiro:has(.cartao-lugar) .lupa-dica { display: none; }   /* a dica da roda ficaria atrás do cartão */
 
 /* camada Dinheiro: o que pinta o mapa (chips na base do mapa), a ordem dos candidatos, a cobertura e os grupos de despesa */
 .ord-cand { margin: 6px 0 10px; }
@@ -2231,6 +2258,11 @@ a.q-ver:active { transform: scale(0.98); }
 .din-cab .escolha-mun { min-width: min(280px, 100%); }
 .din-kicker, .din-kpi small, .empilhada figcaption span { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; }
 .din-kicker { margin: 0; color: var(--muted); }
+/* "Dinheiro elege?": a medida da tela toda (perguntas 2 e 8) e a divisão do fim, em que as campanhas gastaram (pergunta 9) */
+.din-medir { margin: 0; padding: 0 4px; }
+.din-medir .chip small { margin-left: 6px; font-size: 11px; opacity: 0.7; }
+.din-divisao { padding: 20px 4px 0; border-top: 1px solid var(--noite-linha); }
+.din-divisao h3 { margin: 4px 0 0; font-size: clamp(20px, 1vw + 12px, 26px); letter-spacing: -0.02em; }
 
 .din-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(118px, auto); gap: var(--gap); }
 .din-kpi { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border-radius: var(--raio); background: var(--noite); color: var(--sobre-noite); text-decoration: none; }
