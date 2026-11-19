@@ -110,7 +110,7 @@ export function CamadasMapa({ modo, hrefs, legenda, comparar, comparativos, inst
 
       {modo === "dinheiro" && dinheiro && (
         <div className="camadas-opcoes">
-          <p className="camadas-apoio">Gasto das campanhas dividido pelas vagas do cargo. Escolha o cargo e o lugar aqui ou clique no mapa; a eleição fica embaixo do mapa.</p>
+          <p className="camadas-apoio">Dinheiro das campanhas e patrimônio dos candidatos. Escolha o cargo, a pergunta e o lugar aqui ou clique no mapa; a eleição fica embaixo do mapa.</p>
           <nav className="radios" aria-label="Cargo">
             {dinheiro.cargos.map((c) => (
               <a key={c.rotulo} href={c.href} data-mapa="" aria-current={c.on ? "true" : undefined}>

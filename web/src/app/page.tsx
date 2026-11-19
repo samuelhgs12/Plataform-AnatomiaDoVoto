@@ -422,7 +422,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   );
   const submenu = (
     <SubmenuMapa
-      resumo={ufBusca ? `Busca só em ${NOME_UF[ufBusca]}` : resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo })}
+      resumo={ufBusca ? `Busca só em ${NOME_UF[ufBusca]}` : resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo, dinheiro: naDinheiro ? PINTAR.find((x) => x.chave === escDinheiro.pintar)!.rotulo.replace(/^d+. /, "") : undefined })}
       aba={naCandidato ? "candidato" : "camadas"} hrefCandidato={hrefCand} hrefCamadas={hrefAbst}
     >
       {naCandidato ? (
@@ -508,7 +508,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       )}
     </div>
   ) : null;
-  const recorte = `${resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo })} · ${naLegenda ? (uf ?? "seis estados") : mun ? nomeMun.get(mun.id_municipio) : uf ?? "seis estados"} · ${naLegenda ? anoLeg : naInstrucao ? anoInst : ano}`;
+  const recorte = `${resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo, dinheiro: naDinheiro ? PINTAR.find((x) => x.chave === escDinheiro.pintar)!.rotulo.replace(/^d+. /, "") : undefined })} · ${naLegenda ? (uf ?? "seis estados") : mun ? nomeMun.get(mun.id_municipio) : uf ?? "seis estados"} · ${naLegenda ? anoLeg : naInstrucao ? anoInst : ano}`;
 
   return (
     <>

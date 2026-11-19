@@ -2793,7 +2793,7 @@ a.q-ver:active { transform: scale(0.98); }
 .serie-p2 text { fill: var(--noite-muted); font-size: 12px; text-anchor: middle; }
 .sp-grade text { text-anchor: end; }
 .sp-ref line { stroke: var(--sobre-noite); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: 0.7; }
-.sp-ref text { text-anchor: end; fill: var(--sobre-noite); }
+.sp-ref text { text-anchor: start; fill: var(--sobre-noite); }
 .sp-linha { fill: none; stroke: var(--p2-barra); stroke-width: 2.5; stroke-linejoin: round; }
 .sp-ponto circle { fill: var(--p2-barra); stroke: var(--noite2); stroke-width: 2; }
 .sp-ponto text { fill: var(--sobre-noite); font-weight: 600; }
@@ -2822,3 +2822,27 @@ a.q-ver:active { transform: scale(0.98); }
 .p2-cidades .dinheiro-tabela th { background: var(--noite2); }
 .p2-cidades .dinheiro-tabela a { color: var(--sobre-noite); }
 @media (max-width: 1000px) { .painel.din.p2 > .meia { grid-column: 1 / -1; } }
+.legenda-p2 { column-gap: 6px; }
+.legenda-p2 li { min-width: 4.6em; }
+.fx-sem small { bottom: auto; top: 2px; font-weight: 650; color: var(--sobre-noite); text-shadow: 0 0 3px var(--noite); }
+.dp-legenda span { white-space: nowrap; }
+.escada-p2.votos .degrau.sem-bens { margin-right: 0; }
+.escada-p2.votos .degrau-trilho i { background: var(--p2-nao); }
+.escada-p2.votos .degrau.eleito .degrau-trilho i { background: var(--p2-eleitos); }
+.escada-p2.votos .degrau.sem-bens .degrau-trilho i { background: repeating-linear-gradient(45deg, var(--p2-nao) 0 3px, color-mix(in srgb, var(--p2-nao) 55%, transparent) 3px 6px); }
+.escada-p2.votos .degrau.eleito .degrau-rot { color: var(--p2-eleitos); }
+.degrau-rot { overflow: hidden; text-overflow: ellipsis; }
+.dispersao-p2 svg { overflow: hidden; }
+.p2-cand-duas > *, .lista-p2, .lista-p2 li > * { min-width: 0; }
+@media (max-width: 1000px) { .p2-cand-duas { grid-template-columns: minmax(0, 1fr); } }
+.degrau.sem-bens .degrau-rot { white-space: normal; line-height: 1.1; }
+@media (max-width: 620px) { .lp-res small, .lista-p2 .selo { white-space: normal; text-align: right; } .lp-valor b { font-size: 15px; } }
+.dp-legenda span:last-child { white-space: normal; }
+@media (max-width: 620px) {
+  .anos-p2 { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .anos-p2 .ano { flex: none; min-height: 40px; padding: 4px 7px; font-size: 13px; }
+  .legenda-p2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 4px; width: 100%; font-size: 11px; }
+  .legenda-p2 li { max-width: none; gap: 3px; }
+  .legenda-p2 i { height: 7px; }
+}
+.lp-alerta { font-size: 12px; font-weight: 600; color: var(--amarelo-400); cursor: help; }

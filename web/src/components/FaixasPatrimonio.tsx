@@ -14,7 +14,8 @@ export function FaixasPatrimonio({ h, m, titulo }: { h: Histograma; m: Medianas 
     { rotulo: "Eleitos", partes: h.eleitos, n: h.nEleitos, mediana: m?.medianaEleitos ?? null, classe: "fx-eleitos" },
     { rotulo: "Não eleitos", partes: h.nao, n: h.nNao, mediana: m?.medianaNao ?? null, classe: "fx-nao" },
   ].filter((l) => l.n > 0);
-  const max = Math.max(0.01, ...linhas.flatMap((l) => l.partes));
+  // a escala é a das faixas com bens: os sem bens (às vezes mais da metade) encostam no teto e têm o número escrito
+  const max = Math.max(0.01, ...linhas.flatMap((l) => l.partes.slice(1)));
   const texto = `${titulo}. ${linhas.map((l) => `${l.rotulo} (${l.n.toLocaleString("pt-BR")}): ${FAIXAS_LOG.map((f, i) => `${f.rotulo} ${pctCurto(l.partes[i])}`).join(", ")}; típico de quem declarou: ${valorTipico(l.mediana)}`).join(". ")}.`;
   return (
     <figure className="faixas-p2">
@@ -22,7 +23,7 @@ export function FaixasPatrimonio({ h, m, titulo }: { h: Histograma; m: Medianas 
         {linhas.map((l) => (
           <div key={l.rotulo} className={`fx-linha ${l.classe}`} aria-hidden="true">
             <span className="fx-rot"><b>{l.rotulo}</b><small>{l.n.toLocaleString("pt-BR")}</small></span>
-            <span className="fx-sem" title={`Sem bens: ${pctCurto(l.partes[0])}`}><i style={{ height: `${(l.partes[0] / max) * 100}%` }} /><small>{pctCurto(l.partes[0])}</small></span>
+            <span className="fx-sem" title={`Sem bens: ${pctCurto(l.partes[0])}`}><i style={{ height: `${Math.min(1, l.partes[0] / max) * 100}%` }} /><small>{pctCurto(l.partes[0])}</small></span>
             <span className="fx-bins">
               {FAIXAS_LOG.slice(1).map((f, i) => (
                 <span key={f.faixa} className="fx-bin" title={`${f.rotulo}: ${pctCurto(l.partes[i + 1])}`}><i style={{ height: `${(l.partes[i + 1] / max) * 100}%` }} /></span>

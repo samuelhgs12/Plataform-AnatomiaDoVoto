@@ -251,6 +251,19 @@ export function escadaDeCandidatos(cls: Classificado[], { majoritario }: { major
     : montarDegraus(ORDEM_DECIS, ROTULO_DECIL, (d) => (d === 0 ? "sem bens" : ordinal(d)), grupos);
 }
 
+/**
+ * Uma disputa só (prefeito numa cidade): um degrau por candidato, do sem bens ao mais rico, com a parte dos votos do 1º
+ * turno (taxa) e o patrimônio (tipico); eleitos = 1 para quem venceu. Responde "o mais rico teve mais votos?" sem
+ * transformar uma disputa em porcentagens de vitória (0% ou 100%).
+ */
+export function escadaDeVotos(cls: Classificado[]): Degrau[] {
+  const total = cls.reduce((a, c) => a + c.votos, 0);
+  return [...cls].sort((a, b) => a.patrimonio - b.patrimonio || a.votos - b.votos).map((c, i) => {
+    const nome = (c.nome_urna ?? "Sem nome").toLowerCase().replace(/(^|\s)\p{L}/gu, (x) => x.toUpperCase());
+    return { chave: i + 1, rotulo: nome, curto: nome.split(" ")[0], candidatos: 1, eleitos: c.eleito ? 1 : 0, taxa: total > 0 ? c.votos / total : null, tipico: c.patrimonio };
+  });
+}
+
 /** A disputa de prefeito de uma cidade no formato de pat_disputas (para posicaoDoEleito). null sem candidatos. */
 export function disputaDeCandidatos(cls: Classificado[], f: { ano: number; cargo: string; uf: string; id_municipio: number | null }): LinhaDisputa | null {
   if (!cls.length) return null;
@@ -413,6 +426,17 @@ export function disputaEmOrdem(cls: Classificado[]): ItemLista[] {
   }));
 }
 
+/**
+ * A escala das barras da lista: o maior patrimônio, a menos que ele seja mais de 5 vezes o 2º (quase sempre erro de
+ * digitação, como bilhões para vereador): aí vale o 2º, e o valor que passa dele fica marcado como fora do comum (a
+ * barra enche e a pessoa continua na lista; nada é removido).
+ */
+export function escalaLista(valores: number[]): { max: number; foraDoComum: (v: number) => boolean } {
+  const v = [...valores].filter((x) => x > 0).sort((a, b) => b - a);
+  const max = v.length > 1 && v[0] > 5 * v[1] ? v[1] : v[0] ?? 1;
+  return { max, foraDoComum: (x) => v.length > 1 && x > 5 * v[1] };
+}
+
 /** A posição na própria disputa, por extenso: "1º mais rico de 842", "sem bens declarados (842 candidatos)". */
 export const textoPosicao = (i: { patrimonio: number; posicao: number; naDisputa: number }) =>
   i.patrimonio > 0 ? `${i.posicao}º mais rico de ${i.naDisputa.toLocaleString("pt-BR")}` : `sem bens declarados (${i.naDisputa.toLocaleString("pt-BR")} candidatos)`;
@@ -497,16 +521,23 @@ export const rotuloSemCargo = (cargo: string) => `Sem ${quemTinha(cargo)}`;
 
 /**
  * A frase da faixa embaixo da escada: o degrau de cima com e sem quem já tinha o cargo, o recorte ligado primeiro.
- * Vereador: "Sem quem já era vereador, os 10% mais ricos se elegem 9 em cada 100 (com todos, 14)."
+ * Vereador: "Sem quem já era vereador, os 10% mais ricos se elegem 9 em cada 100 (com todos: 14)."
+ * Prefeito: "Com todas as cidades, o mais rico venceu em 53 de cada 100 (sem as disputas com prefeito tentando a reeleição: 51)."
  */
 export function fraseTopo(cargo: string, com: number | null, sem: number | null, semCargo: boolean): string | null {
   const majoritario = ehMajoritarioP2(cargo);
-  const quem = majoritario ? "o mais rico vence" : "os 10% mais ricos se elegem";
   const [a, b] = semCargo ? [sem, com] : [com, sem];
   if (a === null) return null;
-  const primeiro = semCargo ? `Sem ${quemTinha(cargo)}, ${quem} ${deCada100(a)} em cada 100` : `Com todos, ${quem} ${deCada100(a)} em cada 100`;
-  const segundo = b === null ? "" : semCargo ? ` (com todos, ${deCada100(b)})` : ` (sem ${quemTinha(cargo)}, ${deCada100(b)})`;
-  return `${primeiro}${segundo}${majoritario ? (cargo === "Prefeito" ? " cidades" : " disputas") : ""}.`;
+  if (!majoritario) {
+    const quem = "os 10% mais ricos se elegem";
+    const primeiro = semCargo ? `Sem ${quemTinha(cargo)}, ${quem} ${deCada100(a)} em cada 100` : `Com todos, ${quem} ${deCada100(a)} em cada 100`;
+    const segundo = b === null ? "" : semCargo ? ` (com todos: ${deCada100(b)})` : ` (sem ${quemTinha(cargo)}: ${deCada100(b)})`;
+    return `${primeiro}${segundo}.`;
+  }
+  const todas = cargo === "Prefeito" ? "todas as cidades" : "todas as disputas";
+  const primeiro = semCargo ? `Sem as ${quemTinha(cargo)}, o mais rico venceu em ${deCada100(a)} de cada 100` : `Com ${todas}, o mais rico venceu em ${deCada100(a)} de cada 100`;
+  const segundo = b === null ? "" : semCargo ? ` (com ${todas}: ${deCada100(b)})` : ` (sem as ${quemTinha(cargo)}: ${deCada100(b)})`;
+  return `${primeiro}${segundo}.`;
 }
 
 /** O título do mapa: "Quem declarou mais bens se elegeu mais? em 2024" ou "O candidato mais rico venceu? em 2024". */
@@ -525,7 +556,7 @@ export function frasePosicao(p: PosicaoEleito): string {
 /** Escala de 10 em 10 para a dispersão: as marcas de R$ 1 mil a R$ 100 milhões que cobrem os valores. */
 export function marcasLog(valores: number[]): { min: number; max: number; marcas: { valor: number; rotulo: string }[] } {
   const v = valores.filter((x) => x > 0);
-  const lo = v.length ? Math.max(2, Math.floor(Math.log10(Math.min(...v)))) : 3;
+  const lo = v.length ? Math.max(3, Math.floor(Math.log10(Math.min(...v)))) : 3;
   const hi = v.length ? Math.max(lo + 1, Math.ceil(Math.log10(Math.max(...v)))) : 6;
   const rot = (e: number) => (e >= 9 ? `R$ ${10 ** (e - 9)} bi` : e >= 6 ? `R$ ${10 ** (e - 6)} mi` : e >= 3 ? `R$ ${10 ** (e - 3)} mil` : `R$ ${10 ** e}`);
   const marcas = [];

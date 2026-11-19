@@ -1,6 +1,6 @@
 import { COR_CATEGORIA, type PontoSerie, type PosicaoEleito } from "@/lib/patrimonio";
 
-const L = 480, A = 200, ESQ = 36, DIR = 14, TOPO = 22, BASE = 26;
+const L = 480, A = 210, ESQ = 36, DIR = 14, TOPO = 30, BASE = 26;
 const p = (v: number) => `${Math.round(v * 100)}%`;
 
 /**
@@ -20,7 +20,7 @@ export function SeriePatrimonio({ pontos, atual, titulo, referencia }: { pontos:
         {[0, 0.25, 0.5, 0.75, 1].map((v) => (
           <g key={v} className="sp-grade"><line x1={ESQ} x2={L - DIR} y1={y(v)} y2={y(v)} /><text x={ESQ - 6} y={y(v) + 4}>{p(v)}</text></g>
         ))}
-        {referencia && <g className="sp-ref"><line x1={ESQ} x2={L - DIR} y1={y(0.5)} y2={y(0.5)} /><text x={L - DIR} y={y(0.5) - 6}>{referencia}</text></g>}
+        {referencia && <g className="sp-ref"><line x1={ESQ} x2={L - DIR} y1={y(0.5)} y2={y(0.5)} /><text x={ESQ + 6} y={y(0.5) + 15}>{referencia}</text></g>}
         <path className="sp-linha" d={`M${caminho}`} />
         {pontos.map((pt, i) => pt.valor === null ? null : (
           <g key={pt.ano} className={`sp-ponto${pt.ano === atual ? " on" : ""}`}>

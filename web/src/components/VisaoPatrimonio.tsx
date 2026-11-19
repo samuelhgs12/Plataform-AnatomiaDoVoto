@@ -12,7 +12,7 @@ import { TELA } from "@/lib/lupa";
 import { METODOLOGIA } from "@/lib/metodologia";
 import {
   ANOS_PATRIMONIO, anosDoTipo, classificar, composicaoEleitos, concordancia, concordanciaDeCandidatos, COR_CATEGORIA, corDaMetade, corDaParteCidades,
-  deCada100, disputaDeCandidatos, disputaEmOrdem, ehMajoritarioP2, escada, escadaDeCandidatos, escadaPosicoes, frasePosicao, fraseTopo, histograma,
+  deCada100, disputaDeCandidatos, disputaEmOrdem, ehMajoritarioP2, escada, escadaDeCandidatos, escadaDeVotos, escadaPosicoes, frasePosicao, fraseTopo, histograma,
   histogramaDeCandidatos, juntarPatrimonio, legendaMetade, legendaParteCidades, legendaPrefeito, LISTAS, listaDeCandidatos, listaDoRecorte, medianasDeCandidatos,
   medianasDoRecorte, metadeDaCidade, metadeMaisRica, MINIMO_CANDIDATOS, posicaoDoEleito, quemTinha, recorteDaDisputa, ROTULO_MOTIVO, rotuloSemCargo,
   serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade, taxaDoTopo, tituloP2, topoDaComposicao, valorTipico, vitoriaDoMaisRico,
@@ -145,9 +145,14 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const posicoes = dadosPainel?.pat_posicoes ? comoObjetos<LinhaPosicao>(dadosPainel.pat_posicoes) : [];
   const f: FiltroP2 = { anos: anosEscada, cargo, uf };
   const degrausDe = (sc: boolean): Degrau[] => (mun ? escadaDeCandidatos(rec(sc), { majoritario }) : majoritario ? escadaPosicoes(posicoes, f, { semCargo: sc }) : escada(decis, f, { semCargo: sc }));
-  const degraus = uf ? degrausDe(semCargo) : [];
+  // prefeito numa cidade: uma disputa só; a escada mostra os votos de cada candidato, do menos ao mais rico
+  const cidadeUnica = !!(mun && majoritario && cls);
+  // vereador numa cidade com poucos candidatos: um ou dois por décimo dariam 0% ou 100%; mostra os votos de cada um
+  const poucos = !!(mun && !majoritario && cls && cls.length < MINIMO_CANDIDATOS);
+  const porCandidato = cidadeUnica || poucos;
+  const degraus = !uf ? [] : porCandidato ? (recAqui.length ? escadaDeVotos(recAqui) : []) : degrausDe(semCargo);
   const [topoCom, topoSem] = uf ? [taxaDoTopo(degrausDe(false), { majoritario }), taxaDoTopo(degrausDe(true), { majoritario })] : [null, null];
-  const metade = !majoritario && degraus.length ? metadeMaisRica(degraus) : null;
+  const metade = !majoritario && uf ? metadeMaisRica(degrausDe(semCargo)) : null;
   const metadeOutra = !majoritario && uf ? metadeMaisRica(degrausDe(!semCargo)) : null;
   // a disputa única (prefeito na cidade, governador ou senador no estado): onde estava o eleito
   const disputaUnica = mun && majoritario && cls ? disputaDeCandidatos(cls, { ano, cargo, uf: uf!, id_municipio: mun.id_municipio })
@@ -158,7 +163,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const medTab = dadosPainel?.pat_medianas ? comoObjetos<LinhaMedianas>(dadosPainel.pat_medianas) : [];
   const medianas = mun ? (cls ? medianasDeCandidatos(recAqui) : null) : uf ? medianasDoRecorte(medTab, { ano, cargo, uf }, { semCargo }) : null;
   const hist = mun ? (cls ? histogramaDeCandidatos(recAqui) : null) : uf && dadosPainel?.pat_faixas ? histograma(comoObjetos<LinhaFaixa>(dadosPainel.pat_faixas), { anos: [ano], cargo, uf }, { semCargo }) : null;
-  const grupos = composicaoEleitos(degraus, { majoritario });
+  const grupos = cidadeUnica ? [] : composicaoEleitos(degraus, { majoritario });
   const topoComp = topoDaComposicao(grupos);
   const pares = mun ? (cls ? concordanciaDeCandidatos(recAqui) : null) : uf && dadosPainel?.pat_pares ? concordancia(comoObjetos<LinhaPares>(dadosPainel.pat_pares), { anos: [ano], cargo, uf }, { semCargo }) : null;
   const listas = dadosLista?.pat_lista ? comoObjetos<LinhaLista>(dadosLista.pat_lista) : null;
@@ -209,7 +214,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
       ))}
     </nav>
   );
-  const fraseFaixa = fraseTopo(cargo, topoCom, topoSem, semCargo);
+  const fraseFaixa = poucos && metade ? `Poucos candidatos (${cls!.length}): ${metade.rica} de ${metade.comBens} eleitos com bens estavam na metade mais rica; com tão poucas pessoas, as porcentagens mudam muito com uma a mais ou a menos.` : cidadeUnica ? (posUnica ? `${frasePosicao(posUnica)}${posUnica.eleitoTinha && posUnica.categoria !== "fora" ? ", e já era prefeito" : ""}.` : null) : fraseTopo(cargo, topoCom, topoSem, semCargo);
   const naDisputa = mun ? (cargo === "Prefeito" ? `os candidatos a prefeito de ${lugar}` : `os candidatos de ${lugar}`) : cargo === "Vereador" || cargo === "Prefeito" ? "os da mesma cidade" : `os do mesmo estado`;
   const semPainel = mun && (!candidatos || !pessoas);
 
@@ -243,7 +248,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
               <h2>{lugar}</h2>
               <p className="cartao-valor"><b>{cartao.valor}</b> {cartao.unidade}</p>
               {cartao.linha && <p className="cartao-linha">{cartao.linha}</p>}
-              {degraus.length > 1 && <EscadaPatrimonio mini degraus={degraus} titulo={`Taxa de eleição por grupo de patrimônio, ${lugar}`} />}
+              {degraus.length > 1 && <EscadaPatrimonio mini votos={porCandidato} degraus={degraus} titulo={porCandidato ? `Votos de cada candidato, do menos ao mais rico, ${lugar}` : `Taxa de eleição por grupo de patrimônio, ${lugar}`} />}
               <p className="cartao-selos">{cartao.selos.map((s) => <span key={s}>{s}</span>)}</p>
             </aside>
           )}
@@ -283,21 +288,21 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
         <section id="p2-escada" className="bloco noite s12 p2-escada">
           <header className="din-sec">
             <h3>Quanto mais patrimônio, mais eleitos?</h3>
-            <p>{majoritario ? "Quantos venceram em cada posição no patrimônio da própria disputa" : "Quantos se elegeram em cada décimo de patrimônio, do menos ao mais rico"}: cada candidato comparado só com {naDisputa}
+            <p>{porCandidato ? `Votos de cada candidato no 1º turno, do que declarou menos ao que declarou mais (${cidadeUnica ? "o eleito" : "os eleitos"} em destaque)${cidadeUnica ? "; uma disputa só, sem porcentagem de vitória" : `; com ${cls!.length} candidatos, décimos não dizem nada`}` : majoritario ? "Quantos venceram em cada posição no patrimônio da própria disputa" : "Quantos se elegeram em cada décimo de patrimônio, do menos ao mais rico"}{porCandidato ? "" : <>: cada candidato comparado só com {naDisputa}</>}
               {umaPorEstado ? ` · ${anosDoTipo(cargo).length} eleições, ${anosDoTipo(cargo)[0]} a ${anosDoTipo(cargo).at(-1)}` : ""}</p>
           </header>
           {degraus.length ? (
-            <EscadaPatrimonio degraus={degraus} titulo={`Taxa de eleição por grupo de patrimônio declarado, ${cargoMin}, ${lugar}, ${umaPorEstado ? "2006 a 2022" : ano}`} />
+            <EscadaPatrimonio votos={porCandidato} degraus={degraus} titulo={porCandidato ? `Parte dos votos de cada candidato a ${cargoMin} em ${lugar}, ${ano}, do menos ao mais rico` : `Taxa de eleição por grupo de patrimônio declarado, ${cargoMin}, ${lugar}, ${umaPorEstado ? "2006 a 2022" : ano}`} />
           ) : <p className="muted">{mun && posUnica?.categoria === "fora" ? `${frasePosicao(posUnica)}.` : "Sem candidatos comparáveis neste recorte."}</p>}
           <div className="p2-faixa">
             <p>{fraseFaixa ?? "Sem dados para a comparação."}</p>
             {chips("p2-escada")}
           </div>
-          <p className="din-rodape">Sem bens: quem não declarou nenhum bem, à parte (não é o “menos rico”) · {majoritario ? "posição 1 = o mais rico da disputa" : "décimo = um décimo dos que declararam bens na disputa, de tamanho aproximado"} · embaixo, o patrimônio típico (mediana), valores da época</p>
+          <p className="din-rodape">{porCandidato ? "Em cima, a parte dos votos válidos nominais do 1º turno; embaixo, o patrimônio declarado · " : ""}Sem bens: quem não declarou nenhum bem, à parte (não é o “menos rico”) · {majoritario ? "posição 1 = o mais rico da disputa" : "décimo = um décimo dos que declararam bens na disputa, de tamanho aproximado"} · embaixo, o patrimônio típico (mediana), valores da época</p>
         </section>
 
         {/* 2. eleitos × não eleitos e quem são os eleitos */}
-        <section id="p2-declararam" className="bloco noite s12 meia p2-declararam">
+        <section id="p2-declararam" className={`bloco noite s12${cidadeUnica ? "" : " meia"} p2-declararam`}>
           <header className="din-sec">
             <h3>Eleitos e não eleitos: quanto declararam</h3>
             <p>{medianas ? <>Eleito típico: <b>{valorTipico(medianas.medianaEleitos)}</b> · não eleito típico: <b>{valorTipico(medianas.medianaNao)}</b></> : `${cargo} · ${ano}`}</p>
@@ -305,14 +310,14 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
           {hist ? <FaixasPatrimonio h={hist} m={medianas} titulo={`Patrimônio declarado de eleitos e não eleitos, ${cargoMin}, ${lugar}, ${ano}`} /> : <p className="muted">Sem dados neste recorte.</p>}
           {medianas && <p className="din-rodape">Sem bens: {pc(medianas.eleitos ? medianas.eleitosSemBens / medianas.eleitos : null)} dos eleitos e {pc(medianas.naoEleitos ? medianas.naoSemBens / medianas.naoEleitos : null)} dos não eleitos · o típico conta só quem declarou bens · valores da época</p>}
         </section>
-        <section id="p2-composicao" className="bloco noite s12 meia p2-composicao">
+        {!cidadeUnica && <section id="p2-composicao" className="bloco noite s12 meia p2-composicao">
           <header className="din-sec">
             <h3>Quem são os eleitos</h3>
             <p>{topoComp ? <>{majoritario ? "O mais rico de cada disputa" : "O décimo mais rico"} é <b>{pc(topoComp.parteCandidatos)}</b> dos candidatos, mas <b>{pc(topoComp.parteEleitos)}</b> dos eleitos.</> : `${cargo} · ${ano}`}</p>
           </header>
           {grupos.length ? <ComposicaoEleitos grupos={grupos} titulo={`Candidatos e eleitos por grupo de patrimônio, ${cargoMin}, ${lugar}`} /> : <p className="muted">Sem dados neste recorte.</p>}
           {umaPorEstado && <p className="din-rodape">{anosDoTipo(cargo).length} eleições para {cargoMin} juntas (2006 a 2022)</p>}
-        </section>
+        </section>}
 
         {/* 3. os candidatos */}
         <section id="p2-candidatos" className="bloco noite s12 p2-candidatos">

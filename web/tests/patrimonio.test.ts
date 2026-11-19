@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   anosDoTipo, classificar, composicaoEleitos, concordancia, concordanciaDeCandidatos, corDaMetade, corDaParteCidades, disputaDeCandidatos, escada,
-  escadaDeCandidatos, escadaPosicoes, faixaDoValor, frasePosicao, fraseTopo, histograma, histogramaDeCandidatos, juntarPatrimonio, legendaMetade,
+  escadaDeCandidatos, escadaDeVotos, escalaLista, escadaPosicoes, faixaDoValor, frasePosicao, fraseTopo, histograma, histogramaDeCandidatos, juntarPatrimonio, legendaMetade,
   legendaPrefeito, listaDe, listaDeCandidatos, listaDoRecorte, marcasLog, medianaPonderada, medianasDeCandidatos, medianasDoRecorte, metadeDaCidade,
   metadeMaisRica, naEscalaLog, posicaoDoEleito, posicaoLog, quemTinha, recorteDaDisputa, serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade,
   taxaDoTopo, textoPosicao, topoDaComposicao, tituloP2, valorTipico, vitoriaDoMaisRico,
@@ -124,6 +124,13 @@ describe("recorteDaDisputa", () => {
   });
 });
 
+describe("escadaDeVotos", () => {
+  it("um degrau por candidato, do menos ao mais rico, com a parte dos votos", () => {
+    const d = escadaDeVotos(classificar([cand({ nome_urna: "MARIA DA SILVA", patrimonio: 900, votos: 75, eleito: true }), cand({ id_candidatura: 2, votos: 25 })]));
+    expect(d.map((x) => [x.curto, x.taxa, x.eleitos, x.tipico])).toEqual([["A", 0.25, 0, 0], ["Maria", 0.75, 1, 900]]);
+  });
+});
+
 describe("escadaDeCandidatos e disputaDeCandidatos", () => {
   const c = classificar([cand({ patrimonio: 900, eleito: true }), cand({ id_candidatura: 2, patrimonio: 100 }), cand({ id_candidatura: 3 })]);
   it("monta as posições com o típico e a disputa no formato da tabela", () => {
@@ -206,6 +213,16 @@ describe("listaDe, listaDoRecorte e listaDeCandidatos", () => {
   });
 });
 
+describe("escalaLista", () => {
+  it("usa o 2º maior quando o 1º passa de 5 vezes ele, e marca o 1º", () => {
+    const e = escalaLista([12e9, 26e6, 24e6]);
+    expect(e.max).toBe(26e6);
+    expect([e.foraDoComum(12e9), e.foraDoComum(26e6)]).toEqual([true, false]);
+    expect(escalaLista([10, 8]).max).toBe(10);
+    expect(escalaLista([]).max).toBe(1);
+  });
+});
+
 describe("textoPosicao", () => {
   it("escreve a posição na disputa", () => {
     expect(textoPosicao({ patrimonio: 1, posicao: 1, naDisputa: 842 })).toBe("1º mais rico de 842");
@@ -255,9 +272,10 @@ describe("textos", () => {
     expect(valorTipico(null)).toBe("—");
   });
   it("fraseTopo põe o recorte ligado primeiro", () => {
-    expect(fraseTopo("Vereador", 0.14, 0.09, true)).toBe("Sem quem já era vereador, os 10% mais ricos se elegem 9 em cada 100 (com todos, 14).");
+    expect(fraseTopo("Vereador", 0.14, 0.09, true)).toBe("Sem quem já era vereador, os 10% mais ricos se elegem 9 em cada 100 (com todos: 14).");
     expect(fraseTopo("Vereador", 0.14, null, false)).toBe("Com todos, os 10% mais ricos se elegem 14 em cada 100.");
-    expect(fraseTopo("Prefeito", 0.5, 0.4, false)).toContain("o mais rico vence 50 em cada 100");
+    expect(fraseTopo("Prefeito", 0.53, 0.51, false)).toBe("Com todas as cidades, o mais rico venceu em 53 de cada 100 (sem as disputas com prefeito tentando a reeleição: 51).");
+    expect(fraseTopo("Prefeito", 0.53, 0.51, true)).toBe("Sem as disputas com prefeito tentando a reeleição, o mais rico venceu em 51 de cada 100 (com todas as cidades: 53).");
     expect(fraseTopo("Vereador", null, 0.1, false)).toBeNull();
   });
   it("frasePosicao", () => {
@@ -270,6 +288,7 @@ describe("marcasLog e naEscalaLog", () => {
   it("cobre os valores de 10 em 10", () => {
     const m = marcasLog([5_000, 2_000_000]);
     expect(m.marcas.map((x) => x.rotulo)).toEqual(["R$ 1 mil", "R$ 10 mil", "R$ 100 mil", "R$ 1 mi", "R$ 10 mi"]);
+    expect(marcasLog([50, 5_000]).marcas[0].rotulo).toBe("R$ 1 mil");   // abaixo de R$ 1 mil encosta na ponta
     expect(naEscalaLog(1e5, m.min, m.max)).toBeCloseTo(0.5);
   });
 });

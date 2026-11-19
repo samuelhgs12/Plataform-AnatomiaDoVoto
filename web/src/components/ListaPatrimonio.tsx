@@ -2,7 +2,7 @@ import Link from "next/link";
 import { nomeProprio } from "@/lib/abstencao";
 import { fotoDaPessoa } from "@/lib/foto-candidato";
 import { inteiro, reais } from "@/lib/format";
-import { textoPosicao, type ItemLista } from "@/lib/patrimonio";
+import { escalaLista, textoPosicao, type ItemLista } from "@/lib/patrimonio";
 import { Avatar } from "./Avatar";
 import { PartyChip } from "./PartyChip";
 
@@ -13,7 +13,7 @@ import { PartyChip } from "./PartyChip";
  */
 export function ListaPatrimonio({ itens, ano, inicio = 5, titulo, comCidade = false }: { itens: ItemLista[]; ano: number; inicio?: number; titulo: string; comCidade?: boolean }) {
   if (!itens.length) return <p className="muted pequeno">Ninguém neste recorte.</p>;
-  const max = Math.max(1, ...itens.map((i) => i.patrimonio));
+  const { max, foraDoComum } = escalaLista(itens.map((i) => i.patrimonio));
   const linha = (c: ItemLista) => (
     <li key={c.id_candidatura}>
       <span className="lp-foto"><Avatar nome={c.nome} partido={c.partido} foto={fotoDaPessoa({ id_candidato: c.id_candidato, ultimo_ano: ano })} /></span>
@@ -24,7 +24,8 @@ export function ListaPatrimonio({ itens, ano, inicio = 5, titulo, comCidade = fa
       </span>
       <span className="lp-valor">
         <b>{c.patrimonio > 0 ? reais(c.patrimonio) : "Sem bens"}</b>
-        <span className="lp-trilho" aria-hidden="true"><i style={{ width: `${(c.patrimonio / max) * 100}%` }} /></span>
+        <span className="lp-trilho" aria-hidden="true"><i style={{ width: `${Math.min(1, c.patrimonio / max) * 100}%` }} /></span>
+        {foraDoComum(c.patrimonio) && <small className="lp-alerta" title="Mais de 5 vezes o 2º maior da lista: pode ser erro de digitação na declaração ao TSE">valor fora do comum</small>}
       </span>
       <span className="lp-res">
         <b className={c.eleito ? "eleito" : undefined}>{c.eleito ? "Eleito" : "Não eleito"}</b>

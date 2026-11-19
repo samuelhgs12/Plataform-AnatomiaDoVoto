@@ -2,7 +2,7 @@ import { nomeProprio } from "@/lib/abstencao";
 import { inteiro } from "@/lib/format";
 import { marcasLog, naEscalaLog, valorTipico, type Classificado } from "@/lib/patrimonio";
 
-const L = 480, A = 300, ESQ = 58, SEM = 34, DIR = 10, TOPO = 12, BASE = 30;
+const L = 480, A = 300, ESQ = 58, SEM = 34, DIR = 22, TOPO = 12, BASE = 30;
 
 /**
  * Os candidatos de uma cidade num só gráfico: x = patrimônio declarado em escala de 10 em 10 (os sem bens numa coluna à
@@ -30,7 +30,6 @@ export function DispersaoPatrimonio({ cls, titulo }: { cls: Classificado[]; titu
             <text x={x(m.valor)} y={A - 12}>{m.rotulo.replace("R$ ", "")}</text>
           </g>
         ))}
-        <text className="dp-eixo" x={ESQ + (SEM - 4) / 2} y={A - 12}>0</text>
         <text className="dp-eixo dp-y" x={ESQ - 8} y={TOPO + 8}>1º</text>
         <text className="dp-eixo dp-y" x={ESQ - 8} y={TOPO + alt}>{inteiro(n)}º</text>
         <text className="dp-eixo dp-y" x={ESQ - 8} y={TOPO + alt / 2}>votos</text>
