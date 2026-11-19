@@ -63,14 +63,14 @@ export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
  */
 export type Pintar = "vaga" | "voto";
 export const PINTAR: { chave: Pintar; rotulo: string }[] = [
-  { chave: "vaga", rotulo: "1. Quanto custa uma cadeira" },
-  { chave: "voto", rotulo: "2. Dinheiro elege?" },
+  { chave: "vaga", rotulo: "Quanto custa uma cadeira" },
+  { chave: "voto", rotulo: "Dinheiro elege?" },
 ];
 export type Medir = "recursos" | "publico";
-/** As duas medidas de "Dinheiro elege?", com a pergunta do dossiê que cada uma responde. */
-export const MEDIR: { chave: Medir; rotulo: string; numero: string }[] = [
-  { chave: "recursos", rotulo: "Todo o dinheiro", numero: "Pergunta 2" },
-  { chave: "publico", rotulo: "Só o dinheiro público", numero: "Pergunta 8" },
+/** As duas medidas de "Dinheiro elege?" (a tela não mostra o número da pergunta do dossiê). */
+export const MEDIR: { chave: Medir; rotulo: string }[] = [
+  { chave: "recursos", rotulo: "Todo o dinheiro" },
+  { chave: "publico", rotulo: "Só o dinheiro público" },
 ];
 /** A tela da camada: a pergunta 1, ou "Dinheiro elege?" medida por todo o dinheiro ou só pelo público. */
 export type Tela = "vaga" | Medir;
@@ -89,7 +89,7 @@ export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba
 export const medidaDe = (tela: Tela) => MEDIDAS_MAPA.find((m) => m.chave === (tela === "publico" ? "publico" : "vaga"))!;
 
 /** Os blocos do painel embaixo do mapa. */
-export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar" | "busca";
+export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar";
 /** Os blocos do fim de "Dinheiro elege?", iguais nas duas medidas: em que as campanhas gastaram (pergunta 9). */
 export const SECOES_GASTARAM: Secao[] = ["destino", "propaganda"];
 /**
@@ -101,8 +101,8 @@ export const SECOES_GASTARAM: Secao[] = ["destino", "propaganda"];
  */
 export const SECOES: Record<Tela, Secao[]> = {
   vaga: ["numeros", "cadeiras", "ranking", "anos"],
-  recursos: ["comparar", "busca", "maiores", "partidos", "voto", "quartis", "cand", ...SECOES_GASTARAM],
-  publico: ["numeros", "comparar", "busca", "origem", "fundos", "ranking", "anos", ...SECOES_GASTARAM],
+  recursos: ["comparar", "maiores", "partidos", "voto", "quartis", "cand", ...SECOES_GASTARAM],
+  publico: ["numeros", "comparar", "origem", "fundos", "ranking", "anos", ...SECOES_GASTARAM],
 };
 /** Os blocos que dividem a linha com o vizinho (meia largura na tela larga), aos pares, na ordem de SECOES. */
 export const MEIAS: Record<Tela, Secao[]> = {
@@ -1149,44 +1149,3 @@ export function fraseDependeram(todos: ContagemFundos, eleitos: ContagemFundos):
   return `${sujeito} ${todos.maioria <= 1 ? "dependeu" : "dependeram"} do dinheiro público${entre}.`;
 }
 
-/**
- * O nome digitado na busca de candidato da pergunta 1 (`?nome=`): sem espaços sobrando, com pelo menos 2 letras ou
- * números e no máximo 80 caracteres; senão, null (sem busca).
- */
-export function termoBuscaCandidato(x: string | undefined): string | null {
-  const t = (x ?? "").replace(/\s+/g, " ").trim();
-  if (t.length > 80) return null;
-  return (t.normalize("NFD").match(/[\p{L}\p{N}]/gu) ?? []).length >= 2 ? t : null;
-}
-
-/** O endereço da busca de candidatos do recorte na API (`/api/dinheiro/candidatos`); a cidade só nas municipais. */
-export function caminhoBuscaCandidato(r: { q: string; ano: number; cargo: string; uf?: string; mun?: number | null }): string {
-  const p = new URLSearchParams({ q: r.q, ano: String(r.ano), cargo: r.cargo });
-  if (r.uf) p.set("uf", r.uf);   // sem estado, a busca vale para os seis
-  if (r.uf && r.mun != null && ehMunicipal(r.ano)) p.set("mun", String(r.mun));
-  return `/dinheiro/candidatos?${p}`;
-}
-
-/**
- * Onde é o candidato achado pela busca, quando o recorte não diz: a cidade (nas municipais sem cidade escolhida) e a
- * UF (sem estado escolhido). `cidade` já vem com a grafia do site. Null quando o recorte já é o lugar dele.
- */
-export function lugarDoAchado(a: { cidade?: string | null; uf?: string | null }, r: { uf?: string; mun?: number | null }): string | null {
-  if (r.mun != null) return null;
-  const uf = !r.uf && a.uf ? a.uf : null;
-  if (a.cidade) return uf ? `${a.cidade} (${uf})` : a.cidade;
-  return uf;
-}
-
-/** Os campos escondidos do formulário de busca: o recorte atual, tirado do endereço (sem o próprio nome buscado). */
-export function camposDoHref(href: string): [string, string][] {
-  const consulta = href.split("#")[0].split("?")[1] ?? "";
-  return [...new URLSearchParams(consulta)].filter(([k]) => k !== "nome");
-}
-
-/** O endereço da página com a busca de um nome (`?nome=`), mantendo o recorte (os campos de camposDoHref), já no bloco da busca. */
-export function hrefBuscaCandidato(campos: [string, string][], nome: string): string {
-  const p = new URLSearchParams(campos.filter(([k]) => k !== "nome"));
-  p.set("nome", nome);
-  return `/?${p}#dinheiro-busca`;
-}
