@@ -145,7 +145,7 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
                 ))}
               </nav>
               <h1 id="h-mapa">{ind === "maior" ? `Em ${ano}, quem mais gastou para prefeito venceu?` : `${infoInd.rotulo} em ${ano}`}</h1>
-              <p className="palco-sobre">{infoInd.pergunta} · {infoInd.explicacao}</p>
+              <p className="palco-sobre">{infoInd.explicacao}</p>
             </div>
             <nav className="trilha" aria-label="Onde você está no mapa">
               <a href={href({ uf: null, mun: null })} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>
@@ -218,12 +218,12 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
               <div className="bloco noite">
                 <h3>As perguntas nesta cidade</h3>
                 <dl className="painel-mini">
-                  <div><dt>Custo da cadeira de vereador (P1)</dt><dd>{texto("custo", valorMunicipio(r, "custo"), true)} <small>no estado: {texto("custo", valorEstado(estados, ano, uf!, "custo"), false)}</small></dd></div>
-                  <div><dt>Dinheiro público nas campanhas a prefeito e vereador (P8)</dt><dd>{texto("publico", valorMunicipio(r, "publico"), true)} <small>no estado: {texto("publico", valorEstado(estados, ano, uf!, "publico"), false)}</small></dd></div>
-                  <div><dt>Quem mais gastou para prefeito venceu? (P2)</dt><dd>{r?.maior_venceu == null ? "—" : r.maior_venceu ? "Sim" : "Não"} <small>no estado: {texto("maior", valorEstado(estados, ano, uf!, "maior"), false)} das cidades</small></dd></div>
+                  <div><dt>Custo da cadeira de vereador</dt><dd>{texto("custo", valorMunicipio(r, "custo"), true)} <small>no estado: {texto("custo", valorEstado(estados, ano, uf!, "custo"), false)}</small></dd></div>
+                  <div><dt>Dinheiro público nas campanhas a prefeito e vereador</dt><dd>{texto("publico", valorMunicipio(r, "publico"), true)} <small>no estado: {texto("publico", valorEstado(estados, ano, uf!, "publico"), false)}</small></dd></div>
+                  <div><dt>Quem mais gastou para prefeito venceu?</dt><dd>{r?.maior_venceu == null ? "—" : r.maior_venceu ? "Sim" : "Não"} <small>no estado: {texto("maior", valorEstado(estados, ano, uf!, "maior"), false)} das cidades</small></dd></div>
                 </dl>
                 {r && <p className="muted pequeno">{inteiro(r.vereador_candidatos)} candidatos disputaram {inteiro(r.vereador_vagas)} vagas de vereador; {inteiro(r.prefeito_candidatos)} disputaram a prefeitura.</p>}
-                <p className="muted pequeno">Na P2, um &quot;sim&quot; mostra que dinheiro e vitória andaram juntos aqui, não que o dinheiro fez ganhar: quem já tem mais chance também arrecada mais.</p>
+                <p className="muted pequeno">Um &quot;sim&quot; em quem mais gastou mostra que dinheiro e vitória andaram juntos aqui, não que o dinheiro fez ganhar: quem já tem mais chance também arrecada mais.</p>
                 {semPrestacaoMun > 0 && <p className="muted pequeno">{inteiro(semPrestacaoMun)} {semPrestacaoMun === 1 ? "candidato não entregou" : "candidatos não entregaram"} a prestação de contas final: {semPrestacaoMun === 1 ? "entra" : "entram"} com zero nas somas, mas o valor real não é conhecido.</p>}
               </div>
             </>
@@ -257,9 +257,9 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
             <div className="bloco noite">
               <h3>Os seis estados em {ano}</h3>
               <dl className="painel-mini">
-                <div><dt>Custo da cadeira de vereador (P1)</dt><dd>{texto("custo", est.custoCadeira, false)}</dd></div>
-                <div><dt>Dinheiro público nas campanhas a prefeito e vereador (P8)</dt><dd>{texto("publico", est.partePublica, false)}</dd></div>
-                <div><dt>Cidades onde quem mais gastou para prefeito venceu (P2)</dt><dd>{texto("maior", est.parteMaior, false)}</dd></div>
+                <div><dt>Custo da cadeira de vereador</dt><dd>{texto("custo", est.custoCadeira, false)}</dd></div>
+                <div><dt>Dinheiro público nas campanhas a prefeito e vereador</dt><dd>{texto("publico", est.partePublica, false)}</dd></div>
+                <div><dt>Cidades onde quem mais gastou para prefeito venceu</dt><dd>{texto("maior", est.parteMaior, false)}</dd></div>
               </dl>
               <p className="muted pequeno">{inteiro(est.prefeitos)} prefeitos e {inteiro(est.vagasVereador)} vereadores eleitos. Clique num estado para ver as cidades e os eleitos.</p>
             </div>
@@ -296,7 +296,7 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
             <summary id="h-tabela">Ver as {inteiro(tabela.length)} cidades de {NOME_UF[uf!]} em tabela ({ano})</summary>
             <div className="tablewrap">
               <table>
-                <thead><tr><th>Cidade</th><th className="num">Custo da cadeira (P1)</th><th className="num">Dinheiro público (P8)</th><th className="num">Quem mais gastou venceu? (P2)</th></tr></thead>
+                <thead><tr><th>Cidade</th><th className="num">Custo da cadeira</th><th className="num">Dinheiro público</th><th className="num">Quem mais gastou venceu?</th></tr></thead>
                 <tbody>
                   {tabela.map((t) => (
                     <tr key={t.id}>
@@ -316,9 +316,9 @@ export default async function Municipios({ searchParams }: { searchParams: SP })
       <section className="card" aria-labelledby="h-como">
         <h2 id="h-como">Como ler esta página</h2>
         <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-          <li><b>Custo da cadeira (pergunta 1):</b> tudo o que os candidatos a vereador gastaram, dividido pelas vagas da câmara. Inclui o gasto de quem perdeu.</li>
-          <li><b>Dinheiro público (pergunta 8):</b> parte do dinheiro recebido pelas campanhas a prefeito e vereador que veio do Fundo Eleitoral e do Fundo Partidário. O que um candidato repassou a outro não é contado de novo.</li>
-          <li><b>Quem gastou mais (pergunta 2):</b> se o candidato a prefeito que mais gastou foi o eleito. Só entram as cidades com mais de um candidato e em que todos entregaram a prestação de contas final. Não prova que o dinheiro faz ganhar: quem já tem mais chance também arrecada mais.</li>
+          <li><b>Custo da cadeira:</b> tudo o que os candidatos a vereador gastaram, dividido pelas vagas da câmara. Inclui o gasto de quem perdeu.</li>
+          <li><b>Dinheiro público:</b> parte do dinheiro recebido pelas campanhas a prefeito e vereador que veio do Fundo Eleitoral e do Fundo Partidário. O que um candidato repassou a outro não é contado de novo.</li>
+          <li><b>Quem gastou mais:</b> se o candidato a prefeito que mais gastou foi o eleito. Só entram as cidades com mais de um candidato e em que todos entregaram a prestação de contas final. Não prova que o dinheiro faz ganhar: quem já tem mais chance também arrecada mais.</li>
           <li>Gasto: despesas da prestação de contas final entregue ao TSE, sem as transferências para outros candidatos ou partidos. Quem não entregou a prestação final entra com zero nas somas e é contado à parte. Valores da época, sem correção pela inflação. Votos do 1º turno. Só eleições ordinárias.</li>
           <li>O banco tem só AP, ES, MG, PE, RJ e RR: os demais estados aparecem sem cor. As faixas de cor de custo e de dinheiro público são as mesmas em 2020 e 2024, para comparar os anos.</li>
           <li>Deputados, senadores e governador concorrem no estado inteiro: o banco não tem os votos de cada um por cidade, então eles aparecem no estado, e não na cidade.</li>

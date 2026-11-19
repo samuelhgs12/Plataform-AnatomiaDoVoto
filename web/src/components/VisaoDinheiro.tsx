@@ -305,7 +305,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         <div className="palco-mapa">
           {mapaPalco}
           {!uf && <p className="palco-dica">Selecione um estado para explorar o dinheiro das campanhas, ou veja embaixo os seis comparados</p>}
-          <p className="carregando-mapa" aria-hidden="true">Carregando…</p>
         </div>
 
         <div className="palco-base">

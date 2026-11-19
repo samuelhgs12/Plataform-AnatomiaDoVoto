@@ -75,10 +75,11 @@ export const MEDIR: { chave: Medir; rotulo: string }[] = [
 /** A tela da camada: a pergunta 1, ou "Dinheiro elege?" medida por todo o dinheiro ou só pelo público. */
 export type Tela = "vaga" | Medir;
 export const telaDe = ({ pintar, medir }: { pintar: Pintar; medir: Medir }): Tela => (pintar === "vaga" ? "vaga" : medir);
+/** Título do mapa (antes de " em <ano>"): curto, para caber numa linha como nas outras camadas e não encolher o mapa. */
 export const TITULO_TELA: Record<Tela, string> = {
-  vaga: "Quanto custou cada cadeira",
-  recursos: "Quem teve mais dinheiro se elegeu mais?",
-  publico: "Quem teve mais dinheiro público se elegeu mais?",
+  vaga: "Custo da cadeira",
+  recursos: "Dinheiro e vitória",
+  publico: "Fundo público e vitória",
 };
 /** As medidas que pintam o mapa (legenda, dicas e título do mapa). */
 export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba }[] = [

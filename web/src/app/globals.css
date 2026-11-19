@@ -2217,11 +2217,6 @@ a.q-ver:active { transform: scale(0.98); }
 .dinheiro-comp summary, .dinheiro-comp summary h3, .dinheiro-comp h3, .dinheiro-comp h4 { color: var(--fg); }
 .bloco.noite .ver-todos > summary { color: var(--sobre-noite); }
 
-/* camada Dinheiro: aviso enquanto a página troca */
-.carregando-mapa { display: none; position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 4; margin: 0; padding: 8px 16px;
-  border-radius: 999px; background: var(--noite2); color: var(--sobre-noite); font-weight: 600; }
-.palco-dinheiro[aria-busy="true"] .carregando-mapa { display: block; }
-.palco-dinheiro[aria-busy="true"] .mapa-abst { opacity: 0.45; transition: opacity 0.2s ease; }
 
 /* camada Dinheiro: o que pinta o mapa (chips na base do mapa), a ordem dos candidatos, a cobertura e os grupos de despesa */
 .ord-cand { margin: 6px 0 10px; }
