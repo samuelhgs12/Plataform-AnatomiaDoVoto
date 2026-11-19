@@ -1,5 +1,5 @@
 -- Busca de candidatos pelo nome dentro do recorte da camada Dinheiro (pergunta 1: quanto custa uma cadeira).
--- Parâmetros: $1 texto normalizado (minúsculas, sem acento, só letras/números/espaços), $2 ano, $3 cargo, $4 UF,
+-- Parâmetros: $1 texto normalizado (minúsculas, sem acento, só letras/números/espaços), $2 ano, $3 cargo, $4 UF (NULL = os seis estados),
 -- $5 id_municipio (NULL = o estado todo; nas municipais, cada linha traz a cidade). Casa no nome de urna ou no nome civil,
 -- a partir do início de uma palavra, mas devolve só o nome de urna. Gasto, recebido e "prestou" com as mesmas regras de
 -- candidatos_municipio.sql. Ordem (serve ao autocompletar): nome de urna igual ao digitado, nome de urna que começa com
@@ -13,7 +13,7 @@ WITH recorte AS (
     JOIN cargo g             ON g.id_cargo = e.id_cargo
     JOIN rotulo_resultado rr ON rr.id_rotulo = c.id_rotulo_final
     LEFT JOIN candidato k    ON k.id_candidato = c.id_candidato
-    WHERE c.ano = $2 AND g.nome = $3 AND c.uf = $4 AND ($5::INTEGER IS NULL OR c.id_municipio = $5::INTEGER)
+    WHERE c.ano = $2 AND g.nome = $3 AND ($4::VARCHAR IS NULL OR c.uf = $4::VARCHAR) AND ($5::INTEGER IS NULL OR c.id_municipio = $5::INTEGER)
       AND e.tipo_eleicao = 'ORDINARIA' AND rr.disputou
 )
 SELECT c.cargo_nome AS cargo, c.cargo_id AS id_cargo, c.resultado_desc AS resultado, c.id_candidato, c.id_candidatura,
@@ -22,7 +22,7 @@ SELECT c.cargo_nome AS cargo, c.cargo_id AS id_cargo, c.resultado_desc AS result
        coalesce(d.gasto_total, 0) AS gasto,
        coalesce(r.receita_total, 0) AS receita,
        coalesce(r.receita_publica, 0) AS receita_publica,
-       c.foi_eleito AS eleito, m.nome AS municipio,
+       c.foi_eleito AS eleito, m.nome AS municipio, c.uf,
        EXISTS (SELECT 1 FROM despesa_campanha x WHERE x.id_candidatura = c.id_candidatura AND x.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO'))
          OR EXISTS (SELECT 1 FROM receita_campanha x WHERE x.id_candidatura = c.id_candidatura AND x.tipo_prestacao_contas IN ('FINAL', 'REGULARIZACAO_OMISSAO')) AS prestou
 FROM recorte c

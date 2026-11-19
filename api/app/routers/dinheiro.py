@@ -13,14 +13,16 @@ router = APIRouter(tags=["dinheiro"])
 def busca_candidato_dinheiro(
     q: str = Query(..., min_length=2, max_length=80, description="parte do nome de urna ou do nome civil"),
     ano: int = Query(..., ge=1998, le=2030), cargo: str = Query(..., max_length=40, description="nome do cargo, como em /api/meta"),
-    uf: str = Query(..., pattern=r"^[A-Za-z]{2}$"), mun: int | None = Query(None, description="id_municipio (eleições municipais)"),
+    uf: str | None = Query(None, pattern=r"^[A-Za-z]{2}$", description="sem UF, busca nos seis estados"),
+    mun: int | None = Query(None, description="id_municipio (eleições municipais)"),
 ):
-    """Até 20 candidatos do recorte (ano, cargo, UF e, nas municipais, cidade) cujo nome contém o texto, a partir do
-    início de uma palavra; ignora acentos e maiúsculas. Com gasto, recebido, votos e resultado (seção Dinheiro, P1)."""
+    """Até 20 candidatos do recorte (ano, cargo, UF ou os seis estados e, nas municipais, cidade) cujo nome contém o
+    texto, a partir do início de uma palavra; ignora acentos e maiúsculas. Com gasto, recebido, votos, resultado e a UF
+    (seção Dinheiro, P1)."""
     palavras = palavras_busca(q)
     if not palavras:
         return []
-    return db.consultar("dinheiro_busca_candidato", (" ".join(palavras), ano, cargo, uf.upper(), mun))
+    return db.consultar("dinheiro_busca_candidato", (" ".join(palavras), ano, cargo, uf.upper() if uf else None, mun))
 
 
 @router.get("/dinheiro/candidaturas/{id_candidatura}/despesas", response_model=DespesasCandidato)

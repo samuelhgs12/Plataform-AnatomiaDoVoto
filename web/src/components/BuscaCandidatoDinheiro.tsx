@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, useTransition, type KeyboardEvent } from "react";
 import { nomeProprio } from "@/lib/abstencao";
 import { destacarBusca } from "@/lib/busca";
-import { caminhoBuscaCandidato, hrefBuscaCandidato, termoBuscaCandidato } from "@/lib/dinheiro";
 import { reais } from "@/lib/format";
+import { caminhoBuscaCandidato, hrefBuscaCandidato, lugarDoAchado, termoBuscaCandidato } from "@/lib/dinheiro";
 import type { CandidatoLocal } from "@/lib/territorio";
 import { PartyChip } from "./PartyChip";
+import { DetalhesCandidatoDinheiro } from "./DetalhesCandidatoDinheiro";
 
-type Achado = CandidatoLocal & { municipio?: string | null };
+type Achado = CandidatoLocal & { municipio?: string | null; uf?: string | null };
 
 /** Nome com o trecho digitado em <mark>, como na busca do topo. */
 function Destaque({ nome, busca }: { nome: string; busca: string }) {
@@ -19,12 +20,13 @@ function Destaque({ nome, busca }: { nome: string; busca: string }) {
 /**
  * Busca de candidato da pergunta 1 (camada Dinheiro), com autocompletar: a partir de 2 letras, as sugestões vêm de
  * /api/dinheiro/candidatos no recorte aberto (ano, cargo, estado e, nas municipais, cidade), quem começa com o texto
- * primeiro. Setas, Enter e Esc como na busca do mapa; escolher ou enviar muda ?nome= e a página mostra o gasto, o custo
- * do voto e as despesas. Sem JavaScript, é um formulário GET comum (os campos escondidos guardam o recorte).
+ * primeiro. Escolher abre o detalhe da candidatura na tela; a busca por texto continua disponível para listar
+ * vários resultados. Sem JavaScript, é um formulário GET comum (os campos escondidos guardam o recorte).
  */
 export function BuscaCandidatoDinheiro({ campos, recorte, inicial, municipal }: {
   campos: [string, string][];
-  recorte: { ano: number; cargo: string; uf: string; mun?: number | null };
+  /** sem `uf`, a busca vale para os seis estados */
+  recorte: { ano: number; cargo: string; uf?: string; mun?: number | null };
   inicial: string;
   /** nas municipais sem cidade escolhida, a sugestão mostra a cidade */
   municipal: boolean;
@@ -34,30 +36,32 @@ export function BuscaCandidatoDinheiro({ campos, recorte, inicial, municipal }: 
   const [termo, setTermo] = useState(inicial);
   const [ativo, setAtivo] = useState(0);
   const [aberto, setAberto] = useState(false);
-  const [achados, setAchados] = useState<Achado[]>([]);
-  const [estado, setEstado] = useState<"parado" | "buscando" | "erro">("parado");
+  const [resposta, setResposta] = useState<{ chave: string; achados: Achado[]; erro: boolean } | null>(null);
+  const [selecionado, setSelecionado] = useState<Achado | null>(null);
   const [indo, iniciar] = useTransition();
 
   const q = termoBuscaCandidato(termo);
   const { ano, cargo, uf, mun } = recorte;
+  const chave = q ? caminhoBuscaCandidato({ q, ano, cargo, uf, mun }) : null;
   useEffect(() => {
-    if (!q) return;
+    if (!chave) return;
     const ctl = new AbortController();
     const t = setTimeout(async () => {
-      setEstado("buscando");
       try {
-        const r = await fetch(`/api${caminhoBuscaCandidato({ q, ano, cargo, uf, mun })}`, { signal: ctl.signal });
+        const r = await fetch(`/api${chave}`, { signal: ctl.signal });
         if (!r.ok) throw new Error(String(r.status));
-        setAchados(await r.json());
-        setEstado("parado");
+        const achados: Achado[] = await r.json();
+        if (!ctl.signal.aborted) setResposta({ chave, achados, erro: false });
       } catch (e) {
-        if ((e as Error).name !== "AbortError") setEstado("erro");
+        if (!ctl.signal.aborted && (e as Error).name !== "AbortError") setResposta({ chave, achados: [], erro: true });
       }
     }, 200);
     return () => { clearTimeout(t); ctl.abort(); };
-  }, [q, ano, cargo, uf, mun]);
+  }, [chave]);
 
-  const opcoes = q ? achados.slice(0, 8) : [];
+  const atual = chave !== null && resposta?.chave === chave ? resposta : null;
+  const opcoes = atual?.achados.slice(0, 8) ?? [];
+  const buscando = !!chave && !atual;
   const mostrar = aberto && opcoes.length > 0;
   const marcado = Math.min(ativo, opcoes.length - 1);
 
@@ -68,7 +72,8 @@ export function BuscaCandidatoDinheiro({ campos, recorte, inicial, municipal }: 
   const escolher = (a: Achado) => {
     const nome = nomeProprio(a.nome_urna ?? "");
     setTermo(nome);
-    ir(nome);
+    setAberto(false);
+    setSelecionado(a);
   };
   const teclas = (ev: KeyboardEvent<HTMLInputElement>) => {
     const n = opcoes.length;
@@ -85,9 +90,9 @@ export function BuscaCandidatoDinheiro({ campos, recorte, inicial, municipal }: 
     }
   };
 
-  return (
+  return (<>
     <form className="din-busca-form combo" action="/#dinheiro-busca" method="get" role="search" aria-busy={indo}
-      onSubmit={(ev) => { if (q) { ev.preventDefault(); ir(q); } }}>
+      onSubmit={(ev) => { if (q) { ev.preventDefault(); if (atual?.achados.length === 1) escolher(atual.achados[0]); else ir(q); } }}>
       {campos.map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
       <label htmlFor={`${id}-campo`} className="sr-only">Nome do candidato</label>
       <div className="din-busca-campo">
@@ -102,23 +107,28 @@ export function BuscaCandidatoDinheiro({ campos, recorte, inicial, municipal }: 
         <ul id={`${id}-lista`} role="listbox" aria-label="Candidatos encontrados" className="din-busca-lista" hidden={!mostrar}>
           {opcoes.map((o, i) => (
             <li key={o.id_candidatura} id={`${id}-op-${i}`} role="option" aria-selected={i === marcado}
-              onMouseDown={(e) => { e.preventDefault(); escolher(o); }} onMouseEnter={() => setAtivo(i)}>
+              onMouseDown={(e) => e.preventDefault()} onClick={() => escolher(o)} onMouseEnter={() => setAtivo(i)}>
               <span className="din-busca-nome"><Destaque nome={nomeProprio(o.nome_urna ?? "")} busca={termo} /></span>
               <small>
                 <PartyChip sigla={o.partido} />
-                {municipal && !mun && o.municipio ? ` ${nomeProprio(o.municipio)} ·` : ""} {o.eleito ? "Eleito" : "Não eleito"}
-                {" · "}{o.prestou === false ? "gasto não informado" : `gastou ${reais(o.gasto)}`}
+                {(() => { const l = lugarDoAchado({ cidade: municipal && o.municipio ? nomeProprio(o.municipio) : null, uf: o.uf }, { uf, mun }); return l ? ` · ${l}` : ""; })()}
               </small>
+              <span className="din-busca-valor">
+                <b>{o.prestou === false ? "Sem contas" : reais(o.gasto)}</b>
+                <span className={o.eleito ? "din-busca-eleito" : undefined}>{o.eleito ? "Eleito" : "Não eleito"}</span>
+              </span>
             </li>
           ))}
         </ul>
       </div>
-      <button type="submit">Buscar</button>
+      <button type="submit">Ver resultados</button>
       <p className="din-busca-status" role="status">
-        {q && aberto && estado === "buscando" && !opcoes.length ? "Buscando…" : ""}
-        {q && estado === "erro" ? "Não foi possível buscar agora." : ""}
-        {q && aberto && estado === "parado" && !opcoes.length && achados.length === 0 ? "Nenhum candidato com esse nome neste recorte." : ""}
+        {aberto && buscando ? "Buscando…" : ""}
+        {atual?.erro ? "Não foi possível buscar agora." : ""}
+        {q && aberto && atual && !atual.erro && !opcoes.length ? "Nenhum candidato com esse nome neste recorte." : ""}
       </p>
+      <p className="din-busca-ajuda">Selecione um nome para ver os gastos.</p>
     </form>
-  );
+    {selecionado && <DetalhesCandidatoDinheiro key={selecionado.id_candidatura} candidato={selecionado} ano={ano} cargo={cargo} onFechar={() => setSelecionado(null)} />}
+  </>);
 }
