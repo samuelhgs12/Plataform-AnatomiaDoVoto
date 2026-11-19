@@ -49,7 +49,6 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   const { ano, cargo, uf, mun } = r;
   const prop = abaPropaganda ? recortePropaganda({ ...r, mun: mun && { nome: nomeProprio(mun.nome) } }, { cargo: um(sp.cargo), porte: um(sp.porte), nomeUf: (u) => NOME_UF[u] ?? u }) : null;
   const municipal = ehMunicipal(ano);
-  const ver = um(sp.ver) === "publico" ? "publico" : "recursos";          // P2 (todo o dinheiro) ou P8 (só o público)
   const ordem = um(sp.ordem) === "nome" ? "nome" : "valor";
   const porteFiltro = municipal ? PORTES.find((p) => p.chave === um(sp.porte)) : undefined;   // recorte por porte da cidade
   const nomeMun = new Map(municipios.map((m) => [m.id_municipio, nomeProprio(m.nome)]));
@@ -60,7 +59,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
   // o recorte na URL: trocar o estado solta a cidade
   const estado: Record<string, string | number | undefined> = {
     ano, cargo, uf, mun: mun?.id_municipio, vista: r.vista === "lista" ? "lista" : undefined,
-    ordem: ordem === "nome" ? "nome" : undefined, ver: ver === "publico" ? "publico" : undefined, porte: porteFiltro?.chave,
+    ordem: ordem === "nome" ? "nome" : undefined, porte: porteFiltro?.chave,
   };
   const href = (novo: Record<string, string | number | null> = {}, ancora?: string) => {
     const atual = { ...estado, ...("uf" in novo ? { mun: undefined } : {}) };
@@ -100,7 +99,7 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
         cidades={municipal ? ufs.filter((u) => !uf || u === uf).map((u) => ({ uf: u, nome: NOME_UF[u] ?? u, opcoes: municipios.filter((m) => m.uf === u).map((m) => [String(m.id_municipio), nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR")) })) : null}
         portes={municipal ? PORTES.map((p) => [p.chave, p.rotulo] as [string, string]) : null}
         atual={{ ano: String(ano), cargo: prop?.cargo ?? cargo, uf: uf ?? "", mun: mun ? String(mun.id_municipio) : "", porte: porteFiltro?.chave ?? "" }}
-        fixos={Object.fromEntries(Object.entries({ vista: estado.vista, ordem: estado.ordem, ver: estado.ver, aba: prop ? ABA_PROPAGANDA : undefined }).filter(([, v]) => v)) as Record<string, string>}
+        fixos={Object.fromEntries(Object.entries({ vista: estado.vista, ordem: estado.ordem, aba: prop ? ABA_PROPAGANDA : undefined }).filter(([, v]) => v)) as Record<string, string>}
       />
       {!prop && (r.cargoTrocado || r.munIgnorado) && (
         <p className="aviso-linha">
@@ -133,9 +132,12 @@ export default async function Dinheiro({ searchParams }: { searchParams: SP }) {
 
       {/* as comparações são as mesmas da camada Dinheiro do mapa da página inicial */}
       <ComparacoesDinheiro
-        ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porteFiltro?.chave} medir={ver}
-        hrefMedir={(m) => href({ ver: m === "publico" ? "publico" : null }, "comparar")} hrefUf={(u) => href({ uf: u }, "estados")}
+        ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porteFiltro?.chave}
+        hrefUf={(u) => href({ uf: u }, "estados")}
       />
+      <p className="card muted">
+        Patrimônio declarado e vitória (pergunta 2): <Link href={hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.cod_ibge, pintar: "voto" })}>veja no mapa, cidade por cidade</Link>.
+      </p>
 
 
       <details className="card analise-metodo">

@@ -29,6 +29,10 @@ componentes recebem os dados prontos e só montam o HTML/SVG.
   e `src/lib/nuvem.ts`; desenho em `BarraPecas` e `NuvemPalavras`). A comparação com a campanha típica vem da análise q9:
   o perfil lê `referencia` e, só quando o grupo (cargo + ano + UF) tem menos de 30 campanhas, `parcelas`, para tirar a
   própria campanha da típica.
+- Pergunta 2 na camada Dinheiro do mapa (`?ver=dinheiro&pintar=voto`, `?semcargo=1` tira quem já tinha o cargo, `?lista=ricos|perderam|menos`):
+  `VisaoPatrimonio` (o `VisaoDinheiro` desvia para ele), tabelas `pat_*` da q2 (estado) ou, numa cidade, a lista de candidatos
+  + `pat_cidade_<ano>` (junta pelo `id_candidatura`); toda a conta em `src/lib/patrimonio.ts`. Cada `lerAnalise` pede poucas
+  tabelas, para cada resposta ficar abaixo de 2 MB (o cache do Next não guarda maiores).
 - Visão Candidato do mapa (página inicial, `?ver=candidato&cand=<id_candidato>`): `/api/candidatos/<id>/mapa` (candidaturas
   e números da ficha) e `/api/candidaturas/<id>/votos-municipio` (tabela `votos_candidatura_municipio`, da carga)
   → `VisaoCandidato`; lógica em `src/lib/candidato-mapa.ts`. Os votos casam com o `mapa.json` pelo `cod_ibge`
@@ -66,7 +70,7 @@ Todo gráfico tem `role="img"` + `aria-label` (ou tabela equivalente) e não dep
 
 ## Testes do web
 
-- Vitest (`vitest.config.ts` inclui `tests/**/*.test.ts`): `web/tests/legenda.test.ts` para `src/lib/legenda.ts`, `web/tests/legislativo.test.ts` para `src/lib/legislativo.ts` e
+- Vitest (`vitest.config.ts` inclui `tests/**/*.test.ts`): `web/tests/legenda.test.ts` para `src/lib/legenda.ts`, `web/tests/legislativo.test.ts` para `src/lib/legislativo.ts`, `web/tests/patrimonio.test.ts` para `src/lib/patrimonio.ts` e
   `web/tests/lib.test.ts` para o resto; um `describe` por função de `src/lib`, com uma fábrica de linha
   (`const l = (o: Partial<Linha>) => ({...padrão, ...o})`) e poucas linhas inventadas.
 - Só lógica pura é testada (sem render de componente). Antes do PR: `npm run lint && npm run typecheck && npm test && npm run build`.

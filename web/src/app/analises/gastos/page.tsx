@@ -15,7 +15,7 @@ import { Colunas } from "@/components/Colunas";
 import { Rolar } from "@/components/Rolar";
 import { FOTOS } from "@/lib/fotos";
 import { explicacao } from "@/lib/estatistica";
-import { METODOLOGIA } from "@/lib/metodologia";
+import { CALCULO_GASTOS } from "@/lib/metodologia";
 
 const TITULO = "Patrimônio e sucesso eleitoral";
 export const metadata: Metadata = { title: TITULO };
@@ -256,7 +256,7 @@ export default async function Gastos({ searchParams }: { searchParams: SP }) {
       <section className="card" aria-labelledby="h-met">
         <h2 id="h-met">Como calculamos</h2>
         <ul className="muted" style={{ margin: 0, paddingLeft: 18 }}>
-          {METODOLOGIA.p2.calculo.map((t) => <li key={t}>{t}</li>)}
+          {CALCULO_GASTOS.map((t) => <li key={t}>{t}</li>)}
         </ul>
       </section>
     </>

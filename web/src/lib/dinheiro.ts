@@ -4,6 +4,7 @@
 import { pontosPercentuais, type Resposta } from "./estatistica";
 import { brlCentavos, reais } from "./format";
 import { mediana, porteDe, PORTES, type CandidatoLocal, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
+import { ANOS_PATRIMONIO, listaDe, type Lista } from "./patrimonio";
 
 /** As três abas (e "eleitor": o gasto por eleitor apto, só uma medida do mapa). `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
 export type Aba = "gasto" | "resultado" | "publico" | "eleitor";
@@ -58,41 +59,45 @@ export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
 
 /** O que pinta o mapa: o gasto por vaga (padrão), o gasto por eleitor apto ou a parte pública do dinheiro recebido. */
 /**
- * As perguntas da camada Dinheiro, na ordem do menu: só as do dossiê sobre dinheiro (1, 2, 8 e 9). A 1 e a 8 pintam o
- * mapa com a sua medida; a 2 e a 9 usam o gasto por vaga no mapa e mudam só o que o painel mostra embaixo (SECOES).
+ * As perguntas da camada Dinheiro, na ordem do menu: só as do dossiê sobre dinheiro (1, 2, 8 e 9). A 1, a 2 e a 8 pintam o
+ * mapa com a sua medida (a 2, o patrimônio declarado dentro da disputa: src/lib/patrimonio.ts e VisaoPatrimonio); a 9
+ * usa o gasto por vaga no mapa e muda só o que o painel mostra embaixo (SECOES).
  */
 export type Pintar = "vaga" | "voto" | "publico" | "propaganda";
 export const PINTAR: { chave: Pintar; rotulo: string; aba: Aba; titulo: string }[] = [
   { chave: "vaga", rotulo: "1. Quanto custa uma cadeira", aba: "gasto", titulo: "Quanto custou cada cadeira" },
-  { chave: "voto", rotulo: "2. Dinheiro elege?", aba: "gasto", titulo: "Quem teve mais dinheiro se elegeu mais?" },
+  { chave: "voto", rotulo: "2. Patrimônio elege?", aba: "resultado", titulo: "Quem declarou mais bens se elegeu mais?" },
   { chave: "publico", rotulo: "8. Dinheiro público", aba: "publico", titulo: "Quanto do dinheiro das campanhas foi público" },
   { chave: "propaganda", rotulo: "9. Propaganda", aba: "gasto", titulo: "Em que as campanhas gastaram" },
 ];
 /** As medidas que pintam o mapa (legenda, dicas e título do mapa). */
-export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba }[] = [
+export const MEDIDAS_MAPA: { chave: "vaga" | "publico" | "patrimonio"; rotulo: string; aba: Aba }[] = [
   { chave: "vaga", rotulo: "Gasto por vaga", aba: "gasto" },
   { chave: "publico", rotulo: "Parte pública", aba: "publico" },
+  { chave: "patrimonio", rotulo: "Patrimônio declarado na disputa", aba: "resultado" },
 ];
-/** A medida que pinta o mapa em cada pergunta: a parte pública na 8; o gasto por vaga nas outras. */
-export const medidaDe = (pintar: Pintar) => MEDIDAS_MAPA.find((m) => m.chave === (pintar === "publico" ? "publico" : "vaga"))!;
+/** A medida que pinta o mapa em cada pergunta: a parte pública na 8; o patrimônio declarado na 2; o gasto por vaga nas outras. */
+export const medidaDe = (pintar: Pintar) => MEDIDAS_MAPA.find((m) => m.chave === (pintar === "publico" ? "publico" : pintar === "voto" ? "patrimonio" : "vaga"))!;
 
 /** Os blocos do painel embaixo do mapa. */
-export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar" | "busca";
+export type Secao = "numeros" | "cadeiras" | "origem" | "fundos" | "ranking" | "anos" | "destino" | "propaganda" | "busca"
+  | "escada" | "declararam" | "composicao" | "candidatos" | "serie" | "pares" | "cidades";
 /**
  * O que cada pergunta mostra no painel, na ordem da página: só os blocos que a respondem, para a tela não misturar
- * assuntos. 1: o custo da vaga (com o gasto por eleitor), cada cadeira, a busca de um candidato, os lugares e os anos. 2: dinheiro × resultado,
- * quem mais gastou, os partidos, o custo do voto, os quartis e os candidatos. 8: a parte pública, de onde veio o
- * dinheiro, os lugares, quem dependeu dele e os anos. 9: para onde foi o dinheiro e a nuvem de propaganda.
+ * assuntos. 1: o custo da vaga (com o gasto por eleitor), cada cadeira, a busca de um candidato, os lugares e os anos. 2: a
+ * escada do patrimônio, eleitos × não eleitos, quem são os eleitos, os candidatos, a série, os pares e cidade por cidade
+ * (VisaoPatrimonio). 8: a parte pública, de onde veio o dinheiro, os lugares, quem dependeu dele e os anos. 9: para onde
+ * foi o dinheiro e a nuvem de propaganda.
  */
 export const SECOES: Record<Pintar, Secao[]> = {
   vaga: ["numeros", "cadeiras", "busca", "ranking", "anos"],
-  voto: ["comparar", "maiores", "partidos", "voto", "quartis", "cand"],
+  voto: ["escada", "declararam", "composicao", "candidatos", "serie", "pares", "cidades"],
   publico: ["numeros", "origem", "ranking", "fundos", "anos"],
   propaganda: ["destino", "propaganda"],
 };
 /** Os blocos que dividem a linha com o vizinho (meia largura na tela larga), aos pares, na ordem de SECOES. */
 export const MEIAS: Record<Pintar, Secao[]> = {
-  vaga: ["ranking", "anos"], voto: ["partidos", "voto"], publico: ["origem", "ranking"], propaganda: [],
+  vaga: ["ranking", "anos"], voto: ["declararam", "composicao", "serie", "pares"], publico: ["origem", "ranking"], propaganda: [],
 };
 /** As linhas da comparação entre anos (medidasNosAnos) que cada pergunta mostra. */
 export const MEDIDAS_ANOS: Record<Pintar, string[]> = {
@@ -100,21 +105,28 @@ export const MEDIDAS_ANOS: Record<Pintar, string[]> = {
 };
 export const abaDe = (pintar: Pintar): Aba => PINTAR.find((p) => p.chave === pintar)!.aba;
 
-/** O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais), o que pinta o mapa e a medida da pergunta 2 × 8. */
-export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; pintar: Pintar; medir: "recursos" | "publico" }
+/** As eleições de cada pergunta: a 2 (patrimônio declarado) vai de 2006 a 2024; as de dinheiro de campanha, de 2018 em diante. */
+export const anosDoPintar = (pintar: string | undefined) => (pintar === "voto" ? ANOS_PATRIMONIO : ANOS_DINHEIRO);
 
 /**
- * Camada Dinheiro do mapa da página inicial: o ano (padrão: o último), um cargo que exista nele, o porte (só nas
- * eleições municipais, e só um dos que existem) e a medida de "quem teve mais dinheiro se elegeu mais?": todo o
- * dinheiro (padrão, pergunta 2) ou só o público (?medir=publico, pergunta 8).
+ * O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais, fora da pergunta 2), o que pinta
+ * o mapa e, na pergunta 2, se tira quem já tinha o cargo (?semcargo=1) e a lista de candidatos (?lista=).
+ */
+export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; pintar: Pintar; semCargo: boolean; lista: Lista }
+
+/**
+ * Camada Dinheiro do mapa da página inicial: o ano (padrão: o último; só os que a pergunta tem), um cargo que exista
+ * nele, o porte (só nas eleições municipais, e só um dos que existem; a pergunta 2 compara dentro de cada disputa e não
+ * usa o porte), semcargo=1 e a lista (pergunta 2).
  */
 export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
-  const pedido = Number(um(sp.ano));
-  const ano = ANOS_DINHEIRO.includes(pedido) ? pedido : ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1];
-  const cargos = cargosDoAno(ano);
-  const porte = ehMunicipal(ano) ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
   const pintar = PINTAR.find((p) => p.chave === um(sp.pintar))?.chave ?? "vaga";
-  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, pintar, medir: um(sp.medir) === "publico" ? "publico" : "recursos" };
+  const anos = anosDoPintar(pintar);
+  const pedido = Number(um(sp.ano));
+  const ano = anos.includes(pedido) ? pedido : anos[anos.length - 1];
+  const cargos = cargosDoAno(ano);
+  const porte = ehMunicipal(ano) && pintar !== "voto" ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
+  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, pintar, semCargo: pintar === "voto" && um(sp.semcargo) === "1", lista: listaDe(sp.lista) };
 }
 
 /**
@@ -124,21 +136,24 @@ export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
  * troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
  */
 export function hrefMapaDinheiro(
-  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; medir?: string; ord?: string; quem?: string },
-  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "medir" | "ord" | "quem", string | number | null>> = {},
+  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; ord?: string; quem?: string; semCargo?: boolean; lista?: string },
+  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "ord" | "quem" | "semCargo" | "lista", string | number | boolean | null>> = {},
   ancora = "mapa",
 ): string {
   const n = { ...atual, ...("uf" in novo ? { mun: undefined } : {}), ...novo };
-  const ano = Number(n.ano);
+  // um ano que a pergunta não tem (ex.: 2012 ao sair da pergunta 2) volta ao último
+  const anos = anosDoPintar(n.pintar ? String(n.pintar) : undefined);
+  const ano = anos.includes(Number(n.ano)) ? Number(n.ano) : anos[anos.length - 1];
   const p = new URLSearchParams({ ver: "dinheiro" });
-  if (ano !== ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1]) p.set("ano", String(ano));
+  if (ano !== anos[anos.length - 1]) p.set("ano", String(ano));
   const cargos = cargosDoAno(ano);
   if (n.cargo && cargos.includes(String(n.cargo)) && n.cargo !== cargos[0]) p.set("cargo", String(n.cargo));
   if (n.uf) p.set("uf", String(n.uf));
   if (n.uf && n.mun && ehMunicipal(ano)) p.set("mun", String(n.mun));
-  if (n.porte && ehMunicipal(ano)) p.set("porte", String(n.porte));
+  if (n.porte && ehMunicipal(ano) && n.pintar !== "voto") p.set("porte", String(n.porte));
   if (n.pintar && n.pintar !== "vaga" && PINTAR.some((x) => x.chave === n.pintar)) p.set("pintar", String(n.pintar));
-  if (n.medir === "publico") p.set("medir", "publico");
+  if (n.pintar === "voto" && n.semCargo) p.set("semcargo", "1");
+  if (n.pintar === "voto" && n.lista && n.lista !== "ricos" && listaDe(String(n.lista)) === n.lista) p.set("lista", String(n.lista));
   if (n.ord && n.ord !== "votos" && ORDENS_CANDIDATOS.some((o) => o.chave === n.ord)) p.set("ord", String(n.ord));
   if (n.quem === "eleitos") p.set("quem", "eleitos");
   return `/?${p}#${ancora}`;

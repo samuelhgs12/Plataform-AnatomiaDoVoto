@@ -4,9 +4,14 @@ import { TELA } from "@/lib/lupa";
 import { seloUf } from "@/lib/mapa";
 import type { FichaDica } from "@/lib/dica";
 
-/** `ficha`: o conteúdo gráfico da dica (MapaVivo); sem ela, a dica mostra só o texto (`descricao`, `dica`). */
-export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string; ficha?: FichaDica }
-export interface MunicipioNoMapa { ibge: string; classe: string; href: string; dica: string; atraso: number; ficha?: FichaDica }
+/**
+ * `ficha`: o conteúdo gráfico da dica (MapaVivo); sem ela, a dica mostra só o texto (`descricao`, `dica`). `marca`: um
+ * desenho por cima da cor, para a leitura não depender só dela (hachura = poucos candidatos ou fora da conta; pontos =
+ * o eleito já tinha o cargo).
+ */
+export type MarcaMapa = "hachura" | "pontos";
+export interface EstadoNoMapa { uf: string; classe: string; href: string; sigla: string; valor: string; descricao: string; ficha?: FichaDica; marca?: MarcaMapa }
+export interface MunicipioNoMapa { ibge: string; classe: string; href: string; dica: string; atraso: number; ficha?: FichaDica; marca?: MarcaMapa }
 
 interface Props {
   titulo: string;
@@ -39,8 +44,16 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
   const xs = ESTADOS_MAPA.filter((e) => comDados.has(e.uf)).map((e) => e.x);
   const [oeste, leste] = [Math.min(...xs), Math.max(...xs)];
   const varre = (x: number) => ({ "--varre": leste > oeste ? Math.round(((x - oeste) / (leste - oeste)) * 100) / 100 : 0 }) as CSSProperties;
+  const comMarca = estados.some((e) => e.marca) || municipios.some((m) => m.marca);
   return (
     <svg viewBox={`0 0 ${TELA.larg} ${TELA.alt}`} className="mapa-abst" role="group" aria-label={titulo} data-zoom={uf && zoom ? "uf" : "brasil"}>
+      {comMarca && (
+        <defs>
+          {/* no espaço da tela (userSpaceOnUse): o desenho fica do mesmo tamanho em qualquer zoom da câmera */}
+          <pattern id="marca-hachura" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line className="marca-traco" x1="0" y1="0" x2="0" y2="6" /></pattern>
+          <pattern id="marca-pontos" width="5" height="5" patternUnits="userSpaceOnUse"><circle className="marca-ponto" cx="2.5" cy="2.5" r="1" /></pattern>
+        </defs>
+      )}
       <g className="lupa">
         <g className="camera" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.k})` }}>
           <g aria-hidden="true">
@@ -55,6 +68,11 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
               </a>
             );
           })}
+          {estados.some((e) => e.marca) && (!uf || !zoom || !municipios.length) && (
+            <g className="marcas" aria-hidden="true">
+              {ESTADOS_MAPA.filter((e) => comDados.get(e.uf)?.marca).map((e) => <path key={e.uf} d={e.d} className={`marca ${comDados.get(e.uf)!.marca}`} />)}
+            </g>
+          )}
           {uf && zoom && (
             <g className="municipios" key={uf}>
               {municipios.map((m) => (
@@ -63,6 +81,11 @@ export function MapaAbstencao({ titulo, camera, estados, uf, zoom = true, munici
                   <use href={desenho(m.ibge)} />
                 </a>
               ))}
+            </g>
+          )}
+          {uf && zoom && municipios.some((m) => m.marca) && (
+            <g className="marcas" aria-hidden="true" key={`marcas-${uf}`}>
+              {municipios.filter((m) => m.marca).map((m) => <use key={m.ibge} href={desenho(m.ibge)} className={`marca ${m.marca}`} />)}
             </g>
           )}
           {contorno && <path className="contorno-uf" d={contorno.d} aria-hidden="true" />}

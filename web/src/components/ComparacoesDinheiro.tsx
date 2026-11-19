@@ -1,18 +1,11 @@
-import Link from "next/link";
 import { lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
-import {
-  contaGastoEstado, ehMajoritario, ehMunicipal, emCada100, mediaPorCandidato, mediasPorResultado, qualificacao, tresGrupos, valorCidade, valorDoEstado, valorDoPorte,
-} from "@/lib/dinheiro";
-import { compararGrupos } from "@/lib/estatistica";
+import { contaGastoEstado, emCada100, mediaPorCandidato, mediasPorResultado, qualificacao, valorCidade, valorDoEstado, valorDoPorte } from "@/lib/dinheiro";
 import { NOME_UF, respostaSucesso, sucessoTresGrupos, type LinhaFontes, type LinhaSucesso } from "@/lib/financiamento";
 import { inteiro, reais } from "@/lib/format";
-import { coberturaDisputas, daMedida, maiorGastador, respostaMaior, sucessoPorGasto, type LinhaGastoFaixa, type LinhaMaiorGasto } from "@/lib/gastos";
-import { porteDe, PORTES, type LinhaEstado, type LinhaMunicipio, type LinhaResumo, type Porte } from "@/lib/territorio";
+import { PORTES, type LinhaEstado, type LinhaMunicipio, type LinhaResumo, type Porte } from "@/lib/territorio";
 import { BarrasH } from "./BarrasH";
 import { GradeCem } from "./GradeCem";
-
-type Medir = "recursos" | "publico";
 
 interface Props {
   ano: number;
@@ -23,9 +16,7 @@ interface Props {
   /** nome da cidade escolhida (já com a grafia do site) */
   nomeMun?: string;
   porte?: Porte;
-  medir: Medir;
-  /** endereços da página onde o componente está (mapa ou análise): a medida e cada estado */
-  hrefMedir: (m: Medir) => string;
+  /** endereço de cada estado na página onde o componente está (mapa ou análise) */
   hrefUf: (uf: string) => string;
   /** no painel escuro do mapa da página inicial (blocos "noite") ou em cartões claros (análise) */
   noite?: boolean;
@@ -34,23 +25,20 @@ interface Props {
 }
 
 /**
- * As comparações da área de dinheiro, iguais no mapa da página inicial (camada Dinheiro) e em /analises/dinheiro:
- * "Comparar os estados" (gasto por vaga e média recebida por candidato, público e privado) e "Quem teve mais dinheiro
- * se elegeu mais?" (perguntas 2 e 8 juntas, medindo por todo o dinheiro ou só pelo público). Lê as análises
- * municipios, q2 e q8 (em cache); as contas são de src/lib/dinheiro.ts, gastos.ts e financiamento.ts.
+ * As comparações da área de dinheiro (perguntas 1 e 8), em /analises/dinheiro: "Comparar os estados" (gasto por vaga e
+ * média recebida por candidato, público e privado) e "Quem recebeu mais dinheiro público se elegeu mais?" (pergunta 8).
+ * A pergunta 2 (patrimônio declarado) fica na camada Dinheiro do mapa (VisaoPatrimonio). Lê as análises municipios e
+ * q8 (em cache); as contas são de src/lib/dinheiro.ts e financiamento.ts.
  */
-export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte, medir, hrefMedir, hrefUf, noite, semGasto }: Props) {
-  const [dados, q2, q8] = await Promise.all([
+export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte, hrefUf, noite, semGasto }: Props) {
+  const [dados, q8] = await Promise.all([
     lerAnalise("municipios", ["resumo", "estados"]),
-    lerAnalise("q2", ["faixas", "maior_gasto"]),
     lerAnalise("q8", ["sucesso", "fontes"]),
   ]);
   if (!dados?.resumo || !dados.estados) return null;
   const resumo = comoObjetos<LinhaResumo>(dados.resumo);
   const estados = comoObjetos<LinhaEstado>(dados.estados);
   const ufs = [...new Set(estados.map((e) => e.uf).filter((u) => NOME_UF[u]))].sort();
-  const municipal = ehMunicipal(ano);
-  const majoritario = ehMajoritario(cargo);
   const porteInfo = porte ? PORTES.find((p) => p.chave === porte) : undefined;
   const nomeUf = uf ? NOME_UF[uf] ?? uf : "seis estados";
   const lugar = mun ? nomeMun ?? "a cidade" : uf ? nomeUf : "Seis estados";
@@ -65,21 +53,10 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
   const estadosMedia = ufs.map((u) => ({ uf: u, nome: NOME_UF[u] ?? u, m: mediaPorCandidato(fontes, ano, cargo, u) })).filter((e) => e.m.candidaturas > 0)
     .sort((a, b) => b.m.publico + b.m.privado - (a.m.publico + a.m.privado));
 
-  // quem teve mais dinheiro se elegeu mais? (pergunta 2: todo o dinheiro; pergunta 8: só o público)
-  const faixasQ2 = q2?.faixas ? daMedida(comoObjetos<LinhaGastoFaixa>(q2.faixas), "recursos") : [];
-  const maiores = q2?.maior_gasto ? daMedida(comoObjetos<LinhaMaiorGasto>(q2.maior_gasto), "gasto") : [];
+  // quem recebeu mais dinheiro público se elegeu mais? (pergunta 8)
   const sucesso = q8?.sucesso ? comoObjetos<LinhaSucesso>(q8.sucesso) : [];
-  const recUf = tresGrupos(sucessoPorGasto(faixasQ2, f));
   const pubUf = sucessoTresGrupos(sucesso, f);
-  const respRec = recUf.mais.candidaturas && recUf.menos.candidaturas ? compararGrupos(recUf.mais, recUf.menos).resposta : null;
   const respPub = respostaSucesso(pubUf);
-  const maior = maiorGastador(maiores, f);
-  const cobertura = coberturaDisputas(maior);
-  const porPorte = PORTES.map((p) => {
-    const sel = resumo.filter((x) => x.ano === ano && (!uf || x.uf === uf) && porteDe(x.eleitorado)?.chave === p.chave && x.maior_venceu != null);
-    const venceu = sel.filter((x) => x.maior_venceu).length;
-    return { ...p, n: sel.length, venceu, parte: sel.length ? venceu / sel.length : 0 };
-  });
   const linhaMun = mun ? resumo.find((x) => x.ano === ano && x.id_municipio === mun.id_municipio) : undefined;
   const publico = mun ? valorCidade(linhaMun, "publico", cargo) : valorDoEstado(estados, ano, uf, "publico", cargo);
   const medias = mediasPorResultado(fontes, ano, cargo, uf);
@@ -116,39 +93,16 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
           estado inteiro: o bloco vem recolhido. */}
       <section id="comparar" className={classe("area-comparacao")} aria-labelledby="h-comp">
         <details open={!mun} className="area-comparacao">
-          <summary><Titulo id="h-comp">Quem teve mais dinheiro se elegeu mais?</Titulo></summary>
+          <summary><Titulo id="h-comp">Quem recebeu mais dinheiro público se elegeu mais?</Titulo></summary>
           <p className="comparacao-sub">{uf ? nomeUf : "Seis estados"} · {cargo.toLowerCase()} · {ano} · todos os candidatos{uf ? " do estado" : ""}{mun ? ` (não só de ${lugar})` : ""}. Cada candidato é comparado com os concorrentes da mesma disputa.</p>
-          <div className="chips" role="group" aria-label="Medir pelo">
-            <Link href={hrefMedir("recursos")} scroll={false} className={`chip${medir === "recursos" ? " on" : ""}`} aria-current={medir === "recursos" ? "true" : undefined}>{noite && majoritario ? "Quem mais gastou" : "Todo o dinheiro"}</Link>
-            <Link href={hrefMedir("publico")} scroll={false} className={`chip${medir === "publico" ? " on" : ""}`} aria-current={medir === "publico" ? "true" : undefined}>Só o dinheiro público</Link>
-          </div>
-          <p className="escala">{medir === "recursos" ? (noite && majoritario ? `Para ${cargo.toLowerCase()}, a medida é o gasto declarado de cada candidato: se o que mais gastou na disputa venceu.` : "Todo o dinheiro: o maior valor entre o que o candidato recebeu e o que gastou (considera também quem ganhou material de campanha).") : "Dinheiro público: o que veio do Fundo Eleitoral e do Fundo Partidário."}{noite && " A escolha vale só para esta comparação, não para as cores do mapa."}</p>
+          <p className="escala">Dinheiro público: o que veio do Fundo Eleitoral e do Fundo Partidário.</p>
 
-          {medir === "recursos" && majoritario ? (
-            maior.disputas === 0 ? <p className="muted">Sem disputas comparáveis.</p> : (
-              <>
-                <p className="frase-comp">Quem mais gastou venceu em <b>{inteiro(maior.venceu)} de {inteiro(maior.disputas)}</b> {cargo === "Prefeito" ? "cidades" : "disputas"}: <b>{emCada100(maior.pct)} em cada 100</b>. Se o vencedor fosse escolhido ao acaso, seriam cerca de {emCada100(maior.pctSorteio)}.</p>
-                <div className="grades">
-                  <figure><GradeCem parte={maior.pct} titulo="Quem mais gastou venceu" destaque /><figcaption><b>{emCada100(maior.pct)} em cada 100</b> {cargo === "Prefeito" ? "cidades" : "disputas"}: quem mais gastou venceu</figcaption></figure>
-                  <figure><GradeCem parte={maior.pctSorteio} titulo="Por acaso" /><figcaption><b>{emCada100(maior.pctSorteio)} em cada 100</b>: o esperado se fosse por acaso</figcaption></figure>
-                </div>
-                {cargo === "Prefeito" && municipal && !mun && (
-                  <details className="mais-dentro dinheiro-barras"><summary>Por porte da cidade</summary>
-                    <BarrasH compacto max={1} titulo={`Quem mais gastou para prefeito venceu, por porte da cidade, ${ano}`}
-                      linhas={porPorte.filter((pp) => pp.n > 0).map((pp) => ({ chave: pp.chave, rotulo: pp.rotulo.replace(" eleitores", ""), valor: pp.parte, classe: "pub", trilhoCheio: true, texto: `${emCada100(pp.parte)} em cada 100`, subtexto: `${inteiro(pp.venceu)} de ${inteiro(pp.n)} cidades` }))} />
-                  </details>
-                )}
-                <p className="escala">{qualificacao(respostaMaior(maior))} {cobertura.excluidas > 0 && `Ficaram de fora ${inteiro(cobertura.excluidas)} disputas (${cobertura.motivos.map((m) => `${m.motivo}: ${inteiro(m.n)}`).join("; ")}).`}</p>
-              </>
-            )
-          ) : (() => {
-            const g = medir === "recursos"
-              ? { mais: recUf.mais, menos: recUf.menos, nada: recUf.nada, rotulos: ["Mais dinheiro", "Menos dinheiro", "Nenhum dinheiro declarado"], resp: respRec }
-              : { mais: pubUf.muito, menos: pubUf.pouco, nada: pubUf.nada, rotulos: ["Mais dinheiro público", "Menos dinheiro público", "Nenhum dinheiro público"], resp: respPub.curta };
-            const detalhes = ["os 25% com mais em cada disputa", "os demais que tiveram algum", medir === "recursos" ? "declararam zero" : "não receberam"];
+          {(() => {
+            const g = { mais: pubUf.muito, menos: pubUf.pouco, nada: pubUf.nada, rotulos: ["Mais dinheiro público", "Menos dinheiro público", "Nenhum dinheiro público"], resp: respPub.curta };
+            const detalhes = ["os 25% com mais em cada disputa", "os demais que tiveram algum", "não receberam"];
             return g.mais.candidaturas === 0 ? <p className="muted">Sem dados para este recorte.</p> : (
               <>
-                <p className="frase-comp">De cada 100 candidatos com {medir === "recursos" ? "mais dinheiro" : "mais dinheiro público"}, <b>{emCada100(g.mais.taxa)} se elegeram</b>. Entre os que tiveram menos, {emCada100(g.menos.taxa)}{g.nada.candidaturas > 0 && <>; entre os que {medir === "recursos" ? "não declararam dinheiro" : "não receberam dinheiro público"}, {emCada100(g.nada.taxa)}</>}.</p>
+                <p className="frase-comp">De cada 100 candidatos com mais dinheiro público, <b>{emCada100(g.mais.taxa)} se elegeram</b>. Entre os que tiveram menos, {emCada100(g.menos.taxa)}{g.nada.candidaturas > 0 && <>; entre os que não receberam dinheiro público, {emCada100(g.nada.taxa)}</>}.</p>
                 <div className="grades tres">
                   {([[g.mais, 0, true], [g.menos, 1, false], [g.nada, 2, false]] as const).filter(([x]) => x.candidaturas > 0).map(([x, i, d]) => (
                     <figure key={i}>
@@ -158,8 +112,8 @@ export async function ComparacoesDinheiro({ ano, cargo, uf, mun, nomeMun, porte,
                     </figure>
                   ))}
                 </div>
-                <p className="escala">{qualificacao(g.resp)}{medir === "publico" && " Os partidos costumam mandar mais dinheiro para quem já tem mais chance."}</p>
-                {medir === "publico" && publico !== null && <p className="escala">De onde veio o dinheiro {emLugar}: R$ {Math.round(publico * 100)} de cada R$ 100 recebidos pelas campanhas a {cargo.toLowerCase()} foram públicos.</p>}
+                <p className="escala">{qualificacao(g.resp)} Os partidos costumam mandar mais dinheiro para quem já tem mais chance.</p>
+                {publico !== null && <p className="escala">De onde veio o dinheiro {emLugar}: R$ {Math.round(publico * 100)} de cada R$ 100 recebidos pelas campanhas a {cargo.toLowerCase()} foram públicos.</p>}
               </>
             );
           })()}
