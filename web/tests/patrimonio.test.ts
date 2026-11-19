@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   anosDoTipo, classificar, composicaoEleitos, concordancia, concordanciaDeCandidatos, corDaMetade, corDaParteCidades, disputaDeCandidatos, escada,
-  escadaDeCandidatos, escadaDeVotos, escalaLista, eixoSerie, fraseSerie, afastarRotulos, colunasComposicao, escadaPosicoes, faixaDoValor, frasePosicao, fraseTopo, histograma, histogramaDeCandidatos, juntarPatrimonio, legendaMetade,
+  escadaDeCandidatos, escadaDeVotos, escalaLista, eixoSerie, fraseSerie, afastarRotulos, escadaPosicoes, frasePosicao, fraseTopo, juntarPatrimonio, legendaMetade,
   legendaPrefeito, listaDe, listaDeCandidatos, listaDoRecorte, marcasLog, medianaPonderada, medianasDeCandidatos, medianasDoRecorte, metadeDaCidade,
-  metadeMaisRica, naEscalaLog, posicaoDoEleito, posicaoLog, quemTinha, recorteDaDisputa, serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade,
+  metadeMaisRica, naEscalaLog, posicaoDoEleito, quemTinha, recorteDaDisputa, serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade,
   taxaDoTopo, textoPosicao, topoDaComposicao, tituloP2, valorTipico, vitoriaDoMaisRico, numeroDoTopo, rotuloRespostaP2, type GrupoComposicao,
-  type CandidatoP2, type LinhaDecil, type LinhaDisputa, type LinhaFaixa, type LinhaLista, type LinhaMedianas, type LinhaPares, type LinhaPosicao, type LinhaVereadorCidade,
+  type CandidatoP2, type LinhaDecil, type LinhaDisputa, type LinhaLista, type LinhaMedianas, type LinhaPares, type LinhaPosicao, type LinhaVereadorCidade,
 } from "../src/lib/patrimonio";
 
 const dec = (o: Partial<LinhaDecil>): LinhaDecil => ({ ano: 2024, cargo: "Vereador", uf: "PE", tinha_cargo: false, decil: 1, candidatos: 10, eleitos: 1, mediana: 10_000, ...o });
@@ -155,22 +155,6 @@ describe("medianasDoRecorte e medianasDeCandidatos", () => {
   });
 });
 
-describe("faixaDoValor, posicaoLog e histograma", () => {
-  it("usa os limites de 10 em 10 do SQL", () => {
-    expect([0, 999, 1000, 99_999, 1e6, 2e7].map(faixaDoValor)).toEqual([0, 1, 2, 3, 5, 6]);
-    expect(posicaoLog(1e5)).toBeCloseTo(0.5);
-    expect(posicaoLog(1e12)).toBe(1);
-  });
-  it("dá a parte de cada faixa em cada grupo", () => {
-    const f = (o: Partial<LinhaFaixa>): LinhaFaixa => ({ ano: 2024, cargo: "Vereador", uf: "PE", sem_cargo: false, eleito: true, faixa: 3, candidatos: 3, ...o });
-    const h = histograma([f({}), f({ faixa: 0, candidatos: 1 }), f({ eleito: false, faixa: 2, candidatos: 4 })], { anos: [2024], cargo: "Vereador", uf: "PE" })!;
-    expect(h.eleitos[3]).toBe(0.75);
-    expect(h.nao[2]).toBe(1);
-    expect(histogramaDeCandidatos([cand({ eleito: true, patrimonio: 5e4 })])!.eleitos[3]).toBe(1);
-    expect(histogramaDeCandidatos([])).toBeNull();
-  });
-});
-
 describe("composicaoEleitos e topoDaComposicao", () => {
   it("junta os décimos em quatro grupos", () => {
     const d = escada([dec({ decil: 0, candidatos: 50, eleitos: 2 }), dec({ decil: 2, candidatos: 40, eleitos: 2 }), dec({ decil: 10, candidatos: 10, eleitos: 6 })], { anos: [2024], cargo: "Vereador" });
@@ -282,23 +266,6 @@ describe("afastarRotulos", () => {
     expect(afastarRotulos([10, 12, 50], 10)).toEqual([10, 20, 50]);
     expect(afastarRotulos([90, 95, 100], 10, 0, 100)).toEqual([80, 90, 100]);
     expect(afastarRotulos([], 10)).toEqual([]);
-  });
-});
-
-describe("colunasComposicao", () => {
-  const d = escada([dec({ decil: 0, candidatos: 60, eleitos: 39 }), dec({ decil: 3, candidatos: 20, eleitos: 21 }), dec({ decil: 7, candidatos: 15, eleitos: 29 }), dec({ decil: 10, candidatos: 5, eleitos: 11 })], { anos: [2024], cargo: "Vereador" });
-  const c = colunasComposicao(composicaoEleitos(d, { majoritario: false }));
-  it("empilha do mais rico (em cima) aos sem bens, somando a altura útil", () => {
-    const cand = c.colunas[0].segmentos;
-    expect(cand.map((s) => s.chave)).toEqual(["topo", "meio", "baixo", "sem"]);
-    expect(cand[0].y).toBe(26);
-    expect(cand.at(-1)!.y + cand.at(-1)!.h).toBeCloseTo(300 - 6);
-  });
-  it("põe fora o percentual que não cabe e afasta os nomes", () => {
-    expect(c.colunas[0].segmentos[0]).toMatchObject({ chave: "topo", dentro: false });   // 5% de 268 ≈ 13
-    expect(c.nomes[0]).toMatchObject({ chave: "topo", linhas: ["Os 10%", "mais ricos"], fora: null });   // 11% cabe
-    for (let i = 1; i < c.nomes.length; i++) expect(c.nomes[i].y - c.nomes[i - 1].y).toBeGreaterThanOrEqual(30);
-    expect(c.faixas).toHaveLength(4);
   });
 });
 

@@ -39,8 +39,6 @@ export interface LinhaMedianas {
   ano: number; cargo: string; uf: string; sem_cargo: boolean; eleitos: number; eleitos_sem_bens: number; nao_eleitos: number; nao_sem_bens: number;
   mediana_eleitos: number | null; mediana_nao: number | null; mediana_todos: number | null;
 }
-/** pat_faixas: histograma de 10 em 10 (faixa 0 = sem bens; 1 = menos de R$ 1 mil ... 6 = R$ 10 milhões ou mais). */
-export interface LinhaFaixa { ano: number; cargo: string; uf: string; sem_cargo: boolean; eleito: boolean; faixa: number; candidatos: number }
 /** pat_pares: pares de candidatos da mesma disputa com votos diferentes; pontos = 2 por par concordante + 1 por empate. */
 export interface LinhaPares { ano: number; cargo: string; uf: string; sem_cargo: boolean; pares: number; pontos: number }
 /** pat_lista: as 10 primeiras linhas de cada lista de candidatos. */
@@ -297,38 +295,7 @@ export function medianasDeCandidatos(cls: CandidatoP2[]): Medianas {
   };
 }
 
-// ---------- histograma em escala de 10 em 10 ----------
-
-export const FAIXAS_LOG: { faixa: number; rotulo: string }[] = [
-  { faixa: 0, rotulo: "Sem bens" }, { faixa: 1, rotulo: "até R$ 1 mil" }, { faixa: 2, rotulo: "R$ 1 mil a 10 mil" }, { faixa: 3, rotulo: "R$ 10 mil a 100 mil" },
-  { faixa: 4, rotulo: "R$ 100 mil a 1 milhão" }, { faixa: 5, rotulo: "R$ 1 a 10 milhões" }, { faixa: 6, rotulo: "R$ 10 milhões ou mais" },
-];
-/** A faixa de um valor, com os mesmos limites do SQL. */
-export const faixaDoValor = (v: number) => (v <= 0 ? 0 : v < 1e3 ? 1 : v < 1e4 ? 2 : v < 1e5 ? 3 : v < 1e6 ? 4 : v < 1e7 ? 5 : 6);
-/**
- * Onde um valor fica no eixo das faixas 1 a 6 (0 a 1): cada faixa ocupa 1/6 e, dentro dela, a escala é de 10 em 10
- * (a faixa 1 vai de R$ 100 a R$ 1 mil no desenho; a 6, de R$ 10 milhões a R$ 100 milhões; fora disso, encosta na ponta).
- */
-export const posicaoLog = (v: number) => Math.min(1, Math.max(0, (Math.log10(Math.max(v, 1)) - 2) / 6));
-
-export interface Histograma { eleitos: number[]; nao: number[]; nEleitos: number; nNao: number }
-const montarHist = (cont: (eleito: boolean, faixa: number) => number): Histograma | null => {
-  const linha = (e: boolean) => FAIXAS_LOG.map((f) => cont(e, f.faixa));
-  const [el, na] = [linha(true), linha(false)];
-  const [ne, nn] = [el.reduce((a, v) => a + v, 0), na.reduce((a, v) => a + v, 0)];
-  if (ne + nn === 0) return null;
-  return { eleitos: el.map((v) => (ne ? v / ne : 0)), nao: na.map((v) => (nn ? v / nn : 0)), nEleitos: ne, nNao: nn };
-};
-/** As partes de cada faixa entre os eleitos e entre os não eleitos de um recorte (tabela pat_faixas); null sem ninguém. */
-export function histograma(linhas: LinhaFaixa[], f: FiltroP2, { semCargo = false } = {}): Histograma | null {
-  const sel = linhas.filter((l) => doFiltro(f)(l) && l.sem_cargo === semCargo);
-  return montarHist((e, fx) => sel.filter((l) => l.eleito === e && l.faixa === fx).reduce((a, l) => a + l.candidatos, 0));
-}
-export function histogramaDeCandidatos(cls: CandidatoP2[]): Histograma | null {
-  return montarHist((e, fx) => cls.filter((c) => c.eleito === e && faixaDoValor(c.patrimonio) === fx).length);
-}
-
-// ---------- quem são os eleitos: candidatos × eleitos por grupo ----------
+// ---------- de que grupo de patrimônio vieram os eleitos (para o número do décimo mais rico) ----------
 
 export interface GrupoComposicao { chave: string; rotulo: string; candidatos: number; eleitos: number; parteCandidatos: number; parteEleitos: number; cor: string }
 
@@ -349,60 +316,6 @@ export function composicaoEleitos(d: Degrau[], { majoritario }: { majoritario: b
     return { chave: g.chave, rotulo: g.rotulo, candidatos, eleitos, parteCandidatos: tc ? candidatos / tc : 0, parteEleitos: te ? eleitos / te : 0, cor: g.cor };
   }).filter((g) => g.candidatos > 0);
 }
-
-/** Os nomes dos grupos em até duas linhas, para os rótulos ao lado das colunas. */
-const NOME_EM_LINHAS: Record<string, string[]> = {
-  topo: ["Os 10%", "mais ricos"], meio: ["6º ao 9º", "décimo"], baixo: ["Metade", "menos rica"], sem: ["Sem bens"],
-  "1": ["O mais", "rico"], "2": ["2º mais", "rico"], "3": ["3º mais", "rico"], "4": ["4º ou", "abaixo"],
-};
-
-/** Um pedaço de uma coluna: a posição, a altura e onde fica o percentual (dentro, se couber; senão, ao lado). */
-export interface SegmentoColuna { chave: string; cor: string; parte: number; y: number; h: number; dentro: boolean; yRotulo: number }
-export interface ColunasComposicao {
-  largura: number; altura: number; topo: number; base: number; larguraColuna: number;
-  colunas: { titulo: string; x: number; segmentos: SegmentoColuna[] }[];
-  /** os nomes à direita da coluna dos eleitos, já afastados; `fora`: o percentual dos eleitos, quando não coube dentro */
-  nomes: { chave: string; y: number; linhas: string[]; fora: string | null }[];
-  /** as faixas que ligam o mesmo grupo de uma coluna à outra (pontos do polígono) */
-  faixas: { chave: string; cor: string; pontos: string }[];
-}
-
-/**
- * O desenho de "Quem são os eleitos" em duas colunas 100% em pé (candidatos e eleitos), com o grupo mais rico em cima e
- * os sem bens embaixo. O percentual fica dentro do pedaço quando ele tem pelo menos `minTexto` de altura; senão, fora:
- * à esquerda da coluna dos candidatos e junto do nome, à direita da dos eleitos. Os rótulos de fora são afastados
- * (afastarRotulos) para não se sobreporem. Tudo em unidades do viewBox.
- */
-export function colunasComposicao(grupos: GrupoComposicao[], { largura = 460, altura = 300, topo = 26, base = 6, larguraColuna = 92, vao = 58, esquerda = 40, minTexto = 16 } = {}): ColunasComposicao {
-  const deCima = [...grupos].reverse();
-  const util = altura - topo - base;
-  const xs = [esquerda, esquerda + larguraColuna + vao];
-  const coluna = (titulo: string, x: number, parte: (g: GrupoComposicao) => number) => {
-    let y = topo;
-    const segs = deCima.map((g) => {
-      const h = parte(g) * util;
-      const seg = { chave: g.chave, cor: g.cor, parte: parte(g), y, h, dentro: h >= minTexto, yRotulo: y + h / 2 };
-      y += h;
-      return seg;
-    });
-    // os percentuais de fora (à esquerda dos candidatos) se afastam entre si
-    const fora = segs.filter((sg) => !sg.dentro && sg.parte > 0);
-    afastarRotulos(fora.map((sg) => sg.yRotulo), 14, topo + 6, altura - base - 2).forEach((y2, i) => { fora[i].yRotulo = y2; });
-    return { titulo, x, segmentos: segs };
-  };
-  const colunas = [coluna("Candidatos", xs[0], (g) => g.parteCandidatos), coluna("Eleitos", xs[1], (g) => g.parteEleitos)];
-  const eleitos = colunas[1].segmentos;
-  const linhasDe = (sg: SegmentoColuna) => NOME_EM_LINHAS[sg.chave] ?? [sg.chave];
-  // o nome (uma ou duas linhas) fica centrado no pedaço; dois nomes de duas linhas pedem ~30 de distância
-  const centros = afastarRotulos(eleitos.map((sg) => sg.y + sg.h / 2), 30, topo + 8, altura - base - 14);
-  const nomes = eleitos.map((sg, i) => ({ chave: sg.chave, y: centros[i], linhas: linhasDe(sg), fora: sg.dentro || sg.parte <= 0 ? null : `${Math.round(sg.parte * 100)}%` }));
-  const faixas = colunas[0].segmentos.map((a, i) => {
-    const b2 = eleitos[i], x0 = xs[0] + larguraColuna, x1 = xs[1];
-    return { chave: a.chave, cor: a.cor, pontos: `${x0},${a.y} ${x1},${b2.y} ${x1},${b2.y + b2.h} ${x0},${a.y + a.h}` };
-  });
-  return { largura, altura, topo, base, larguraColuna, colunas, nomes, faixas };
-}
-
 /** O grupo de cima da composição (os 10% mais ricos ou o mais rico): a frase "é X% dos candidatos, mas Y% dos eleitos". */
 export const topoDaComposicao = (g: GrupoComposicao[]) => g.find((x) => x.chave === "topo" || x.chave === "1") ?? null;
 

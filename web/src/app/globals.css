@@ -2556,39 +2556,12 @@ a.q-ver:active { transform: scale(0.98); }
 .degrau-valor { font-size: 12px; line-height: 1.2; color: var(--noite-muted); overflow-wrap: anywhere; }
 .escada-eixo { display: flex; justify-content: space-between; margin-top: 6px; padding-left: calc(100% / 11 + 12px); font-size: 12px; color: var(--noite-muted); }
 .escada-eixo span:first-child::before { content: "← "; } .escada-eixo span:last-child::after { content: " →"; }
-.escada-p2.mini .escada-barras { height: 44px; gap: 2px; }
-.escada-p2.mini .degrau { grid-template-rows: minmax(0, 1fr); }
-.escada-p2.mini .degrau.sem-bens { margin-right: 5px; }
-.p2-faixa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; margin-top: 18px; padding: 12px 16px; border-radius: var(--raio); background: var(--noite3); }
-.p2-faixa p { margin: 0; font-size: 16px; font-weight: 600; color: var(--sobre-noite); }
 .p2-chips .chip { min-height: 44px; }
 @media (max-width: 620px) {
   .escada-barras { height: 200px; }
   .degrau-pct { font-size: 12px; } .degrau-rot { font-size: 11px; } .degrau-valor { font-size: 10px; }
   .escada-eixo { padding-left: 0; }
 }
-
-/* eleitos e não eleitos: o histograma de 10 em 10, com a mediana marcada */
-.faixas-p2 { margin: 0; }
-.fx-linha { display: grid; grid-template-columns: 6.2em 2.6em minmax(0, 1fr); gap: 10px; align-items: end; height: 92px; margin-bottom: 12px; }
-.fx-rot { align-self: center; display: grid; font-size: 14px; } .fx-rot b { color: var(--sobre-noite); } .fx-rot small { color: var(--noite-muted); font-size: 12px; }
-.fx-sem { position: relative; height: 100%; display: flex; align-items: flex-end; border-radius: 3px; background: color-mix(in srgb, var(--sobre-noite) 6%, transparent); }
-.fx-sem i { display: block; width: 100%; background: repeating-linear-gradient(45deg, var(--p2-barra-sem) 0 3px, color-mix(in srgb, var(--p2-barra-sem) 55%, transparent) 3px 6px); border-radius: 3px 3px 0 0; }
-.fx-sem small { position: absolute; left: 0; right: 0; bottom: 100%; font-size: 11px; text-align: center; color: var(--noite-muted); }
-.fx-bins { position: relative; height: 100%; display: flex; align-items: stretch; gap: 2px; border-bottom: 1px solid var(--noite-linha); }
-.fx-bin { flex: 1 1 0; display: flex; align-items: flex-end; }
-.fx-bin i { display: block; width: 100%; border-radius: 3px 3px 0 0; }
-.fx-eleitos .fx-bin i { background: var(--p2-eleitos); } .fx-nao .fx-bin i { background: var(--p2-nao); }
-.fx-mediana { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--sobre-noite); }
-.fx-mediana span { position: absolute; top: -2px; left: 4px; padding: 1px 5px; border-radius: 4px; background: var(--noite3); font-size: 12px; font-style: normal; font-weight: 650; white-space: nowrap; color: var(--sobre-noite); }
-.fx-eixo { height: auto; margin: -4px 0 6px; align-items: start; }
-.fx-eixo .fx-bins { border: 0; height: 18px; }
-.fx-eixo .fx-bins small { position: absolute; top: 0; transform: translateX(-50%); font-size: 11px; color: var(--noite-muted); white-space: nowrap; }
-.fx-sem-rot { font-size: 11px; line-height: 1.1; color: var(--noite-muted); text-align: center; }
-.fx-legenda { font-size: 12.5px; color: var(--noite-muted); }
-@media (max-width: 620px) { .fx-linha { grid-template-columns: 4.6em 2.2em minmax(0, 1fr); gap: 6px; } .fx-eixo .fx-bins small:nth-child(even) { display: none; } }
-
-/* quem são os eleitos: candidatos × eleitos em barras 100% */
 
 /* os candidatos */
 .p2-abas { margin: 0 0 14px; }
@@ -2652,10 +2625,8 @@ a.q-ver:active { transform: scale(0.98); }
 .serie-disputa i.p1 { background: var(--p2-pos1); } .serie-disputa i.p2 { background: var(--p2-pos2); } .serie-disputa i.p3 { background: var(--p2-pos3); }
 .serie-disputa i.psb { background: var(--p2-sem-bens); } .serie-disputa i.fora, .serie-disputa i.sem { background: repeating-linear-gradient(45deg, var(--p2-traco) 0 1.5px, var(--p2-fora) 1.5px 5px); }
 .sd-txt { display: grid; font-size: 13.5px; font-weight: 600; } .sd-txt small { font-size: 12px; font-weight: 400; color: var(--noite-muted); }
-@media (max-width: 1000px) { .painel.din.p2 > .meia { grid-column: 1 / -1; } }
 .legenda-p2 { column-gap: 6px; }
 .legenda-p2 li { min-width: 4.6em; }
-.fx-sem small { bottom: auto; top: 2px; font-weight: 650; color: var(--sobre-noite); text-shadow: 0 0 3px var(--noite2); }
 .dp-legenda span { white-space: nowrap; }
 .escada-p2.votos .degrau.sem-bens { margin-right: 0; }
 .escada-p2.votos .degrau-trilho i { background: var(--p2-nao); }
@@ -2678,38 +2649,17 @@ a.q-ver:active { transform: scale(0.98); }
 }
 .lp-alerta { font-size: 12px; font-weight: 600; color: var(--amarelo-400); cursor: help; }
 
-/* pergunta 2, ajustes: a mediana acima das barras, a legenda das cores numa linha e a série com duas linhas nomeadas */
-.fx-linha { height: 112px; padding-top: 20px; }
-.fx-mediana { top: -20px; }
-.fx-mediana span { top: 0; }
+/* pergunta 2, ajustes: a série com duas linhas nomeadas */
 .serie-p2 .sp-nome { text-anchor: start; font-size: 13px; font-weight: 650; fill: var(--sobre-noite); }
-.fx-linha.fx-eixo { height: auto; padding-top: 0; }
 .serie-p2 .sp-nome-valor { font-weight: 700; }
 
-/* pergunta 2: quem são os eleitos em duas colunas 100% em pé (o cartão inteiro: sem espaço vazio embaixo) */
+/* pergunta 2: a cor da linha da série sem quem já tinha o cargo */
 .observatorio, .paleta-mapa { --p2-serie-sem: var(--c3); }
-.p2-composicao { display: flex; flex-direction: column; }
-.comp-p2 { flex: 1; display: flex; min-height: 280px; margin: 0; }
-.comp-p2 svg { display: block; width: 100%; height: 100%; min-height: 280px; overflow: visible; }
-.comp-seg.q0, .comp-faixa.q0 { fill: var(--q0); } .comp-seg.q1, .comp-faixa.q1 { fill: var(--q1); }
-.comp-seg.q3, .comp-faixa.q3 { fill: var(--q3); } .comp-seg.q4, .comp-faixa.q4 { fill: var(--q4); }
-.comp-seg.o { fill: url(#comp-hachura); } .comp-faixa.o { fill: var(--p2-barra-sem); }
-.comp-hachura-fundo { fill: color-mix(in srgb, var(--p2-barra-sem) 55%, transparent); } .comp-hachura-traco { stroke: var(--p2-barra-sem); stroke-width: 3; }
-.comp-seg { stroke: var(--noite2); stroke-width: 1.5; }
-.comp-faixa { opacity: 0.2; }
-.comp-p2 text { font-size: 13px; fill: var(--sobre-noite); }
-.comp-titulo { text-anchor: middle; font-weight: 650; }
-.comp-pct { text-anchor: middle; font-weight: 700; }
-.comp-pct.escuro { fill: var(--noite); }
-.comp-pct.fora { text-anchor: end; }
-.comp-nome tspan:first-child { font-weight: 650; }
 /* a série: a linha sem quem já tinha o cargo, tracejada e mais clara; os nomes nas pontas */
 .serie-p2 .sp-serie.sem .sp-linha { stroke: var(--p2-serie-sem); stroke-width: 1.8; stroke-dasharray: 6 4; }
 .serie-p2 .sp-serie.sem .sp-ponto circle { fill: var(--p2-serie-sem); }
 .serie-p2 .sp-serie.sem .sp-ponto text, .serie-p2 .sp-serie.sem .sp-nome { fill: var(--p2-serie-sem); }
 .serie-p2 .sp-ref text { text-anchor: end; font-weight: 600; fill: var(--sobre-noite); }
-@media (max-width: 620px) { .comp-p2 text { font-size: 15px; } .comp-p2 .comp-nome { font-size: 14px; } }
-@media (max-width: 1000px) { .comp-p2, .comp-p2 svg { min-height: 0; } .comp-p2 svg { height: auto; } }
 
 .serie-p2 .sp-compacta { display: none; }
 @media (max-width: 620px) { .serie-p2 .sp-larga { display: none; } .serie-p2 .sp-compacta { display: block; } .serie-p2 .sp-compacta text { font-size: 14px; } }
