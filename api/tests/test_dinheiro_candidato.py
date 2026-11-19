@@ -78,6 +78,16 @@ def test_busca_de_candidato_no_recorte_do_dinheiro(client):
     assert maria[0]["municipio"] is None
     assert client.get("/api/dinheiro/candidatos?ano=2020&cargo=Vereador&uf=MG&mun=4&q=maria").json() == []
     assert client.get(base + "&q=a").status_code == 422
+    assert maria[0]["uf"] == "MG"
+
+
+def test_busca_do_dinheiro_sem_uf_procura_nos_seis_estados(client):
+    """Sem estado escolhido no mapa, a busca vale para os seis; cada achado diz a UF."""
+    todos = client.get("/api/dinheiro/candidatos?ano=2022&cargo=Deputado%20estadual&q=maria").json()
+    so_mg = client.get("/api/dinheiro/candidatos?ano=2022&cargo=Deputado%20estadual&uf=MG&q=maria").json()
+    assert {x["id_candidatura"] for x in so_mg} <= {x["id_candidatura"] for x in todos}
+    assert all(x["uf"] for x in todos)
+    assert client.get("/api/dinheiro/candidatos?ano=2022&cargo=Deputado%20estadual&uf=MGX&q=maria").status_code == 422
 
 
 def test_busca_do_dinheiro_poe_primeiro_quem_comeca_com_o_texto(client):

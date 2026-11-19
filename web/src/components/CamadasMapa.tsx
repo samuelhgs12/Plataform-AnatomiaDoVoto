@@ -127,12 +127,12 @@ export function CamadasMapa({ modo, hrefs, legenda, comparar, comparativos, inst
           )}
           <EscolhaMunicipio nome="uf" rotulo="Estado" vazio="Os seis estados" opcoes={dinheiro.estado.opcoes} atual={dinheiro.estado.atual} params={dinheiro.estado.params} />
           {dinheiro.cidade && (
-            <EscolhaMunicipio nome="mun" rotulo="Município" vazio="O estado inteiro" opcoes={dinheiro.cidade.opcoes} atual={dinheiro.cidade.atual} params={dinheiro.cidade.params} />
+            <EscolhaMunicipio nome="mun" rotulo="Município" vazio={dinheiro.estado.atual ? "O estado inteiro" : "Os seis estados"} opcoes={dinheiro.cidade.opcoes} atual={dinheiro.cidade.atual} params={dinheiro.cidade.params} />
           )}
           {dinheiro.porte && (
             <EscolhaMunicipio nome="porte" rotulo="Porte da cidade" vazio="Todos os portes" opcoes={dinheiro.porte.opcoes} atual={dinheiro.porte.atual} params={dinheiro.porte.params} />
           )}
-          {!dinheiro.estado.atual && <p className="camadas-apoio">Selecione um estado no mapa ou na lista para ver os dados.</p>}
+          {!dinheiro.estado.atual && <p className="camadas-apoio">Embaixo do mapa, os seis estados comparados. Selecione um estado no mapa ou na lista para ver só ele.</p>}
         </div>
       )}
 

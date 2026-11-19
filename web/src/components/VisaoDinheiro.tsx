@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { apiGetOpcional, lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
 import { enquadrar, nomeProprio, quantis } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
-  abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, coberturaCurta, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, contasDoEstado, contasDoPorte, corCidade, corPorFaixas,
-  coberturaSelo, diferencaRelativa, ehMunicipal, fatias, seloValor, seta, escolhaMapaDinheiro, foraDaDisputa, foraDaDisputaPorte, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
-  camposDoHref, caminhoBuscaCandidato, MEDIDAS_ANOS, MEIAS, medidaDe, termoBuscaCandidato, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, PINTAR, referenciaDoPorte, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
+  abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, corCidade, corPorFaixas,
+  diferencaRelativa, ehMunicipal, fatias, seloValor, seta, escolhaMapaDinheiro, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
+  camposDoHref, caminhoBuscaCandidato, MEDIDAS_ANOS, MEIAS, medidaDe, termoBuscaCandidato, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, MEDIR, lugarDoAchado, opcoesMunicipio, ufDoMunicipio, referenciaDoPorte, telaDe, TITULO_TELA, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosDoRecorte, cargosDoAno, deCada100, fraseDependeram, parteDependeu, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
   type Aba, type LinhaCargo, type LinhaDespesa, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
@@ -52,7 +53,8 @@ const MAX_LISTA = 40;
  * prestações de contas, a referência das cidades de porte parecido e a eleição anterior; as cidades do estado (as de
  * maior valor e a tabela de todas); os candidatos da cidade (ou os eleitos do estado, nas gerais), em qualquer ordem;
  * onde o dinheiro foi gasto (grupos de categoria do TSE); e as comparações (ComparacoesDinheiro). Cada pergunta do menu
- * (PINTAR) mostra só os blocos que a respondem (SECOES, em src/lib/dinheiro.ts). A aba Propaganda
+ * (PINTAR) mostra só os blocos que a respondem (SECOES, em src/lib/dinheiro.ts); "Dinheiro elege?" junta as perguntas
+ * 2, 8 e 9, com a medida (todo o dinheiro ou só o público) escolhida no topo do painel. A aba Propaganda
  * (pergunta 9) fica em /analises/dinheiro. Lê as análises `municipios` e `dinheiro` e os candidatos da API; as contas
  * são de src/lib/dinheiro.ts.
  */
@@ -60,22 +62,23 @@ const QUINTOS = ["q0", "q1", "q2", "q3", "q4"];
 
 export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const { ano, cargo, porte, pintar, medir } = escolhaMapaDinheiro(sp);
-  const aba: Aba = abaDe(pintar);
-  const pintarInfo = PINTAR.find((p) => p.chave === pintar)!;
-  // a medida que pinta o mapa (as perguntas sem medida própria usam o gasto por vaga) e os blocos que a pergunta mostra
-  const medidaInfo = medidaDe(pintar);
-  const secoes = new Set<Secao>(SECOES[pintar]);
+  // a tela: a pergunta 1, ou "Dinheiro elege?" (2, 8 e 9) medida por todo o dinheiro ou só pelo público
+  const tela = telaDe({ pintar, medir });
+  const aba: Aba = abaDe(tela);
+  // a medida que pinta o mapa (só o público pinta a parte pública; o resto, o gasto por vaga) e os blocos da tela
+  const medidaInfo = medidaDe(tela);
+  const secoes = new Set<Secao>(SECOES[tela]);
   const tem = (x: Secao) => secoes.has(x);
   // na tela larga, alguns blocos dividem a linha com o vizinho (MEIAS)
-  const meia = (x: Secao) => (MEIAS[pintar].includes(x) ? " meia" : "");
+  const meia = (x: Secao) => (MEIAS[tela].includes(x) ? " meia" : "");
   const ord = ordemCandidatos(um(sp.ord));
   const quem = quemDe(sp.quem);
   const porteInfo = porte ? PORTES.find((p) => p.chave === porte) : undefined;
   const municipal = ehMunicipal(ano);
   const [dados, dadosDespesas, dadosPerguntas] = await Promise.all([
     lerAnalise("municipios", ["municipios", "resumo", "estados"]),
-    um(sp.uf) ? lerAnalise("dinheiro", ["despesas"]) : Promise.resolve(null),
-    um(sp.uf) ? lerAnalise("dinheiro", ["partidos", "quartis", "cargos", "maiores"]) : Promise.resolve(null),
+    lerAnalise("dinheiro", ["despesas"]),
+    lerAnalise("dinheiro", ["partidos", "quartis", "cargos", "maiores"]),
   ]);
   if (!dados?.resumo || !dados.estados || !dados.municipios) {
     return (
@@ -99,6 +102,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const uf = ufs.find((u) => u === um(sp.uf));
   // a cidade vem pelo código do IBGE, que é o mesmo no mapa e na API (o id_municipio muda a cada carga do banco)
   const mun = municipal && uf ? municipios.find((m) => m.uf === uf && m.cod_ibge === um(sp.mun)) : undefined;
+  // a cidade escolhida na lista dos seis estados chega sem o estado: abre o estado dela
+  const ufDaCidade = municipal && !uf ? ufDoMunicipio(municipios, um(sp.mun)) : undefined;
+  if (ufDaCidade) redirect(hrefMapaDinheiro({ ano, cargo, porte, pintar, medir }, { uf: ufDaCidade, mun: um(sp.mun)! }));
   const codDe = new Map(municipios.map((m) => [m.id_municipio, m.cod_ibge]));
   const href = (novo: Parameters<typeof hrefMapaDinheiro>[1], ancora?: string) => hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.cod_ibge, porte, pintar, medir, ord, quem }, novo, ancora);
   const nomeMun = new Map(municipios.map((m) => [m.id_municipio, nomeProprio(m.nome)]));
@@ -166,8 +172,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const conta = mun ? contaGasto(linhaMun, cargo) : contaUf(uf);
   const cima = mun ? valorUf(uf) : uf ? valorUf(undefined) : null;
   // a leitura do número: a cobertura das prestações de contas, a referência das cidades de porte parecido e a eleição anterior
-  const contas = mun ? contasDaCidade(linhaMun, cargo) : porte ? contasDoPorte(resumo, ano, uf, porte, cargo) : contasDoEstado(estados, ano, uf, cargo);
-  const coberturaLinha = coberturaCurta(contas);
   const porteCidade = porteDe(linhaMun?.eleitorado);
   const referencia = mun && porteCidade ? referenciaDoPorte(resumo, ano, porteCidade.chave, aba, cargo) : null;
   const difReferencia = referencia ? diferencaRelativa(principal, referencia.valor) : null;
@@ -175,7 +179,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const valorAntes = antes !== null ? valorLugar(aba, antes) : null;
   const variacao = variacaoNominal(principal, valorAntes);
   // com um porte, o aviso conta só as cidades dele (o mesmo recorte do número)
-  const fora = mun || aba !== "gasto" ? null : porte ? foraDaDisputaPorte(resumo, ano, uf, porte, cargo) : foraDaDisputa(estados, ano, uf, cargo);
 
   // candidatos: os da cidade (eleições municipais) ou os eleitos do estado (gerais), na ordem escolhida
   const [candidatos, eleitosUf] = await Promise.all([
@@ -217,7 +220,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
     { chave: "publico", rotulo: "Parte pública do dinheiro", valores: porAno.map((x) => x.publico), fmt: (v: number) => pct(v, 0), pontos: true },
     { chave: "topo", rotulo: "Fatia dos 25% que mais gastaram", valores: porAno.map((x) => x.quartis?.concentracao ?? null), fmt: (v: number) => pct(v, 0), pontos: true },
     { chave: "cand", rotulo: "Candidatos", valores: porAno.map((x) => x.total?.candidatos ?? null), fmt: inteiro },
-  ].filter((m) => MEDIDAS_ANOS[pintar].includes(m.chave)));
+  ].filter((m) => MEDIDAS_ANOS[tela].includes(m.chave)));
   const votoAntes = antes !== null ? porAno[anosCargo.indexOf(antes)]?.total?.porVoto ?? null : null;
 
   // quem mais gastou (todos ou só os eleitos), quanto custou cada cadeira em cada cargo da eleição, quantos de cada 100
@@ -226,12 +229,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const linhasCargo = dadosPerguntas?.cargos ? comoObjetos<LinhaCargo>(dadosPerguntas.cargos) : null;
   const linhasMaior = dadosPerguntas?.maiores ? comoObjetos<LinhaMaior>(dadosPerguntas.maiores) : null;
   const outroCargo = mun ? cargosDoAno(ano).find((c) => c !== cargo) : undefined;
-  // pergunta 1: a busca de um candidato pelo nome, no recorte (estado ou cidade, cargo e ano)
-  const nomeBusca = uf && tem("busca") ? termoBuscaCandidato(um(sp.nome)) : null;
+  // "Dinheiro elege?": a busca de um candidato pelo nome, no recorte (estado ou cidade, cargo e ano)
+  const nomeBusca = tem("busca") ? termoBuscaCandidato(um(sp.nome)) : null;
   const [candsOutro, recebidasPecas, achados] = await Promise.all([
     mun && outroCargo ? apiGetOpcional<CandidatoLocal[]>(`/municipios/${mun.id_municipio}/candidatos?ano=${ano}&cargo=${encodeURIComponent(outroCargo)}`) : Promise.resolve(null),
-    uf && tem("propaganda") ? apiGetOpcional<unknown>(caminhoPecas({ ano, cargo, uf, mun: mun?.id_municipio }, quem)) : Promise.resolve(null),
-    uf && nomeBusca ? apiGetOpcional<(CandidatoLocal & { municipio?: string | null })[]>(caminhoBuscaCandidato({ q: nomeBusca, ano, cargo, uf, mun: mun?.id_municipio })) : Promise.resolve(null),
+    tem("propaganda") ? apiGetOpcional<unknown>(caminhoPecas({ ano, cargo, uf, mun: mun?.id_municipio }, quem)) : Promise.resolve(null),
+    nomeBusca ? apiGetOpcional<(CandidatoLocal & { municipio?: string | null; uf?: string | null })[]>(caminhoBuscaCandidato({ q: nomeBusca, ano, cargo, uf, mun: mun?.id_municipio })) : Promise.resolve(null),
   ]);
   const vagasMun = (c: string) => (c === "Prefeito" ? 1 : linhaMun?.vereador_vagas ?? 0);
   const cargosLugar = mun
@@ -277,8 +280,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const posUf = uf ? estadosLista.findIndex((e) => e.id === uf) : -1;
   const unidadeCurta = aba === "gasto" ? (cargo === "Prefeito" && mun ? "gastos por todas as campanhas a prefeito" : `por vaga de ${cargoMin}`) : aba === "eleitor" ? "por eleitor apto" : "do dinheiro recebido veio de fundos públicos";
   // só avisa no cartão do mapa quando faltam contas de verdade (abaixo de LIMIAR_CONTAS); acima, o painel só informa a parte
-  const seloContas = coberturaSelo(contas);
-  const semContas = seloContas?.incompleta ? seloContas.detalhe : null;
   // leitura de relance: a origem e o destino do dinheiro em barras 100%, com os grupos menores juntos em "Outros"
   const fatiasOrigem = !origem ? [] : fatias("naoPublico" in origem
     ? [{ chave: "pub", rotulo: "Público", valor: origem.publico, cor: "pub" }, { chave: "np", rotulo: "Não público", valor: origem.naoPublico, cor: "fx3" }]
@@ -310,7 +311,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         {menu}
         <div className="palco-topo">
           <div>
-            <h1 id="h-mapa">{pintarInfo.titulo} em {ano}</h1>
+            <h1 id="h-mapa">{TITULO_TELA[tela]} em {ano}</h1>
             <p className="palco-sobre">{cargo}{porteInfo ? ` · cidades de ${porteInfo.rotulo}` : ""}</p>
           </div>
           <nav className="trilha" aria-label="Onde você está no mapa">
@@ -322,7 +323,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         <div className="palco-mapa">
           {mapaPalco}
-          {!uf && <p className="palco-dica">Selecione um estado para explorar o dinheiro das campanhas</p>}
+          {!uf && <p className="palco-dica">Selecione um estado para explorar o dinheiro das campanhas, ou veja embaixo os seis comparados</p>}
           <p className="carregando-mapa" aria-hidden="true">Carregando…</p>
           {cartao && (
             <aside className="cartao-lugar" aria-label={`Resumo: ${cartao.nome}`}>
@@ -332,7 +333,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
               <p className="cartao-valor"><b>{cartao.valor}</b> {cartao.unidade}</p>
               <p className="cartao-selos">
                 {cartao.posicao && <span>{cartao.posicao}</span>}
-                {semContas && <span className="cartao-aviso" title={semContas}>{seloContas!.texto}</span>}
               </p>
               {cartao.extra && <p className="cartao-linha">{cartao.extra}</p>}
             </aside>
@@ -353,20 +353,33 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         </div>
       </MapaVivo>
 
-      {uf && <div id="dinheiro-painel" className="painel s12 din" key={`dinheiro-${uf}-${mun?.id_municipio}-${ano}-${cargo}-${pintar}`}>
+      {/* sem estado escolhido, o painel compara os seis (o mapa fica neutro até a escolha) */}
+      <div id="dinheiro-painel" className="painel s12 din" key={`dinheiro-${uf}-${mun?.id_municipio}-${ano}-${cargo}-${tela}`}>
         {/* cabeçalho: onde estamos e a troca de cidade */}
         <header className="din-cab s12">
           <div>
             <p className="din-kicker">{mun ? `Município · ${uf}` : uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"} · {cargo} · {ano}{!mun && porteInfo ? ` · ${porteInfo.rotulo}` : ""}</p>
             <h2>{lugar}</h2>
           </div>
-          {municipal && uf && (
-            <EscolhaMunicipio
-              opcoes={municipios.filter((m) => m.uf === uf).map((m) => [m.cod_ibge, nomeMun.get(m.id_municipio)!] as [string, string]).sort((a, b) => a[1].localeCompare(b[1], "pt-BR"))}
+          {municipal && (
+            <EscolhaMunicipio vazio={uf ? "O estado inteiro" : "Os seis estados"}
+              opcoes={opcoesMunicipio(municipios.map((m) => ({ cod_ibge: m.cod_ibge, uf: m.uf, nome: nomeMun.get(m.id_municipio)! })), uf)}
               atual={mun?.cod_ibge} params={paramsMun}
             />
           )}
         </header>
+
+        {/* "Dinheiro elege?": a medida vale para a tela inteira (as cores do mapa, os números e os blocos) */}
+        {pintar === "voto" && (
+          <nav className="chips din-medir s12" aria-label="Medir pelo">
+            {MEDIR.map((m) => (
+              <Link key={m.chave} href={href({ medir: m.chave === "publico" ? "publico" : null }, "dinheiro-painel")} scroll={false}
+                className={`chip${m.chave === medir ? " on" : ""}`} aria-current={m.chave === medir ? "true" : undefined}>
+                {m.rotulo} <small>{m.numero}</small>
+              </Link>
+            ))}
+          </nav>
+        )}
 
         {/* os números do lugar, para ler de relance: o principal grande e, ao lado, as outras medidas e as comparações */}
         {tem("numeros") && <section className="din-kpis s12" aria-label={`${lugar} em números`}>
@@ -409,10 +422,8 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             </div>
           )}
         </section>}
-        {tem("numeros") && (seloContas || fora || (!mun && porte)) && (
+        {tem("numeros") && ((!mun && porte) || eleitoPrefeito) && (
           <ul className="din-notas s12" aria-label="Notas sobre os números">
-            {seloContas && <li className={seloContas.incompleta ? "aviso" : "ok"} title={coberturaLinha?.texto ?? seloContas.detalhe}>{seloContas.incompleta ? "⚠ " : "✓ "}{seloContas.texto}</li>}
-            {fora && <li title="A Pergunta 1 soma também essas campanhas; aqui conta só quem disputou.">Fora da conta: {reais(fora.gasto)} de {inteiro(fora.n)} {fora.n === 1 ? "campanha que não disputou" : "campanhas que não disputaram"}</li>}
             {!mun && porte && <li>Soma de {inteiro(valorDoPorte(resumo, ano, uf, porte, aba, cargo).n)} cidades</li>}
             {eleitoPrefeito && <li>Eleito: {eleitoPrefeito.nome_urna} ({eleitoPrefeito.partido}){eleitoPrefeito.prestou === false ? ", sem prestação final" : ` · gastou ${reais(eleitoPrefeito.gasto)}`}</li>}
           </ul>
@@ -420,9 +431,27 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         {/* pergunta 2: primeiro a resposta (dinheiro × resultado), depois quem gastou */}
         {tem("comparar") && <ComparacoesDinheiro
-          noite ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir={medir} semGasto={!uf}
+          noite escolhaFora ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir={medir} semGasto={!uf}
           hrefMedir={(m) => href({ medir: m === "publico" ? "publico" : null }, "comparar")} hrefUf={(u) => href({ uf: u })}
         />}
+
+        {/* "Dinheiro elege?" aplicada a uma pessoa: procurar um candidato e ver quanto gastou e recebeu, os votos, o custo do voto e as despesas por tipo */}
+        {tem("busca") && (
+          <section id="dinheiro-busca" className="bloco noite s12 din-busca">
+            <header className="din-sec">
+              <h3>Quanto gastou um candidato</h3>
+            </header>
+            <BuscaCandidatoDinheiro campos={camposDoHref(href({}))} recorte={{ ano, cargo, uf, mun: mun?.id_municipio }}
+              inicial={nomeBusca ?? ""} municipal={municipal} />
+            {!uf && <p className="din-rodape">Busca nos seis estados. Escolha um estado no mapa para procurar só nele.</p>}
+            {nomeBusca && (achados === null
+              ? <p className="card aviso" role="status">Não foi possível buscar agora: a API não respondeu. Tente de novo.</p>
+              : <div role="status" aria-live="polite">
+                  <p className="rotulo">{achados.length === 0 ? `Nenhum candidato a ${cargoMin} com "${nomeBusca}" no nome` : achados.length >= 20 ? `Os 20 primeiros com "${nomeBusca}" no nome (eleitos primeiro)` : `${inteiro(achados.length)} ${achados.length === 1 ? "candidato" : "candidatos"} com "${nomeBusca}" no nome`}</p>
+                  <div className="dinheiro-cand"><LinhasCandidatos detalhar linhas={mun ? achados.map((a) => ({ ...a, nome_urna: a.nome_urna && nomeProprio(a.nome_urna), municipio: null })) : achados.map((a) => ({ ...a, nome_urna: a.nome_urna && nomeProprio(a.nome_urna), municipio: lugarDoAchado({ cidade: a.municipio ? nomeProprio(a.municipio) : null, uf: a.uf }, { uf }) }))} ano={ano} vazio="" /></div>
+                </div>)}
+          </section>
+        )}
 
         {/* cada pergunta do menu mostra só os seus blocos (SECOES, em src/lib/dinheiro.ts); as pessoas que mais gastaram */}
         {tem("maiores") && <section id="dinheiro-maiores" className="bloco noite s12 din-maiores">
@@ -487,24 +516,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             <p className="din-rodape">Público = Fundo Eleitoral e Fundo Partidário · sem repasses entre candidatos · valores sem correção pela inflação</p>
           </section>
         )}
-        {tem("destino") && fatiasDestino.length > 0 && (
-          <section id="dinheiro-destino" className="bloco noite s12 din-origem">
-            <header className="din-sec">
-              <h3>Para onde foi o dinheiro</h3>
-              <p>Tudo o que as campanhas a {cargoMin} gastaram · {ano}</p>
-            </header>
-            <BarraEmpilhada titulo="Gasto" total={reais(totalGrupos)} fatias={fatiasDestino} valor={reais} />
-            {grupos.length > 0 && (
-              <details className="ver-todos dinheiro-grupos">
-                <summary>Todos os {grupos.length} grupos de despesa</summary>
-                <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} por grupo, ${ano}`}
-                  linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: reais(g.valor) }))} />
-              </details>
-            )}
-            <p className="din-rodape">Grupos de categoria de despesa do TSE · sem repasses entre candidatos · valores sem correção pela inflação</p>
-          </section>
-        )}
-
         {/* quanto custou cada cadeira, cargo a cargo, na mesma eleição e no mesmo lugar */}
         {tem("cadeiras") && cargosLugar.length > 0 && (
           <section id="dinheiro-cadeiras" className="bloco noite s12 din-cadeiras">
@@ -518,25 +529,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             <CadeirasCargos cargos={cargosLugar} atual={cargo} hrefCargo={(c) => href({ cargo: c }, "dinheiro-cadeiras")}
               titulo={`Quanto custou cada cadeira em cada cargo, ${lugar}, ${ano}`} />
             <p className="din-rodape">Cada cadeira = gasto de todas as campanhas ao cargo ÷ cadeiras em disputa · eleito típico = mediana do gasto dos eleitos{!mun && porteInfo ? ` · só cidades de ${porteInfo.rotulo}` : ""} · clique num cargo para vê-lo no painel</p>
-          </section>
-        )}
-
-        {/* pergunta 1: procurar um candidato e ver quanto ele gastou, o custo do voto e as despesas por tipo */}
-        {tem("busca") && (
-          <section id="dinheiro-busca" className="bloco noite s12 din-busca">
-            <header className="din-sec">
-              <h3>Quanto gastou um candidato</h3>
-              <p>Procure pelo nome: candidatos a {cargoMin} em {lugar} · {ano}</p>
-            </header>
-            <BuscaCandidatoDinheiro campos={camposDoHref(href({}))} recorte={{ ano, cargo, uf: uf!, mun: mun?.id_municipio }}
-              inicial={nomeBusca ?? ""} municipal={municipal} />
-            {nomeBusca && (achados === null
-              ? <p className="card aviso" role="status">Não foi possível buscar agora: a API não respondeu. Tente de novo.</p>
-              : <div role="status" aria-live="polite">
-                  <p className="rotulo">{achados.length === 0 ? `Nenhum candidato a ${cargoMin} com "${nomeBusca}" no nome` : achados.length >= 20 ? `Os 20 primeiros com "${nomeBusca}" no nome (eleitos primeiro)` : `${inteiro(achados.length)} ${achados.length === 1 ? "candidato" : "candidatos"} com "${nomeBusca}" no nome`}</p>
-                  <div className="dinheiro-cand"><LinhasCandidatos detalhar linhas={mun ? achados.map((a) => ({ ...a, municipio: null })) : achados.map((a) => ({ ...a, municipio: a.municipio ? nomeProprio(a.municipio) : null }))} ano={ano} vazio="" /></div>
-                </div>)}
-            <p className="din-rodape">Gasto declarado na prestação de contas final · gasto por voto = gasto ÷ votos do 1º turno · abra as despesas para ver cada tipo de gasto (materiais impressos, comícios, passagens...)</p>
           </section>
         )}
 
@@ -591,38 +583,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             <p className="din-rodape">Grupos de tamanho aproximado: valores iguais ficam no mesmo grupo{!mun ? ` · candidatos comparados com todos os ${cargoMin === "prefeito" ? "candidatos a prefeito" : "candidatos"} do recorte${porte ? "" : " (use o porte para comparar cidades parecidas)"}` : ""}</p>
           </section>
         )}
-
-        {/* o que se comprou em propaganda (nuvem de palavras), de todos ou só dos eleitos */}
-        {tem("propaganda") && <section id="dinheiro-propaganda" className="bloco noite s12 din-propaganda">
-          <header className="din-sec">
-            <h3>O que se comprou em propaganda</h3>
-            {pecas?.todos[0] ? (
-              <p>Onde mais foi dinheiro: <b>{pecas.todos[0].termo}</b>, {reais(pecas.todos[0].centavos / 100)} ({pct(pecas.todos[0].parte, 0)} da propaganda de {quemTexto})</p>
-            ) : <p>{cargo} · {ano} · {quemTexto}</p>}
-          </header>
-          {chipsQuem("dinheiro-propaganda")}
-          {comNuvem && pecas ? (
-            <div className="din-nuvem">
-              <NuvemPalavras nuvem={pecas} />
-              <div>
-                <p className="rotulo">As maiores peças</p>
-                <ol className="din-pecas" aria-label={`As peças de propaganda de maior valor, ${cargoMin}, ${lugar}, ${ano}, ${quemTexto}`}>
-                  {pecas.todos.slice(0, 8).map((t) => (
-                    <li key={t.termo} title={t.explicacao ?? undefined}>
-                      <span>{t.termo}</span>
-                      <span className="din-pecas-trilho" aria-hidden="true"><i style={{ width: `${Math.round((t.centavos / pecas.todos[0].centavos) * 100)}%` }} /></span>
-                      <b>{pct(t.parte, 0)}</b><small>{reais(t.centavos / 100)}</small>
-                    </li>
-                  ))}
-                </ol>
-                <p className="din-rodape">Total em propaganda: {reais(pecas.totalCentavos / 100)}</p>
-              </div>
-            </div>
-          ) : (
-            <p className="muted">{pecasPreparando ? "A nuvem ainda está sendo calculada. Recarregue a página em um ou dois minutos." : recebidasPecas === null ? "A API não devolveu a propaganda agora. Recarregue a página para tentar de novo." : "Há poucas peças de propaganda declaradas neste recorte para uma nuvem."}</p>
-          )}
-          <p className="din-rodape">O tamanho da palavra é o valor contratado · a cor é o tipo (material físico, rádio e TV, internet; cinza: não diz a peça){!mun && porte ? " · a nuvem não separa por porte: são todas as cidades do recorte" : ""} · <Link href={propaganda}>Propaganda em detalhe</Link></p>
-        </section>}
 
         {/* o mesmo cargo nas eleições com dados de dinheiro, no mesmo lugar */}
         {medidasAnos.length > 0 && (
@@ -707,21 +667,78 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
                 )}
               </>
             )}
-            <p className="din-rodape">Gasto por voto = gasto declarado ÷ votos do 1º turno · abra as despesas para ver cada categoria · clique no nome para ver o perfil</p>
+            <p className="din-rodape">Selecione um nome para ver os detalhes.</p>
           </section>
         )}
 
+
+        {/* o fim de "Dinheiro elege?" nas duas medidas: em que as campanhas gastaram (pergunta 9) */}
+        {tem("destino") && (fatiasDestino.length > 0 || tem("propaganda")) && (
+          <header className="din-divisao s12">
+            <p className="din-kicker">Pergunta 9</p>
+            <h3>Em que as campanhas gastaram</h3>
+          </header>
+        )}
+        {tem("destino") && fatiasDestino.length > 0 && (
+          <section id="dinheiro-destino" className="bloco noite s12 din-origem">
+            <header className="din-sec">
+              <h3>Para onde foi o dinheiro</h3>
+              <p>Tudo o que as campanhas a {cargoMin} gastaram · {ano}</p>
+            </header>
+            <BarraEmpilhada titulo="Gasto" total={reais(totalGrupos)} fatias={fatiasDestino} valor={reais} />
+            {grupos.length > 0 && (
+              <details className="ver-todos dinheiro-grupos">
+                <summary>Todos os {grupos.length} grupos de despesa</summary>
+                <BarrasH compacto titulo={`Despesas das campanhas a ${cargoMin} por grupo, ${ano}`}
+                  linhas={grupos.map((g) => ({ chave: g.grupo, rotulo: g.rotulo, detalhe: g.detalhe, valor: g.valor, classe: g.grupo.startsWith("propaganda") ? "pub" : "fx2", texto: pct(g.parte, 0), subtexto: reais(g.valor) }))} />
+              </details>
+            )}
+            <p className="din-rodape">Grupos de categoria de despesa do TSE · sem repasses entre candidatos · valores sem correção pela inflação</p>
+          </section>
+        )}
+
+        {/* o que se comprou em propaganda (nuvem de palavras), de todos ou só dos eleitos */}
+        {tem("propaganda") && <section id="dinheiro-propaganda" className="bloco noite s12 din-propaganda">
+          <header className="din-sec">
+            <h3>O que se comprou em propaganda</h3>
+            {pecas?.todos[0] ? (
+              <p>Onde mais foi dinheiro: <b>{pecas.todos[0].termo}</b>, {reais(pecas.todos[0].centavos / 100)} ({pct(pecas.todos[0].parte, 0)} da propaganda de {quemTexto})</p>
+            ) : <p>{cargo} · {ano} · {quemTexto}</p>}
+          </header>
+          {chipsQuem("dinheiro-propaganda")}
+          {comNuvem && pecas ? (
+            <div className="din-nuvem">
+              <NuvemPalavras nuvem={pecas} />
+              <div>
+                <p className="rotulo">As maiores peças</p>
+                <ol className="din-pecas" aria-label={`As peças de propaganda de maior valor, ${cargoMin}, ${lugar}, ${ano}, ${quemTexto}`}>
+                  {pecas.todos.slice(0, 8).map((t) => (
+                    <li key={t.termo} title={t.explicacao ?? undefined}>
+                      <span>{t.termo}</span>
+                      <span className="din-pecas-trilho" aria-hidden="true"><i style={{ width: `${Math.round((t.centavos / pecas.todos[0].centavos) * 100)}%` }} /></span>
+                      <b>{pct(t.parte, 0)}</b><small>{reais(t.centavos / 100)}</small>
+                    </li>
+                  ))}
+                </ol>
+                <p className="din-rodape">Total em propaganda: {reais(pecas.totalCentavos / 100)}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">{pecasPreparando ? "A nuvem ainda está sendo calculada. Recarregue a página em um ou dois minutos." : recebidasPecas === null ? "A API não devolveu a propaganda agora. Recarregue a página para tentar de novo." : "Há poucas peças de propaganda declaradas neste recorte para uma nuvem."}</p>
+          )}
+          <p className="din-rodape">O tamanho da palavra é o valor contratado · a cor é o tipo (material físico, rádio e TV, internet; cinza: não diz a peça){!mun && porte ? " · a nuvem não separa por porte: são todas as cidades do recorte" : ""} · <Link href={propaganda}>Propaganda em detalhe</Link></p>
+        </section>}
 
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">
           <summary>Como calculamos</summary>
           <ul>{CALCULO_MAPA_DINHEIRO.map((t) => <li key={t}>{t}</li>)}</ul>
         </details>
 
-        <ul className="atalhos s12">
+        {pintar === "voto" && <ul className="atalhos s12">
           <li><Link href={propaganda}>Onde os candidatos investem em propaganda</Link></li>
           <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
-        </ul>
-      </div>}
+        </ul>}
+      </div>
     </>
   );
 }
