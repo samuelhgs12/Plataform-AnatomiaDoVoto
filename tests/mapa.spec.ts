@@ -211,3 +211,24 @@ test('painel: ficha fixa do município e mini-mapa indo até ele', async ({ page
   await expect(ficha.getByRole('img', { name: /maior abstenção entre os \d+ municípios de Rio de Janeiro/ })).toBeVisible();
   await expect(page.locator('.minimapa')).toHaveAttribute('data-foco', '');
 });
+
+test('legenda: quem puxou quem, só com estado escolhido, com 2026 e coligações de 2018', async ({ page }) => {
+  // sem estado, o bloco não aparece
+  await page.goto('/?ver=legenda&ano=2022');
+  await expect(page.getByRole('heading', { name: 'Quem puxou quem' })).toHaveCount(0);
+
+  await page.goto('/?ver=legenda&ano=2022&uf=MG&cargo=federal');
+  const bloco = page.locator('.quem-puxou');
+  await expect(bloco.getByRole('heading', { name: 'Quem puxou quem' })).toBeVisible();
+  // cada puxador é uma linha da lista, com os puxados no nome acessível
+  await expect(bloco.getByRole('listitem', { name: /quocientes, puxou \d+:/ }).first()).toBeVisible();
+  // as listas abrem e mostram os eleitos, com quem foi puxado marcado
+  await bloco.locator('.cad-lista summary').first().click();
+  await expect(bloco.locator('.cad-lista[open] .cl-eleitos li').first()).toBeVisible();
+  await expect(bloco.getByText(/puxado por /).first()).toBeVisible();
+
+  // 2026 está nos anos; em 2018 a lista é a coligação
+  await expect(page.locator('.anos').getByRole('link', { name: /2026/ })).toBeVisible();
+  await page.goto('/?ver=legenda&ano=2018&uf=PE&cargo=federal');
+  await expect(page.locator('.quem-puxou .cl-nome small', { hasText: 'coligação' }).first()).toBeVisible();
+});
