@@ -2,7 +2,7 @@
 // calculamos") e a página /sobre leem daqui, para as duas versões não divergirem. O texto de `calculo` é o que a equipe
 // já revisou nas páginas; para a /sobre há `resposta`, sem editar o original. As perguntas, no texto do dossiê, estão em
 // PERGUNTAS.
-import { MINIMO_CADA_100 } from "./dinheiro";
+import { MINIMO_CADA_100, type Tela } from "./dinheiro";
 
 export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p6" | "p7" | "p8" | "p9" | "p10" | "candidato" | "legislativo";
 
@@ -312,12 +312,15 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p9: {
     id: "p9",
-    resposta: "No perfil de cada candidato, quanto a campanha escolhida contratou em propaganda, dividido em impresso e de rua, rádio, TV e vídeo, e internet, ao lado da campanha típica do mesmo cargo, ano e estado.",
-    ondeVer: [{ rotulo: "Ver a resposta no perfil de um candidato", href: "/candidatos" }],
+    resposta: "No mapa, quanto as campanhas de cada cargo contrataram em propaganda, cidade por cidade ou no estado, dividido em impresso e de rua, rádio, TV e vídeo, e internet, com as peças de maior valor, de todos os candidatos ou só dos eleitos. No perfil de cada candidato, a mesma divisão para uma campanha, ao lado da campanha típica do mesmo cargo, ano e estado.",
+    ondeVer: [
+      { rotulo: "Ver a resposta no mapa", href: "/?ver=dinheiro&pintar=propaganda#mapa" },
+      { rotulo: "A propaganda de um candidato, no perfil", href: "/candidatos" },
+    ],
     anos: "2018–2026",
     cargos: "Todos os cargos titulares",
-    dados: ["despesa_campanha e categoria_despesa (categorias de publicidade)", "candidatura, eleicao, cargo e rotulo_resultado"],
-    recorte: ["Uma campanha por vez", "Prestação final", "Sem transferências", "Valor contratado"],
+    dados: ["despesa_campanha e categoria_despesa (categorias de publicidade)", "candidatura, eleicao, cargo e rotulo_resultado", "As descrições das despesas de propaganda, transformadas em peças (santinho, adesivo, Facebook...) pelo dicionário de api/app/nuvem.py"],
+    recorte: ["No mapa: todas as campanhas do cargo na cidade, no estado ou nos seis estados, ou só as dos eleitos", "No perfil: uma campanha por vez", "Prestação final", "Sem transferências", "Valor contratado"],
     calculo: [
       "Os valores são o que foi contratado e declarado ao TSE na prestação de contas final, não necessariamente o que foi pago. Não há correção pela inflação, e as doações a outros candidatos ficam de fora.",
       "Impresso e de rua reúne impressos, adesivos, jornais e carros de som; rádio, TV e vídeo reúne programas, vídeos e jingles; internet reúne impulsionamento e páginas. Os tipos e as categorias são oficiais. As peças são estimadas a partir da descrição de cada despesa.",
@@ -327,7 +330,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
       "Gastar mais não diz quantas pessoas a propaganda alcançou nem se ajudou a eleger.",
       "Material recebido pronto do partido não aparece.",
     ],
-    sql: ["api/app/queries/propaganda_totais.sql", "api/app/queries/propaganda_categorias.sql", "api/app/analises/q9.sql"],
+    sql: ["api/app/queries/pecas_geral.sql", "api/app/queries/pecas_eleitos.sql", "api/app/queries/pecas_municipio.sql", "api/app/queries/propaganda_totais.sql", "api/app/queries/propaganda_categorias.sql", "api/app/analises/q9.sql"],
   },
 
   p10: {
@@ -427,7 +430,16 @@ export const CALCULO_MAPA_DINHEIRO: string[] = [
       "Quem mais gastou: as 10 campanhas de maior gasto declarado no recorte, entre todos os que disputaram ou só entre os eleitos; a parte pública é o que veio do Fundo Eleitoral e do Fundo Partidário no que a campanha recebeu.",
       "Cada cadeira: gasto de todas as campanhas ao cargo, inclusive as que não chegaram a disputar, ÷ cadeiras em disputa no recorte; o eleito típico é a mediana do gasto dos eleitos que entregaram as contas.",
       "Dependeu do dinheiro público: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário. “De cada 100” arredonda pelos maiores restos para somar 100; com menos de 20 pessoas, mostra a conta de verdade (ex.: 2 de 3).",
-      "Propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo mesmo dicionário da Pergunta 9; o tamanho da palavra é o valor contratado. Dá para ver todos os candidatos ou só os eleitos; o filtro de porte não se aplica à nuvem.",
+];
+
+/** O "Como calculamos" da pergunta 9 no mapa (tela Propaganda da camada Dinheiro: parte do gasto, barra, nuvem e peças). */
+export const CALCULO_P9_MAPA: string[] = [
+  "Parte do gasto: as despesas de propaganda (impressos e rua; rádio, TV e vídeo; internet) ÷ todas as despesas declaradas pelas campanhas ao cargo no recorte (cidade, estado ou os seis estados), pelos grupos de categoria do TSE.",
+  "De cada R$ 100 em propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo dicionário da pergunta 9 (api/app/nuvem.py), e o valor de cada peça é somado no tipo dela; o que não se encaixa em nenhum tipo fica em “Outra propaganda”. O tamanho da palavra na nuvem e a lista das maiores peças usam o mesmo valor.",
+  "Todos os candidatos ou só os eleitos: a escolha vale para a barra, a nuvem e as maiores peças. O filtro de porte de cidade não se aplica à propaganda.",
+  "Os valores são o que foi contratado e declarado ao TSE na prestação de contas, não necessariamente o que foi pago, sem correção pela inflação.",
+  "Material recebido pronto do partido, como programas de rádio e TV, não entra. Gastar mais não diz quantas pessoas a propaganda alcançou nem se ajudou a eleger.",
+  "Para uma campanha só, ao lado da campanha típica do mesmo cargo, ano e estado, veja o perfil do candidato.",
 ];
 
 /** O "Como calculamos" da pergunta 8 no mapa (eleitos × não eleitos, no público e no privado: PublicoPrivado). */
@@ -514,3 +526,7 @@ export function escopoEmTexto(l: LinhaEscopo): string {
   // o Censo vale para anos soltos, um a um: "comparado com 2008, 2010 e 2012"
   return `comparado com ${anos.slice(0, -1).join(", ")} e ${anos[anos.length - 1]}`;
 }
+
+/** O "Como calculamos" de cada tela da camada Dinheiro: a 8 e a 9 têm texto próprio; a 1 usa o geral da camada. */
+export const calculoMapaDinheiro = (tela: Tela): string[] =>
+  tela === "propaganda" ? CALCULO_P9_MAPA : tela === "publico" ? CALCULO_P8_MAPA : CALCULO_MAPA_DINHEIRO;

@@ -1,6 +1,9 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ESCOPO, METODOLOGIA, PERGUNTAS, TAMBEM, escopoEmTexto, linkFonte, trechosDeAnos, type LinhaEscopo } from "../src/lib/metodologia";
+import {
+  CALCULO_MAPA_DINHEIRO, CALCULO_P8_MAPA, CALCULO_P9_MAPA, ESCOPO, METODOLOGIA, PERGUNTAS, TAMBEM, calculoMapaDinheiro, escopoEmTexto, linkFonte,
+  trechosDeAnos, type LinhaEscopo,
+} from "../src/lib/metodologia";
 import { VISOES } from "../src/lib/mapa";
 
 const raiz = (caminho: string) => new URL(`../../${caminho}`, import.meta.url);
@@ -92,5 +95,18 @@ describe("escopoEmTexto", () => {
     expect(escopoEmTexto(linha("Censo 2010"))).toBe("comparado com 2008, 2010 e 2012");
     expect(escopoEmTexto(linha("Censo 2022"))).toBe("comparado com 2020, 2022 e 2024");
     expect(escopoEmTexto(linha("Candidaturas e votação"))).toBe("1998–2026");
+  });
+});
+
+describe("calculoMapaDinheiro", () => {
+  it("cada tela da camada Dinheiro tem o seu \"Como calculamos\": a propaganda (P9) e o dinheiro público (P8) têm texto próprio", () => {
+    expect(calculoMapaDinheiro("propaganda")).toBe(CALCULO_P9_MAPA);
+    expect(calculoMapaDinheiro("publico")).toBe(CALCULO_P8_MAPA);
+    expect(calculoMapaDinheiro("vaga")).toBe(CALCULO_MAPA_DINHEIRO);
+  });
+  it("o texto da propaganda fala das peças e da parte do gasto; o geral não repete a propaganda", () => {
+    expect(CALCULO_P9_MAPA.join(" ")).toMatch(/peças/);
+    expect(CALCULO_P9_MAPA.join(" ")).toMatch(/parte do gasto/i);
+    expect(CALCULO_MAPA_DINHEIRO.some((t) => t.startsWith("Propaganda:"))).toBe(false);
   });
 });

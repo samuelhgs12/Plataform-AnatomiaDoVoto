@@ -16,7 +16,7 @@ import {
 } from "@/lib/dinheiro";
 import { montarNuvem, type TermoNuvem } from "@/lib/nuvem";
 import { mostrarNuvem } from "@/lib/propaganda";
-import { CALCULO_MAPA_DINHEIRO, CALCULO_P8_MAPA } from "@/lib/metodologia";
+import { calculoMapaDinheiro } from "@/lib/metodologia";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import {
   colunasSucessoP8, fontesPorResultado, p8DaCidade, type LinhaCidadeP8, colunasSucessoCidade, contagensSucesso, frasePrefeitoDaCidade, prefeitoDaCidade, sucessoDaCidade, type LinhaCidadePrefeito, type LinhaCidadeSucesso, fraseP8, GRUPOS_P8, gruposP8, maioriaPublica, NOME_UF, partePublica, partePublicaNosAnos, setaPP, tipicosP8,
@@ -56,9 +56,9 @@ const MAX_LISTA = 40;
  * maior valor e a tabela de todas); os candidatos da cidade (ou os eleitos do estado, nas gerais), em qualquer ordem;
  * onde o dinheiro foi gasto (grupos de categoria do TSE); e as comparações (ComparacoesDinheiro). Cada pergunta do menu
  * (PINTAR) mostra só os blocos que a respondem (SECOES, em src/lib/dinheiro.ts): a 1, a 8 e a 9; a 2 ("Patrimônio
- * elege?") é a VisaoPatrimonio, escolhida em app/page.tsx. A aba Propaganda
- * (pergunta 9) fica em /analises/dinheiro. Lê as análises `municipios` e `dinheiro` e os candidatos da API; as contas
- * são de src/lib/dinheiro.ts.
+ * elege?") é a VisaoPatrimonio, escolhida em app/page.tsx. A 9 (propaganda) é a tela Propaganda daqui: parte do gasto,
+ * barra, nuvem e maiores peças; a propaganda de uma campanha só fica no perfil. Lê as análises `municipios` e `dinheiro`
+ * e os candidatos da API; as contas são de src/lib/dinheiro.ts; o "Como calculamos" de cada tela, de src/lib/metodologia.ts.
  */
 const QUINTOS = ["q0", "q1", "q2", "q3", "q4"];
 
@@ -769,7 +769,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">
           <summary>Como calculamos</summary>
-          <ul>{(tela === "publico" ? CALCULO_P8_MAPA : CALCULO_MAPA_DINHEIRO).map((t) => <li key={t}>{t}</li>)}</ul>
+          <ul>{calculoMapaDinheiro(tela).map((t) => <li key={t}>{t}</li>)}</ul>
         </details>
 
         {pintar !== "vaga" && <ul className="atalhos s12">
