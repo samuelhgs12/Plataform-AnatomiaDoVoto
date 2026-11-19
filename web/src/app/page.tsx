@@ -31,6 +31,8 @@ import { compacto, inteiro, pct } from "@/lib/format";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { VisaoDinheiro } from "@/components/VisaoDinheiro";
+import { VisaoVies } from "@/components/VisaoVies";
+import { ANOS_CENSO_IDADE, MEDIDAS_IDADE, cargosDoAno as cargosVies, escolhaVies, paramsVies, type EscolhaVies } from "@/lib/vies";
 import { cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro, PINTAR } from "@/lib/dinheiro";
 import { PORTES } from "@/lib/territorio";
 import { MiniMapa } from "@/components/MiniMapa";
@@ -86,7 +88,10 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const pediuLegenda = um(sp.ver) === "legenda";
   const naCandidato = um(sp.ver) === "candidato";
   const naDinheiro = um(sp.ver) === "dinheiro";   // camada Dinheiro (perguntas 1, 2 e 8): src/components/VisaoDinheiro.tsx
-  const ver: Visao = naCandidato ? "candidato" : naDinheiro ? "dinheiro" : pediuLegenda && anoLeg !== undefined ? "legenda"
+  // Comparar › Idade e Comparar › Viés (perguntas 6 e 7): src/components/VisaoVies.tsx
+  const subVies = um(sp.ver) === "idade" ? "idade" : um(sp.ver) === "vies" ? "vies" : null;
+  const naVies = subVies !== null;
+  const ver: Visao = naCandidato ? "candidato" : naDinheiro ? "dinheiro" : subVies ? subVies : pediuLegenda && anoLeg !== undefined ? "legenda"
     : pediuInstrucao && q4?.eleitos && q4.prefeitos && q4.populacao ? "instrucao" : "abstencao";
   const naLegenda = ver === "legenda";
   // Comparar › Instrução (pergunta 4): só as eleições municipais comparadas com o Censo 2022; sem ano na URL, a mais recente
@@ -103,7 +108,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const partido = pedido && resolverSelecao([pedido], juntar, linhagem)[0];
 
   // na camada Dinheiro a cidade vai pelo código do IBGE (munDinheiro, mais abaixo), não pelo id_municipio
-  const mun = uf && !soEstados && !naDinheiro ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
+  const mun = uf && !soEstados && !naDinheiro && !naVies ? municipios.find((m) => m.uf === uf && String(m.id_municipio) === um(sp.mun)) : undefined;
   // cada eleição em volta de um Censo usa os indicadores dele (2008 a 2012: Censo 2010; 2020 a 2024: Censo 2022). O
   // indicador pedido fica na URL mesmo quando o Censo do ano não o tem (o IDHM em 2022): volta ao trocar de ano
   const censo = censoDoAno(ano);
@@ -269,9 +274,14 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   // camada Dinheiro: o ano e o cargo dela (só 2018 a 2024); ao sair dela, a abstenção fica no mesmo ano
   const escDinheiro = escolhaMapaDinheiro(naDinheiro ? sp : { ano: String(naLegenda ? anoLeg : naInstrucao ? anoInst : ano) });
   // o ano da abstenção ao sair da legenda, da instrução ou do dinheiro
+  const escViesSp = naVies ? escolhaVies(sp) : null;
   const anoBase = naLegenda && anos.includes(anoLeg!) ? anoLeg! : naInstrucao ? anoInst
-    : naDinheiro && anos.includes(escDinheiro.ano) ? escDinheiro.ano : ano;
-  const hrefAbst = naLegenda || naInstrucao || naDinheiro ? href({ ver: "abstencao", ano: anoBase }) : href({});
+    : naDinheiro && anos.includes(escDinheiro.ano) ? escDinheiro.ano : escViesSp && anos.includes(escViesSp.ano) ? escViesSp.ano : ano;
+  const hrefAbst = naLegenda || naInstrucao || naDinheiro || naVies ? href({ ver: "abstencao", ano: anoBase }) : href({});
+  // Idade e Viés: a escolha atual (ou, vindo de outra camada, a do ano dela); o município vai pelo código do IBGE
+  const escV = escViesSp ?? escolhaVies({ ano: String(anoBase) });
+  const munV = naVies && uf ? municipios.find((m) => m.uf === uf && m.cod_ibge === um(sp.mun))?.cod_ibge : undefined;
+  const hrefV = (nova: Partial<EscolhaVies>) => `/?${paramsVies({ ...escV, ...nova }, { uf, mun: munV })}#mapa`;
   const hrefLeg = naLegenda ? href({}) : href({ ver: "legenda", ano: anoNaLegenda(anoBase, anosLeg) ?? anoBase });
   const hrefInst = naInstrucao ? href({}) : href({ ver: "instrucao", ano: anoNaLegenda(anoBase, [...ANOS_INSTRUCAO]) ?? anoInst });
 
@@ -385,9 +395,17 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
         dinheiro: hrefMapaDinheiro({ ...escDinheiro, uf }),
       }}
       comparar={{
-        sub: naInstrucao ? "instrucao" : "abstencao",
-        hrefs: { abstencao: href({ ver: "abstencao", ano: anoBase, cor: null }), instrucao: hrefInst },
+        sub: naInstrucao ? "instrucao" : subVies ?? "abstencao",
+        hrefs: { abstencao: href({ ver: "abstencao", ano: anoBase, cor: null }), instrucao: hrefInst, idade: hrefV({ sub: "idade" }), vies: hrefV({ sub: "vies" }) },
       }}
+      vies={naVies ? {
+        cargos: cargosVies(escV.ano).map((c) => ({ rotulo: c.rotulo, href: hrefV({ cargo: c.chave }), on: c.chave === escV.cargo })),
+        medidas: MEDIDAS_IDADE.map((m) => ({ rotulo: m.rotulo, href: hrefV({ med: m.chave }), on: m.chave === escV.med })),
+        fontes: ANOS_CENSO_IDADE.includes(escV.ano) ? [
+          { rotulo: "Eleitorado (TSE)", href: hrefV({ fonte: "eleitorado" }), on: escV.fonte === "eleitorado" },
+          { rotulo: "Censo 2022", href: hrefV({ fonte: "censo" }), on: escV.fonte === "censo" },
+        ] : undefined,
+      } : undefined}
       instrucao={{
         anos: new Intl.ListFormat("pt-BR").format(ANOS_INSTRUCAO.map(String)),
         medidas: MEDIDAS.map((m) => ({ chave: m.chave, rotulo: m.rotulo, href: href({ med: m.chave }), on: m.chave === medida.chave })),
@@ -527,6 +545,8 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
             />
           ) : naDinheiro ? (
             <VisaoDinheiro menu={submenu} sp={sp} />
+          ) : naVies ? (
+            <VisaoVies menu={submenu} sp={sp} municipios={municipios} />
           ) : (<>
           <MapaVivo className="palco s12" estado={soEstados ? undefined : uf}>
             {submenu}
