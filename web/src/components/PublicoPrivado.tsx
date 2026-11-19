@@ -75,14 +75,13 @@ export function PublicoPrivado({ d }: { d: DadosP8 }) {
             <section className="bloco noite">
               <h3>Maioria do dinheiro foi pública</h3>
               <div className="p8-grades">
-                <figure>
-                  <GradeCem destaque parte={d.maioria.eleitos!} titulo={`Eleitos com a maioria do dinheiro pública, ${d.recorte}`} />
-                  <figcaption>{Math.round(d.maioria.eleitos! * 100)} de cada 100 eleitos</figcaption>
-                </figure>
-                <figure>
-                  <GradeCem parte={d.maioria.naoEleitos!} titulo={`Não eleitos com a maioria do dinheiro pública, ${d.recorte}`} />
-                  <figcaption>{Math.round(d.maioria.naoEleitos! * 100)} de cada 100 não eleitos</figcaption>
-                </figure>
+                {/* um valor por grupo, o mesmo na grade e na legenda */}
+                {([["eleitos", "Eleitos", d.maioria.eleitos!], ["não eleitos", "Não eleitos", d.maioria.naoEleitos!]] as const).map(([quem, Quem, parte], i) => (
+                  <figure key={quem}>
+                    <GradeCem destaque={i === 0} parte={parte} titulo={`${Quem} com a maioria do dinheiro pública, ${d.recorte}`} />
+                    <figcaption>{Math.round(parte * 100)} de cada 100 {quem}</figcaption>
+                  </figure>
+                ))}
               </div>
             </section>
           )}

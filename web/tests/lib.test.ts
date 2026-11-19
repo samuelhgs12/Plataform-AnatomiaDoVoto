@@ -819,6 +819,13 @@ describe("maioriaPublica", () => {
       x8({ eleito: false, faixa: "sem_receita", candidaturas: 4 }), x8({ eleito: false, candidaturas: 1 })];
     expect(maioriaPublica(linhas, { ano: 2022, cargo: "Deputado federal", uf: "MG" })).toEqual({ eleitos: 0.6, naoEleitos: 0.2 });
   });
+  it("devolve números finitos nos dois grupos (o que a grade e a legenda usam)", () => {
+    const m = maioriaPublica([x8({}), x8({ eleito: false, faixa: "mais_publico", candidaturas: 7 }), x8({ eleito: false, faixa: "so_privado", candidaturas: 3 })], { ano: 2022, cargo: "Deputado federal", uf: "MG" });
+    expect(Object.keys(m)).toEqual(["eleitos", "naoEleitos"]);
+    expect(Number.isFinite(m.eleitos)).toBe(true);
+    expect(Number.isFinite(m.naoEleitos)).toBe(true);
+    expect(m.naoEleitos).toBe(0.7);
+  });
   it("sem ninguém no grupo, null; sem uf, as UFs somadas", () => {
     expect(maioriaPublica([x8({})], { ano: 2022 }).naoEleitos).toBeNull();
     expect(maioriaPublica([x8({}), x8({ uf: "PE", faixa: "so_privado" })], { ano: 2022 }).eleitos).toBe(0.5);
