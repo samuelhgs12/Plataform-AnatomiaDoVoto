@@ -655,6 +655,14 @@ def test_mapa_do_candidato(client):
     assert client.get("/api/candidatos/999/mapa").status_code == 404
 
 
+def test_patrimonio_do_candidato(client):
+    """Evolução do patrimônio no perfil: uma linha por candidatura e tipo de bem; quem não declarou nada vem com valor 0."""
+    p = client.get("/api/candidatos/1/patrimonio").json()
+    assert [(x["id_candidatura"], x["ano"], x["valor"], x["bens"]) for x in p] == [(1, 2016, 200000, 1), (2, 2020, 0, 0), (3, 2022, 350000, 2)]
+    assert (p[0]["cargo"], p[0]["municipio"], p[0]["eleito"]) == ("Vereador", "Alvorada", True)
+    assert client.get("/api/candidatos/999/patrimonio").status_code == 404
+
+
 def test_votos_por_municipio(client):
     v = client.get("/api/candidaturas/3/votos-municipio").json()
     # Alvorada: Maria 30000 + rival 3000 nominais + 70 de legenda; Serra Azul: só o rival votado, ela com 0

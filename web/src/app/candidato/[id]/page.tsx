@@ -15,6 +15,8 @@ import type { LinhaMediana } from "@/lib/financiamento";
 import { naLinhaDoTempo } from "@/lib/carreira";
 import { fotoDoPerfil } from "@/lib/foto-candidato";
 import { Rolar } from "@/components/Rolar";
+import { PatrimonioCandidato } from "@/components/PatrimonioCandidato";
+import { evolucaoPatrimonio, type LinhaPatrimonio } from "@/lib/patrimonio-perfil";
 
 type Props = { params: Promise<{ id: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
 const ANO_RECEITAS = 2018;   // a base só tem prestação de contas (receitas e despesas) de 2018 em diante
@@ -43,7 +45,7 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
   const comContas = disputadas.filter((c) => c.ano >= ANO_RECEITAS).reverse();
   const pedida = Number(Array.isArray(sp.campanha) ? sp.campanha[0] : sp.campanha);
   const foto = fotoDoPerfil(Number(id), carreira);
-  const [contas, q9] = await Promise.all([
+  const [contas, q9, bens] = await Promise.all([
     Promise.all(comContas.map(async (c) => ({
       c,
       r: await apiGetOpcional<Receitas>(`/candidaturas/${c.id_candidatura}/receitas`),
@@ -51,7 +53,10 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
     }))),
     // pergunta 9: parcela típica de cada tipo de propaganda por cargo, ano e UF (análise q9; sem ela, sem comparação)
     comContas.length ? lerAnalise("q9", ["referencia"]) : Promise.resolve(null),
+    // evolução do patrimônio declarado entre as candidaturas (2006 em diante); null se a API não responder
+    apiGetOpcional<LinhaPatrimonio[]>(`/candidatos/${id}/patrimonio`),
   ]);
+  const patrimonio = bens ? evolucaoPatrimonio(bens) : null;
   const referencias = q9?.referencia ? comoObjetos<LinhaReferencia>(q9.referencia) : null;
   // tirar a própria campanha da típica só importa nos grupos pequenos: só então busca a tabela "parcelas" da q9
   const escolhida = comContas.find((c) => c.id_candidatura === pedida) ?? comContas[0];
@@ -104,6 +109,8 @@ export default async function PerfilCandidato({ params, searchParams }: Props) {
           </p>
         )}
       </section>
+
+      <PatrimonioCandidato pontos={patrimonio} />
 
       <DinheiroCampanha campanhas={contas} escolhida={pedida} hrefDe={(c) => `/candidato/${id}?campanha=${c}#dinheiro`}
         medianas={medianas} disputa={disputa} />
