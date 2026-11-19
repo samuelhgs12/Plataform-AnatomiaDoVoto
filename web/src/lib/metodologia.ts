@@ -35,6 +35,15 @@ export const linkFonte = (caminho: string) => `${REPOSITORIO}/blob/main/${caminh
 
 const UFS = "AP, ES, MG, PE, RJ e RR";
 
+/**
+ * A frase dos pares da pergunta 2, em "Como calculamos": com a concordância do recorte (0 a 1), o número; sem ela, a
+ * frase sem número (a /sobre, que não tem recorte).
+ */
+export function fraseParesP2(parte?: number | null, mesma = "da mesma cidade"): string {
+  const n = parte == null ? "" : ` em cerca de ${Math.round(parte * 100)} de cada 100 pares,`;
+  return `Outra forma de medir, comparando os candidatos ${mesma} dois a dois, dá resultado parecido:${n || " em mais da metade dos pares,"} o que declarou mais bens teve mais votos. Entram só os pares que declararam bens e tiveram votos diferentes no 1º turno; patrimônio igual vale meio; 50 em 100 quer dizer nenhuma relação.`;
+}
+
 export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
   mapa: {
     id: "mapa",
@@ -138,8 +147,10 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
       "Vereador e deputados, no mapa: a parte dos eleitos que estava na metade mais rica dos candidatos da própria disputa, contando só os eleitos que declararam bens (quantos não declararam aparece à parte). Se patrimônio e vitória não andassem juntos, ficaria perto de 50%; de 50% a 60% o mapa mostra como “pouca ou nenhuma relação”. Cidades com menos de 15 candidatos ficam hachuradas: a metade mais rica é de poucas pessoas.",
       "Prefeito, governador e senador: cada candidato recebe a posição no patrimônio dentro da disputa (1º = o mais rico; empates com a mesma posição; sem bens por último), e a pergunta vira “o candidato mais rico venceu?”. Com duas vagas de senador, vale o eleito mais rico. Ficam fora da conta as disputas com um candidato só, sem eleito na base ou em que ninguém declarou bens.",
       "Quem já tinha o cargo: eleito para o mesmo cargo, no mesmo lugar, na eleição anterior (4 anos antes; senador, também 8). Essas pessoas costumam ter mais bens e ganhar mais. “Sem quem já tinha o cargo” tira essas pessoas (vereador e deputados) ou as disputas inteiras com alguém tentando a reeleição (prefeito, governador e senador); os décimos continuam os da disputa inteira.",
-      "Em uma frase (pares): dentro de cada disputa, entre os pares de candidatos que declararam bens e tiveram votos diferentes no 1º turno, a parte em que o de maior patrimônio teve mais votos; patrimônio igual vale meio. 50% quer dizer nenhuma relação.",
-      "Eleitos e não eleitos: o patrimônio típico (mediana) de quem declarou bens em cada grupo, e a distribuição em faixas de 10 em 10 (R$ 1 mil, 10 mil, 100 mil, 1 milhão, 10 milhões).",
+      fraseParesP2(),
+      "Eleitos e não eleitos: o patrimônio típico (mediana) conta só quem declarou bens; as colunas mostram a parte de cada grupo em faixas de 10 em 10 (R$ 1 mil, 10 mil, 100 mil, 1 milhão, 10 milhões), com os sem bens numa coluna à parte. Quem são os eleitos: a parte dos candidatos e a dos eleitos em cada grupo de patrimônio.",
+      "Prefeito numa cidade, ou vereador numa cidade com menos de 15 candidatos: a escada mostra cada candidato, do que declarou menos ao que declarou mais, com a parte dos votos válidos nominais do 1º turno (com tão poucas pessoas, porcentagens por décimo não dizem nada). Governador e senador: a escada junta as cinco eleições do estado (2006 a 2022).",
+      "Ao longo do tempo: a mesma medida em cada eleição do mesmo tipo, com todos e sem quem já tinha o cargo. Os valores são da época e são comparados só dentro de cada eleição, então a inflação não muda a ordem.",
       "Os candidatos: os de maior patrimônio, os de maior patrimônio que não se elegeram e os eleitos com menos bens (menor décimo da própria disputa; sem bens primeiro), com a posição de cada um na própria disputa.",
       "Sucesso eleitoral = ter sido eleito, conforme o resultado final do TSE; votos do 1º turno. Só titulares, eleições ordinárias e quem de fato disputou, de 2006 a 2024.",
       "Os valores são os declarados, com possíveis erros de digitação (bilhões para vereador): nada é removido. Como as contas usam a ordem dentro da disputa, um valor absurdo muda só a posição daquela pessoa, mas ela aparece no topo das listas.",

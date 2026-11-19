@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   anosDoTipo, classificar, composicaoEleitos, concordancia, concordanciaDeCandidatos, corDaMetade, corDaParteCidades, disputaDeCandidatos, escada,
-  escadaDeCandidatos, escadaDeVotos, escalaLista, escadaPosicoes, faixaDoValor, frasePosicao, fraseTopo, histograma, histogramaDeCandidatos, juntarPatrimonio, legendaMetade,
+  escadaDeCandidatos, escadaDeVotos, escalaLista, eixoSerie, fraseSerie, escadaPosicoes, faixaDoValor, frasePosicao, fraseTopo, histograma, histogramaDeCandidatos, juntarPatrimonio, legendaMetade,
   legendaPrefeito, listaDe, listaDeCandidatos, listaDoRecorte, marcasLog, medianaPonderada, medianasDeCandidatos, medianasDoRecorte, metadeDaCidade,
   metadeMaisRica, naEscalaLog, posicaoDoEleito, posicaoLog, quemTinha, recorteDaDisputa, serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade,
   taxaDoTopo, textoPosicao, topoDaComposicao, tituloP2, valorTipico, vitoriaDoMaisRico,
@@ -259,6 +259,22 @@ describe("as séries", () => {
     expect(serieMaisRico([disp({}), disp({ pos_eleito: 2 })], "Prefeito", "PE").at(-1)).toEqual({ ano: 2024, valor: 0.5, n: 2 });
     expect(serieDisputa([disp({ pos_eleito: 2 })], "Prefeito", "PE", 1).at(-1)!.p!.categoria).toBe("segundo");
     expect(serieDisputa([], "Prefeito", "PE", 1)[0].p).toBeNull();
+  });
+});
+
+describe("fraseSerie e eixoSerie", () => {
+  it("responde numa frase com a média dos anos com dado", () => {
+    const p = [{ ano: 2008, valor: 0.6, n: 1 }, { ano: 2012, valor: null, n: 0 }, { ano: 2016, valor: 0.64, n: 1 }];
+    expect(fraseSerie(p, "Vereador")).toBe("Desde 2008, cerca de 6 em cada 10 eleitos estão na metade mais rica");
+    expect(fraseSerie([{ ano: 2012, valor: 0.47, n: 1 }], "Prefeito")).toBe("Desde 2012, o mais rico venceu em 47% das cidades");
+    expect(fraseSerie([{ ano: 2012, valor: null, n: 0 }], "Prefeito")).toBeNull();
+  });
+  it("vereador de 40% a 80% (alarga se preciso); prefeito pelos dados", () => {
+    expect(eixoSerie([0.6, 0.66], "Vereador")).toEqual({ min: 0.4, max: 0.8, marcas: [0.5, 0.75] });
+    expect(eixoSerie([0.6, 0.88], "Deputado estadual").max).toBe(0.9);
+    const e = eixoSerie([0.45, 0.53], "Prefeito");
+    expect([e.min, e.max]).toEqual([0.4, 0.6]);
+    expect(e.marcas).toEqual([0.5]);
   });
 });
 

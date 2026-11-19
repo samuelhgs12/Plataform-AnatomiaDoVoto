@@ -497,6 +497,37 @@ export function serieMetadeCidade(linhas: LinhaVereadorCidade[], id_municipio: n
 export function serieMaisRico(ds: LinhaDisputa[], cargo: string, uf: string | undefined, { semCargo = false } = {}): PontoSerie[] {
   return anosDoTipo(cargo).map((ano) => { const v = vitoriaDoMaisRico(ds, { anos: [ano], cargo, uf }, { semCargo }); return { ano, valor: v.parte, n: v.comparaveis }; });
 }
+/**
+ * O título da série, a resposta numa frase, com a média das eleições com dado: vereador e deputados, "Desde 2008, cerca
+ * de 6 em cada 10 eleitos estão na metade mais rica"; prefeito, "Desde 2008, o mais rico venceu em 47% das cidades".
+ * null sem nenhum ano com dado.
+ */
+export function fraseSerie(pontos: PontoSerie[], cargo: string): string | null {
+  const v = pontos.filter((p): p is PontoSerie & { valor: number } => p.valor !== null);
+  if (!v.length) return null;
+  const media = v.reduce((a, p) => a + p.valor, 0) / v.length;
+  const desde = `Desde ${v[0].ano}`;
+  if (ehMajoritarioP2(cargo)) return `${desde}, o mais rico venceu em ${Math.round(media * 100)}% ${cargo === "Prefeito" ? "das cidades" : "das disputas"}`;
+  return `${desde}, cerca de ${Math.round(media * 10)} em cada 10 eleitos estão na metade mais rica`;
+}
+
+/**
+ * O eixo da série (0 a 1): vereador e deputados, de 40% a 80% (o neutro, 50%, sempre à vista), alargado em décimos se
+ * algum valor sair dele; prefeito, governador e senador, pelos dados, em décimos com folga. As marcas são as que não
+ * colidem com os rótulos: 50% e 75% no primeiro caso; no outro, o meio do eixo.
+ */
+export function eixoSerie(valores: (number | null)[], cargo: string): { min: number; max: number; marcas: number[] } {
+  const v = valores.filter((x): x is number => x !== null);
+  const baixo = v.length ? Math.floor((Math.min(...v) - 0.02) * 10) / 10 : 0.4;
+  const alto = v.length ? Math.ceil((Math.max(...v) + 0.02) * 10) / 10 : 0.8;
+  if (!ehMajoritarioP2(cargo)) {
+    const min = Math.max(0, Math.min(0.4, baixo)), max = Math.min(1, Math.max(0.8, alto));
+    return { min, max, marcas: [0.5, 0.75].filter((m) => m > min && m < max) };
+  }
+  const min = Math.max(0, baixo), max = Math.min(1, Math.round(Math.max(min + 0.2, alto) * 10) / 10);
+  return { min, max, marcas: [Math.round(((min + max) / 2) * 100) / 100] };
+}
+
 /** Uma disputa só (a cidade, para prefeito; o estado, para governador e senador) em cada eleição: onde estava o eleito. */
 export function serieDisputa(ds: LinhaDisputa[], cargo: string, uf: string, id_municipio: number | null, { semCargo = false } = {}): { ano: number; p: PosicaoEleito | null }[] {
   return anosDoTipo(cargo).map((ano) => {

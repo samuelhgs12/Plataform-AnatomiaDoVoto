@@ -40,7 +40,7 @@ export function FaixasPatrimonio({ h, m, titulo }: { h: Histograma; m: Medianas 
           <span className="fx-bins">{DIVISAS.map((d) => <small key={d.v} style={{ left: `${posicaoLog(d.v) * 100}%` }}>{d.t}</small>)}</span>
         </div>
       </div>
-      <figcaption className="fx-legenda">Altura: parte do grupo em cada faixa · traço: o típico (mediana) de quem declarou bens · eixo em reais, de 10 em 10</figcaption>
+      <figcaption className="fx-legenda">eixo em reais, de 10 em 10</figcaption>
     </figure>
   );
 }

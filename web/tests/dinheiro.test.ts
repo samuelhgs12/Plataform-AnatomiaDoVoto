@@ -818,9 +818,9 @@ describe("perguntas do menu: PINTAR, medidaDe, SECOES, MEIAS e MEDIDAS_ANOS", ()
   it("cada pergunta mostra só os seus blocos, e todo bloco aparece em alguma pergunta", () => {
     expect(SECOES.vaga).toEqual(["numeros", "cadeiras", "busca", "ranking", "anos"]);
     expect(SECOES.publico).toContain("fundos");
-    expect(SECOES.voto).toEqual(["escada", "declararam", "composicao", "candidatos", "serie", "pares", "cidades"]);
+    expect(SECOES.voto).toEqual(["escada", "declararam", "composicao", "candidatos", "serie"]);
     const todas = new Set(Object.values(SECOES).flat());
-    for (const x of ["numeros", "cadeiras", "origem", "fundos", "ranking", "anos", "destino", "propaganda", "busca", "escada", "declararam", "composicao", "candidatos", "serie", "pares", "cidades"]) expect(todas.has(x as never)).toBe(true);
+    for (const x of ["numeros", "cadeiras", "origem", "fundos", "ranking", "anos", "destino", "propaganda", "busca", "escada", "declararam", "composicao", "candidatos", "serie"]) expect(todas.has(x as never)).toBe(true);
   });
   it("os blocos de meia largura vêm aos pares, vizinhos, e são da própria pergunta", () => {
     for (const p of PINTAR) {

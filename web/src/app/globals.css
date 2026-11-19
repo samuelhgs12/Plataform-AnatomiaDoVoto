@@ -2740,11 +2740,6 @@ a.q-ver:active { transform: scale(0.98); }
 .comp-p2 .q0 { background: var(--q0); } .comp-p2 .q1 { background: var(--q1); } .comp-p2 .q3 { background: var(--q3); } .comp-p2 .q4 { background: var(--q4); }
 .comp-p2 .o { background: repeating-linear-gradient(45deg, var(--p2-barra-sem) 0 3px, color-mix(in srgb, var(--p2-barra-sem) 55%, transparent) 3px 6px); }
 .comp-p2 .q0 em, .comp-p2 .q1 em, .comp-p2 .o em { color: var(--sobre-noite); }
-.comp-legenda { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
-.comp-legenda li { display: grid; grid-template-columns: 12px minmax(0, 1fr) 6.5em 4.5em; gap: 10px; align-items: center; }
-.comp-legenda i { width: 12px; height: 12px; border-radius: 3px; }
-.comp-legenda b { text-align: right; font-variant-numeric: tabular-nums; }
-.comp-legenda .comp-cab { font-size: 12px; color: var(--noite-muted); } .comp-legenda .comp-cab b { font-weight: 500; }
 
 /* os candidatos */
 .p2-abas { margin: 0 0 14px; }
@@ -2793,7 +2788,8 @@ a.q-ver:active { transform: scale(0.98); }
 .serie-p2 text { fill: var(--noite-muted); font-size: 12px; text-anchor: middle; }
 .sp-grade text { text-anchor: end; }
 .sp-ref line { stroke: var(--sobre-noite); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: 0.7; }
-.sp-ref text { text-anchor: start; fill: var(--sobre-noite); }
+.sp-ref text { text-anchor: start; fill: var(--sobre-noite); font-weight: 600; }
+.sp-ref .sp-ref-eixo { text-anchor: end; }
 .sp-linha { fill: none; stroke: var(--p2-barra); stroke-width: 2.5; stroke-linejoin: round; }
 .sp-ponto circle { fill: var(--p2-barra); stroke: var(--noite2); stroke-width: 2; }
 .sp-ponto text { fill: var(--sobre-noite); font-weight: 600; }
@@ -2807,20 +2803,6 @@ a.q-ver:active { transform: scale(0.98); }
 .serie-disputa i.p1 { background: var(--p2-pos1); } .serie-disputa i.p2 { background: var(--p2-pos2); } .serie-disputa i.p3 { background: var(--p2-pos3); }
 .serie-disputa i.psb { background: var(--p2-sem-bens); } .serie-disputa i.fora, .serie-disputa i.sem { background: repeating-linear-gradient(45deg, var(--p2-traco) 0 1.5px, var(--p2-fora) 1.5px 5px); }
 .sd-txt { display: grid; font-size: 13.5px; font-weight: 600; } .sd-txt small { font-size: 12px; font-weight: 400; color: var(--noite-muted); }
-.p2-frase { font-size: 19px; line-height: 1.35; color: var(--sobre-noite); }
-.p2-frase b { color: var(--brilho); font-size: 1.25em; }
-.p2-regua { position: relative; margin: 18px 0 6px; padding-bottom: 20px; }
-.p2-regua-trilho { display: block; height: 14px; border-radius: 7px; background: color-mix(in srgb, var(--sobre-noite) 9%, transparent); overflow: hidden; }
-.p2-regua-trilho i { display: block; height: 100%; background: var(--p2-barra); }
-.p2-regua-meio { position: absolute; left: 50%; top: -6px; height: 26px; border-left: 2px dashed var(--sobre-noite); }
-.p2-regua-meio small { position: absolute; top: 28px; left: 0; transform: translateX(-50%); font-size: 12px; white-space: nowrap; color: var(--noite-muted); }
-.p2-regua-num { position: absolute; left: 0; right: 0; top: 18px; display: flex; justify-content: space-between; font-size: 11px; color: var(--noite-muted); }
-.p2-cidades summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
-.p2-cidades summary h3 { display: inline; margin: 0; }
-.p2-cidades summary span { font-size: 14px; color: var(--noite-muted); }
-.p2-cidades .tabela-rolar { max-height: 420px; overflow: auto; margin-top: 12px; }
-.p2-cidades .dinheiro-tabela th { background: var(--noite2); }
-.p2-cidades .dinheiro-tabela a { color: var(--sobre-noite); }
 @media (max-width: 1000px) { .painel.din.p2 > .meia { grid-column: 1 / -1; } }
 .legenda-p2 { column-gap: 6px; }
 .legenda-p2 li { min-width: 4.6em; }
@@ -2846,3 +2828,19 @@ a.q-ver:active { transform: scale(0.98); }
   .legenda-p2 i { height: 7px; }
 }
 .lp-alerta { font-size: 12px; font-weight: 600; color: var(--amarelo-400); cursor: help; }
+
+/* pergunta 2, ajustes: a mediana acima das barras, a legenda das cores numa linha e a série com duas linhas nomeadas */
+.fx-linha { height: 112px; padding-top: 20px; }
+.fx-mediana { top: -20px; }
+.fx-mediana span { top: 0; }
+.comp-legenda { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--noite-muted); }
+.comp-legenda li { display: inline-flex; align-items: center; gap: 6px; }
+.comp-legenda i { width: 12px; height: 12px; border-radius: 3px; }
+.serie-p2 .sp-serie.fina .sp-linha { stroke-width: 1.6; stroke-dasharray: 6 4; opacity: 0.85; }
+.serie-p2 .sp-serie.fina .sp-ponto circle { r: 3; }
+.serie-p2 .sp-nome { text-anchor: start; font-size: 13px; font-weight: 650; fill: var(--sobre-noite); }
+.serie-p2 .sp-serie.fina .sp-nome { font-weight: 500; fill: var(--noite-muted); }
+.serie-p2 .sp-serie.fina .sp-ponto text { fill: var(--noite-muted); }
+.fx-linha.fx-eixo { height: auto; padding-top: 0; }
+.serie-p2 .sp-nome-valor { font-weight: 700; }
+@media (max-width: 620px) { .serie-p2 text { font-size: 21px; } .serie-p2 .sp-nome { font-size: 22px; } }

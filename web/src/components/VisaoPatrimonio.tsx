@@ -9,15 +9,15 @@ import { ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro } from "@/lib/dinhei
 import { NOME_UF } from "@/lib/financiamento";
 import { inteiro } from "@/lib/format";
 import { TELA } from "@/lib/lupa";
-import { METODOLOGIA } from "@/lib/metodologia";
+import { fraseParesP2, METODOLOGIA } from "@/lib/metodologia";
 import {
   ANOS_PATRIMONIO, anosDoTipo, classificar, composicaoEleitos, concordancia, concordanciaDeCandidatos, COR_CATEGORIA, corDaMetade, corDaParteCidades,
-  deCada100, disputaDeCandidatos, disputaEmOrdem, ehMajoritarioP2, escada, escadaDeCandidatos, escadaDeVotos, escadaPosicoes, frasePosicao, fraseTopo, histograma,
+  disputaDeCandidatos, disputaEmOrdem, ehMajoritarioP2, escada, escadaDeCandidatos, escadaDeVotos, eixoSerie, fraseSerie, escadaPosicoes, frasePosicao, fraseTopo, histograma,
   histogramaDeCandidatos, juntarPatrimonio, legendaMetade, legendaParteCidades, legendaPrefeito, LISTAS, listaDeCandidatos, listaDoRecorte, medianasDeCandidatos,
-  medianasDoRecorte, metadeDaCidade, metadeMaisRica, MINIMO_CANDIDATOS, posicaoDoEleito, quemTinha, recorteDaDisputa, ROTULO_MOTIVO, rotuloSemCargo,
+  medianasDoRecorte, metadeDaCidade, metadeMaisRica, MINIMO_CANDIDATOS, posicaoDoEleito, quemTinha, recorteDaDisputa, rotuloSemCargo,
   serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade, taxaDoTopo, tituloP2, topoDaComposicao, valorTipico, vitoriaDoMaisRico,
   type Degrau, type FiltroP2, type LinhaDecil, type LinhaDisputa, type LinhaFaixa, type LinhaLista, type LinhaMedianas, type LinhaPares, type LinhaPessoa,
-  type LinhaPosicao, type LinhaVereadorCidade, type MotivoFora, type PosicaoEleito,
+  type LinhaPosicao, type LinhaVereadorCidade, type PosicaoEleito,
 } from "@/lib/patrimonio";
 import type { CandidatoLocal, LinhaMunicipio } from "@/lib/territorio";
 import { ComposicaoEleitos } from "./ComposicaoEleitos";
@@ -41,8 +41,8 @@ const seloPosicao = (p: PosicaoEleito | null) => (!p ? "—" : p.categoria === "
  * vitória? Cada candidato é comparado só com os concorrentes da mesma disputa. O mapa pinta, por cidade (vereador) ou
  * estado (deputados), a parte dos eleitos que estava na metade mais rica dos candidatos, numa escala divergente com o
  * neutro em 50–60%; para prefeito, onde o eleito estava no patrimônio (o mais rico, o 2º, abaixo), com marca quando ele
- * já era prefeito. Embaixo: a escada, eleitos × não eleitos, quem são os eleitos, os candidatos, a série, a frase dos
- * pares e cidade por cidade. Com uma cidade escolhida, tudo é da cidade. `?semcargo=1` tira quem já tinha o cargo.
+ * já era prefeito. Embaixo: a escada, eleitos × não eleitos, quem são os eleitos, os candidatos e a série ao longo do
+ * tempo (com e sem quem já tinha o cargo); a frase dos pares fica em "Como calculamos". Com uma cidade escolhida, tudo é da cidade. `?semcargo=1` tira quem já tinha o cargo.
  * Dados: tabelas pat_* de /api/analises/q2 (estado) ou, na cidade, a lista de candidatos + pat_cidade_<ano>; as contas
  * estão em src/lib/patrimonio.ts.
  */
@@ -171,21 +171,17 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const disputaInteira = mun && majoritario && cls ? disputaEmOrdem(cls) : null;
   const eleitoUnico = mun && majoritario && cls ? cls.filter((c) => c.eleito).sort((a, b) => a.posicao - b.posicao)[0] : undefined;
   // a série: a cidade (vereador: a metade; prefeito: a posição do eleito) ou o estado
-  const serie = !uf ? null : cargo === "Vereador" ? (mun ? serieMetadeCidade(porCidade, mun.id_municipio, { semCargo }) : serieMetade(decis, cargo, uf, { semCargo }))
-    : !majoritario ? serieMetade(decis, cargo, uf, { semCargo }) : cargo === "Prefeito" && !mun ? serieMaisRico(disputas, cargo, uf, { semCargo }) : null;
+  const serieDe = (sc: boolean) => (!uf ? null : cargo === "Vereador" ? (mun ? serieMetadeCidade(porCidade, mun.id_municipio, { semCargo: sc }) : serieMetade(decis, cargo, uf, { semCargo: sc }))
+    : !majoritario ? serieMetade(decis, cargo, uf, { semCargo: sc }) : cargo === "Prefeito" && !mun ? serieMaisRico(disputas, cargo, uf, { semCargo: sc }) : null);
+  const [serieCom, serieSem] = [serieDe(false), serieDe(true)];
+  const linhasSerie = serieCom && serieSem ? [
+    { nome: "com todos", pontos: serieCom, fina: semCargo },
+    { nome: majoritario ? "sem disputas|com reeleição" : "sem quem já|tinha o cargo", pontos: serieSem, fina: !semCargo },
+  ] : [];
+  const eixo = eixoSerie([...(serieCom ?? []), ...(serieSem ?? [])].map((x) => x.valor), cargo);
+  const tituloSerie = (semCargo ? serieSem : serieCom) ? fraseSerie((semCargo ? serieSem : serieCom)!, cargo) : null;
   const serieUnica = uf && majoritario && (mun || umaPorEstado) ? serieDisputa(disputas, cargo, uf, mun ? mun.id_municipio : null, { semCargo }) : null;
   const anosSerie = anosDoTipo(cargo);
-  // cidade por cidade (estado aberto, eleições municipais)
-  const cidadesTabela = uf && municipal && !mun ? cidadesUf.map((m) => {
-    if (cargo === "Vereador") {
-      const md = metadeDaCidade(porCidade, ano, m.id_municipio, { semCargo });
-      return { m, candidatos: md?.candidatos ?? 0, valor: md?.parte ?? null, texto: !md ? "—" : md.candidatos < MINIMO_CANDIDATOS ? `${pc(md.parte)} · poucos` : pc(md.parte), extra: md ? `${md.rica} de ${md.comBens}` : "" };
-    }
-    const d = disputaDaCidade.get(m.id_municipio);
-    const p = d ? posicaoDoEleito(d, { semCargo }) : null;
-    return { m, candidatos: d?.candidatos ?? 0, valor: p?.categoria === "primeiro" ? 1 : p?.categoria === "fora" || !p ? null : 0, texto: p ? (p.categoria === "fora" ? `fora (${ROTULO_MOTIVO[p.motivo as MotivoFora]})` : frasePosicao(p).replace("O eleito era o ", "")) : "—", extra: p?.eleitoTinha && p.categoria !== "fora" ? "já era prefeito" : "" };
-  }).sort((a, b) => (b.valor ?? -1) - (a.valor ?? -1) || b.candidatos - a.candidatos) : [];
-
   // ---------- o cartão do lugar (sobre o mapa) ----------
   const tipicos = medianas && (medianas.medianaEleitos !== null || medianas.medianaTodos !== null) ? `Eleito típico: ${valorTipico(medianas.medianaEleitos)} · candidato típico: ${valorTipico(medianas.medianaTodos)}` : null;
   const outraVariante = semCargo ? "Com todos" : `Sem ${quemTinha(cargo)}`;
@@ -193,7 +189,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
     rotulo: `${mun ? `Município · ${uf}` : "Estado"} · ${cargo}`,
     valor: seloPosicao(posUnica), unidade: frasePosicao(posUnica).replace(/^O eleito era o /, "o eleito era o "),
     linha: eleitoUnico ? `Eleito: ${nomeProprio(eleitoUnico.nome_urna ?? "")} (${eleitoUnico.partido ?? "?"}), ${eleitoUnico.patrimonio > 0 ? valorTipico(eleitoUnico.patrimonio) : "sem bens declarados"}` : null,
-    selos: [posUnica.eleitoTinha && posUnica.categoria !== "fora" ? `já era ${cargoMin}` : null, pares?.parte != null ? `Pares: ${deCada100(pares.parte)} em 100` : null].filter((x): x is string => !!x),
+    selos: [posUnica.eleitoTinha && posUnica.categoria !== "fora" ? `já era ${cargoMin}` : null].filter((x): x is string => !!x),
   } : vitoria ? {
     rotulo: `Estado · ${cargo}`, valor: pc(vitoria.parte), unidade: `das cidades elegeram o candidato mais rico (${inteiro(vitoria.venceu)} de ${inteiro(vitoria.comparaveis)})`,
     linha: tipicos,
@@ -201,7 +197,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   } : metade ? {
     rotulo: `${mun ? `Município · ${uf}` : "Estado"} · ${cargo}`, valor: pc(metade.parte), unidade: "dos eleitos estavam na metade mais rica dos candidatos",
     linha: tipicos,
-    selos: [metadeOutra?.parte != null ? `${outraVariante}: ${pc(metadeOutra.parte)}` : null, pares?.parte != null ? `Pares: ${deCada100(pares.parte)} em 100` : null,
+    selos: [metadeOutra?.parte != null ? `${outraVariante}: ${pc(metadeOutra.parte)}` : null,
       metade.eleitos ? `${pc(metade.semBens / metade.eleitos)} dos eleitos sem bens` : null, mun && metade.candidatos < MINIMO_CANDIDATOS ? "poucos candidatos" : null].filter((x): x is string => !!x),
   } : null;
   const paramsMun = Object.fromEntries(new URL(href({ mun: null }), "http://x").searchParams);
@@ -298,7 +294,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
             <p>{fraseFaixa ?? "Sem dados para a comparação."}</p>
             {chips("p2-escada")}
           </div>
-          <p className="din-rodape">{porCandidato ? "Em cima, a parte dos votos válidos nominais do 1º turno; embaixo, o patrimônio declarado · " : ""}Sem bens: quem não declarou nenhum bem, à parte (não é o “menos rico”) · {majoritario ? "posição 1 = o mais rico da disputa" : "décimo = um décimo dos que declararam bens na disputa, de tamanho aproximado"} · embaixo, o patrimônio típico (mediana), valores da época</p>
+          <p className="din-rodape">{porCandidato ? "Em cima, a parte dos votos; embaixo, o patrimônio declarado." : "Embaixo, o patrimônio típico de cada grupo; “sem bens” fica à parte."}</p>
         </section>
 
         {/* 2. eleitos × não eleitos e quem são os eleitos */}
@@ -308,7 +304,6 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
             <p>{medianas ? <>Eleito típico: <b>{valorTipico(medianas.medianaEleitos)}</b> · não eleito típico: <b>{valorTipico(medianas.medianaNao)}</b></> : `${cargo} · ${ano}`}</p>
           </header>
           {hist ? <FaixasPatrimonio h={hist} m={medianas} titulo={`Patrimônio declarado de eleitos e não eleitos, ${cargoMin}, ${lugar}, ${ano}`} /> : <p className="muted">Sem dados neste recorte.</p>}
-          {medianas && <p className="din-rodape">Sem bens: {pc(medianas.eleitos ? medianas.eleitosSemBens / medianas.eleitos : null)} dos eleitos e {pc(medianas.naoEleitos ? medianas.naoSemBens / medianas.naoEleitos : null)} dos não eleitos · o típico conta só quem declarou bens · valores da época</p>}
         </section>
         {!cidadeUnica && <section id="p2-composicao" className="bloco noite s12 meia p2-composicao">
           <header className="din-sec">
@@ -342,65 +337,21 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
               </div>
             </>
           )}
-          <p className="din-rodape">Valores declarados pelo candidato ao TSE; podem conter erros (um vereador com bilhões quase sempre é erro de digitação) · posição = lugar no patrimônio dentro da própria disputa · votos do 1º turno · clique no nome para ver o perfil</p>
+          <p className="din-rodape">Valores declarados pelo candidato ao TSE; podem conter erros.</p>
         </section>
 
-        {/* 4. a série e a frase dos pares */}
-        <section id="p2-serie" className="bloco noite s12 meia p2-serie">
+        {/* 4. ao longo do tempo, na largura toda */}
+        <section id="p2-serie" className="bloco noite s12 p2-serie">
           <header className="din-sec">
-            <h3>De {anosSerie[0]} a {anosSerie.at(-1)}</h3>
-            <p>{serieUnica ? `Onde estava o eleito, eleição a eleição, ${mun ? `em ${lugar}` : `em ${NOME_UF[uf]}`}` : !majoritario ? `Parte dos eleitos na metade mais rica, ${mun ? lugar : NOME_UF[uf]}` : `Parte das cidades que elegeram o mais rico, ${NOME_UF[uf]}`}</p>
+            <h3>{serieUnica ? `De ${anosSerie[0]} a ${anosSerie.at(-1)}: onde estava o eleito` : tituloSerie ?? `De ${anosSerie[0]} a ${anosSerie.at(-1)}`}</h3>
           </header>
           {serieUnica ? <SerieDisputa anos={serieUnica} atual={ano} titulo={`Posição do eleito no patrimônio, ${cargoMin}, ${lugar}, ${anosSerie[0]} a ${anosSerie.at(-1)}`} />
-            : serie ? <SeriePatrimonio pontos={serie} atual={ano} referencia={!majoritario ? "50% = sem relação" : undefined} titulo={`${!majoritario ? "Eleitos na metade mais rica" : "Cidades que elegeram o mais rico"}, ${cargoMin}, ${lugar}`} />
+            : linhasSerie.length ? <SeriePatrimonio linhas={linhasSerie} eixo={eixo} atual={ano} referencia={!majoritario ? "50% = sem relação" : undefined} titulo={`${!majoritario ? "Eleitos na metade mais rica" : "Cidades que elegeram o mais rico"}, ${cargoMin}, ${lugar}, ${anosSerie[0]} a ${anosSerie.at(-1)}`} />
             : <p className="muted">Sem série para este recorte.</p>}
-          <p className="din-rodape">{semCargo ? `Sem ${quemTinha(cargo)} · ` : ""}valores comparados dentro de cada eleição: a inflação não muda a ordem</p>
         </section>
-        <section id="p2-pares" className="bloco noite s12 meia p2-pares">
-          <header className="din-sec">
-            <h3>Em uma frase</h3>
-            <p>Pares de candidatos {mun ? `de ${lugar}` : cargo === "Vereador" || cargo === "Prefeito" ? "da mesma cidade" : "do mesmo estado"} que declararam bens</p>
-          </header>
-          {pares?.parte != null ? (
-            <>
-              <p className="p2-frase">Em <b>{deCada100(pares.parte)}</b> de cada 100 pares de candidatos {cargo === "Vereador" || cargo === "Prefeito" ? "da mesma cidade" : "do mesmo estado"}, o que declarou mais bens teve mais votos.</p>
-              <div className="p2-regua" role="img" aria-label={`${deCada100(pares.parte)} de 100; 50 quer dizer nenhuma relação`}>
-                <span className="p2-regua-trilho"><i style={{ width: `${pares.parte * 100}%` }} /></span>
-                <span className="p2-regua-meio" aria-hidden="true"><small>50: sem relação</small></span>
-                <span className="p2-regua-num" aria-hidden="true"><small>0</small><small>100</small></span>
-              </div>
-              <p className="din-rodape">{inteiro(pares.pares)} pares com votos diferentes · patrimônio igual conta meio · sem bens fica fora{semCargo ? ` · sem ${quemTinha(cargo)}` : ""}</p>
-            </>
-          ) : <p className="muted">Poucos candidatos com bens declarados para formar pares.</p>}
-        </section>
-
-        {/* 5. cidade por cidade */}
-        {cidadesTabela.length > 0 && (
-          <section id="p2-cidades" className="bloco noite s12 p2-cidades">
-            <details>
-              <summary><h3>Cidade por cidade</h3><span>{inteiro(cidadesTabela.length)} cidades de {NOME_UF[uf]} · {cargo === "Vereador" ? "eleitos na metade mais rica" : "onde estava o prefeito eleito"}</span></summary>
-              <div className="tabela-rolar">
-                <table className="dinheiro-tabela">
-                  <thead><tr><th>Cidade</th><th className="num">Candidatos</th><th className="num">{cargo === "Vereador" ? "Na metade mais rica" : "Eleito"}</th><th className="num">{cargo === "Vereador" ? "Eleitos com bens" : ""}</th></tr></thead>
-                  <tbody>
-                    {cidadesTabela.map((c) => (
-                      <tr key={c.m.id_municipio}>
-                        <td><Link href={href({ mun: c.m.cod_ibge })} scroll={false}>{nomeMun.get(c.m.id_municipio)}</Link></td>
-                        <td className="num">{inteiro(c.candidatos)}</td>
-                        <td className="num">{c.texto}</td>
-                        <td className="num">{c.extra}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </details>
-          </section>
-        )}
-
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">
           <summary>Como calculamos</summary>
-          <ul>{[...METODOLOGIA.p2.calculo, ...METODOLOGIA.p2.limites].map((t) => <li key={t}>{t}</li>)}</ul>
+          <ul>{[...METODOLOGIA.p2.calculo.map((t) => (t === fraseParesP2() ? fraseParesP2(pares?.parte, mun ? `de ${lugar}` : cargo === "Vereador" || cargo === "Prefeito" ? "da mesma cidade" : "do mesmo estado") : t)), ...METODOLOGIA.p2.limites].map((t) => <li key={t}>{t}</li>)}</ul>
         </details>
       </div>}
     </>

@@ -81,23 +81,23 @@ export const medidaDe = (pintar: Pintar) => MEDIDAS_MAPA.find((m) => m.chave ===
 
 /** Os blocos do painel embaixo do mapa. */
 export type Secao = "numeros" | "cadeiras" | "origem" | "fundos" | "ranking" | "anos" | "destino" | "propaganda" | "busca"
-  | "escada" | "declararam" | "composicao" | "candidatos" | "serie" | "pares" | "cidades";
+  | "escada" | "declararam" | "composicao" | "candidatos" | "serie";
 /**
  * O que cada pergunta mostra no painel, na ordem da página: só os blocos que a respondem, para a tela não misturar
  * assuntos. 1: o custo da vaga (com o gasto por eleitor), cada cadeira, a busca de um candidato, os lugares e os anos. 2: a
- * escada do patrimônio, eleitos × não eleitos, quem são os eleitos, os candidatos, a série, os pares e cidade por cidade
+ * escada do patrimônio, eleitos × não eleitos, quem são os eleitos, os candidatos e a série ao longo do tempo
  * (VisaoPatrimonio). 8: a parte pública, de onde veio o dinheiro, os lugares, quem dependeu dele e os anos. 9: para onde
  * foi o dinheiro e a nuvem de propaganda.
  */
 export const SECOES: Record<Pintar, Secao[]> = {
   vaga: ["numeros", "cadeiras", "busca", "ranking", "anos"],
-  voto: ["escada", "declararam", "composicao", "candidatos", "serie", "pares", "cidades"],
+  voto: ["escada", "declararam", "composicao", "candidatos", "serie"],
   publico: ["numeros", "origem", "ranking", "fundos", "anos"],
   propaganda: ["destino", "propaganda"],
 };
 /** Os blocos que dividem a linha com o vizinho (meia largura na tela larga), aos pares, na ordem de SECOES. */
 export const MEIAS: Record<Pintar, Secao[]> = {
-  vaga: ["ranking", "anos"], voto: ["declararam", "composicao", "serie", "pares"], publico: ["origem", "ranking"], propaganda: [],
+  vaga: ["ranking", "anos"], voto: ["declararam", "composicao"], publico: ["origem", "ranking"], propaganda: [],
 };
 /** As linhas da comparação entre anos (medidasNosAnos) que cada pergunta mostra. */
 export const MEDIDAS_ANOS: Record<Pintar, string[]> = {
