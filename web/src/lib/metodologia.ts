@@ -4,7 +4,7 @@
 // PERGUNTAS.
 import { MINIMO_CADA_100 } from "./dinheiro";
 
-export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p8" | "p9" | "p10" | "candidato" | "legislativo";
+export type IdMetodologia = "mapa" | "dinheiro" | "p1" | "p2" | "p4" | "p5" | "p6" | "p7" | "p8" | "p9" | "p10" | "candidato" | "legislativo";
 
 export interface Metodologia {
   id: IdMetodologia;
@@ -220,26 +220,94 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     sql: ["api/app/analises/q4.sql"],
   },
 
+  p6: {
+    id: "p6",
+    resposta: "No mapa, a idade de quem vota em cada município: a idade média, a parte de 16 a 29 anos ou a de 60 anos ou mais. No painel, essa idade cruzada com a dos candidatos votados ali (municípios com eleitorado mais jovem votam em candidatos mais jovens?) ou com o viés político dos votos.",
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/?ver=idade" }],
+    anos: "2018–2026",
+    cargos: "Presidente, deputado federal e estadual, senador, governador, prefeito e vereador (à escolha)",
+    turno: "1º turno",
+    dados: [
+      "perfil_eleitorado e faixa_etaria: eleitores aptos por faixa etária em cada eleição (TSE)",
+      "populacao_idade: pessoas por idade no Censo 2022 (IBGE)",
+      "votos_candidatura_municipio e candidatura (idade na eleição); votos_partido_municipio e vies_partido (viés)",
+    ],
+    recorte: ["Eleições ordinárias, 1º turno, só titulares", "Eleitorado de 16 anos ou mais; no Censo, pessoas de 16 anos ou mais", UFS],
+    calculo: [
+      "Idade média do eleitorado: cada faixa etária do TSE conta pelo ponto médio dela (21 a 24 anos = 22,5; 100 anos ou mais = 100), ponderada pelos eleitores. Jovens: 16 a 29 anos; idosos: 60 anos ou mais. No Censo 2022, cada idade conta por ela mesma.",
+      "O Censo 2022 vale para a eleição de 2022 e as municipais em volta (2020 e 2024), como no resto do mapa; o eleitorado do TSE existe em todas as eleições.",
+      "Idade dos votados: a média da idade dos candidatos na data da eleição, ponderada pelos votos que cada um teve no município. Também mostramos a parte dos votos que foi para quem tinha até 29 anos.",
+      "Viés: o mesmo da pergunta 7 (média do score dos partidos, ponderada pelos votos).",
+      "Cores do mapa em quintos: cada cor reúne um quinto dos municípios dos seis estados. Para um estado ou os seis juntos, eleitores e votos são somados antes da divisão.",
+      "A dispersão tem um ponto por município, com a correlação de Pearson (r) e a reta de mínimos quadrados.",
+    ],
+    limites: [
+      "O TSE não diz em quem cada eleitor votou: a relação é entre municípios (um município com eleitorado mais jovem dá mais votos a candidatos jovens?), não entre pessoas. Concluir sobre o eleitor individual é a falácia ecológica.",
+      "Nos cargos majoritários (presidente, senador, governador, prefeito) há poucos candidatos por lugar: a idade dos votados reflete onde cada candidato é forte, mais do que a idade de quem votou.",
+      "As idades mínimas para concorrer variam (18 anos para vereador, 21 para deputado e prefeito, 30 para governador, 35 para senador) e o eleitorado começa aos 16: compare municípios entre si, não a idade do eleitor com a do votado.",
+      "O ponto médio das faixas do TSE é uma aproximação da idade média; a faixa “inválida” fica de fora.",
+      "Correlação não é causa: idade, renda, região e religião andam juntas.",
+    ],
+    sql: ["api/app/analises/vies.sql"],
+  },
+
+  p7: {
+    id: "p7",
+    resposta: "O viés político dos votos de cada município, estado ou dos seis estados juntos, de 2018 a 2026: a média do score dos partidos (−100 esquerda, +100 direita), ponderada pelos votos de cada partido. No mapa, a eleição escolhida; no painel, a linha do tempo.",
+    formula: { resultado: "viés do município", parcelas: ["Σ votos do partido × score do partido", "votos em partidos com score"], operador: "÷" },
+    ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/?ver=vies" }],
+    anos: "2018–2026",
+    cargos: "Um de cada vez: presidente, deputado federal (padrão nos anos gerais), deputado estadual, senador, governador, vereador (padrão nos municipais) ou prefeito",
+    turno: "1º turno",
+    dados: [
+      "vies_partido: score de cada partido em cada eleição, da pesquisa BLS com parlamentares (Brazilian Legislative Surveys), de −100 a +100",
+      "votos_partido_municipio (nominais + legenda), eleicao, cargo e municipio",
+      "votos_candidatura_municipio e candidatura (presidente, que não está nos votos por partido)",
+    ],
+    recorte: ["Eleições ordinárias, 1º turno", "Votos válidos dados a partidos (sem brancos e nulos)", UFS],
+    calculo: [
+      "Viés do município = soma, em todos os partidos, de (votos do partido × score do partido) ÷ votos em partidos com score. O score é o da eleição daquele ano.",
+      "Para um estado ou os seis juntos, as somas dos municípios são somadas antes da divisão: o resultado é ponderado pelos votos.",
+      "A linha do tempo compara só eleições do mesmo cargo: deputado federal em 2018, 2022 e 2026; vereador em 2020 e 2024; e assim por diante. O padrão é o deputado federal nos anos gerais e o vereador nos municipais, os cargos proporcionais, em que quase todo partido concorre e o voto é mais partidário.",
+      "Presidente: os votos de cada candidato no município, 1º turno, contam para o partido dele (não para a coligação).",
+      "As cores do mapa são nove faixas fixas, iguais em todos os anos e cargos: de −45 ou menos (vermelho) a +45 ou mais (azul), com o centro entre −5 e +5. As faixas são mais finas perto do centro porque a média de muitos partidos puxa para o meio.",
+      "O nome da faixa (Esquerda, Centro-esquerda, Centro, Centro-direita, Direita) segue os cortes do Legislativo: ±20 e ±60.",
+    ],
+    limites: [
+      "É o viés dos partidos votados, não do eleitor: quem vota num candidato pode não concordar com o partido dele.",
+      "A linha do tempo mexe por dois motivos: o eleitor mudou de partido ou o partido mudou de posição na pesquisa daquela eleição.",
+      "A média ponderada puxa para o centro: um município dividido entre esquerda e direita aparece no centro.",
+      "Parte dos scores vem de fontes complementares (fusão de partidos, onda vizinha da pesquisa ou classificação editorial) quando a pesquisa não mediu o partido; votos em partido sem score ficam fora da média, e o painel avisa quanto.",
+      "Nos cargos majoritários, o voto pesa a pessoa mais que o partido: o viés de presidente, governador ou senador diz mais sobre os candidatos fortes do lugar. Em presidente, o score é o do partido do candidato, mesmo quando a coligação é ampla.",
+      "Cada cargo tem só os anos em que foi disputado: três pontos nos cargos das eleições gerais (2018, 2022, 2026) e dois nos municipais (2020, 2024).",
+    ],
+    sql: ["api/app/analises/vies.sql"],
+  },
+
   p5: {
     id: "p5",
-    resposta: "Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2024, com as fusões e renomeações marcadas.",
+    resposta: "Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2026, com as fusões e renomeações marcadas.",
     formula: { resultado: "proporção de legenda", parcelas: ["votos de legenda", "votos de legenda + votos nominais"], operador: "÷" },
     ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/legenda" }, { rotulo: "Voto de legenda no mapa", href: "/?ver=legenda" }],
-    anos: "2018–2024",
+    anos: "2018–2026",
     cargos: "Deputado federal, deputado estadual e vereador",
     turno: "1º turno",
-    dados: ["votos_partido_municipio", "partido, eleicao, cargo e municipio", "vw_eleito_efetivo (eleitos por partido)"],
+    dados: ["votos_partido_municipio", "partido, eleicao, cargo e municipio", "vw_eleito_efetivo (eleitos por partido)", "candidatura, resultado_candidatura, rotulo_resultado e vagas (quem puxou quem)", "TSE, consulta_coligacao: coligações de 2018 e federações de 2022 e 2026"],
     recorte: ["Cargos proporcionais", "1º turno", "Eleições ordinárias", UFS],
     calculo: [
       "Siglas renomeadas aparecem com o nome atual (PRB → REPUBLICANOS, PR → PL, PPS → CIDADANIA, PTC → AGIR, PMN → MOBILIZA).",
       "Com “Juntar partidos que se fundiram”, os votos dos antigos passam para o atual: DEM e PSL → UNIÃO; PTB, PATRIOTA e PRP → PRD; PSC e PHS → PODEMOS; PROS → SOLIDARIEDADE; PPL → PCdoB.",
       "Datas das mudanças: ano da aprovação pelo TSE.",
+      "Quem puxou quem (mapa, deputados de 2018, 2022 e 2026, com um estado escolhido): a lista que disputa as cadeiras é a coligação (2018), a federação (2022 em diante) ou o partido sozinho, segundo o TSE (dados abertos, consulta_coligacao). Quociente eleitoral = votos válidos (nominais + legenda) ÷ vagas, desprezada a fração igual ou menor que meio. Cada lista leva uma cadeira por quociente completo; as que sobram vão para as maiores médias. Quem foi eleito, e se pelo quociente ou pelas sobras, é o resultado do TSE.",
+      "Puxador = quem teve votos para mais de um quociente e, sem esses votos, a lista perderia cadeiras além da dele. As cadeiras puxadas são as últimas da lista pelo quociente, que ficaram com os eleitos menos votados por quociente, de qualquer partido da lista.",
     ],
     limites: [
       "O voto de legenda só existe nos cargos proporcionais; prefeito, governador, senador e presidente ficam de fora.",
       "No mapa, o voto de legenda é mostrado por estado; por município ainda não.",
+      "Quem puxou quem: vereadores ainda não. Amapá em 2026 ainda sem resultado na base.",
+      "A conta do puxador olha só a fase do quociente: sem os votos dele, as sobras também mudariam, mas dependem das outras listas.",
     ],
-    sql: ["api/app/analises/q5.sql"],
+    sql: ["api/app/analises/q5.sql", "api/app/analises/cadeiras.sql"],
     fonte: "Fonte: TSE, dados abertos; banco do projeto BDR. Cargos proporcionais, 1º turno, eleições ordinárias, em AP, ES, MG, PE, RJ e RR.",
   },
 
@@ -381,8 +449,8 @@ export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [
   { n: 3, texto: "Como as características socioeconômicas dos municípios se relacionam com votação partidária e abstenção?", id: "mapa" },
   { n: 4, texto: "Grau de instrução dos candidatos versus o da população?", id: "p4" },
   { n: 5, texto: "Qual é a quantidade e a proporção de votos de legenda recebidos por cada partido?", id: "p5" },
-  { n: 6, texto: "Qual a relação entre a idade da população do município com o viés político?" },
-  { n: 7, texto: "Qual o viés político do município/região na linha do tempo?" },
+  { n: 6, texto: "Qual a relação entre a idade da população do município com o viés político?", id: "p6" },
+  { n: 7, texto: "Qual o viés político do município/região na linha do tempo?", id: "p7" },
   { n: 8, texto: "Candidatos eleitos e não eleitos apresentam diferenças no uso de recursos públicos e privados?", id: "p8" },
   { n: 9, texto: "Onde o candidato investe em propaganda?", id: "p9" },
   { n: 10, texto: "Como ocorre a permanência e a trajetória dos políticos na carreira eleitoral ao longo do tempo?", id: "p10" },

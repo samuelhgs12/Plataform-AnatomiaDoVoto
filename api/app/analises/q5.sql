@@ -3,14 +3,14 @@
 -- Servida pela API em GET /api/analises/q5 (cada COPY ... TO 'x.csv' vira a tabela x da resposta)
 --
 -- Regras:
---   * só cargos proporcionais (onde existe voto de legenda), 1º turno, eleição ordinária, 2018–2024
+--   * só cargos proporcionais (onde existe voto de legenda), 1º turno, eleição ordinária, 2018–2026
 --   * partido identificado pelo NÚMERO dentro do ano (a sigla varia entre arquivos: 51 = PATRI/PATRIOTA)
 --   * siglas renomeadas são unificadas; fusões (DEM/PSL → UNIÃO, PTB/PATRIOTA → PRD) ficam separadas
 --   * proporção = votos_legenda / (votos_legenda + votos_nominais), calculada no front depois de somar
 
 CREATE OR REPLACE TEMP TABLE renomeado AS
 SELECT * FROM (VALUES ('PRB', 'REPUBLICANOS'), ('PR', 'PL'), ('PPS', 'CIDADANIA'), ('PATRI', 'PATRIOTA'),
-                      ('PTC', 'AGIR'), ('PMN', 'MOBILIZA'), ('PODE', 'PODEMOS'), ('PC do B', 'PCdoB')) t(sigla, partido);
+                      ('PTC', 'AGIR'), ('PMN', 'MOBILIZA'), ('PODE', 'PODEMOS'), ('PC do B', 'PCdoB'), ('PCDOB', 'PCdoB')) t(sigla, partido);
 
 -------------------------------------------------------------------------------
 -- 1. legenda: ano x cargo x UF x partido, com os eleitos de vw_eleito_efetivo
@@ -30,7 +30,7 @@ COPY (
         WHERE g.sistema = 'proporcional'
           AND v.turno = 1
           AND e.tipo_eleicao = 'ORDINARIA'
-          AND e.ano BETWEEN 2018 AND 2024
+          AND e.ano BETWEEN 2018 AND 2026
         GROUP BY e.ano, g.id_cargo, g.nome, m.uf, p.numero
     ),
     eleitos AS (
