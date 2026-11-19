@@ -211,7 +211,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
         <div className="palco-topo">
           <div>
             <h1 id="h-mapa">{titulo}</h1>
-            <p className="palco-sobre">{cargo} · patrimônio declarado, comparado dentro de cada disputa{semCargo ? ` · sem ${quemTinha(cargo)}` : ""}</p>
+            <p className="palco-sobre">{cargo}{semCargo ? ` · sem ${quemTinha(cargo)}` : ""}</p>
           </div>
           <nav className="trilha" aria-label="Onde você está no mapa">
             <a href={href({ uf: null })} data-mapa="" aria-current={!uf ? "true" : undefined}>Seis estados</a>
