@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  cargoEquivalente, cargoNoAno, cargosDoAno, classeMapaVies, escolhaVies, fmtIdade, idadePorMunicipio, lerRelacao, lerSerie, medirIdade, medirVies, medirVotados, naReguaVies,
+  cargoEquivalente, cargoNoAno, cargosDoAno, compararIdade, compararVies, extremosVies, rotulosIdade, viesDosMunicipios, votadosDosMunicipios, classeMapaVies, escolhaVies, fmtIdade, idadePorMunicipio, lerRelacao, lerSerie, medirIdade, medirVies, medirVotados, naReguaVies,
   paramsVies, parear, rotulosVies, serieVies, textoVies, viesPorMunicipio, votadosPorMunicipio,
   type LinhaEleitorado, type LinhaPopulacao, type LinhaVies, type LinhaVotados,
 } from "../src/lib/vies";
@@ -68,6 +68,12 @@ describe("medirVies", () => {
     expect(medirVies([v({ votos_score: 0, soma_score: 0 })], 2022, "Deputado federal").score).toBeNull();
     expect(medirVies(linhas, 2022, "Senador").cobertura).toBeNull();
   });
+  it("viesDosMunicipios: viés, votos e cobertura de cada um, numa passada", () => {
+    const m = viesDosMunicipios(linhas, 2022, "Deputado federal");
+    expect(m.get("3100002")).toEqual({ score: -10, votos: 300, cobertura: 200 / 300 });
+    expect(m.get("3100002")).toEqual(medirVies(linhas, 2022, "Deputado federal", { ibge: "3100002" }));
+    expect(m.size).toBe(3);
+  });
   it("viesPorMunicipio dá a média de cada um", () => {
     expect(viesPorMunicipio(linhas, 2022, "Deputado federal").get("3100002")).toBe(-10);
   });
@@ -109,6 +115,9 @@ describe("medirVotados", () => {
     expect(m.idade).toBeCloseTo(7000 / 150);
     expect(m.jovem).toBe(10 / 200);
   });
+  it("votadosDosMunicipios bate com medirVotados de cada um", () => {
+    expect(votadosDosMunicipios(linhas, 2022, "Deputado federal").get("3100002")).toEqual(medirVotados(linhas, 2022, "Deputado federal", { ibge: "3100002" }));
+  });
   it("votadosPorMunicipio", () => {
     expect(votadosPorMunicipio(linhas, 2022, "Deputado federal").get("3100002")).toBe(60);
   });
@@ -135,6 +144,38 @@ describe("classeMapaVies", () => {
     expect(naReguaVies(0)).toBeCloseTo(4.5 / 9);
     expect(naReguaVies(-100)).toBe(0);
     expect(naReguaVies(100)).toBe(1);
+  });
+});
+
+describe("extremosVies", () => {
+  const valores = new Map(Array.from({ length: 12 }, (_, i) => [String(i), i * 10 - 50]));
+  it("os mais à esquerda e os mais à direita, do mais extremo para dentro", () => {
+    const x = extremosVies(valores, [...valores.keys()], 2)!;
+    expect(x.esq.map((e) => e.v)).toEqual([-50, -40]);
+    expect(x.dir.map((e) => e.v)).toEqual([60, 50]);
+  });
+  it("poucos municípios: nada", () => {
+    expect(extremosVies(valores, ["1", "2", "3"], 2)).toBeNull();
+  });
+});
+
+describe("compararVies e compararIdade", () => {
+  it("viés: diferença em pontos, com a média de cima", () => {
+    expect(compararVies(7.5, 15.6, "a média do Rio de Janeiro")).toBe("8,1 pontos mais à esquerda que a média do Rio de Janeiro (+15,6).");
+    expect(compararVies(10.2, 10, "x")).toBe("No mesmo nível que x (+10,0).");
+    expect(compararVies(null, 1, "x")).toBeNull();
+  });
+  it("idade média: anos mais velho ou mais novo; nas partes, só o valor de cima", () => {
+    expect(compararIdade(43.4, 45.5, "media", "os seis estados juntos")).toBe("2,1 anos mais novo que os seis estados juntos (45,5 anos).");
+    expect(compararIdade(46, 45.5, "media", "x")).toBe("0,5 ano mais velho que x (45,5 anos).");
+    expect(compararIdade(0.3, 0.25, "jovens", "os seis estados juntos")).toBe("Os seis estados juntos: 25%.");
+  });
+});
+
+describe("rotulosIdade", () => {
+  it("unidade nas pontas", () => {
+    expect(rotulosIdade([43.8, 45.2], "media")).toEqual(["até 43,8 anos", "43,8–45,2", "45,2 anos ou mais"]);
+    expect(rotulosIdade([0.2, 0.25], "jovens")).toEqual(["até 20%", "20%–25%", "25% ou mais"]);
   });
 });
 

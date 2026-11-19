@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { lerAnalise } from "@/lib/api";
 import { comoObjetos } from "@/lib/data";
-import { classe, correlacao, enquadrar, nomeProprio, quantis, rotulosFaixas, tendencia, type LinhaMunicipio } from "@/lib/abstencao";
+import { classe, correlacao, enquadrar, nomeProprio, quantis, tendencia, type LinhaMunicipio } from "@/lib/abstencao";
 import { CAIXA_UF, CENTRO_MUNICIPIO } from "@/lib/brasil-municipios";
 import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import { naRegua, type FichaDica } from "@/lib/dica";
@@ -12,8 +12,9 @@ import { eixoNum } from "@/lib/grafico";
 import { fmtVies, preposicaoUf } from "@/lib/legislativo";
 import { centrarLupa, TELA } from "@/lib/lupa";
 import {
-  ANOS_VIES, CARGOS_VIES, CORTES_VIES, MAJORITARIOS, MEDIDAS_IDADE, cargoNoAno, classeMapaVies, escolhaVies, fmtIdade, idadePorMunicipio, lerRelacao, lerSerie, medirIdade, medirVies,
-  medirVotados, naReguaVies, paramsVies, parear, rotulosVies, serieVies, textoVies, viesPorMunicipio, votadosPorMunicipio,
+  ANOS_VIES, CARGOS_VIES, CORTES_VIES, MAJORITARIOS, MEDIDAS_IDADE, cargoNoAno, classeMapaVies, compararIdade, compararVies, escolhaVies, extremosVies, fmtIdade, idadePorMunicipio,
+  lerRelacao, lerSerie, medirIdade, medirVies, medirVotados, naReguaVies, paramsVies, parear, rotulosIdade, rotulosVies, serieVies, textoVies, viesDosMunicipios, viesPorMunicipio,
+  votadosDosMunicipios, votadosPorMunicipio, type MedidaVies, type MedidaVotados,
   type EscolhaVies, type LinhaEleitorado, type LinhaPopulacao, type LinhaVies, type LinhaVotados, type Lugar,
 } from "@/lib/vies";
 import { Dispersao } from "./Dispersao";
@@ -28,7 +29,6 @@ type SP = Record<string, string | string[] | undefined>;
 const um = (v: SP[string]) => (Array.isArray(v) ? v[0] : v);
 const QUINTOS = ["q0", "q1", "q2", "q3", "q4"];
 const DEGRAUS = Array.from({ length: CORTES_VIES.length + 1 }, (_, i) => `dv${i}`);
-const umaCasa = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /**
  * Sub-abas Comparar › Viés (pergunta 7) e Comparar › Idade (pergunta 6) do mapa da página inicial, lidas da análise
@@ -89,15 +89,19 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
   // valores do mapa: viés (degraus fixos) ou idade (quintos dos municípios dos seis estados)
   const medida = MEDIDAS_IDADE.find((m) => m.chave === med)!;
   const daFonte = fonte === "eleitorado" ? `eleitorado de ${ano}` : "população de 16 anos ou mais (Censo 2022)";
+  // somas por município numa passada só pela tabela: a ficha de cada um lê daqui
+  const viesMun = precisaVies ? viesDosMunicipios(linhasV, ano, cargo) : new Map<string, MedidaVies>();
+  const votMun = sub === "idade" ? votadosDosMunicipios(votados, ano, cargo) : new Map<string, MedidaVotados>();
   const vMun = sub === "vies" ? viesPorMunicipio(linhasV, ano, cargo) : idadePorMunicipio(fonte, idades, ano, med);
   const cortesIdade = sub === "idade" ? quantis([...vMun.values()], 5) : [];
   const [minI, maxI] = sub === "idade" && vMun.size ? [Math.min(...vMun.values()), Math.max(...vMun.values())] : [0, 0];
   const classeDe = (v: number | null | undefined) => (sub === "vies" ? classeMapaVies(v) : v == null ? "sem" : `q${classe(v, cortesIdade)}`);
-  const votadosDe = (l: Lugar) => medirVotados(votados, ano, cargo, l);
+  const votadosDe = (l: Lugar) => (l.ibge ? votMun.get(l.ibge) ?? { idade: null, jovem: null, votos: 0 } : medirVotados(votados, ano, cargo, l));
+  const viesDe = (l: Lugar) => (l.ibge ? viesMun.get(l.ibge) ?? { score: null, votos: 0, cobertura: null } : medirVies(linhasV, ano, cargo, l));
   const fichaDe = (titulo: string, subtitulo: string, v: number | null, l: Lugar): FichaDica => {
     if (v === null) return { titulo, sub: `${subtitulo} · sem dado`, medidas: [] };
     if (sub === "vies") {
-      const m = medirVies(linhasV, ano, cargo, l);
+      const m = viesDe(l);
       return {
         titulo, sub: subtitulo,
         medidas: [
@@ -115,7 +119,7 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
       ],
     };
   };
-  const valorDe = (l: Lugar) => (sub === "vies" ? medirVies(linhasV, ano, cargo, l).score : medirIdade(fonte, idades, ano, med, l));
+  const valorDe = (l: Lugar) => (sub === "vies" ? viesDe(l).score : medirIdade(fonte, idades, ano, med, l));
   const fmtValor = (v: number | null) => (sub === "vies" ? fmtVies(v, 0) : v === null ? "—" : med === "media" ? Math.round(v).toString() : pct(v, 0));
   const subFicha = `${cargo} · ${ano}`;
 
@@ -161,14 +165,12 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
   const majoritario = MAJORITARIOS.has(cargo);
 
   // viés: a série do lugar e a da referência, a medida e os extremos do estado
-  const mv = medirVies(linhasV, ano, cargo, lugar);
+  const mv = viesDe(lugar);
   const serie = sub === "vies" ? serieVies(linhasV, esc.cargo, lugar) : [];
   const serieRef = sub === "vies" && lugarRef ? serieVies(linhasV, esc.cargo, lugarRef) : [];
   const textoSerie = lerSerie(serie);
-  const ordemUf = sub === "vies" && uf && !mun ? codsUf.flatMap((c) => (vMun.has(c) ? [{ cod: c, v: vMun.get(c)! }] : [])).sort((a, b) => a.v - b.v) : [];
-  const extremos = ordemUf.length >= 10 ? { esq: ordemUf.slice(0, 5), dir: ordemUf.slice(-5).reverse() } : null;
-  const comparaVies = valor !== null && valorRef !== null ? (Math.abs(valor - valorRef) < 0.5 ? `No mesmo nível que ${nomeRef} (${fmtVies(valorRef)}).`
-    : `${umaCasa(Math.abs(valor - valorRef))} pontos mais à ${valor > valorRef ? "direita" : "esquerda"} que ${nomeRef} (${fmtVies(valorRef)}).`) : null;
+  const extremos = sub === "vies" && uf && !mun ? extremosVies(vMun, codsUf) : null;
+  const comparaVies = compararVies(valor, valorRef, nomeRef);
 
   // idade: a medida, os votados e a dispersão
   const vt = votadosDe(lugar);
@@ -185,11 +187,7 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
   } : undefined;
   const xNome = med === "media" ? "a idade média" : med === "jovens" ? "a parte de jovens" : "a parte de idosos";
   const yNome = eixo === "vies" ? "o viés (mais à direita)" : "a idade dos votados";
-  const comparaIdade = valor !== null && valorRef !== null
-    ? med === "media"
-      ? Math.abs(valor - valorRef) < 0.05 ? `A mesma de ${nomeRef}.` : `${umaCasa(Math.abs(valor - valorRef))} ${Math.abs(valor - valorRef) >= 1.95 ? "anos" : "ano"} ${valor > valorRef ? "mais velho" : "mais novo"} que ${nomeRef} (${fmtIdade(valorRef, "media")}).`
-      : `${nomeRef[0].toUpperCase()}${nomeRef.slice(1)}: ${fmtIdade(valorRef, med)}.`
-    : null;
+  const comparaIdade = compararIdade(valor, valorRef, med, nomeRef);
 
   const legenda = sub === "vies" ? (
     <div className="legenda-dv" role="img" aria-label={`Cores: viés do município em nove faixas fixas, de ${rotulosVies()[0]} (vermelho, esquerda) a ${rotulosVies()[8]} (azul, direita)`}>
@@ -202,7 +200,7 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
     </div>
   ) : (
     <ul className="legenda-q" aria-label={`Cores: ${medida.curto} do ${daFonte}; cada cor reúne um quinto dos municípios dos seis estados`}>
-      {rotulosFaixas(cortesIdade, (v) => (med === "media" ? umaCasa(v) : pct(v, 0))).map((t, i) => <li key={i}><i className={`q${i}`} />{t}</li>)}
+      {rotulosIdade(cortesIdade, med).map((t, i) => <li key={i}><i className={`q${i}`} />{t}</li>)}
       {algumSem && <li className="legenda-sem"><i className="sem" />sem dado</li>}
     </ul>
   );
@@ -272,7 +270,7 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
                 descricao={`Viés de ${nomeLugar} por eleição: ${serie.map((p) => `${p.ano} ${fmtVies(p.score)}`).join(", ")}${serieRef.length ? `; ${nomeRef}: ${serieRef.map((p) => `${p.ano} ${fmtVies(p.score)}`).join(", ")}` : ""}`}
               />
             ) : <p>Sem votos com viés para este cargo aqui.</p>}
-            <p className="muted pequeno">
+            <p className="muted pequeno vies-nota">
               {`${CARGOS_VIES.find((c) => c.chave === esc.cargo)!.rotulo}: só os anos em que o cargo foi disputado (${ANOS_VIES.filter((a) => cargoNoAno(esc.cargo, a)).join(", ")}). `}
               {lugarRef && serieRef.length > 0 && <>Tracejado: {nomeRef}. </>}
               O score de cada partido é o da eleição daquele ano, então a linha mexe quando o eleitor muda de partido e quando o partido muda de posição.
@@ -333,7 +331,7 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
               {pontos.length >= 3 ? (
                 <>
                   <p className="r-texto">{r != null && lerRelacao(r, xNome, yNome)}{r != null && <small> (r = {r.toLocaleString("pt-BR", { maximumFractionDigits: 2, minimumFractionDigits: 2 })})</small>}</p>
-                  <p className="muted pequeno">
+                  <p className="muted pequeno vies-nota">
                     Cada ponto é um município {uf ? deUf(uf) : "dos seis estados"}{mun ? "; o círculo grande é o escolhido" : ""}. Votos para {cargoMin} em {ano}.
                     {" "}O TSE não diz em quem cada eleitor votou: a relação é entre municípios, não entre pessoas. Correlação não é causa.
                     {majoritario && " Com poucos candidatos por lugar, a idade dos votados reflete onde cada candidato é forte, mais do que a idade de quem votou."}

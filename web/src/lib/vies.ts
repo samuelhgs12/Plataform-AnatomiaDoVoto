@@ -109,10 +109,24 @@ export function medirVies(linhas: LinhaVies[], ano: number, cargo: string, lugar
   return { score: comScore > 0 ? soma / comScore : null, votos, cobertura: votos > 0 ? comScore / votos : null };
 }
 
-/** Viés de cada município (cod_ibge → score) no ano e cargo. */
+export type MedidaVies = ReturnType<typeof medirVies>;
+
+/** O viés, os votos e a cobertura de cada município (cod_ibge) no ano e cargo, numa passada só pela tabela (a ficha de
+ *  cada município do mapa lê daqui, em vez de somar a tabela inteira de novo). */
+export function viesDosMunicipios(linhas: LinhaVies[], ano: number, cargo: string): Map<string, MedidaVies> {
+  const m = new Map<string, MedidaVies>();
+  for (const l of linhas) {
+    if (l.ano !== ano || l.cargo !== cargo) continue;
+    const votos = Number(l.votos), comScore = Number(l.votos_score ?? 0);
+    m.set(l.cod_ibge, { score: comScore > 0 ? Number(l.soma_score ?? 0) / comScore : null, votos, cobertura: votos > 0 ? comScore / votos : null });
+  }
+  return m;
+}
+
+/** Viés de cada município (cod_ibge → score) no ano e cargo; fora os que não têm votos com score. */
 export function viesPorMunicipio(linhas: LinhaVies[], ano: number, cargo: string): Map<string, number> {
   const m = new Map<string, number>();
-  for (const l of linhas) if (l.ano === ano && l.cargo === cargo && Number(l.votos_score) > 0) m.set(l.cod_ibge, Number(l.soma_score) / Number(l.votos_score));
+  for (const [cod, v] of viesDosMunicipios(linhas, ano, cargo)) if (v.score !== null) m.set(cod, v.score);
   return m;
 }
 
@@ -162,10 +176,23 @@ export function medirVotados(linhas: LinhaVotados[], ano: number, cargo: string,
   return { idade: comIdade > 0 ? soma / comIdade : null, jovem: votos > 0 ? jovem / votos : null, votos };
 }
 
-/** Idade média dos votados em cada município (cod_ibge → anos). */
+export type MedidaVotados = ReturnType<typeof medirVotados>;
+
+/** A idade dos votados de cada município (cod_ibge), numa passada só pela tabela. */
+export function votadosDosMunicipios(linhas: LinhaVotados[], ano: number, cargo: string): Map<string, MedidaVotados> {
+  const m = new Map<string, MedidaVotados>();
+  for (const l of linhas) {
+    if (l.ano !== ano || l.cargo !== cargo) continue;
+    const votos = Number(l.votos), comIdade = Number(l.votos_idade ?? 0);
+    m.set(l.cod_ibge, { idade: comIdade > 0 ? Number(l.soma_idade ?? 0) / comIdade : null, jovem: votos > 0 ? Number(l.votos_jovem) / votos : null, votos });
+  }
+  return m;
+}
+
+/** Idade média dos votados em cada município (cod_ibge → anos); fora os que não têm idade. */
 export function votadosPorMunicipio(linhas: LinhaVotados[], ano: number, cargo: string): Map<string, number> {
   const m = new Map<string, number>();
-  for (const l of linhas) if (l.ano === ano && l.cargo === cargo && Number(l.votos_idade) > 0) m.set(l.cod_ibge, Number(l.soma_idade) / Number(l.votos_idade));
+  for (const [cod, v] of votadosDosMunicipios(linhas, ano, cargo)) if (v.idade !== null) m.set(cod, v.idade);
   return m;
 }
 
@@ -202,6 +229,40 @@ export const textoVies = (score: number | null) => (score === null ? "sem dado" 
 export function fmtIdade(v: number | null, med: ChaveMedida): string {
   if (v === null) return "—";
   return med === "media" ? `${v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} anos` : `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`;
+}
+
+/** Os `n` municípios mais à esquerda e os `n` mais à direita (do mais extremo para dentro); null com menos de 2 × n. */
+export function extremosVies(valores: Map<string, number>, cods: string[], n = 5): { esq: { cod: string; v: number }[]; dir: { cod: string; v: number }[] } | null {
+  const ordem = cods.flatMap((cod) => (valores.has(cod) ? [{ cod, v: valores.get(cod)! }] : [])).sort((a, b) => a.v - b.v);
+  return ordem.length >= 2 * n ? { esq: ordem.slice(0, n), dir: ordem.slice(-n).reverse() } : null;
+}
+
+const umaCasa = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** O viés do lugar diante da média de cima: "8,1 pontos mais à esquerda que a média do Rio de Janeiro (+15,6)." */
+export function compararVies(valor: number | null, ref: number | null, nomeRef: string): string | null {
+  if (valor === null || ref === null) return null;
+  const d = valor - ref;
+  if (Math.abs(d) < 0.5) return `No mesmo nível que ${nomeRef} (${fmtVies(ref)}).`;
+  return `${umaCasa(Math.abs(d))} pontos mais à ${d > 0 ? "direita" : "esquerda"} que ${nomeRef} (${fmtVies(ref)}).`;
+}
+
+/** A idade do lugar diante da média de cima: "2,1 anos mais novo que os seis estados juntos (45,5 anos)."; nas partes
+ *  (jovens, idosos), só o valor de cima. */
+export function compararIdade(valor: number | null, ref: number | null, med: ChaveMedida, nomeRef: string): string | null {
+  if (valor === null || ref === null) return null;
+  if (med !== "media") return `${nomeRef[0].toUpperCase()}${nomeRef.slice(1)}: ${fmtIdade(ref, med)}.`;
+  const d = valor - ref;
+  if (Math.abs(d) < 0.05) return `A mesma de ${nomeRef}.`;
+  return `${umaCasa(Math.abs(d))} ${Math.abs(d) >= 1.95 ? "anos" : "ano"} ${d > 0 ? "mais velho" : "mais novo"} que ${nomeRef} (${fmtIdade(ref, "media")}).`;
+}
+
+/** Rótulos da legenda em quintos da idade, com a unidade nas pontas: "até 43,8 anos", …, "47,3 anos ou mais"; nas partes, "%". */
+export function rotulosIdade(cortes: number[], med: ChaveMedida): string[] {
+  if (!cortes.length) return [];
+  const f = (v: number) => (med === "media" ? umaCasa(v) : `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}%`);
+  const u = med === "media" ? " anos" : "";
+  return [`até ${f(cortes[0])}${u}`, ...cortes.slice(0, -1).map((c, i) => `${f(c)}–${f(cortes[i + 1])}`), `${f(cortes[cortes.length - 1])}${u} ou mais`];
 }
 
 /** A correlação em palavras, como a da abstenção: força por |r|, sentido pelo sinal. */

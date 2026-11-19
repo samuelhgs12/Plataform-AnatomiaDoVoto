@@ -1145,7 +1145,7 @@ a.eleito-inst:focus-visible { outline: 2px solid var(--brilho); outline-offset: 
 .r-texto { font-size: 17px; font-weight: 500; line-height: 1.35; }
 .r-texto small { color: var(--noite-muted); font-weight: 400; }
 .dispersao { width: 100%; height: auto; display: block; margin: 6px 0 10px; overflow: visible; }
-.dispersao text { fill: var(--noite-muted); font-size: 11px; }
+.dispersao text { fill: var(--noite-muted); font-size: 12px; }
 .dispersao .eixo { fill: var(--sobre-noite); font-weight: 600; }
 .dispersao .gr { stroke: var(--noite-linha); stroke-width: 1; }
 .dispersao circle { fill: var(--q3); fill-opacity: 0.7; transition: transform 1000ms var(--ease-expo); }
@@ -2684,7 +2684,7 @@ a.q-ver:active { transform: scale(0.98); }
 .serie-vies .gr { stroke: var(--noite-linha); stroke-width: 1; }
 .serie-vies .sv-zero { stroke: var(--noite-muted); stroke-width: 1; opacity: 0.6; }
 .serie-vies .sv-centro { fill: var(--noite3); opacity: 0.55; }
-.serie-vies .sv-faixa { font-size: 11px; letter-spacing: 0.02em; }
+.serie-vies .sv-faixa { font-size: 12px; letter-spacing: 0.02em; }
 .serie-vies .sv-ano { font-size: 13px; }
 .serie-vies .sv-ano.on { fill: var(--brilho); font-weight: 700; }
 .serie-vies .sv-atual { stroke: var(--brilho); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
@@ -2693,6 +2693,10 @@ a.q-ver:active { transform: scale(0.98); }
 .serie-vies circle { stroke: var(--noite2); stroke-width: 2.5; }
 .serie-vies circle.on { stroke: var(--brilho); stroke-width: 3; }
 .serie-vies .sv-valor { fill: var(--sobre-noite); font-size: 13px; font-weight: 700; paint-order: stroke; stroke: var(--noite2); stroke-width: 4px; stroke-linejoin: round; }
+
+/* títulos do painel em linhas equilibradas; notas na medida de leitura */
+.observatorio .painel .bloco h3 { text-wrap: balance; }
+.vies-nota { max-width: 72ch; text-wrap: pretty; }
 
 /* o lugar comparado com a média de cima */
 .vies-compara { font-weight: 600; }
