@@ -56,7 +56,7 @@ def test_sem_motherduck_e_sem_fallback(monkeypatch, tmp_path):
 def test_meta(client):
     m = client.get("/api/meta").json()
     assert {c["nome"] for c in m["cargos"]} >= {"Vereador", "Prefeito", "Deputado federal", "Deputado estadual"}
-    assert m["anos"] == [2016, 2018, 2020, 2022, 2024]
+    assert m["anos"] == [2016, 2018, 2020, 2022, 2024, 2026]   # 2026: o candidato a presidente (pergunta 7)
     assert m["ufs"] == ["MG", "PE", "RJ"]
 
 
@@ -391,7 +391,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["dinheiro", "legislativo", "municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9"]
+    assert client.get("/api/analises").json() == ["dinheiro", "legislativo", "municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9", "vies"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -538,7 +538,7 @@ def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
              "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/api/candidaturas/5/disputa", "/openapi.json",
-             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10", "/api/analises/legislativo",
+             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10", "/api/analises/legislativo", "/api/analises/vies",
              "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022",
              "/api/municipios/2/candidatos?ano=2020&cargo=Prefeito"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]
@@ -704,3 +704,28 @@ def test_pecas_eleitos_falha_vira_503(client, monkeypatch):
     r = client.get("/api/dinheiro/pecas?ano=2020&cargo=Vereador&eleitos=true")
     assert r.status_code == 503 and r.json() == {"estado": "erro"}
     pecas_eleitos.reiniciar()
+
+
+def test_vies_e_idade_por_municipio(client):
+    dados = client.get("/api/analises/vies").json()
+    assert set(dados) == {"vies", "votados", "eleitorado", "populacao"}
+    tab = lambda t: [dict(zip(dados[t]["colunas"], l)) for l in dados[t]["linhas"]]
+    vies = {(l["ano"], l["cargo"], l["cod_ibge"]): l for l in tab("vies")}
+    # vereador em Alvorada, 2020: PSB (520 votos, sem score) e PSD (960 votos, score 30)
+    v = vies[2020, "Vereador", "3100001"]
+    assert (v["votos"], v["votos_score"], float(v["soma_score"])) == (1480, 960, 28800)
+    # deputado estadual em Campo Alegre, 2022: só o PL (600 votos, score 49,34)
+    v = vies[2022, "Deputado estadual", "3300003"]
+    assert (v["votos"], v["votos_score"], float(v["soma_score"])) == (600, 600, 29604)
+    # presidente em Campo Alegre, 2026: os votos do candidato (1º turno) contam para o partido dele (PL, 50)
+    v = vies[2026, "Presidente", "3300003"]
+    assert (v["votos"], v["votos_score"], float(v["soma_score"])) == (1000, 1000, 50000)
+    # idade dos votados para deputado estadual em Alvorada, 2022: Maria (42 anos, 30 mil votos) e o rival (50, 3 mil);
+    # Serra Azul (sem cod_ibge) fica de fora
+    (d,) = [l for l in tab("votados") if l["ano"] == 2022 and l["cargo"] == "Deputado estadual"]
+    assert (d["cod_ibge"], d["votos"], d["votos_idade"], d["soma_idade"], d["votos_jovem"]) == ("3100001", 33000, 33000, 1410000, 0)
+    # eleitorado: ponto médio de cada faixa (100 anos ou mais = 100), sem a faixa inválida
+    (e,) = tab("eleitorado")
+    assert (e["ano"], e["cod_ibge"], e["eleitores"], float(e["soma_idade"]), e["jovens"], e["idosos"]) == (2022, "3100001", 610, 26600, 300, 310)
+    # população de 16 anos ou mais no Censo 2022
+    assert tab("populacao") == [{"uf": "MG", "cod_ibge": "3100001", "pessoas": 100, "soma_idade": 4690, "jovens": 50, "idosos": 50}]

@@ -13,6 +13,16 @@ export function eixoPct(max: number): { teto: number; marcas: number[] } {
   return { teto: marcas[n], marcas };
 }
 
+/** Eixo numérico qualquer (idade, viés): marcas em passos "redondos" (1, 2, 5 × 10ⁿ) que cobrem [min, max], umas `alvo` marcas. */
+export function eixoNum(min: number, max: number, alvo = 4): { de: number; ate: number; marcas: number[] } {
+  if (!(max > min)) { const m = Number.isFinite(min) ? min : 0; return eixoNum(m - 1, m + 1, alvo); }
+  const bruto = (max - min) / alvo, mag = 10 ** Math.floor(Math.log10(bruto));
+  const passo = [1, 2, 5, 10].map((f) => f * mag).find((p) => p >= bruto / 1.5)!;   // até 1,5 × mais marcas que o alvo
+  const de = Math.floor(min / passo + 1e-9) * passo, ate = Math.ceil(max / passo - 1e-9) * passo;
+  const marcas = Array.from({ length: Math.round((ate - de) / passo) + 1 }, (_, i) => Math.round((de + i * passo) * 1e6) / 1e6);
+  return { de, ate, marcas };
+}
+
 /** Afasta rótulos verticais que se sobreporiam, mantendo a ordem: distância mínima `gap`, dentro de [min, max]. */
 export function espalhar(ys: number[], gap: number, min = -Infinity, max = Infinity): number[] {
   const ordem = ys.map((y, i) => ({ y, i })).sort((a, b) => a.y - b.y || a.i - b.i);

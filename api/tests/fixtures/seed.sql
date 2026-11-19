@@ -75,3 +75,25 @@ INSERT INTO vies_partido (id_vies, id_partido, ano_eleicao, legislatura, score, 
 -- vagas (Legislativo)
 INSERT INTO vagas (id_vagas, ano, id_cargo, uf, id_municipio, qt_vagas) VALUES
   (1, 2018, 6, 'RJ', NULL, 46), (2, 2022, 6, 'RJ', NULL, 46), (3, 2022, 7, 'MG', NULL, 77);
+-- perguntas 6 e 7 (viés e idade): o PSD também tem score em 2020 (o PSB não: os votos dele ficam sem score)
+INSERT INTO vies_partido (id_vies, id_partido, ano_eleicao, legislatura, score, erro_padrao, fonte, onda_referencia, versao_algoritmo) VALUES
+  (6, 2, 2020, 56, 30.00, 3.70, 'bls', 2021, 'bls9_cascata_v1');
+INSERT INTO faixa_etaria (id_faixa, faixa_original, idade_min, idade_max, ponto_medio, jovem) VALUES
+  (1, '100 anos ou mais', 100, NULL, NULL, false), (2, '16 anos', 16, 16, 16.0, true), (8, '25 a 29 anos', 25, 29, 27.0, true),
+  (15, '60 a 64 anos', 60, 64, 62.0, false), (23, 'Inválida', NULL, NULL, NULL, false);
+-- eleitorado de Alvorada em 2022: 610 com faixa válida (a inválida e Serra Azul, sem cod_ibge, ficam de fora)
+INSERT INTO perfil_eleitorado (id_perfil, id_municipio, id_faixa, ano, genero, grau_instrucao, eleitores) VALUES
+  (1, 1, 2, 2022, 'FEMININO', 'ENSINO MÉDIO INCOMPLETO', 100), (2, 1, 8, 2022, 'MASCULINO', 'SUPERIOR COMPLETO', 200),
+  (3, 1, 15, 2022, 'FEMININO', 'ENSINO MÉDIO COMPLETO', 200), (4, 1, 15, 2022, 'MASCULINO', 'ENSINO MÉDIO COMPLETO', 100),
+  (5, 1, 1, 2022, 'FEMININO', 'LÊ E ESCREVE', 10), (6, 1, 23, 2022, 'MASCULINO', 'NÃO INFORMADO', 50),
+  (7, 4, 2, 2022, 'FEMININO', 'ENSINO MÉDIO INCOMPLETO', 999);
+-- população de Alvorada por idade no Censo 2022: as crianças e o Censo 2010 ficam de fora
+INSERT INTO populacao_idade (id_municipio, ano_referencia, idade, populacao) VALUES
+  (1, 2022, 10, 50), (1, 2022, 16, 20), (1, 2022, 29, 30), (1, 2022, 70, 50), (1, 2010, 30, 77);
+-- presidente em 2026 (pergunta 7): não está em votos_partido_municipio; os votos do candidato contam para o partido dele (PL)
+INSERT INTO eleicao (id_eleicao, cd_eleicao_tse, ano, id_cargo, tipo_eleicao, turno, data) VALUES (10, '2026_1', 2026, 1, 'ORDINARIA', 1, '2026-10-04');
+INSERT INTO vies_partido (id_vies, id_partido, ano_eleicao, legislatura, score, erro_padrao, fonte, onda_referencia, versao_algoritmo) VALUES
+  (7, 4, 2026, 57, 50.00, 3.80, 'bls', 2025, 'bls9_cascata_v1');
+INSERT INTO candidatura (id_candidatura, ano, ue, sequencial, id_eleicao, id_candidato, id_partido, id_municipio, uf, nome_urna, numero_urna, idade_eleicao, id_rotulo_final, disputou) VALUES
+  (11, 2026, 'BR', 'S11', 10, NULL, 4, NULL, NULL, 'CANDIDATO PRESIDENTE', '22', 67, 5, true);
+INSERT INTO votos_candidatura_municipio (id_votos_candidatura, id_candidatura, id_municipio, turno, votos) VALUES (4, 11, 3, 1, 1000), (5, 11, 3, 2, 999);

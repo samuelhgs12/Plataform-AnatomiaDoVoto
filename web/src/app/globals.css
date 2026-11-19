@@ -712,6 +712,9 @@ a.linha:hover { background: var(--panel2); }
   --ficha-campo: var(--marinho-800); --ficha-base: var(--marinho-900); --ficha-sobre-campo: var(--gelo); --ficha-retrato: var(--marinho-700);
   --ficha-faixa-2: color-mix(in srgb, var(--marinho-700) 72%, var(--gelo));   /* a onda de trás, que aparece como faixa */
   --ficha-fundo: var(--bg); --ficha-avesso: color-mix(in srgb, var(--marinho-900) 16%, var(--branco-urna));   /* o canto dobrado: o buraco e o avesso do papel */
+  /* viés político (Comparar › Viés): nove degraus fixos, do vermelho (esquerda) ao azul (direita), mais claros nas
+     pontas; o centro (−5 a +5) é um cinza neutro. Todos com 3:1 ou mais sobre a noite */
+  --dv0: #ff9a94; --dv1: #e2636a; --dv2: #bf5560; --dv3: #93505c; --dv4: #5d6577; --dv5: #4d6ea3; --dv6: #4f8ccc; --dv7: #6eaef0; --dv8: #b3dcff;
   --b00: #2e2b4f; --b01: #7c2f6c; --b02: #e0457b; --b10: #2c5d84; --b11: #775a8f; --b12: #e27798; --b20: #2fb0c8; --b21: #8cb5d2; --b22: #f2d3e4;
 }
 .observatorio { scroll-margin-top: var(--gap); align-items: start; margin-bottom: 120px; }
@@ -963,6 +966,9 @@ a.linha:hover { background: var(--panel2); }
 .ano:active { transform: scale(0.96); }
 .ano.on { background: var(--sobre-noite); color: var(--noite); }
 .ano.on small { color: color-mix(in srgb, var(--noite) 72%, var(--sobre-noite)); }
+/* Viés: o botão que anima os anos abre a régua, separado dos anos por uma linha */
+.ano.tocar { border: 0; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; background: transparent; color: var(--sobre-noite); margin-right: 3px; box-shadow: 1px 0 0 var(--noite-linha); border-radius: 6px 0 0 6px; }
+.ano.tocar[aria-pressed="true"] { background: var(--noite3); }
 
 /* os números do mapa, embaixo dele: a mesma grade de 12 colunas, cada bloco com a sua largura */
 .painel { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap); }
@@ -1142,7 +1148,7 @@ a.eleito-inst:focus-visible { outline: 2px solid var(--brilho); outline-offset: 
 .r-texto { font-size: 17px; font-weight: 500; line-height: 1.35; }
 .r-texto small { color: var(--noite-muted); font-weight: 400; }
 .dispersao { width: 100%; height: auto; display: block; margin: 6px 0 10px; overflow: visible; }
-.dispersao text { fill: var(--noite-muted); font-size: 11px; }
+.dispersao text { fill: var(--noite-muted); font-size: 12px; }
 .dispersao .eixo { fill: var(--sobre-noite); font-weight: 600; }
 .dispersao .gr { stroke: var(--noite-linha); stroke-width: 1; }
 .dispersao circle { fill: var(--q3); fill-opacity: 0.7; transition: transform 1000ms var(--ease-expo); }
@@ -2682,3 +2688,63 @@ a.q-ver:active { transform: scale(0.98); }
   .leg-topo { grid-template-columns: 1fr; }
   .leg-alternar { grid-column: 1; grid-row: auto; justify-items: start; }
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Comparar › Viés e Comparar › Idade (perguntas 6 e 7; components/VisaoVies.tsx e SerieVies.tsx)
+   --------------------------------------------------------------------------------------------------------------- */
+.mapa-abst .dv0, .dica-regua .dv0, .legenda-dv .dv0, .vies-colunas .dv0, .serie-vies .dv0 { fill: var(--dv0); background: var(--dv0); }
+.mapa-abst .dv1, .dica-regua .dv1, .legenda-dv .dv1, .vies-colunas .dv1, .serie-vies .dv1 { fill: var(--dv1); background: var(--dv1); }
+.mapa-abst .dv2, .dica-regua .dv2, .legenda-dv .dv2, .vies-colunas .dv2, .serie-vies .dv2 { fill: var(--dv2); background: var(--dv2); }
+.mapa-abst .dv3, .dica-regua .dv3, .legenda-dv .dv3, .vies-colunas .dv3, .serie-vies .dv3 { fill: var(--dv3); background: var(--dv3); }
+.mapa-abst .dv4, .dica-regua .dv4, .legenda-dv .dv4, .vies-colunas .dv4, .serie-vies .dv4 { fill: var(--dv4); background: var(--dv4); }
+.mapa-abst .dv5, .dica-regua .dv5, .legenda-dv .dv5, .vies-colunas .dv5, .serie-vies .dv5 { fill: var(--dv5); background: var(--dv5); }
+.mapa-abst .dv6, .dica-regua .dv6, .legenda-dv .dv6, .vies-colunas .dv6, .serie-vies .dv6 { fill: var(--dv6); background: var(--dv6); }
+.mapa-abst .dv7, .dica-regua .dv7, .legenda-dv .dv7, .vies-colunas .dv7, .serie-vies .dv7 { fill: var(--dv7); background: var(--dv7); }
+.mapa-abst .dv8, .dica-regua .dv8, .legenda-dv .dv8, .vies-colunas .dv8, .serie-vies .dv8 { fill: var(--dv8); background: var(--dv8); }
+
+/* legenda: nove cores iguais, os cortes escritos nas divisas e as pontas nomeadas */
+.legenda-dv { display: grid; gap: 5px; width: min(440px, 100%); font-size: 12px; color: var(--noite-muted); font-variant-numeric: tabular-nums; }
+.legenda-dv .dv-cores { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; }
+.legenda-dv .dv-cores i { display: block; height: 10px; }
+.legenda-dv .dv-cores i:first-child { border-radius: 3px 0 0 3px; } .legenda-dv .dv-cores i:last-child { border-radius: 0 3px 3px 0; }
+.legenda-dv .dv-marcas { display: grid; grid-template-columns: repeat(9, 1fr); }
+.legenda-dv .dv-marcas span { grid-row: 1; text-align: center; white-space: nowrap; }
+.legenda-dv .dv-pontas { display: flex; justify-content: space-between; font-size: 13px; color: var(--sobre-noite); font-weight: 600; }
+.legenda-dv .dv-sem { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; }
+.legenda-dv .dv-sem i { width: 14px; height: 10px; border-radius: 2px; background: var(--noite2); box-shadow: inset 0 0 0 1px var(--noite-linha); }
+
+/* linha do tempo do viés */
+.serie-vies { width: 100%; height: auto; display: block; margin: 8px 0 10px; overflow: visible; }
+.serie-vies text { fill: var(--noite-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.serie-vies .gr { stroke: var(--noite-linha); stroke-width: 1; }
+.serie-vies .sv-zero { stroke: var(--noite-muted); stroke-width: 1; opacity: 0.6; }
+.serie-vies .sv-centro { fill: var(--noite3); opacity: 0.55; }
+.serie-vies .sv-faixa { font-size: 12px; letter-spacing: 0.02em; }
+.serie-vies .sv-ano { font-size: 13px; }
+.serie-vies .sv-ano.on { fill: var(--brilho); font-weight: 700; }
+.serie-vies .sv-atual { stroke: var(--brilho); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
+.serie-vies .sv-linha { fill: none; stroke: var(--sobre-noite); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.serie-vies .sv-ref { fill: none; stroke: var(--noite-muted); stroke-width: 1.8; stroke-dasharray: 6 5; }
+.serie-vies circle { stroke: var(--noite2); stroke-width: 2.5; }
+.serie-vies circle.on { stroke: var(--brilho); stroke-width: 3; }
+.serie-vies .sv-valor { fill: var(--sobre-noite); font-size: 13px; font-weight: 700; paint-order: stroke; stroke: var(--noite2); stroke-width: 4px; stroke-linejoin: round; }
+
+/* títulos do painel em linhas equilibradas; notas na medida de leitura */
+.observatorio .painel .bloco h3 { text-wrap: balance; }
+.vies-nota { max-width: 72ch; text-wrap: pretty; }
+
+/* o lugar comparado com a média de cima */
+.vies-compara { font-weight: 600; }
+
+/* os municípios mais à esquerda e mais à direita do estado */
+.vies-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 32px; margin-top: 8px; }
+.vies-colunas h4 { margin: 0 0 6px; font-size: 14px; color: var(--noite-muted); font-weight: 600; }
+.vies-colunas ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.vies-colunas a { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px;
+  color: var(--sobre-noite); text-decoration: none; transition: background-color var(--t-hover) ease; }
+.vies-colunas a:hover, .vies-colunas a:focus-visible { background: var(--noite3); }
+.vies-colunas a i { width: 14px; height: 14px; border-radius: 3px; }
+.vies-colunas a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vies-colunas a b { font-variant-numeric: tabular-nums; }
+.bloco-dispersao .chips { margin: 6px 0 10px; }
+@media (prefers-reduced-motion: reduce) { .vies-colunas a { transition: none; } }

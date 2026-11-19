@@ -3,9 +3,9 @@ import { Icone, type NomeIcone } from "./Icone";
 
 /** O que pinta o mapa: o voto de legenda, uma comparação (Comparar) ou o gasto das campanhas por vaga (Dinheiro). */
 export type ModoCamada = "legenda" | "comparar" | "dinheiro";
-/** As sub-abas de Comparar: a abstenção (sozinha ou cruzada com um indicador do Censo) ou a instrução da população x a
- *  dos eleitos. Abstenção é a padrão. */
-export type SubComparar = "abstencao" | "instrucao";
+/** As sub-abas de Comparar: a abstenção (sozinha ou cruzada com um indicador do Censo), a instrução da população x a
+ *  dos eleitos, a idade do eleitorado (pergunta 6) e o viés dos votos (pergunta 7). Abstenção é a padrão. */
+export type SubComparar = "abstencao" | "instrucao" | "idade" | "vies";
 
 export interface CamadaLegenda {
   /** anos em que a camada existe, para a linha de apoio ("2018 a 2024") */
@@ -55,7 +55,18 @@ export interface CamadaInstrucao {
 const SUBS: { chave: SubComparar; rotulo: string }[] = [
   { chave: "abstencao", rotulo: "Abstenção" },
   { chave: "instrucao", rotulo: "Instrução" },
+  { chave: "idade", rotulo: "Idade" },
+  { chave: "vies", rotulo: "Viés" },
 ];
+
+type Opcao = { rotulo: string; href: string; on: boolean };
+/** Opções de Comparar › Idade e Comparar › Viés: o cargo cujos votos entram e, na Idade, a medida e a fonte. */
+export interface CamadaVies {
+  cargos: Opcao[];
+  medidas?: Opcao[];
+  /** eleitorado (TSE) ou Censo 2022; só nos anos em volta do Censo */
+  fontes?: Opcao[];
+}
 
 const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
   { chave: "legenda", rotulo: "Legenda", icone: "legenda" },
@@ -70,11 +81,20 @@ const MODOS: { chave: ModoCamada; rotulo: string; icone: NomeIcone }[] = [
  * sub-aba Abstenção, sem indicador (a abstenção sozinha); clicar de novo no indicador escolhido o desmarca. Tudo é link `data-mapa` (escolher é navegar, sem JavaScript); a opção escolhida tem
  * `aria-current`. Só desenha: os links e as situações chegam prontos da página.
  */
-export function CamadasMapa({ modo, hrefs, legenda, comparar, comparativos, instrucao, dinheiro }: {
+export function CamadasMapa({ modo, hrefs, legenda, comparar, comparativos, instrucao, dinheiro, vies }: {
   modo: ModoCamada; hrefs: Record<ModoCamada, string>; legenda: CamadaLegenda;
   comparar: { sub: SubComparar; hrefs: Record<SubComparar, string> }; comparativos: CamadaComparativos; instrucao: CamadaInstrucao;
-  dinheiro?: CamadaDinheiro;
+  dinheiro?: CamadaDinheiro; vies?: CamadaVies;
 }) {
+  const radios = (rotulo: string, itens: Opcao[]) => (
+    <nav className="radios" aria-label={rotulo}>
+      {itens.map((c) => (
+        <a key={c.rotulo} href={c.href} data-mapa="" aria-current={c.on ? "true" : undefined}>
+          <span className="radio" aria-hidden="true" />{c.rotulo}
+        </a>
+      ))}
+    </nav>
+  );
   return (
     <div className="camadas">
       <nav className="segmentos camadas-modos" aria-label="O que pinta o mapa">
@@ -142,6 +162,24 @@ export function CamadasMapa({ modo, hrefs, legenda, comparar, comparativos, inst
             <a key={s.chave} href={comparar.hrefs[s.chave]} data-mapa="" aria-current={s.chave === comparar.sub ? "true" : undefined}>{s.rotulo}</a>
           ))}
         </nav>
+      )}
+
+      {modo === "comparar" && (comparar.sub === "idade" || comparar.sub === "vies") && vies && (
+        <div className="camadas-opcoes">
+          <p className="camadas-apoio">
+            {comparar.sub === "vies"
+              ? "A cor é o viés dos votos: a média do score dos partidos (−100 esquerda, +100 direita), ponderada pelos votos de cada um no município."
+              : "A cor é a idade de quem vota; o painel a cruza com a idade dos candidatos votados ou com o viés."}
+          </p>
+          {comparar.sub === "idade" && vies.medidas && radios("Medida de idade", vies.medidas)}
+          {comparar.sub === "idade" && vies.fontes && (
+            <nav className="segmentos segmentos-pequenos" aria-label="Fonte da idade">
+              {vies.fontes.map((f) => <a key={f.rotulo} href={f.href} data-mapa="" aria-current={f.on ? "true" : undefined}>{f.rotulo}</a>)}
+            </nav>
+          )}
+          <p className="camadas-apoio">Votos para:</p>
+          {radios("Cargo", vies.cargos)}
+        </div>
       )}
 
       {modo === "comparar" && comparar.sub === "instrucao" && (

@@ -57,8 +57,8 @@ describe("PERGUNTAS", () => {
     expect([...usadas, "dinheiro"].sort()).toEqual(Object.keys(METODOLOGIA).sort());
   });
 
-  it("6 e 7 ainda não têm resposta", () => {
-    expect(PERGUNTAS.filter((p) => !p.id).map((p) => p.n)).toEqual([6, 7]);
+  it("as dez perguntas têm resposta", () => {
+    expect(PERGUNTAS.filter((p) => !p.id).map((p) => p.n)).toEqual([]);
   });
 });
 

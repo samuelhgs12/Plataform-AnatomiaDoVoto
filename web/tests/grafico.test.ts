@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caminho, cortar, eixoPct, empilhar, escala, espalhar, yEm } from "../src/lib/grafico";
+import { caminho, cortar, eixoNum, eixoPct, empilhar, escala, espalhar, yEm } from "../src/lib/grafico";
 
 describe("escala e eixoPct", () => {
   it("converte domínio em pixels", () => {
@@ -43,5 +43,15 @@ describe("yEm, cortar e caminho", () => {
   });
   it("gera o atributo d", () => {
     expect(caminho(pts.slice(0, 2))).toBe("M0.0,0.0L10.0,20.0");
+  });
+});
+
+describe("eixoNum", () => {
+  it("marcas redondas que cobrem o intervalo", () => {
+    expect(eixoNum(36.2, 52.8)).toEqual({ de: 35, ate: 55, marcas: [35, 40, 45, 50, 55] });
+    expect(eixoNum(-38, 54)).toEqual({ de: -40, ate: 60, marcas: [-40, -20, 0, 20, 40, 60] });
+  });
+  it("intervalo vazio vira um intervalo em volta do valor", () => {
+    expect(eixoNum(10, 10).marcas).toContain(10);
   });
 });
