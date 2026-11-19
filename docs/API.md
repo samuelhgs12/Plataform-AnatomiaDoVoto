@@ -7,9 +7,9 @@ Com a API rodando, a documentação interativa (gerada automaticamente) fica em 
 | GET | `/api/health` | — | `{status, db}`; 503 se o banco não abrir |
 | GET | `/api/meta` | — | cargos, anos de eleição ordinária e UFs (para os filtros) |
 | GET | `/api/busca` | `q` (3 a 80 letras; o texto precisa aparecer inteiro e na ordem, a partir do início de uma palavra do nome civil ou de urna; ignora acentos, maiúsculas e pontuação) | até 20 pessoas, com a candidatura mais recente de cada |
-| GET | `/api/candidaturas` | `cargo` (id), `ano`, `uf`, `partido` (sigla), `eleito`, `ordem` (`votos`\|`nome`), `pagina`, `tamanho` (≤100), `incluir_suplementares` | listagem paginada de titulares |
+| GET | `/api/candidaturas` | `cargo` (id), `ano`, `uf`, `partido` (sigla), `eleito`, `ordem` (`votos`\|`nome`), `pagina`, `tamanho` (≤100), `incluir_suplementares` | listagem paginada de titulares, com `votos` (1º turno, usado na ordem) e `votos_2t` (null se não foi ao 2º turno) |
 | GET | `/api/partidos` | `ano`, `cargo` (id, obrigatório), `uf` | siglas com titulares na eleição ordinária (opções do filtro de partido) |
-| GET | `/api/candidatos/{id}` | — | cabeçalho, resumo, carreira completa e trocas de partido |
+| GET | `/api/candidatos/{id}` | — | cabeçalho, resumo, carreira completa (com `votos_1t` e `votos_2t`, null sem 2º turno) e trocas de partido |
 | GET | `/api/candidatos/{id}/mapa` | — | visão Candidato do mapa: as candidaturas titulares da pessoa (mais recente primeiro) com os números da ficha (votos no 1º turno, gasto, mediana do gasto da disputa, parte pública, disputas e mandatos até ali) e a chave da foto |
 | GET | `/api/candidaturas/{id}/votos-municipio` | — | votos da candidatura em cada município dos seis estados, por turno, com os válidos do cargo (nominais da disputa + legenda; a legenda por município só existe de 2018 em diante) e a colocação; 0 onde a disputa teve voto e ela não (tabela `votos_candidatura_municipio`). Traz o `cod_ibge`, que o site usa para casar com o mapa estático (o `id_municipio` muda a cada carga). Prefeito e vereador: uma linha só, a do município da disputa |
 | GET | `/api/candidaturas/{id}/despesas` | — | gasto por categoria + mediana do cargo/ano/UF (pergunta 9) |

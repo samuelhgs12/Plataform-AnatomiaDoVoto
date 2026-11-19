@@ -38,10 +38,10 @@ const UFS = "AP, ES, MG, PE, RJ e RR";
 export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
   mapa: {
     id: "mapa",
-    resposta: "A abstenção de cada estado e município, de 2008 a 2024. Em 2008, 2010 e 2012 dá para pôr ao lado um indicador do Censo 2010 (renda, escolaridade, IDHM e outros), e em 2020, 2022 e 2024 um do Censo 2022, e ver se os dois andam juntos.",
+    resposta: "A abstenção de cada estado e município, de 2008 a 2026. Em 2008, 2010 e 2012 dá para pôr ao lado um indicador do Censo 2010 (renda, escolaridade, IDHM e outros), e em 2020, 2022 e 2024 um do Censo 2022, e ver se os dois andam juntos.",
     formula: { resultado: "abstenção", parcelas: ["eleitores que faltaram", "eleitores aptos"], operador: "÷" },
     ondeVer: [{ rotulo: "Ver a resposta no mapa", href: "/" }],
-    anos: "2008–2024",
+    anos: "2008–2026",
     cargos: "Governador (anos gerais) e prefeito (anos municipais)",
     turno: "1º turno",
     dados: [
@@ -74,14 +74,14 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   dinheiro: {
     id: "dinheiro",
-    resposta: "Quanto as campanhas gastaram por vaga, cidade por cidade, e se quem teve mais dinheiro, ou mais dinheiro público, se elegeu mais. De 2018 a 2024.",
+    resposta: "Quanto as campanhas gastaram por vaga, cidade por cidade, e se quem teve mais dinheiro, ou mais dinheiro público, se elegeu mais. De 2018 a 2026.",
     ondeVer: [
       { rotulo: "Ver a análise", href: "/analises/dinheiro" },
       { rotulo: "Pergunta 1", href: "/analises/custo-cadeira" },
       { rotulo: "Pergunta 2", href: "/analises/gastos" },
       { rotulo: "Pergunta 8", href: "/analises/financiamento" },
     ],
-    anos: "2018–2024",
+    anos: "2018–2026",
     cargos: "Todos os cargos titulares",
     dados: ["despesa_campanha, receita_campanha e fonte_recurso", "candidatura, eleicao, cargo, rotulo_resultado e vagas", "Prestação de contas do TSE"],
     recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou", "Prestação final ou regularização"],
@@ -105,7 +105,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     resposta: "Quanto todas as campanhas a um cargo gastaram, dividido pelo número de vagas, por ano e estado.",
     formula: { resultado: "custo da cadeira", parcelas: ["gasto de todas as campanhas ao cargo", "número de vagas"], operador: "÷" },
     ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/custo-cadeira" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
-    anos: "2018–2024",
+    anos: "2018–2026",
     cargos: "Todos os cargos titulares",
     dados: ["vw_despesa_candidatura (sobre despesa_campanha)", "vagas", "candidatura, eleicao, cargo e rotulo_resultado"],
     recorte: ["Titulares", "Eleições ordinárias", "Prestação final ou regularização", "Sem transferências"],
@@ -124,7 +124,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     id: "p2",
     resposta: "Se, na mesma disputa, quem declarou mais patrimônio se elegeu mais do que quem declarou menos.",
     ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/gastos" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
-    anos: "2006–2024 (dinheiro de campanha: 2018–2024)",
+    anos: "2006–2026 (dinheiro de campanha: 2018–2026)",
     cargos: "Todos os cargos titulares",
     turno: "Votos do 1º turno na correlação",
     dados: ["bem_candidato (bens declarados)", "vw_despesa_candidatura e receita_campanha (para comparar)", "resultado_candidatura e rotulo_resultado", "candidatura, eleicao e cargo"],
@@ -151,7 +151,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     id: "p8",
     resposta: "De onde vem o dinheiro das campanhas e se quem recebeu mais do Fundo Eleitoral e do Fundo Partidário se elegeu mais que os concorrentes.",
     ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/financiamento" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
-    anos: "2018–2024",
+    anos: "2018–2026",
     cargos: "Todos os cargos titulares",
     dados: ["receita_campanha e fonte_recurso", "candidatura, eleicao, cargo e rotulo_resultado"],
     recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou", "Prestação final ou regularização"],
@@ -296,7 +296,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     id: "p9",
     resposta: "No perfil de cada candidato, quanto a campanha escolhida contratou em propaganda, dividido em impresso e de rua, rádio, TV e vídeo, e internet, ao lado da campanha típica do mesmo cargo, ano e estado.",
     ondeVer: [{ rotulo: "Ver a resposta no perfil de um candidato", href: "/candidatos" }],
-    anos: "2018–2024",
+    anos: "2018–2026",
     cargos: "Todos os cargos titulares",
     dados: ["despesa_campanha e categoria_despesa (categorias de publicidade)", "candidatura, eleicao, cargo e rotulo_resultado"],
     recorte: ["Uma campanha por vez", "Prestação final", "Sem transferências", "Valor contratado"],
@@ -338,7 +338,7 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
     resposta: "Escolhido um nome, o mapa pinta cada município pela parte dos votos válidos do cargo que foi para essa candidatura. Para prefeito e vereador, destaca o município da disputa.",
     formula: { resultado: "parte no município", parcelas: ["votos da candidatura", "votos válidos do cargo no município"], operador: "÷" },
     ondeVer: [{ rotulo: "Abrir a visão Candidato", href: "/?ver=candidato" }],
-    anos: "1998–2024",
+    anos: "1998–2026",
     cargos: "Titulares, de vereador a presidente",
     turno: "1º e 2º turno, separados",
     dados: ["votos_candidatura_municipio", "votos_partido_municipio (votos de legenda)", "candidatura, eleicao e municipio"],
@@ -449,21 +449,21 @@ export type Cobertura = "dado" | "censo";
 
 export interface LinhaEscopo { dado: string; nota: string; anos: Partial<Record<number, Cobertura>> }
 
-/** Anos de eleição ordinária da base: 1998 a 2024, de dois em dois. */
-export const ANOS_ELEICAO = Array.from({ length: 14 }, (_, i) => 1998 + 2 * i);
+/** Anos de eleição ordinária da base: 1998 a 2026, de dois em dois. */
+export const ANOS_ELEICAO = Array.from({ length: 15 }, (_, i) => 1998 + 2 * i);
 
 const de = (a0: number, a1: number, c: Cobertura) =>
   Object.fromEntries(ANOS_ELEICAO.filter((a) => a >= a0 && a <= a1).map((a) => [a, c])) as Partial<Record<number, Cobertura>>;
 
 export const ESCOPO: LinhaEscopo[] = [
-  { dado: "Candidaturas e votação", nota: "carreira e perfil", anos: de(1998, 2024, "dado") },
-  { dado: "Participação e abstenção", nota: "o mapa (pergunta 3)", anos: de(2008, 2024, "dado") },
+  { dado: "Candidaturas e votação", nota: "carreira e perfil", anos: de(1998, 2026, "dado") },
+  { dado: "Participação e abstenção", nota: "o mapa (pergunta 3)", anos: de(2008, 2026, "dado") },
   { dado: "Censo 2010", nota: "Atlas do Desenvolvimento Humano", anos: de(2008, 2012, "censo") },
   { dado: "Censo 2022", nota: "IBGE", anos: de(2020, 2024, "censo") },
   { dado: "Instrução dos eleitos × população", nota: "pergunta 4, com o Censo 2022", anos: { 2020: "censo", 2024: "censo" } },
-  { dado: "Voto de legenda", nota: "pergunta 5", anos: de(2018, 2024, "dado") },
-  { dado: "Receitas e despesas", nota: "perguntas 1, 2, 8 e 9", anos: de(2018, 2024, "dado") },
-  { dado: "Fotos dos candidatos", nota: "banco à parte (bdr_fotos)", anos: de(2018, 2024, "dado") },
+  { dado: "Voto de legenda", nota: "pergunta 5", anos: de(2018, 2026, "dado") },
+  { dado: "Receitas e despesas", nota: "perguntas 1, 2, 8 e 9", anos: de(2018, 2026, "dado") },
+  { dado: "Fotos dos candidatos", nota: "banco à parte (bdr_fotos)", anos: de(2018, 2026, "dado") },
 ];
 
 /** Anos em trechos contínuos (de dois em dois), por escrito: [2008, 2010, 2018] → "2008–2010 e 2018". */

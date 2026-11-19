@@ -13,6 +13,8 @@ export interface CandidatoBusca {
 export interface CandidaturaItem {
   id_candidatura: number; id_candidato: number | null; nome_urna: string | null; numero_urna: string | null;
   uf: string | null; ano: number; ue: string; sequencial: string; partido: string | null; cargo: string; resultado: string; eleito: boolean; votos: number;
+  /** votos no 2º turno; null (ou ausente, em resposta antiga do cache) se não disputou */
+  votos_2t?: number | null;
 }
 export interface Listagem { total: number; pagina: number; tamanho: number; itens: CandidaturaItem[] }
 
@@ -20,6 +22,8 @@ export interface CarreiraItem {
   id_candidatura: number; ano: number; cargo: string; id_cargo: number; nivel: number; eh_titular: boolean;
   uf: string | null; municipio: string | null; partido: string | null; nome_urna: string | null; numero_urna: string | null;
   ue: string; sequencial: string; tipo_eleicao: string; resultado: string; eleito: boolean; disputou: boolean; votos_1t: number;
+  /** votos no 2º turno; null (ou ausente, em resposta antiga do cache) se não disputou */
+  votos_2t?: number | null;
 }
 export interface Troca { ano: number; de: string; para: string }
 export interface Resumo { eleicoes_disputadas: number; vitorias: number; partidos: string[]; primeiro_ano: number | null; ultimo_ano: number | null }

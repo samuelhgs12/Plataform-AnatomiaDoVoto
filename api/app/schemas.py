@@ -46,7 +46,8 @@ class CandidaturaItem(BaseModel):
     cargo: str
     resultado: str
     eleito: bool
-    votos: int
+    votos: int                           # 1º turno
+    votos_2t: int | None = None          # 2º turno; null se não disputou
 
 
 class Listagem(BaseModel):
@@ -75,6 +76,7 @@ class CarreiraItem(BaseModel):
     eleito: bool
     disputou: bool
     votos_1t: int
+    votos_2t: int | None = None          # null se não disputou 2º turno
 
 
 class Troca(BaseModel):

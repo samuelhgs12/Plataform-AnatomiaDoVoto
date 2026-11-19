@@ -59,7 +59,7 @@ export default async function CustoCadeira({ searchParams }: { searchParams: SP 
       <Cabecalho titulo="Quanto custa uma cadeira" pergunta="Quanto custa uma cadeira/mandato?" foto={FOTOS.congresso}>
         <p className="lead">
           Somamos tudo o que os candidatos a cada cargo gastaram na campanha e dividimos de duas formas: pelo número de
-          vagas, que dá o custo de uma cadeira, e pelo número de candidatos, que dá o gasto médio de cada um. Dados de 2018 a 2024.
+          vagas, que dá o custo de uma cadeira, e pelo número de candidatos, que dá o gasto médio de cada um. Dados de 2018 a 2026.
         </p>
       </Cabecalho>
 

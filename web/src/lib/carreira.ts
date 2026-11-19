@@ -23,6 +23,19 @@ export function naLinhaDoTempo(carreira: CarreiraItem[]): (CarreiraItem & { nive
     .sort((a, b) => a.ano - b.ano || a.nivel - b.nivel);
 }
 
+/** Primeira e última eleição ordinária da base: o eixo X da linha do tempo vai de uma à outra. */
+export const PRIMEIRO_ANO_BASE = 1998;
+export const ULTIMO_ANO_BASE = 2026;
+
+/**
+ * Anos do eixo X da linha do tempo, de dois em dois: da primeira eleição da base até a última, esticado se a carreira
+ * tiver um ano depois dela (uma carga nova antes de ULTIMO_ANO_BASE ser atualizado), para nenhum ponto cair fora do gráfico.
+ */
+export function anosDoEixo(anos: number[]): number[] {
+  const fim = Math.max(ULTIMO_ANO_BASE, ...anos);
+  return Array.from({ length: Math.floor((fim - PRIMEIRO_ANO_BASE) / 2) + 1 }, (_, i) => PRIMEIRO_ANO_BASE + i * 2);
+}
+
 /** Largura aproximada de um texto em px (fonte sem serifa, maiúsculas e números). */
 export const larguraTexto = (texto: string, fonte: number) => texto.length * fonte * 0.66;
 
