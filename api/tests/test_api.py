@@ -391,7 +391,7 @@ def test_candidatura_inexistente(client):
 
 
 def test_analises_listadas_a_partir_dos_arquivos_sql(client):
-    assert client.get("/api/analises").json() == ["dinheiro", "legislativo", "municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9", "vies"]
+    assert client.get("/api/analises").json() == ["cadeiras", "dinheiro", "legislativo", "municipios", "q1", "q10", "q2", "q4", "q5", "q8", "q9", "vies"]
 
 
 def test_analise_devolve_cada_copy_como_tabela(client):
@@ -458,6 +458,26 @@ def test_q2_patrimonio_desde_2006_e_dinheiro_desde_2018(client):
     mg = {l["faixa"]: l["candidaturas"] for l in linhas if l["medida"] == "patrimonio" and l["ano"] == 2022 and l["uf"] == "MG"}
     assert mg == {0: 1, 1: 1}
 
+
+def test_analise_cadeiras_deputados_com_listas_e_fotos(client):
+    """Listas (partido sozinho, coligação ou federação) com votos e cadeiras, eleitos pelo rótulo do TSE, o mais votado sem
+    cadeira e a chave da foto; deputados de 2018, 2022 e 2026."""
+    dados = client.get("/api/analises/cadeiras").json()
+    assert set(dados) == {"disputas", "listas", "candidatos"}
+    disputas = [dict(zip(dados["disputas"]["colunas"], l)) for l in dados["disputas"]["linhas"]]
+    assert {(d["ano"], d["cargo"], d["uf"], d["vagas"]) for d in disputas} == {
+        (2018, "Deputado federal", "RJ", 46), (2022, "Deputado federal", "RJ", 46), (2022, "Deputado estadual", "MG", 77)}
+    listas = [dict(zip(dados["listas"]["colunas"], l)) for l in dados["listas"]["linhas"]]
+    psb = next(l for l in listas if l["lista"] == "PSB")
+    assert (psb["cargo"], psb["uf"], psb["tipo"], psb["id_lista"], psb["votos_nominais"], psb["votos_legenda"]) == (
+        "Deputado estadual", "MG", "partido", "p40", 700, 70)
+    col = dados["candidatos"]["colunas"]
+    cands = {(c[col.index("ano")], c[col.index("nome_urna")]): dict(zip(col, c)) for c in dados["candidatos"]["linhas"]}
+    assert set(cands) == {(2018, "ANA ADVOGADA"), (2022, "ANA ADVOGADA"), (2022, "MARIA DA SILVA"), (2022, "ZÉ DA SERRA")}
+    assert cands[(2022, "ANA ADVOGADA")]["resultado"] == "qp" and cands[(2022, "ANA ADVOGADA")]["votos"] == 120000
+    assert cands[(2018, "ANA ADVOGADA")]["resultado"] == "media"
+    assert (cands[(2022, "ANA ADVOGADA")]["ue"], cands[(2022, "ANA ADVOGADA")]["sequencial"]) == ("RJ", "S7")
+    assert cands[(2022, "ZÉ DA SERRA")]["resultado"] == "suplente" and cands[(2022, "MARIA DA SILVA")]["resultado"] == "suplente"
 
 def test_analise_so_as_tabelas_pedidas(client):
     r = client.get("/api/analises/q10?tabela=fluxo&tabela=mapa")
@@ -538,7 +558,7 @@ def test_privacidade_nenhuma_resposta_expoe_dado_sensivel(client):
     """Título eleitoral, data de nascimento e CPF nunca podem sair pela API."""
     rotas = ["/api/meta", "/api/busca?q=maria", "/api/candidaturas?ano=2022", "/api/candidatos/1", "/api/candidatos/2",
              "/api/candidaturas/2/despesas", "/api/candidaturas/2/propaganda", "/api/candidaturas/2/palavras", "/api/candidaturas/2/receitas", "/api/candidaturas/5/disputa", "/openapi.json",
-             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10", "/api/analises/legislativo", "/api/analises/vies",
+             "/api/analises/q1", "/api/analises/q2", "/api/analises/q5", "/api/analises/q8", "/api/analises/q9", "/api/analises/q10", "/api/analises/legislativo", "/api/analises/vies", "/api/analises/cadeiras",
              "/api/analises/municipios", "/api/municipios/2/eleitos?ano=2020", "/api/estados/RJ/eleitos?ano=2022",
              "/api/municipios/2/candidatos?ano=2020&cargo=Prefeito"]
     proibidos = ["000111222333", "000444555666", "000777888999", "1980-05-10", "1971-02-20", "titulo", "cpf", "dt_nascimento"]

@@ -43,6 +43,8 @@ import { ComparaReferencia } from "@/components/ComparaReferencia";
 import { IndicadoresCenso, type LinhaIndicadorCenso } from "@/components/IndicadoresCenso";
 import { SerieLegenda } from "@/components/SerieLegenda";
 import { ComparaCiclos } from "@/components/ComparaCiclos";
+import { QuemPuxouQuem } from "@/components/CadeirasLegenda";
+import { ANOS_CADEIRAS, cargoDaLista, montarDisputa, puxadores, type DadosCadeiras, type LinhaCandidato, type LinhaDisputa, type LinhaLista } from "@/lib/cadeiras";
 import { BarrasInstrucao } from "@/components/BarrasInstrucao";
 import { EleitosInstrucao } from "@/components/EleitosInstrucao";
 import { CREDITO_FOTOS } from "@/lib/foto-candidato";
@@ -269,6 +271,15 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const rankingLeg = anoLeg === undefined ? [] : rankingPartidos(linhasLeg, { ano: anoLeg, uf }).slice(0, 8);
   const partidosDoAno = anoLeg === undefined ? [] : rankingPartidos(linhasLeg, { ano: anoLeg }).map((r) => r.partido);
   const opcoesPartido = [...new Set([...partidosDoAno, ...(partido ? [partido] : [])])].sort((a, b) => a.localeCompare(b, "pt-BR")).map((x) => [x, x] as [string, string]);
+  // quem puxou quem: deputados, só com estado escolhido (com os dois cargos, mostra o federal)
+  const comCadeiras = naLegenda && !!uf && anoLeg !== undefined && ANOS_CADEIRAS.includes(anoLeg);
+  const cad = comCadeiras ? await lerAnalise("cadeiras", ["disputas", "listas", "candidatos"]) : null;
+  const dadosCad: DadosCadeiras = {
+    disputas: comoObjetos<LinhaDisputa>(cad?.disputas), listas: comoObjetos<LinhaLista>(cad?.listas), candidatos: comoObjetos<LinhaCandidato>(cad?.candidatos),
+  };
+  const disputaCad = cad && uf ? montarDisputa(dadosCad, { ano: anoLeg!, cargo: cargoDaLista(cargo), uf }) : null;
+  const puxadoresCad = disputaCad ? puxadores(disputaCad) : [];
+  const cargosCad = (["federal", "estadual"] as const).map((c) => ({ rotulo: `Dep. ${c}`, href: href({ cargo: c }), on: cargoDaLista(cargo) === cargoDaLista(c) }));
   const hrefAnalise = `/analises/legenda${(() => { const q = new URLSearchParams(); if (uf) q.set("uf", uf); if (juntar) q.set("juntar", "1"); if (partido) q.set("p", partido); const t = q.toString(); return t ? `?${t}` : ""; })()}`;
   // trocar de visão mantém o estado; o ano vai para o mais perto que a outra visão tem
   // camada Dinheiro: o ano e o cargo dela (só 2018 a 2024); ao sair dela, a abstenção fica no mesmo ano
@@ -684,6 +695,13 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
                 </ol>
               </div>
             )}
+
+            {comCadeiras && (cad ? <QuemPuxouQuem disputa={disputaCad} puxadores={puxadoresCad} cargos={cargosCad} /> : (
+              <div className="card aviso s12">
+                <h2>Cadeiras indisponíveis</h2>
+                <p>A API não devolveu a análise <code>cadeiras</code>. Confira se ela está rodando (<code>uvicorn app.main:app</code> em <code>api/</code>).</p>
+              </div>
+            ))}
 
             <div className="bloco noite s12">
               <h3>Eleição a eleição, por partido</h3>

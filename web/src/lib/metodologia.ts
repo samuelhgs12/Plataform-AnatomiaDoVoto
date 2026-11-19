@@ -267,24 +267,28 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p5: {
     id: "p5",
-    resposta: "Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2024, com as fusões e renomeações marcadas.",
+    resposta: "Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2026, com as fusões e renomeações marcadas.",
     formula: { resultado: "proporção de legenda", parcelas: ["votos de legenda", "votos de legenda + votos nominais"], operador: "÷" },
     ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/legenda" }, { rotulo: "Voto de legenda no mapa", href: "/?ver=legenda" }],
-    anos: "2018–2024",
+    anos: "2018–2026",
     cargos: "Deputado federal, deputado estadual e vereador",
     turno: "1º turno",
-    dados: ["votos_partido_municipio", "partido, eleicao, cargo e municipio", "vw_eleito_efetivo (eleitos por partido)"],
+    dados: ["votos_partido_municipio", "partido, eleicao, cargo e municipio", "vw_eleito_efetivo (eleitos por partido)", "candidatura, resultado_candidatura, rotulo_resultado e vagas (quem puxou quem)", "TSE, consulta_coligacao: coligações de 2018 e federações de 2022 e 2026"],
     recorte: ["Cargos proporcionais", "1º turno", "Eleições ordinárias", UFS],
     calculo: [
       "Siglas renomeadas aparecem com o nome atual (PRB → REPUBLICANOS, PR → PL, PPS → CIDADANIA, PTC → AGIR, PMN → MOBILIZA).",
       "Com “Juntar partidos que se fundiram”, os votos dos antigos passam para o atual: DEM e PSL → UNIÃO; PTB, PATRIOTA e PRP → PRD; PSC e PHS → PODEMOS; PROS → SOLIDARIEDADE; PPL → PCdoB.",
       "Datas das mudanças: ano da aprovação pelo TSE.",
+      "Quem puxou quem (mapa, deputados de 2018, 2022 e 2026, com um estado escolhido): a lista que disputa as cadeiras é a coligação (2018), a federação (2022 em diante) ou o partido sozinho, segundo o TSE (dados abertos, consulta_coligacao). Quociente eleitoral = votos válidos (nominais + legenda) ÷ vagas, desprezada a fração igual ou menor que meio. Cada lista leva uma cadeira por quociente completo; as que sobram vão para as maiores médias. Quem foi eleito, e se pelo quociente ou pelas sobras, é o resultado do TSE.",
+      "Puxador = quem teve votos para mais de um quociente e, sem esses votos, a lista perderia cadeiras além da dele. As cadeiras puxadas são as últimas da lista pelo quociente, que ficaram com os eleitos menos votados por quociente, de qualquer partido da lista.",
     ],
     limites: [
       "O voto de legenda só existe nos cargos proporcionais; prefeito, governador, senador e presidente ficam de fora.",
       "No mapa, o voto de legenda é mostrado por estado; por município ainda não.",
+      "Quem puxou quem: vereadores ainda não. Amapá em 2026 ainda sem resultado na base.",
+      "A conta do puxador olha só a fase do quociente: sem os votos dele, as sobras também mudariam, mas dependem das outras listas.",
     ],
-    sql: ["api/app/analises/q5.sql"],
+    sql: ["api/app/analises/q5.sql", "api/app/analises/cadeiras.sql"],
     fonte: "Fonte: TSE, dados abertos; banco do projeto BDR. Cargos proporcionais, 1º turno, eleições ordinárias, em AP, ES, MG, PE, RJ e RR.",
   },
 

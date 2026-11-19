@@ -60,7 +60,7 @@ export default async function Legenda({ searchParams }: { searchParams: SP }) {
   return (
     <>
       <Cabecalho titulo="Voto de legenda" pergunta="Quantos votos cada partido recebeu só na sigla, sem escolher candidato?" foto={FOTOS.itajuba}>
-        <p className="lead">Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2024.</p>
+        <p className="lead">Quantidade e proporção dos votos de legenda de cada partido nas eleições para deputado e vereador, de 2018 a 2026.</p>
       </Cabecalho>
 
       <nav className="bloco filtros-fin" aria-label="Escolha o que ver">
