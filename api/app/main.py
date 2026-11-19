@@ -21,7 +21,7 @@ async def ciclo(_: FastAPI):
 
 
 app = FastAPI(title="Anatomia do Voto", version="0.1.0", lifespan=ciclo,
-              description="Dados eleitorais do TSE (1998–2024) para AP, ES, MG, PE, RJ e RR. Somente leitura.")
+              description="Dados eleitorais do TSE (1998–2026) para AP, ES, MG, PE, RJ e RR. Somente leitura.")
 
 app.add_middleware(CORSMiddleware, allow_origins=get_settings().origens, allow_methods=["GET"], allow_headers=["*"])
 

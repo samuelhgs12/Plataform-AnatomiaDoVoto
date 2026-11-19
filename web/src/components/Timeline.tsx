@@ -1,6 +1,6 @@
 import type { CarreiraItem } from "@/lib/types";
 import { corPartido, ROTULO_RESULTADO, inteiro } from "@/lib/format";
-import { NIVEIS_CARREIRA, rotulosPartido } from "@/lib/carreira";
+import { NIVEIS_CARREIRA, anosDoEixo, rotulosPartido } from "@/lib/carreira";
 import { caminho, escala } from "@/lib/grafico";
 
 const TOPO = NIVEIS_CARREIRA[0][0];
@@ -13,7 +13,8 @@ const FONTE_PARTIDO = 11;
  */
 export function Timeline({ carreira, nome }: { carreira: (CarreiraItem & { nivel: number })[]; nome: string }) {
   const W = 760, L = 112, R = 20, T = 18, PASSO = 34;         // PASSO: distância entre níveis
-  const a0 = 1998, a1 = 2024;
+  const anosEixo = anosDoEixo(carreira.map((p) => p.ano));
+  const a0 = anosEixo[0], a1 = anosEixo[anosEixo.length - 1];
   const X = escala(a0, a1, L + 18, W - R - 18);
   const Y = (nivel: number) => T + (TOPO - nivel) * PASSO;
   const base = Y(1);                                         // linha do nível mais baixo (vereador)
@@ -27,7 +28,6 @@ export function Timeline({ carreira, nome }: { carreira: (CarreiraItem & { nivel
   const H = yAnos + 8;
   const yEtiq = (linha: number) => topoFaixa + linha * LINHA_ETIQ;
 
-  const anosEixo = Array.from({ length: (a1 - a0) / 2 + 1 }, (_, i) => a0 + i * 2);
   const anosComPonto = new Set(pts.map((p) => p.ano));
   const etiquetaDe = (p: (typeof pts)[number]) => rotulos.find((r) => r.partido === p.partido && r.xPonto === p.cx);
   const descricao = `Linha do tempo de ${nome}: ${pts.map((p) => `${p.ano} ${p.cargo}${p.partido ? ` pelo ${p.partido}` : ""} (${p.eleito ? "eleito" : "não eleito"})`).join("; ")}.`;

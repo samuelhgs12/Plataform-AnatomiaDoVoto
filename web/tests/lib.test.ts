@@ -8,7 +8,7 @@ import {
 } from "../src/lib/abstencao";
 import { aproximar, arrastar, centrarLupa, LUPA_INICIAL, LUPA_MAX, TELA } from "../src/lib/lupa";
 import { lerFicha, naRegua, posicionarDica } from "../src/lib/dica";
-import { naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
+import { anosDoEixo, naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira";
 import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { fotoDaBusca, fotoDaPessoa, fotoDoPerfil, urlFoto } from "../src/lib/foto-candidato";
@@ -188,6 +188,17 @@ describe("naLinhaDoTempo", () => {
   });
   it("descarta suplementar e quem não disputou", () => {
     expect(naLinhaDoTempo([c({ tipo_eleicao: "SUPLEMENTAR" }), c({ disputou: false })])).toEqual([]);
+  });
+});
+
+describe("anosDoEixo", () => {
+  it("vai de 1998 à última eleição da base (2026), de dois em dois", () => {
+    const a = anosDoEixo([2010, 2026]);
+    expect([a[0], a[a.length - 1], a.length]).toEqual([1998, 2026, 15]);
+    expect(anosDoEixo([])).toEqual(anosDoEixo([2002]));
+  });
+  it("estica até um ano da carreira posterior à base", () => {
+    expect(anosDoEixo([2030]).at(-1)).toBe(2030);
   });
 });
 

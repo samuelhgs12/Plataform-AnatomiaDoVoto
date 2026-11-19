@@ -31,18 +31,18 @@ export default function Sobre() {
   return (
     <>
       <Cabecalho titulo="Sobre os dados" foto={FOTOS.interior}>
-        <p className="lead">As perguntas do projeto e como chegamos a cada resposta. Dados abertos do Tribunal Superior Eleitoral, de 1998 a 2024, em seis estados. Projeto acadêmico da disciplina de Banco de Dados da UFPI; não é uma fonte oficial.</p>
+        <p className="lead">As perguntas do projeto e como chegamos a cada resposta. Dados abertos do Tribunal Superior Eleitoral, de 1998 a 2026, em seis estados. Projeto acadêmico da disciplina de Banco de Dados da UFPI; não é uma fonte oficial.</p>
       </Cabecalho>
 
       <section className="quadro" aria-labelledby="h-fonte">
         <div className="bloco tinta s12 sobre-numeros">
           <h2 id="h-fonte" className="sr-only">Fonte e escopo</h2>
           <p><b>6</b><span>estados: AP, ES, MG, PE, RJ e RR</span></p>
-          <p><b>14</b><span>eleições ordinárias, de 1998 a 2024</span></p>
+          <p><b>15</b><span>eleições ordinárias, de 1998 a 2026</span></p>
           <p><b>7</b><span>cargos, com vices e suplentes</span></p>
         </div>
         <div className="bloco s12 sobre-escopo-texto">
-          <p>Candidaturas, votação, prestação de contas e eleitorado, de 1998 a 2024, para AP, ES, MG, PE, RJ e RR.</p>
+          <p>Candidaturas, votação, prestação de contas e eleitorado, de 1998 a 2026, para AP, ES, MG, PE, RJ e RR.</p>
           <p className="muted">Cargos: presidente, governador, senador, deputados federal e estadual, prefeito e vereador (e seus vices e suplentes). O Conselheiro Distrital de Fernando de Noronha ficou fora do escopo.</p>
         </div>
       </section>
@@ -102,7 +102,7 @@ export default function Sobre() {
               <div>
                 <h3>Regras de integração</h3>
                 <ul className="lista">
-                  <li>O mesmo político é seguido de 1998 a 2024 pelo identificador interno; o documento que o identifica na carga nunca sai da API.</li>
+                  <li>O mesmo político é seguido de 1998 a 2026 pelo identificador interno; o documento que o identifica na carga nunca sai da API.</li>
                   <li>Cada candidatura tem a chave natural do TSE (ano, unidade eleitoral e sequencial), que não muda quando a carga é refeita; é ela que liga a candidatura à foto, num banco à parte (<code>bdr_fotos</code>).</li>
                   <li>“Eleito” e “disputou” vêm do rótulo de resultado do TSE (<code>rotulo_resultado</code>), não da situação do registro.</li>
                   <li>Cada análise é um arquivo <code>.sql</code> em <code>api/app/analises/</code> que vira uma rota da API sozinho; a API só devolve os campos públicos listados nos modelos dela.</li>
