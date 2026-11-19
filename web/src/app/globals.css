@@ -2259,7 +2259,7 @@ a.q-ver:active { transform: scale(0.98); }
 .din-divisao h3 { margin: 4px 0 0; font-size: clamp(20px, 1vw + 12px, 26px); letter-spacing: -0.02em; }
 
 .din-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(118px, auto); gap: var(--gap); }
-.din-kpi { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border-radius: var(--raio); background: var(--noite); color: var(--sobre-noite); text-decoration: none; }
+.din-kpi { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); text-decoration: none; }
 .din-kpi small { color: var(--noite-muted); line-height: 1.3; }
 .din-kpi b { font-size: 28px; font-weight: 650; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .din-kpi > span { margin-top: auto; font-size: 13px; color: var(--noite-muted); }
@@ -2272,7 +2272,9 @@ a.q-ver:active { transform: scale(0.98); }
 .din-kpi-link > span { color: var(--brilho); font-weight: 600; }
 .din-kpi .delta.sobe { color: var(--brilho); }
 .din-kpi .delta.desce { color: var(--fx2); }
-@media (max-width: 900px) { .din-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .din-kpi-principal { grid-column: 1 / -1; grid-row: auto; } }
+/* P1: o 4º card ocupa as duas colunas que sobram ao lado do principal */
+.din-kpi-largo { grid-column: span 2; }
+@media (max-width: 900px) { .din-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .din-kpi-principal, .din-kpi-largo { grid-column: 1 / -1; grid-row: auto; } }
 @media (max-width: 520px) { .din-kpi b { font-size: 22px; } .din-kpi { padding: 14px 16px; } }
 
 .din-notas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -2489,7 +2491,11 @@ a.q-ver:active { transform: scale(0.98); }
 }
 @media (min-width: 1100px) {
   .painel.din > .meia { grid-column: span 6; }
+  /* P1: os outros cargos (8 colunas) ao lado do ranking (4); abaixo disso, cada um na largura toda (s12) */
+  .painel.din > .din-oito { grid-column: span 8; }
+  .painel.din > .din-quatro { grid-column: span 4; }
 }
+.din-oito .cadeiras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .painel.din > .meia .anos-cargo { min-width: 0; }
 .painel.din > .meia .anos-cargo td { min-width: 0; }
 .painel.din > .meia .anos-cargo td.delta { font-size: 14px; }
