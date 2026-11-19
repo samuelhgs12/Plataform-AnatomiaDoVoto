@@ -10,7 +10,7 @@ import {
   cargoDeCandidatos, cargosDoRecorte, deCada100, dependeram, fraseDeCada100, fraseDependeram, parteDependeu, fundoDe, maioresDeCandidatos,
   maioresDoRecorte, parteDoTotal, quemDe, textoDependeram, totalFundos, quartisDeEleicao, fraseQuartis, medidaDe, MEDIDAS_ANOS, MEIAS, MEDIR, opcoesMunicipio, ufDoMunicipio, PINTAR, SECOES_GASTARAM, telaDe, TITULO_TELA,
   SECOES, type ContagemFundos, type LinhaCargo, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type LinhaDespesa,
-  intervalo,
+  intervalo, gastoComForaDaDisputa, foraDoRecorte, cargosComForaDaDisputa, hrefLegislativoCusto,
 } from "../src/lib/dinheiro";
 import { reais } from "../src/lib/format";
 import type { CandidatoLocal, LinhaMunicipio, LinhaResumo } from "../src/lib/territorio";
@@ -72,6 +72,23 @@ describe("valorCidade", () => {
     expect(valorCidade(r({ rec_mais_cand: 0 }), "resultado", "Vereador")).toBeNull();
     expect(valorCidade(r({ prefeito_candidatos: 0 }), "gasto", "Prefeito")).toBeNull();
   });
+  it("soma o gasto de quem não chegou a disputar no gasto e no gasto por eleitor (como na P1), não nas outras abas", () => {
+    const fora = r({ vereador_nao_disputou_gasto: 100_000, prefeito_nao_disputou_gasto: 60_000 });
+    expect(valorCidade(fora, "gasto", "Vereador")).toBe(60_000);
+    expect(valorCidade(fora, "gasto", "Prefeito")).toBe(960_000);
+    expect(valorCidade(fora, "eleitor", "Vereador")).toBeCloseTo(600_000 / 30_000);
+    expect(valorCidade(fora, "eleitor", "Prefeito")).toBe(32);
+    expect(valorCidade(fora, "publico", "Vereador")).toBeCloseTo(0.5);
+    expect(valorCidade(r({ vereador_nao_disputou_gasto: null }), "gasto", "Vereador")).toBe(50_000);   // sem a coluna: zero
+  });
+});
+
+describe("gastoComForaDaDisputa", () => {
+  it("soma o gasto de quem não disputou; sem a coluna, zero", () => {
+    expect(gastoComForaDaDisputa(500, 120)).toBe(620);
+    expect(gastoComForaDaDisputa(500, undefined)).toBe(500);
+    expect(gastoComForaDaDisputa(500, null)).toBe(500);
+  });
 });
 
 describe("corCidade, legendaCidade e textoValor", () => {
@@ -124,6 +141,13 @@ describe("valorDoEstado, corPorFaixas e classeComPorte", () => {
     expect(valorDoEstado(linhas, 2024, "PE", "resultado", "Vereador")).toBeNull();
     expect(valorDoEstado(linhas, 2020, "PE", "gasto", "Vereador")).toBeNull();
   });
+  it("soma o gasto de quem não disputou no gasto e no gasto por eleitor; a parte pública não muda", () => {
+    const fora = [{ ...e({}), gasto_nao_disputou: 50, eleitorado: 30 }, { ...e({ uf: "RJ", vagas: 30, gasto: 900 }), eleitorado: 70 }];
+    expect(valorDoEstado(fora, 2024, "PE", "gasto", "Vereador")).toBe(15);
+    expect(valorDoEstado(fora, 2024, undefined, "gasto", "Vereador")).toBe(26.25);   // (150 + 900) ÷ 40; RJ sem a coluna
+    expect(valorDoEstado(fora, 2024, "PE", "eleitor", "Vereador")).toBe(5);
+    expect(valorDoEstado(fora, 2024, "PE", "publico", "Vereador")).toBe(0.75);
+  });
   it("pinta por faixas e apaga as cidades de outro porte", () => {
     expect(corPorFaixas(0.65, [0.5, 0.6, 0.7, 0.8])).toBe("q2");
     expect(corPorFaixas(null, [1])).toBe("sem");
@@ -157,11 +181,17 @@ describe("contaGasto, contaGastoEstado e legendaPorFaixas", () => {
     expect(contaGasto(r({ vereador_vagas: 0 }), "Vereador")).toBeNull();
     expect(contaGasto(undefined, "Vereador")).toBeNull();
   });
-  it("soma gasto e vagas do estado ou dos seis, sem a linha BR", () => {
-    const e = (uf: string, vagas: number, gasto: number) => ({ ano: 2024, uf, cargo: "Vereador", vagas, gasto });
-    const linhas = [e("PE", 10, 100), e("RJ", 30, 900), e("BR", 999, 1)];
-    expect(contaGastoEstado(linhas, 2024, "PE", "Vereador")).toEqual({ gasto: 100, vagas: 10 });
-    expect(contaGastoEstado(linhas, 2024, undefined, "Vereador")).toEqual({ gasto: 1000, vagas: 40 });
+  it("na conta da cidade entra o gasto de quem não disputou", () => {
+    const fora = r({ vereador_nao_disputou_gasto: 20_000, prefeito_nao_disputou_gasto: 5_000 });
+    expect(contaGasto(fora, "Vereador")).toEqual({ gasto: 520_000, vagas: 10 });
+    expect(contaGasto(fora, "Prefeito")).toEqual({ gasto: 905_000, vagas: 1 });
+  });
+  it("soma gasto (com quem não disputou) e vagas do estado ou dos seis, sem a linha BR", () => {
+    const e = (uf: string, vagas: number, gasto: number, gasto_nao_disputou?: number) => ({ ano: 2024, uf, cargo: "Vereador", vagas, gasto, gasto_nao_disputou });
+    const linhas = [e("PE", 10, 100, 40), e("RJ", 30, 900), e("BR", 999, 1, 7)];
+    expect(contaGastoEstado(linhas, 2024, "PE", "Vereador")).toEqual({ gasto: 140, vagas: 10 });
+    expect(contaGastoEstado(linhas, 2024, "RJ", "Vereador")).toEqual({ gasto: 900, vagas: 30 });   // sem a coluna: zero
+    expect(contaGastoEstado(linhas, 2024, undefined, "Vereador")).toEqual({ gasto: 1040, vagas: 40 });
     expect(contaGastoEstado(linhas, 2020, "PE", "Vereador")).toBeNull();
   });
   it("escreve os limites das faixas na legenda", () => {
@@ -189,6 +219,12 @@ describe("valorDoPorte", () => {
     expect(valorDoPorte(linhas, 2024, "PE", "ate5", "gasto", "Vereador")).toEqual({ valor: 15, n: 2, conta: { gasto: 300, vagas: 20 } });
     expect(valorDoPorte(linhas, 2024, undefined, "ate5", "gasto", "Vereador").conta).toEqual({ gasto: 1_300, vagas: 30 });
     expect(valorDoPorte(linhas, 2024, "PE", "ate10", "gasto", "Vereador")).toEqual({ valor: null, n: 0, conta: null });
+  });
+  it("soma o gasto de quem não disputou no gasto e no gasto por eleitor", () => {
+    const fora = [r({ id_municipio: 1, eleitorado: 3_000, vereador_gasto: 100, vereador_vagas: 9, vereador_nao_disputou_gasto: 100, prefeito_nao_disputou_gasto: 100_000 }), r({ id_municipio: 2, eleitorado: 4_000, vereador_gasto: 200, vereador_vagas: 11 })];
+    expect(valorDoPorte(fora, 2024, "PE", "ate5", "gasto", "Vereador")).toEqual({ valor: 20, n: 2, conta: { gasto: 400, vagas: 20 } });
+    expect(valorDoPorte(fora, 2024, "PE", "ate5", "gasto", "Prefeito").valor).toBe(950_000);   // (1.000.000 + 900.000) ÷ 2 cidades
+    expect(valorDoPorte(fora, 2024, "PE", "ate5", "eleitor", "Vereador").valor).toBeCloseTo(400 / 7_000);
   });
   it("prefeito: 1 vaga por cidade; resultado e público pelas somas", () => {
     expect(valorDoPorte(linhas, 2024, "PE", "ate5", "gasto", "Prefeito").valor).toBe(900_000);
@@ -742,6 +778,47 @@ describe("cargoDeCandidatos", () => {
   });
 });
 
+describe("foraDoRecorte", () => {
+  const estados = [
+    { ano: 2022, uf: "MG", cargo: "Deputado federal", nao_disputou_com_gasto: 3, gasto_nao_disputou: 30_000 },
+    { ano: 2022, uf: "PE", cargo: "Deputado federal", nao_disputou_com_gasto: 1, gasto_nao_disputou: 10_000 },
+  ];
+  const resumo = [
+    r({ id_municipio: 1, eleitorado: 3_000, vereador_nao_disputou_n: 2, vereador_nao_disputou_gasto: 500 }),
+    r({ id_municipio: 2, eleitorado: 40_000, prefeito_nao_disputou_n: 1, prefeito_nao_disputou_gasto: 900 }),
+  ];
+  it("estado ou os seis: a tabela estados", () => {
+    expect(foraDoRecorte({ resumo, estados }, { ano: 2022, cargo: "Deputado federal", uf: "MG" })).toEqual({ n: 3, gasto: 30_000 });
+    expect(foraDoRecorte({ resumo, estados }, { ano: 2022, cargo: "Deputado federal" })).toEqual({ n: 4, gasto: 40_000 });
+  });
+  it("a cidade: a linha dela no resumo; com um porte: só as cidades dele", () => {
+    expect(foraDoRecorte({ resumo, estados }, { ano: 2024, cargo: "Prefeito", mun: 2 })).toEqual({ n: 1, gasto: 900 });
+    expect(foraDoRecorte({ resumo, estados }, { ano: 2024, cargo: "Prefeito", mun: 1 })).toBeNull();
+    expect(foraDoRecorte({ resumo, estados }, { ano: 2024, cargo: "Vereador", porte: "ate5" })).toEqual({ n: 2, gasto: 500 });
+  });
+});
+
+describe("cargosComForaDaDisputa", () => {
+  it("soma o gasto de quem não disputou e recalcula o custo da cadeira", () => {
+    const cs = cargosDoRecorte([lc({ cargo: "Deputado federal", vagas: 10, gasto: 1_000 }), lc({ vagas: 4, gasto: 400 }), lc({ cargo: "Governador", vagas: 0, gasto: 50 })], { ano: 2022, uf: "MG" });
+    const fora = { "Deputado federal": { gasto: 200 } } as Record<string, { gasto: number }>;
+    const com = cargosComForaDaDisputa(cs, (c) => fora[c] ?? null);
+    expect(com.map((c) => [c.cargo, c.gasto, c.porCadeira])).toEqual([["Deputado federal", 1_200, 120], ["Deputado estadual", 400, 100], ["Governador", 50, null]]);
+    expect(com[0].medianaEleito).toBe(cs[0].medianaEleito);
+  });
+});
+
+describe("hrefLegislativoCusto", () => {
+  it("leva à casa do cargo, só nas eleições gerais", () => {
+    expect(hrefLegislativoCusto(2022, "Deputado federal", "MG")).toBe("/legislativo?casa=camara&ano=2022&ver=custo");
+    expect(hrefLegislativoCusto(2018, "Senador")).toBe("/legislativo?casa=senado&ano=2018&ver=custo");
+    expect(hrefLegislativoCusto(2022, "Deputado estadual", "MG")).toBe("/legislativo?casa=al-mg&ano=2022&ver=custo");
+    expect(hrefLegislativoCusto(2022, "Deputado estadual")).toBeNull();   // sem estado, não há Assembleia
+    expect(hrefLegislativoCusto(2022, "Governador", "MG")).toBeNull();
+    expect(hrefLegislativoCusto(2024, "Vereador", "MG")).toBeNull();
+  });
+});
+
 describe("maioresDoRecorte e maioresDeCandidatos", () => {
   it("pega o recorte e o grupo pedidos, em ordem, com cada voto e parte pública", () => {
     const linhas = [lm({ pos: 2, id_candidatura: 2, gasto: 500 }), lm({}), lm({ so_eleitos: true, id_candidatura: 9 }), lm({ uf: null, id_candidatura: 8 })];
@@ -793,7 +870,9 @@ describe("parteDependeu e fraseDependeram", () => {
 
 describe("perguntas do menu: PINTAR, telaDe, medidaDe, SECOES, MEIAS e MEDIDAS_ANOS", () => {
   it("o menu tem o custo da cadeira e a \"Dinheiro elege?\" (todo o dinheiro ou só o público), sem número de pergunta", () => {
-    expect(PINTAR.map((p) => p.rotulo)).toEqual(["Quanto custa uma cadeira", "Dinheiro elege?"]);
+    expect(PINTAR.map((p) => p.rotulo)).toEqual(["Quanto custa uma cadeira?", "Dinheiro elege?"]);
+    expect(PINTAR.some((p) => /^\d+\.\s/.test(p.rotulo))).toBe(false);
+    expect(TITULO_TELA.vaga).toBe("Custo da cadeira");
     expect(MEDIR.map((m) => m.rotulo)).toEqual(["Todo o dinheiro", "Só o dinheiro público"]);
     expect([...PINTAR, ...MEDIR].some((x) => /^\d|pergunta/i.test(x.rotulo))).toBe(false);
     expect(escolhaMapaDinheiro({ pintar: "gastou" }).pintar).toBe("vaga");
@@ -816,7 +895,8 @@ describe("perguntas do menu: PINTAR, telaDe, medidaDe, SECOES, MEIAS e MEDIDAS_A
     for (const t of ["vaga", "recursos"] as const) expect(medidaDe(t).chave).toBe("vaga");
   });
   it("cada tela mostra só os seus blocos, as duas medidas terminam em que se gastou (9), e todo bloco aparece em alguma", () => {
-    expect(SECOES.vaga).toEqual(["numeros", "cadeiras", "ranking", "anos"]);   // a 1 é uma conta do conjunto
+    expect(SECOES.vaga).toEqual(["numeros", "cadeiras", "ranking"]);   // a 1 é uma conta do conjunto; o card "Desde" cobre os anos
+    expect(MEIAS.vaga).toEqual([]);   // a 1 usa 8 + 4 colunas, não meias
     for (const t of ["recursos", "publico"] as const) expect(SECOES[t]).not.toContain("busca" as never);   // sem busca de candidato
     expect(SECOES.publico).toContain("fundos");
     expect(SECOES.recursos).not.toContain("numeros");
@@ -837,7 +917,7 @@ describe("perguntas do menu: PINTAR, telaDe, medidaDe, SECOES, MEIAS e MEDIDAS_A
   });
   it("os anos mostram só as linhas da tela, e só nas que têm anos", () => {
     expect(MEDIDAS_ANOS.publico).toEqual(["publico"]);
-    expect(MEDIDAS_ANOS.vaga).toContain("eleitor");
+    expect(MEDIDAS_ANOS.vaga).toEqual([]);
     for (const t of ["vaga", "recursos", "publico"] as const) expect(MEDIDAS_ANOS[t].length > 0).toBe(SECOES[t].includes("anos"));
   });
 });
