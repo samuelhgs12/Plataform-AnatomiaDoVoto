@@ -9,7 +9,7 @@ import { MAPA_ALTURA, MAPA_LARGURA } from "@/lib/brasil-uf";
 import {
   abaDe, ANOS_DINHEIRO, anoAnterior, cidadesDoPorte, classeComPorte, composicaoDespesas, contaGasto, contaGastoEstado, contasDaCidade, corCidade, corPorFaixas,
   diferencaRelativa, ehMunicipal, fatias, seloValor, seta, escolhaMapaDinheiro, hrefMapaDinheiro, legendaCidade, legendaPorFaixas, ordemCandidatos, ordenarCandidatos,
-  MEDIDAS_ANOS, MEIAS, medidaDe, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, MEDIR, opcoesMunicipio, ufDoMunicipio, referenciaDoPorte, telaDe, TITULO_TELA, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
+  MEDIDAS_ANOS, MEIAS, medidaDe, SECOES, type Secao, ORDENS_CANDIDATOS, ordenarLinhas, origemDoDinheiro, opcoesMunicipio, ufDoMunicipio, referenciaDoPorte, telaDe, TITULO_TELA, textoValor, unidade, valorCidade, valorDoEstado, valorDoPorte, variacaoNominal,
   anosDoCargo, COR_FAIXA, medidasNosAnos, partidosDeCandidatos, partidosDoRecorte, quartisDeCandidatos, quartisDoRecorte, totalPartidos,
   caminhoPecas, cargoDeCandidatos, cargosComForaDaDisputa, cargosDoRecorte, cargosDoAno, foraDoRecorte, hrefLegislativoCusto, deCada100, fraseDependeram, parteDependeu, maioresDeCandidatos, maioresDoRecorte, MINIMO_CADA_100, parteDoTotal, QUEM, quemDe, textoDependeram, totalFundos,
   type Aba, type LinhaCargo, type LinhaDespesa, type LinhaMaior, type LinhaPartido, type LinhaQuartil, type RecorteTabela,
@@ -51,17 +51,17 @@ const MAX_LISTA = 40;
  * prestações de contas, a referência das cidades de porte parecido e a eleição anterior; as cidades do estado (as de
  * maior valor e a tabela de todas); os candidatos da cidade (ou os eleitos do estado, nas gerais), em qualquer ordem;
  * onde o dinheiro foi gasto (grupos de categoria do TSE); e as comparações (ComparacoesDinheiro). Cada pergunta do menu
- * (PINTAR) mostra só os blocos que a respondem (SECOES, em src/lib/dinheiro.ts); "Dinheiro elege?" junta as perguntas
- * 2, 8 e 9, com a medida (todo o dinheiro ou só o público) escolhida no topo do painel. A aba Propaganda
+ * (PINTAR) mostra só os blocos que a respondem (SECOES, em src/lib/dinheiro.ts): a 1, a 8 e a 9; a 2 ("Patrimônio
+ * elege?") é a VisaoPatrimonio, escolhida em app/page.tsx. A aba Propaganda
  * (pergunta 9) fica em /analises/dinheiro. Lê as análises `municipios` e `dinheiro` e os candidatos da API; as contas
  * são de src/lib/dinheiro.ts.
  */
 const QUINTOS = ["q0", "q1", "q2", "q3", "q4"];
 
 export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
-  const { ano, cargo, porte, pintar, medir } = escolhaMapaDinheiro(sp);
-  // a tela: a pergunta 1, ou "Dinheiro elege?" (2, 8 e 9) medida por todo o dinheiro ou só pelo público
-  const tela = telaDe({ pintar, medir });
+  const { ano, cargo, porte, pintar } = escolhaMapaDinheiro(sp);
+  // a tela: a pergunta 1, a 8 (dinheiro público e privado) ou a 9 (em que se gastou); a 2 é a VisaoPatrimonio
+  const tela = telaDe(pintar);
   const aba: Aba = abaDe(tela);
   // a medida que pinta o mapa (só o público pinta a parte pública; o resto, o gasto por vaga) e os blocos da tela
   const medidaInfo = medidaDe(tela);
@@ -102,9 +102,9 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const mun = municipal && uf ? municipios.find((m) => m.uf === uf && m.cod_ibge === um(sp.mun)) : undefined;
   // a cidade escolhida na lista dos seis estados chega sem o estado: abre o estado dela
   const ufDaCidade = municipal && !uf ? ufDoMunicipio(municipios, um(sp.mun)) : undefined;
-  if (ufDaCidade) redirect(hrefMapaDinheiro({ ano, cargo, porte, pintar, medir }, { uf: ufDaCidade, mun: um(sp.mun)! }));
+  if (ufDaCidade) redirect(hrefMapaDinheiro({ ano, cargo, porte, pintar }, { uf: ufDaCidade, mun: um(sp.mun)! }));
   const codDe = new Map(municipios.map((m) => [m.id_municipio, m.cod_ibge]));
-  const href = (novo: Parameters<typeof hrefMapaDinheiro>[1], ancora?: string) => hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.cod_ibge, porte, pintar, medir, ord, quem }, novo, ancora);
+  const href = (novo: Parameters<typeof hrefMapaDinheiro>[1], ancora?: string) => hrefMapaDinheiro({ ano, cargo, uf, mun: mun?.cod_ibge, porte, pintar, ord, quem }, novo, ancora);
   const nomeMun = new Map(municipios.map((m) => [m.id_municipio, nomeProprio(m.nome)]));
   const lugar = mun ? nomeMun.get(mun.id_municipio)! : uf ? NOME_UF[uf] ?? uf : "Os seis estados";
   const doAno = new Map(resumo.filter((x) => x.ano === ano).map((x) => [x.id_municipio, x]));
@@ -350,18 +350,6 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           )}
         </header>
 
-        {/* "Dinheiro elege?": a medida vale para a tela inteira (as cores do mapa, os números e os blocos) */}
-        {pintar === "voto" && (
-          <nav className="chips din-medir s12" aria-label="Medir pelo">
-            {MEDIR.map((m) => (
-              <Link key={m.chave} href={href({ medir: m.chave === "publico" ? "publico" : null }, "dinheiro-painel")} scroll={false}
-                className={`chip${m.chave === medir ? " on" : ""}`} aria-current={m.chave === medir ? "true" : undefined}>
-                {m.rotulo}
-              </Link>
-            ))}
-          </nav>
-        )}
-
         {/* os números do lugar, para ler de relance: o principal grande e, ao lado, as outras medidas e as comparações */}
         {tem("numeros") && <section className="din-kpis s12" aria-label={`${lugar} em números`}>
           <div className="din-kpi din-kpi-principal">
@@ -420,8 +408,8 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         {/* pergunta 2: primeiro a resposta (dinheiro × resultado), depois quem gastou */}
         {tem("comparar") && <ComparacoesDinheiro
-          noite escolhaFora ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir={medir} semGasto={!uf}
-          hrefMedir={(m) => href({ medir: m === "publico" ? "publico" : null }, "comparar")} hrefUf={(u) => href({ uf: u })}
+          noite escolhaFora ano={ano} cargo={cargo} uf={uf} mun={mun} nomeMun={mun ? lugar : undefined} porte={porte} medir="publico" semGasto={!uf}
+          hrefMedir={() => href({}, "comparar")} hrefUf={(u) => href({ uf: u })}
         />}
 
         {/* cada pergunta do menu mostra só os seus blocos (SECOES, em src/lib/dinheiro.ts); as pessoas que mais gastaram */}
@@ -717,7 +705,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
           <ul>{CALCULO_MAPA_DINHEIRO.map((t) => <li key={t}>{t}</li>)}</ul>
         </details>
 
-        {pintar === "voto" && <ul className="atalhos s12">
+        {pintar !== "vaga" && <ul className="atalhos s12">
           <li><Link href={propaganda}>Onde os candidatos investem em propaganda</Link></li>
           <li><Link href={uf ? `/candidatos?uf=${uf}` : "/candidatos"}>Candidatos</Link></li>
         </ul>}

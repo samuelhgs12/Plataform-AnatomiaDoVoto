@@ -4,6 +4,7 @@
 import { pontosPercentuais, type Resposta } from "./estatistica";
 import { brlCentavos, reais } from "./format";
 import { mediana, porteDe, PORTES, type CandidatoLocal, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
+import { ANOS_PATRIMONIO, listaDe, type Lista } from "./patrimonio";
 
 /** As três abas (e "eleitor": o gasto por eleitor apto, só uma medida do mapa). `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
 export type Aba = "gasto" | "resultado" | "publico" | "eleitor";
@@ -57,108 +58,112 @@ export function lerRecorte(sp: SP, op: { anos: number[]; ufs: string[]; municipi
 export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024];
 
 /**
- * As perguntas da camada Dinheiro, na ordem do menu (só as do dossiê sobre dinheiro). A 1 (quanto custa uma cadeira)
- * fica sozinha; a "Dinheiro elege?" junta a 2, a 8 e a 9 numa tela só: a medida (`medir`: todo o dinheiro, pergunta 2,
- * ou só o público, pergunta 8) vale para a tela inteira, e o fim da tela mostra em que as campanhas gastaram (pergunta 9).
+ * As perguntas da camada Dinheiro, na ordem do menu: uma pergunta do dossiê por item, sem número. A 1 (quanto custa uma
+ * cadeira), a 2 (patrimônio declarado × vitória: src/lib/patrimonio.ts e VisaoPatrimonio), a 8 (dinheiro público e
+ * privado) e a 9 (em que as campanhas gastaram).
  */
-export type Pintar = "vaga" | "voto";
+export type Pintar = "vaga" | "voto" | "publico" | "propaganda";
 export const PINTAR: { chave: Pintar; rotulo: string }[] = [
   { chave: "vaga", rotulo: "Quanto custa uma cadeira?" },
-  { chave: "voto", rotulo: "Dinheiro elege?" },
+  { chave: "voto", rotulo: "Patrimônio elege?" },
+  { chave: "publico", rotulo: "Dinheiro público e privado" },
+  { chave: "propaganda", rotulo: "Em que as campanhas gastaram?" },
 ];
-export type Medir = "recursos" | "publico";
-/** As duas medidas de "Dinheiro elege?" (a tela não mostra o número da pergunta do dossiê). */
-export const MEDIR: { chave: Medir; rotulo: string }[] = [
-  { chave: "recursos", rotulo: "Todo o dinheiro" },
-  { chave: "publico", rotulo: "Só o dinheiro público" },
-];
-/** A tela da camada: a pergunta 1, ou "Dinheiro elege?" medida por todo o dinheiro ou só pelo público. */
-export type Tela = "vaga" | Medir;
-export const telaDe = ({ pintar, medir }: { pintar: Pintar; medir: Medir }): Tela => (pintar === "vaga" ? "vaga" : medir);
+/** As telas da VisaoDinheiro: as perguntas do menu menos a 2 ("voto"), que é a VisaoPatrimonio. */
+export type Tela = Exclude<Pintar, "voto">;
+/** A tela de uma pergunta (a 2 não passa pela VisaoDinheiro; se passar, cai na 1). */
+export const telaDe = (pintar: Pintar): Tela => (pintar === "voto" ? "vaga" : pintar);
 /** Título do mapa (antes de " em <ano>"): curto, para caber numa linha como nas outras camadas e não encolher o mapa. */
 export const TITULO_TELA: Record<Tela, string> = {
   vaga: "Custo da cadeira",
-  recursos: "Dinheiro e vitória",
-  publico: "Fundo público e vitória",
+  publico: "Dinheiro público e privado",
+  propaganda: "Em que se gastou",
 };
 /** As medidas que pintam o mapa (legenda, dicas e título do mapa). */
 export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba }[] = [
   { chave: "vaga", rotulo: "Gasto por vaga", aba: "gasto" },
   { chave: "publico", rotulo: "Parte pública", aba: "publico" },
 ];
-/** A medida que pinta o mapa em cada tela: a parte pública quando se mede só o dinheiro público; senão, o gasto por vaga. */
+/** A medida que pinta o mapa em cada tela: a parte pública na 8; o gasto por vaga nas outras. */
 export const medidaDe = (tela: Tela) => MEDIDAS_MAPA.find((m) => m.chave === (tela === "publico" ? "publico" : "vaga"))!;
 
 /** Os blocos do painel embaixo do mapa. */
 export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar";
-/** Os blocos do fim de "Dinheiro elege?", iguais nas duas medidas: em que as campanhas gastaram (pergunta 9). */
+/** Os blocos da pergunta 9: em que as campanhas gastaram. */
 export const SECOES_GASTARAM: Secao[] = ["destino", "propaganda"];
 /**
  * O que cada tela mostra no painel, na ordem da página: só os blocos que a respondem. 1 (uma conta do conjunto, não
  * de pessoas): o custo da cadeira (com o gasto por eleitor, a eleição anterior e o eleito típico), os outros cargos e
- * os lugares, lado a lado (8 + 4 colunas, sem MEIAS; o card "Desde" cobre os anos). Todo o dinheiro (2):
- * dinheiro × resultado, a busca de um candidato, quem mais gastou, os partidos, o custo do voto, os quartis e os
- * candidatos. Só o público (8): a parte pública, dinheiro × resultado, a busca, de onde veio o dinheiro, quem dependeu
- * dele, os lugares e os anos. As duas terminam em que as campanhas gastaram (9).
+ * os lugares, lado a lado (8 + 4 colunas, sem MEIAS; o card "Desde" cobre os anos). 8: a parte pública, dinheiro
+ * público × resultado, de onde veio o dinheiro, quem dependeu dele, os lugares e os anos. 9: para onde foi o dinheiro
+ * e a nuvem de propaganda.
  */
 export const SECOES: Record<Tela, Secao[]> = {
   vaga: ["numeros", "cadeiras", "ranking"],
-  recursos: ["comparar", "maiores", "partidos", "voto", "quartis", "cand", ...SECOES_GASTARAM],
-  publico: ["numeros", "comparar", "origem", "fundos", "ranking", "anos", ...SECOES_GASTARAM],
+  publico: ["numeros", "comparar", "origem", "fundos", "ranking", "anos"],
+  propaganda: SECOES_GASTARAM,
 };
 /** Os blocos que dividem a linha com o vizinho (meia largura na tela larga), aos pares, na ordem de SECOES. */
 export const MEIAS: Record<Tela, Secao[]> = {
-  vaga: [], recursos: ["partidos", "voto"], publico: ["ranking", "anos"],
+  vaga: [], publico: ["ranking", "anos"], propaganda: [],
 };
 /** As linhas da comparação entre anos (medidasNosAnos) que cada tela mostra. */
 export const MEDIDAS_ANOS: Record<Tela, string[]> = {
-  vaga: [], recursos: [], publico: ["publico"],
+  vaga: [], publico: ["publico"], propaganda: [],
 };
 export const abaDe = (tela: Tela): Aba => (tela === "publico" ? "publico" : "gasto");
 
-/** O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais), o que pinta o mapa e a medida da pergunta 2 × 8. */
-export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; pintar: Pintar; medir: Medir }
+/** As eleições de cada pergunta: a 2 (patrimônio declarado) vai de 2006 a 2024; as de dinheiro de campanha, de 2018 em diante. */
+export const anosDoPintar = (pintar: string | undefined) => (pintar === "voto" ? ANOS_PATRIMONIO : ANOS_DINHEIRO);
 
 /**
- * Camada Dinheiro do mapa da página inicial: o ano (padrão: o último), um cargo que exista nele, o porte (só nas
- * eleições municipais, e só um dos que existem) e a medida de "quem teve mais dinheiro se elegeu mais?": todo o
- * dinheiro (padrão, pergunta 2) ou só o público (?medir=publico, pergunta 8). Os endereços de antes da junção
- * continuam valendo: ?pintar=publico abre "Dinheiro elege?" só com o público, e ?pintar=propaganda, com todo o dinheiro.
+ * O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais, fora da pergunta 2), o que pinta
+ * o mapa e, na pergunta 2, se tira quem já tinha o cargo (?semcargo=1) e a lista de candidatos (?lista=).
+ */
+export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; pintar: Pintar; semCargo: boolean; lista: Lista }
+
+/**
+ * Camada Dinheiro do mapa da página inicial: a pergunta, o ano (padrão: o último; só os que a pergunta tem), um cargo
+ * que exista nele, o porte (só nas eleições municipais, e só um dos que existem; a pergunta 2 compara dentro de cada
+ * disputa e não usa o porte), semcargo=1 e a lista (pergunta 2). O endereço de antes da separação
+ * ?pintar=voto&medir=publico ("Dinheiro elege?" só com o público) abre a 8.
  */
 export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
-  const pedido = Number(um(sp.ano));
-  const ano = ANOS_DINHEIRO.includes(pedido) ? pedido : ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1];
-  const cargos = cargosDoAno(ano);
-  const porte = ehMunicipal(ano) ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
   const pedidoPintar = um(sp.pintar);
-  const antigo = pedidoPintar === "publico" || pedidoPintar === "propaganda";
-  const pintar = antigo ? "voto" : PINTAR.find((p) => p.chave === pedidoPintar)?.chave ?? "vaga";
-  const medir = pintar === "voto" && (pedidoPintar === "publico" || um(sp.medir) === "publico") ? "publico" : "recursos";
-  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, pintar, medir };
+  const pintar: Pintar = pedidoPintar === "voto" && um(sp.medir) === "publico" ? "publico" : PINTAR.find((p) => p.chave === pedidoPintar)?.chave ?? "vaga";
+  const anos = anosDoPintar(pintar);
+  const pedido = Number(um(sp.ano));
+  const ano = anos.includes(pedido) ? pedido : anos[anos.length - 1];
+  const cargos = cargosDoAno(ano);
+  const porte = ehMunicipal(ano) && pintar !== "voto" ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
+  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, pintar, semCargo: pintar === "voto" && um(sp.semcargo) === "1", lista: listaDe(sp.lista) };
 }
 
 /**
  * Endereço da camada Dinheiro no mapa da página inicial, com o recorte atual e as mudanças (null apaga). Trocar o
  * estado solta a cidade; trocar o ano solta o cargo que não existe nele (volta ao primeiro do ano) e, nas eleições
- * gerais, a cidade e o porte. A cidade vai pelo código do IBGE (o id_municipio muda a cada carga do banco). `ancora`
- * troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
+ * gerais, a cidade e o porte; um ano que a pergunta não tem volta ao último dela. A cidade vai pelo código do IBGE (o
+ * id_municipio muda a cada carga do banco). `ancora` troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
  */
 export function hrefMapaDinheiro(
-  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; medir?: string; ord?: string; quem?: string },
-  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "medir" | "ord" | "quem", string | number | null>> = {},
+  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; ord?: string; quem?: string; semCargo?: boolean; lista?: string },
+  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "ord" | "quem" | "semCargo" | "lista", string | number | boolean | null>> = {},
   ancora = "mapa",
 ): string {
   const n = { ...atual, ...("uf" in novo ? { mun: undefined } : {}), ...novo };
-  const ano = Number(n.ano);
+  // um ano que a pergunta não tem (ex.: 2012 ao sair da pergunta 2) volta ao último
+  const anos = anosDoPintar(n.pintar ? String(n.pintar) : undefined);
+  const ano = anos.includes(Number(n.ano)) ? Number(n.ano) : anos[anos.length - 1];
   const p = new URLSearchParams({ ver: "dinheiro" });
-  if (ano !== ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1]) p.set("ano", String(ano));
+  if (ano !== anos[anos.length - 1]) p.set("ano", String(ano));
   const cargos = cargosDoAno(ano);
   if (n.cargo && cargos.includes(String(n.cargo)) && n.cargo !== cargos[0]) p.set("cargo", String(n.cargo));
   if (n.uf) p.set("uf", String(n.uf));
   if (n.uf && n.mun && ehMunicipal(ano)) p.set("mun", String(n.mun));
-  if (n.porte && ehMunicipal(ano)) p.set("porte", String(n.porte));
+  if (n.porte && ehMunicipal(ano) && n.pintar !== "voto") p.set("porte", String(n.porte));
   if (n.pintar && n.pintar !== "vaga" && PINTAR.some((x) => x.chave === n.pintar)) p.set("pintar", String(n.pintar));
-  if (n.medir === "publico" && n.pintar === "voto") p.set("medir", "publico");
+  if (n.pintar === "voto" && n.semCargo) p.set("semcargo", "1");
+  if (n.pintar === "voto" && n.lista && n.lista !== "ricos" && listaDe(String(n.lista)) === n.lista) p.set("lista", String(n.lista));
   if (n.ord && n.ord !== "votos" && ORDENS_CANDIDATOS.some((o) => o.chave === n.ord)) p.set("ord", String(n.ord));
   if (n.quem === "eleitos") p.set("quem", "eleitos");
   return `/?${p}#${ancora}`;
