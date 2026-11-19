@@ -107,6 +107,20 @@ class Perfil(BaseModel):
     trocas: list[Troca]
 
 
+class PatrimonioLinha(BaseModel):
+    """Patrimônio declarado numa candidatura, por tipo de bem (cd_tipo_bem: código da declaração do Imposto de Renda).
+    Sem nenhum bem declarado: uma linha só, com cd_tipo_bem nulo, valor 0 e bens 0."""
+    id_candidatura: int
+    ano: int
+    cargo: str
+    uf: str | None
+    municipio: str | None
+    eleito: bool
+    cd_tipo_bem: int | None
+    valor: float                         # reais da época, sem correção pela inflação
+    bens: int
+
+
 class CandidaturaMapa(BaseModel):
     """Uma candidatura na visão Candidato do mapa, com os números do verso da ficha."""
     id_candidato: int
