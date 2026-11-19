@@ -16,9 +16,12 @@ import {
 } from "@/lib/dinheiro";
 import { montarNuvem, type TermoNuvem } from "@/lib/nuvem";
 import { mostrarNuvem } from "@/lib/propaganda";
-import { CALCULO_MAPA_DINHEIRO } from "@/lib/metodologia";
+import { CALCULO_MAPA_DINHEIRO, CALCULO_P8_MAPA } from "@/lib/metodologia";
 import { naRegua, type FichaDica } from "@/lib/dica";
-import { NOME_UF } from "@/lib/financiamento";
+import {
+  colunasSucessoP8, fontesPorResultado, fraseP8, GRUPOS_P8, gruposP8, maioriaPublica, NOME_UF, partePublica, partePublicaNosAnos, setaPP, tipicosP8,
+  type LinhaFaixa as LinhaFaixaQ8, type LinhaFontes, type LinhaMediana, type LinhaSucesso,
+} from "@/lib/financiamento";
 import { brlCentavos, compacto, inteiro, pct, reais } from "@/lib/format";
 import { TELA } from "@/lib/lupa";
 import { disputaPrefeito, porteDe, PORTES, type CandidatoLocal, type Eleito, type LinhaEstado, type LinhaMunicipio, type LinhaResumo } from "@/lib/territorio";
@@ -35,6 +38,7 @@ import { MaioresGastos } from "./MaioresGastos";
 import { MapaVivo } from "./MapaVivo";
 import { NuvemPalavras } from "./NuvemPalavras";
 import { PartidosGasto } from "./PartidosGasto";
+import { PublicoPrivado, type DadosP8 } from "./PublicoPrivado";
 import { QuartisDoGasto } from "./QuartisDoGasto";
 
 type SP = Record<string, string | string[] | undefined>;
@@ -73,10 +77,12 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   const quem = quemDe(sp.quem);
   const porteInfo = porte ? PORTES.find((p) => p.chave === porte) : undefined;
   const municipal = ehMunicipal(ano);
-  const [dados, dadosDespesas, dadosPerguntas] = await Promise.all([
+  const [dados, dadosDespesas, dadosPerguntas, dadosQ8] = await Promise.all([
     lerAnalise("municipios", ["municipios", "resumo", "estados"]),
     lerAnalise("dinheiro", ["despesas"]),
     lerAnalise("dinheiro", ["partidos", "quartis", "cargos", "maiores"]),
+    // a pergunta 8 (eleitos × não eleitos, no público e no privado) lê o q8, só na tela dela
+    tem("p8") ? lerAnalise("q8", ["fontes", "faixas", "medianas", "sucesso"]) : Promise.resolve(null),
   ]);
   if (!dados?.resumo || !dados.estados || !dados.municipios) {
     return (
@@ -256,6 +262,33 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
   );
   const variacaoVoto = totalVoto ? variacaoNominal(totalVoto.porVoto, votoAntes) : null;
 
+  // pergunta 8: eleitos × não eleitos, no público e no privado (q8 não tem município: numa cidade, os números do estado)
+  const dadosP8: DadosP8 | null = (() => {
+    if (!tem("p8") || !dadosQ8?.fontes || !dadosQ8.faixas || !dadosQ8.medianas || !dadosQ8.sucesso) return null;
+    const fontes = comoObjetos<LinhaFontes>(dadosQ8.fontes);
+    const f = { ano, cargo, uf };
+    const somas = fontesPorResultado(fontes, f);
+    const tipicos = tipicosP8(comoObjetos<LinhaMediana>(dadosQ8.medianas), f);
+    const partes = { eleitos: partePublica(somas.eleitos), naoEleitos: partePublica(somas.naoEleitos) };
+    const nosAnos = antes !== null ? partePublicaNosAnos(fontes, { cargo, uf }, [antes, ano]) : null;
+    const grupos = nosAnos ? ([["Eleitos", nosAnos.eleitos], ["Não eleitos", nosAnos.naoEleitos]] as const) : [];
+    const temAnos = grupos.length > 0 && grupos.every(([, g]) => g.antes !== null && g.depois !== null);
+    const sucesso = colunasSucessoP8(comoObjetos<LinhaSucesso>(dadosQ8.sucesso), f);
+    return {
+      resposta: fraseP8(tipicos, partes),
+      barras: [{ titulo: "Eleitos", s: somas.eleitos }, { titulo: "Não eleitos", s: somas.naoEleitos }].map((b) => ({ titulo: b.titulo, total: reais(b.s.total), fatias: gruposP8(b.s) })),
+      legenda: GRUPOS_P8.map((g) => ({ chave: g.chave, rotulo: g.rotulo, cor: g.cor })),
+      tipicos,
+      maioria: maioriaPublica(comoObjetos<LinhaFaixaQ8>(dadosQ8.faixas), f),
+      anos: temAnos ? {
+        antes: antes!, depois: ano,
+        grupos: grupos.map(([rotulo, g]) => ({ rotulo, antes: pct(g.antes!, 0), depois: pct(g.depois!, 0), seta: setaPP(g.antes, g.depois)! })),
+      } : null,
+      colunas: sucesso.colunas, max: sucesso.max,
+      recorte: `${cargoMin}, ${uf ? NOME_UF[uf] ?? uf : "seis estados"}, ${ano}`,
+    };
+  })();
+
   // onde o dinheiro foi gasto: os grupos de categoria do TSE no recorte (cidade, estado ou os seis)
   // com um porte (e sem cidade escolhida), só as despesas das cidades dele: o mesmo universo das receitas ao lado
   const grupos = despesas ? composicaoDespesas(despesas, { ano, cargo, uf, mun: mun?.id_municipio, muns: !mun && porte ? cidadesDoPorte(resumo, ano, uf, porte) : undefined }) : [];
@@ -339,8 +372,18 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
         {/* cabeçalho: onde estamos e a troca de cidade */}
         <header className="din-cab s12">
           <div>
-            <p className="din-kicker">{mun ? `Município · ${uf}` : uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"} · {cargo} · {ano}{!mun && porteInfo ? ` · ${porteInfo.rotulo}` : ""}</p>
-            <h2>{lugar}</h2>
+            {/* a P8 não separa por cidade nem por porte (o q8 é por estado): numa cidade, mostra o estado dela */}
+            {tem("p8") ? (
+              <>
+                <p className="din-kicker">{uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"} · {cargo} · {ano}</p>
+                <h2>{uf ? NOME_UF[uf] ?? uf : "Os seis estados"}</h2>
+              </>
+            ) : (
+              <>
+                <p className="din-kicker">{mun ? `Município · ${uf}` : uf ? "Estado" : "AP, ES, MG, PE, RJ e RR"} · {cargo} · {ano}{!mun && porteInfo ? ` · ${porteInfo.rotulo}` : ""}</p>
+                <h2>{lugar}</h2>
+              </>
+            )}
           </div>
           {municipal && (
             <EscolhaMunicipio vazio={uf ? "O estado inteiro" : "Os seis estados"}
@@ -349,6 +392,14 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
             />
           )}
         </header>
+
+        {/* pergunta 8: eleitos × não eleitos, no público e no privado */}
+        {tem("p8") && (dadosP8 ? <PublicoPrivado d={dadosP8} /> : (
+          <div className="card aviso s12">
+            <h2>Dinheiro público e privado indisponível</h2>
+            <p>A API não respondeu: não devolveu a análise <code>q8</code>. Recarregue a página para tentar de novo.</p>
+          </div>
+        ))}
 
         {/* os números do lugar, para ler de relance: o principal grande e, ao lado, as outras medidas e as comparações */}
         {tem("numeros") && <section className="din-kpis s12" aria-label={`${lugar} em números`}>
@@ -702,7 +753,7 @@ export async function VisaoDinheiro({ menu, sp }: { menu: ReactNode; sp: SP }) {
 
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">
           <summary>Como calculamos</summary>
-          <ul>{CALCULO_MAPA_DINHEIRO.map((t) => <li key={t}>{t}</li>)}</ul>
+          <ul>{(tela === "publico" ? CALCULO_P8_MAPA : CALCULO_MAPA_DINHEIRO).map((t) => <li key={t}>{t}</li>)}</ul>
         </details>
 
         {pintar !== "vaga" && <ul className="atalhos s12">

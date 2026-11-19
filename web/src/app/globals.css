@@ -2686,6 +2686,42 @@ a.q-ver:active { transform: scale(0.98); }
 .p2-recolhido[open] > summary { margin-bottom: 12px; }
 .p2-recolhido > p.muted { margin: 0 0 12px; }
 
+/* ---------- Pergunta 8 na camada Dinheiro do mapa: eleitos × não eleitos, no público e no privado (PublicoPrivado) ----------
+   Tudo na superfície dos blocos (--noite2) e nos cartões dentro deles (--noite3), sem --noite */
+.p8-resposta { display: flex; flex-direction: column; gap: 12px; }
+.p8-grande { margin: 0; }
+.p8-grande b { font-size: clamp(38px, 2.2vw + 14px, 68px); font-weight: 700; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--brilho); }
+.p8-frase { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--sobre-noite); }
+.p8-barras { display: grid; gap: 14px; margin-top: 6px; }
+.p8-barras .empilhada { margin: 0; }
+.din-legenda-linha { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--noite-muted); }
+.din-legenda-linha li { display: inline-flex; align-items: center; gap: 6px; }
+.din-legenda-linha i { width: 12px; height: 12px; border-radius: 3px; }
+.numeros-lado { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.numeros-lado > .bloco { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.numeros-lado h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.din-tipicos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.din-tipicos > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: 8px; background: var(--noite3); }
+.din-tipicos small { font-size: 12px; font-weight: 600; color: var(--noite-muted); }
+.din-tipicos b { white-space: nowrap; font-size: clamp(19px, 1.2vw + 10px, 24px); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.din-tipicos > div.on b { color: var(--brilho); }
+.din-tipicos span { font-size: 12.5px; color: var(--noite-muted); }
+.p8-grades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.p8-grades figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.p8-grades .grade-cem i { background: var(--noite3); }
+.p8-grades figcaption { font-size: 13.5px; font-weight: 600; color: var(--sobre-noite); }
+.p8-anos h3 { margin-bottom: 14px; }
+.din-anos-p8 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.din-anos-p8 > div { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 8px; background: var(--noite3); }
+.din-anos-p8 small { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.p8-ano-linha { margin: 0; font-size: clamp(30px, 1.6vw + 16px, 44px); font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.p8-ano-linha span { color: var(--noite-muted); }
+.p8-ano-linha b { color: var(--brilho); }
+.din-anos-p8 .delta { margin: 0; font-size: 15px; font-weight: 700; color: var(--noite-muted); }
+.p8-recolhido > summary { cursor: pointer; font-size: 18px; font-weight: 650; color: var(--sobre-noite); }
+.p8-recolhido[open] > summary { margin-bottom: 6px; }
+@media (max-width: 620px) { .din-anos-p8 { grid-template-columns: 1fr; } }
+
 /* ---------- Legislativo (app/legislativo, components/Plenario.tsx) ----------
    O plenário é o centro da página. Passar o mouse numa cadeira destaca a bancada (regras :has geradas na página) e abre
    a ficha (DicaPlenario). As cadeiras não mudam de lugar entre as leituras; só a cor, que varre o arco da esquerda para

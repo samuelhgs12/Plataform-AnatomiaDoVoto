@@ -88,28 +88,28 @@ export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba
 export const medidaDe = (tela: Tela) => MEDIDAS_MAPA.find((m) => m.chave === (tela === "publico" ? "publico" : "vaga"))!;
 
 /** Os blocos do painel embaixo do mapa. */
-export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar";
+export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar" | "p8";
 /** Os blocos da pergunta 9: em que as campanhas gastaram. */
 export const SECOES_GASTARAM: Secao[] = ["destino", "propaganda"];
 /**
  * O que cada tela mostra no painel, na ordem da página: só os blocos que a respondem. 1 (uma conta do conjunto, não
  * de pessoas): o custo da cadeira (com o gasto por eleitor, a eleição anterior e o eleito típico), os outros cargos e
- * os lugares, lado a lado (8 + 4 colunas, sem MEIAS; o card "Desde" cobre os anos). 8: a parte pública, dinheiro
- * público × resultado, de onde veio o dinheiro, quem dependeu dele, os lugares e os anos. 9: para onde foi o dinheiro
+ * os lugares, lado a lado (8 + 4 colunas, sem MEIAS; o card "Desde" cobre os anos). 8: eleitos × não eleitos, no
+ * público e no privado (PublicoPrivado, dados do q8: um bloco só, "p8"). 9: para onde foi o dinheiro
  * e a nuvem de propaganda.
  */
 export const SECOES: Record<Tela, Secao[]> = {
   vaga: ["numeros", "cadeiras", "ranking"],
-  publico: ["numeros", "comparar", "origem", "fundos", "ranking", "anos"],
+  publico: ["p8"],
   propaganda: SECOES_GASTARAM,
 };
 /** Os blocos que dividem a linha com o vizinho (meia largura na tela larga), aos pares, na ordem de SECOES. */
 export const MEIAS: Record<Tela, Secao[]> = {
-  vaga: [], publico: ["ranking", "anos"], propaganda: [],
+  vaga: [], publico: [], propaganda: [],
 };
 /** As linhas da comparação entre anos (medidasNosAnos) que cada tela mostra. */
 export const MEDIDAS_ANOS: Record<Tela, string[]> = {
-  vaga: [], publico: ["publico"], propaganda: [],
+  vaga: [], publico: [], propaganda: [],
 };
 export const abaDe = (tela: Tela): Aba => (tela === "publico" ? "publico" : "gasto");
 

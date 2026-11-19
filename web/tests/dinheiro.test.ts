@@ -913,14 +913,14 @@ describe("perguntas do menu: PINTAR, telaDe, medidaDe, SECOES, MEIAS e MEDIDAS_A
   });
   it("cada tela mostra só os seus blocos: a 8 sem os da 9, e a 9 só os dela", () => {
     expect(SECOES.vaga).toEqual(["numeros", "cadeiras", "ranking"]);   // a 1 é uma conta do conjunto; o card "Desde" cobre os anos
-    expect(SECOES.publico).toEqual(["numeros", "comparar", "origem", "fundos", "ranking", "anos"]);
+    expect(SECOES.publico).toEqual(["p8"]);   // a 8: eleitos × não eleitos, no público e no privado (PublicoPrivado)
     expect(SECOES.propaganda).toEqual(SECOES_GASTARAM);
     expect(SECOES_GASTARAM).toEqual(["destino", "propaganda"]);
     for (const x of SECOES_GASTARAM) expect(SECOES.publico).not.toContain(x);
     expect(Object.keys(SECOES)).toEqual(["vaga", "publico", "propaganda"]);
   });
   it("os blocos de meia largura vêm aos pares, vizinhos, e são da própria tela", () => {
-    expect(MEIAS).toEqual({ vaga: [], publico: ["ranking", "anos"], propaganda: [] });
+    expect(MEIAS).toEqual({ vaga: [], publico: [], propaganda: [] });
     for (const t of ["vaga", "publico", "propaganda"] as const) {
       const m = MEIAS[t];
       expect(m.length % 2).toBe(0);
@@ -928,7 +928,7 @@ describe("perguntas do menu: PINTAR, telaDe, medidaDe, SECOES, MEIAS e MEDIDAS_A
     }
   });
   it("os anos mostram só as linhas da tela, e só nas que têm anos", () => {
-    expect(MEDIDAS_ANOS).toEqual({ vaga: [], publico: ["publico"], propaganda: [] });
+    expect(MEDIDAS_ANOS).toEqual({ vaga: [], publico: [], propaganda: [] });
     for (const t of ["vaga", "publico", "propaganda"] as const) expect(MEDIDAS_ANOS[t].length > 0).toBe(SECOES[t].includes("anos"));
   });
 });

@@ -167,8 +167,8 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p8: {
     id: "p8",
-    resposta: "De onde vem o dinheiro das campanhas e se quem recebeu mais do Fundo Eleitoral e do Fundo Partidário se elegeu mais que os concorrentes.",
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/financiamento" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
+    resposta: "Se eleitos e não eleitos usam dinheiro público e privado de forma diferente: quanto cada grupo recebeu, de onde veio e quantos dependeram dos fundos públicos.",
+    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/financiamento" }, { rotulo: "Ver no mapa", href: "/?ver=dinheiro&pintar=publico#mapa" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
     anos: "2018–2024",
     cargos: "Todos os cargos titulares",
     dados: ["receita_campanha e fonte_recurso", "candidatura, eleicao, cargo e rotulo_resultado"],
@@ -361,6 +361,16 @@ export const CALCULO_MAPA_DINHEIRO: string[] = [
       "Cada cadeira: gasto de todas as campanhas ao cargo, inclusive as que não chegaram a disputar, ÷ cadeiras em disputa no recorte; o eleito típico é a mediana do gasto dos eleitos que entregaram as contas.",
       "Dependeu do dinheiro público: mais da metade do que a campanha recebeu veio do Fundo Eleitoral e do Fundo Partidário. “De cada 100” arredonda pelos maiores restos para somar 100; com menos de 20 pessoas, mostra a conta de verdade (ex.: 2 de 3).",
       "Propaganda: as despesas de propaganda viram peças (santinho, adesivo, Facebook...) pelo mesmo dicionário da Pergunta 9; o tamanho da palavra é o valor contratado. Dá para ver todos os candidatos ou só os eleitos; o filtro de porte não se aplica à nuvem.",
+];
+
+/** O "Como calculamos" da pergunta 8 no mapa (eleitos × não eleitos, no público e no privado: PublicoPrivado). */
+export const CALCULO_P8_MAPA: string[] = [
+  "De onde veio: as somas de cada grupo (eleitos e não eleitos), sem os repasses entre candidatos, para o mesmo real não contar duas vezes. Fundos públicos = Fundo Eleitoral + Fundo Partidário.",
+  "Candidato típico: a mediana de cada grupo, contando o que cada um recebeu, inclusive de outros candidatos. Como cada valor é o do meio do seu grupo, público + privado não somam o total.",
+  "Maioria pública: mais da metade do que o candidato recebeu veio dos fundos. Quem não recebeu nada conta no total do grupo.",
+  "Parte pública ao longo do tempo: valores da época, sem correção pela inflação; a diferença é em pontos percentuais (p.p.).",
+  "Na cidade, os números são do estado: as receitas não são separadas por município nesta análise.",
+  "Andar junto não prova que o dinheiro faz ganhar: os partidos mandam mais dinheiro para quem já tem mais chance.",
 ];
 
 export const PERGUNTAS: { n: number; texto: string; id?: IdMetodologia }[] = [

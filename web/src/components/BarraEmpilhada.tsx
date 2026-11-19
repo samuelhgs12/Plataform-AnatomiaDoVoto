@@ -3,9 +3,10 @@ import { pct } from "@/lib/format";
 
 /**
  * Uma barra 100% dividida em fatias (montadas por `fatias`, src/lib/dinheiro.ts), com o título e o total em cima e a
- * legenda embaixo: cor, nome, parte e valor de cada fatia (a leitura não depende só da cor). Componente de servidor sem JS.
+ * legenda embaixo: cor, nome, parte e valor de cada fatia (a leitura não depende só da cor). `semLegenda`: sem a legenda
+ * (quando várias barras dividem uma legenda só); o aria-label da barra continua com tudo. Componente de servidor sem JS.
  */
-export function BarraEmpilhada({ titulo, total, fatias, valor }: { titulo: string; total: string; fatias: Fatia[]; valor: (v: number) => string }) {
+export function BarraEmpilhada({ titulo, total, fatias, valor, semLegenda = false }: { titulo: string; total: string; fatias: Fatia[]; valor: (v: number) => string; semLegenda?: boolean }) {
   return (
     <figure className="empilhada">
       <figcaption><span>{titulo}</span><b>{total}</b></figcaption>
@@ -16,11 +17,11 @@ export function BarraEmpilhada({ titulo, total, fatias, valor }: { titulo: strin
           </span>
         ))}
       </div>
-      <ul className="emp-legenda" aria-hidden="true">
+      {!semLegenda && <ul className="emp-legenda" aria-hidden="true">
         {fatias.map((f) => (
           <li key={f.chave}><i className={f.cor} /><span>{f.rotulo}</span><b>{pct(f.parte, 0)}</b><small>{valor(f.valor)}</small></li>
         ))}
-      </ul>
+      </ul>}
     </figure>
   );
 }
