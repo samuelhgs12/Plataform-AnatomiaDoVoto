@@ -24,6 +24,7 @@ import { MapaVivo } from "./MapaVivo";
 import { MiniMapa } from "./MiniMapa";
 import { Rolar } from "./Rolar";
 import { SerieVies } from "./SerieVies";
+import { TocarAnos } from "./TocarAnos";
 
 type SP = Record<string, string | string[] | undefined>;
 const um = (v: SP[string]) => (Array.isArray(v) ? v[0] : v);
@@ -236,6 +237,7 @@ export async function VisaoVies({ menu, sp, municipios }: { menu: ReactNode; sp:
         <div className="palco-base">
           {legenda}
           <div className="anos" role="group" aria-label="Ano da eleição">
+            {sub === "vies" && <TocarAnos ano={ano} passos={ANOS_VIES.filter((a) => cargoNoAno(esc.cargo, a)).map((a) => ({ ano: a, href: href({ ano: a }) }))} />}
             {ANOS_VIES.map((a) => (
               <Link key={a} scroll={false} href={href({ ano: a })} className={`ano${a === ano ? " on" : ""}`} aria-current={a === ano ? "true" : undefined}>
                 {a}<small>{a % 4 === 0 ? "Municipal" : "Geral"}</small>

@@ -966,6 +966,9 @@ a.linha:hover { background: var(--panel2); }
 .ano:active { transform: scale(0.96); }
 .ano.on { background: var(--sobre-noite); color: var(--noite); }
 .ano.on small { color: color-mix(in srgb, var(--noite) 72%, var(--sobre-noite)); }
+/* Viés: o botão que anima os anos abre a régua, separado dos anos por uma linha */
+.ano.tocar { border: 0; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; background: transparent; color: var(--sobre-noite); margin-right: 3px; box-shadow: 1px 0 0 var(--noite-linha); border-radius: 6px 0 0 6px; }
+.ano.tocar[aria-pressed="true"] { background: var(--noite3); }
 
 /* os números do mapa, embaixo dele: a mesma grade de 12 colunas, cada bloco com a sua largura */
 .painel { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap); }
