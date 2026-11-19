@@ -4,6 +4,8 @@
 import { pontosPercentuais, type Resposta } from "./estatistica";
 import { brlCentavos, reais } from "./format";
 import { mediana, porteDe, PORTES, type CandidatoLocal, type LinhaMunicipio, type LinhaResumo, type Porte } from "./territorio";
+import { ANOS_PATRIMONIO, listaDe, type Lista } from "./patrimonio";
+import type { Nuvem } from "./nuvem";
 
 /** As três abas (e "eleitor": o gasto por eleitor apto, só uma medida do mapa). `numero` (a pergunta do trabalho) fica discreto, perto da metodologia. */
 export type Aba = "gasto" | "resultado" | "publico" | "eleitor";
@@ -57,107 +59,112 @@ export function lerRecorte(sp: SP, op: { anos: number[]; ufs: string[]; municipi
 export const ANOS_DINHEIRO = [2018, 2020, 2022, 2024, 2026];
 
 /**
- * As perguntas da camada Dinheiro, na ordem do menu (só as do dossiê sobre dinheiro). A 1 (quanto custa uma cadeira)
- * fica sozinha; a "Dinheiro elege?" junta a 2, a 8 e a 9 numa tela só: a medida (`medir`: todo o dinheiro, pergunta 2,
- * ou só o público, pergunta 8) vale para a tela inteira, e o fim da tela mostra em que as campanhas gastaram (pergunta 9).
+ * As perguntas da camada Dinheiro, na ordem do menu: uma pergunta do dossiê por item, sem número. A 1 (quanto custa uma
+ * cadeira), a 2 (patrimônio declarado × vitória: src/lib/patrimonio.ts e VisaoPatrimonio), a 8 (dinheiro público e
+ * privado) e a 9 (em que as campanhas gastaram).
  */
-export type Pintar = "vaga" | "voto";
+export type Pintar = "vaga" | "voto" | "publico" | "propaganda";
 export const PINTAR: { chave: Pintar; rotulo: string }[] = [
-  { chave: "vaga", rotulo: "Quanto custa uma cadeira" },
-  { chave: "voto", rotulo: "Dinheiro elege?" },
+  { chave: "vaga", rotulo: "Quanto custa uma cadeira?" },
+  { chave: "voto", rotulo: "Patrimônio elege?" },
+  { chave: "publico", rotulo: "Dinheiro público e privado" },
+  { chave: "propaganda", rotulo: "Onde se investe em propaganda?" },
 ];
-export type Medir = "recursos" | "publico";
-/** As duas medidas de "Dinheiro elege?" (a tela não mostra o número da pergunta do dossiê). */
-export const MEDIR: { chave: Medir; rotulo: string }[] = [
-  { chave: "recursos", rotulo: "Todo o dinheiro" },
-  { chave: "publico", rotulo: "Só o dinheiro público" },
-];
-/** A tela da camada: a pergunta 1, ou "Dinheiro elege?" medida por todo o dinheiro ou só pelo público. */
-export type Tela = "vaga" | Medir;
-export const telaDe = ({ pintar, medir }: { pintar: Pintar; medir: Medir }): Tela => (pintar === "vaga" ? "vaga" : medir);
+/** As telas da VisaoDinheiro: as perguntas do menu menos a 2 ("voto"), que é a VisaoPatrimonio. */
+export type Tela = Exclude<Pintar, "voto">;
+/** A tela de uma pergunta (a 2 não passa pela VisaoDinheiro; se passar, cai na 1). */
+export const telaDe = (pintar: Pintar): Tela => (pintar === "voto" ? "vaga" : pintar);
 /** Título do mapa (antes de " em <ano>"): curto, para caber numa linha como nas outras camadas e não encolher o mapa. */
 export const TITULO_TELA: Record<Tela, string> = {
   vaga: "Custo da cadeira",
-  recursos: "Dinheiro e vitória",
-  publico: "Fundo público e vitória",
+  publico: "Dinheiro público e privado",
+  propaganda: "Propaganda",
 };
 /** As medidas que pintam o mapa (legenda, dicas e título do mapa). */
 export const MEDIDAS_MAPA: { chave: "vaga" | "publico"; rotulo: string; aba: Aba }[] = [
   { chave: "vaga", rotulo: "Gasto por vaga", aba: "gasto" },
   { chave: "publico", rotulo: "Parte pública", aba: "publico" },
 ];
-/** A medida que pinta o mapa em cada tela: a parte pública quando se mede só o dinheiro público; senão, o gasto por vaga. */
+/** A medida que pinta o mapa em cada tela: a parte pública na 8; o gasto por vaga nas outras. */
 export const medidaDe = (tela: Tela) => MEDIDAS_MAPA.find((m) => m.chave === (tela === "publico" ? "publico" : "vaga"))!;
 
 /** Os blocos do painel embaixo do mapa. */
-export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar";
-/** Os blocos do fim de "Dinheiro elege?", iguais nas duas medidas: em que as campanhas gastaram (pergunta 9). */
+export type Secao = "numeros" | "cadeiras" | "voto" | "origem" | "fundos" | "ranking" | "anos" | "maiores" | "partidos" | "quartis" | "cand" | "destino" | "propaganda" | "comparar" | "p8";
+/** Os blocos da pergunta 9: em que as campanhas gastaram. */
 export const SECOES_GASTARAM: Secao[] = ["destino", "propaganda"];
 /**
  * O que cada tela mostra no painel, na ordem da página: só os blocos que a respondem. 1 (uma conta do conjunto, não
- * de pessoas): o custo da vaga (com o gasto por eleitor), cada cadeira, os lugares e os anos. Todo o dinheiro (2):
- * dinheiro × resultado, a busca de um candidato, quem mais gastou, os partidos, o custo do voto, os quartis e os
- * candidatos. Só o público (8): a parte pública, dinheiro × resultado, a busca, de onde veio o dinheiro, quem dependeu
- * dele, os lugares e os anos. As duas terminam em que as campanhas gastaram (9).
+ * de pessoas): o custo da cadeira (com o gasto por eleitor, a eleição anterior e o eleito típico), os outros cargos e
+ * os lugares, lado a lado (8 + 4 colunas, sem MEIAS; o card "Desde" cobre os anos). 8: eleitos × não eleitos, no
+ * público e no privado (PublicoPrivado, dados do q8: um bloco só, "p8"). 9: para onde foi o dinheiro
+ * e a nuvem de propaganda.
  */
 export const SECOES: Record<Tela, Secao[]> = {
-  vaga: ["numeros", "cadeiras", "ranking", "anos"],
-  recursos: ["comparar", "maiores", "partidos", "voto", "quartis", "cand", ...SECOES_GASTARAM],
-  publico: ["numeros", "comparar", "origem", "fundos", "ranking", "anos", ...SECOES_GASTARAM],
+  vaga: ["numeros", "cadeiras", "ranking"],
+  publico: ["p8"],
+  propaganda: SECOES_GASTARAM,
 };
 /** Os blocos que dividem a linha com o vizinho (meia largura na tela larga), aos pares, na ordem de SECOES. */
 export const MEIAS: Record<Tela, Secao[]> = {
-  vaga: ["ranking", "anos"], recursos: ["partidos", "voto"], publico: ["ranking", "anos"],
+  vaga: [], publico: [], propaganda: [],
 };
 /** As linhas da comparação entre anos (medidasNosAnos) que cada tela mostra. */
 export const MEDIDAS_ANOS: Record<Tela, string[]> = {
-  vaga: ["gasto", "vaga", "eleitor", "cand"], recursos: [], publico: ["publico"],
+  vaga: [], publico: [], propaganda: [],
 };
 export const abaDe = (tela: Tela): Aba => (tela === "publico" ? "publico" : "gasto");
 
-/** O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais), o que pinta o mapa e a medida da pergunta 2 × 8. */
-export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; pintar: Pintar; medir: Medir }
+/** As eleições de cada pergunta: a 2 (patrimônio declarado) vai de 2006 a 2024; as de dinheiro de campanha, de 2018 em diante. */
+export const anosDoPintar = (pintar: string | undefined) => (pintar === "voto" ? ANOS_PATRIMONIO : ANOS_DINHEIRO);
 
 /**
- * Camada Dinheiro do mapa da página inicial: o ano (padrão: o último), um cargo que exista nele, o porte (só nas
- * eleições municipais, e só um dos que existem) e a medida de "quem teve mais dinheiro se elegeu mais?": todo o
- * dinheiro (padrão, pergunta 2) ou só o público (?medir=publico, pergunta 8). Os endereços de antes da junção
- * continuam valendo: ?pintar=publico abre "Dinheiro elege?" só com o público, e ?pintar=propaganda, com todo o dinheiro.
+ * O recorte da camada Dinheiro do mapa: ano, cargo, porte da cidade (só nas municipais, fora da pergunta 2), o que pinta
+ * o mapa e, na pergunta 2, se tira quem já tinha o cargo (?semcargo=1) e a lista de candidatos (?lista=).
+ */
+export interface EscolhaMapaDinheiro { ano: number; cargo: string; porte?: Porte; pintar: Pintar; semCargo: boolean; lista: Lista }
+
+/**
+ * Camada Dinheiro do mapa da página inicial: a pergunta, o ano (padrão: o último; só os que a pergunta tem), um cargo
+ * que exista nele, o porte (só nas eleições municipais, e só um dos que existem; a pergunta 2 compara dentro de cada
+ * disputa e não usa o porte), semcargo=1 e a lista (pergunta 2). O endereço de antes da separação
+ * ?pintar=voto&medir=publico ("Dinheiro elege?" só com o público) abre a 8.
  */
 export function escolhaMapaDinheiro(sp: SP): EscolhaMapaDinheiro {
-  const pedido = Number(um(sp.ano));
-  const ano = ANOS_DINHEIRO.includes(pedido) ? pedido : ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1];
-  const cargos = cargosDoAno(ano);
-  const porte = ehMunicipal(ano) ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
   const pedidoPintar = um(sp.pintar);
-  const antigo = pedidoPintar === "publico" || pedidoPintar === "propaganda";
-  const pintar = antigo ? "voto" : PINTAR.find((p) => p.chave === pedidoPintar)?.chave ?? "vaga";
-  const medir = pintar === "voto" && (pedidoPintar === "publico" || um(sp.medir) === "publico") ? "publico" : "recursos";
-  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, pintar, medir };
+  const pintar: Pintar = pedidoPintar === "voto" && um(sp.medir) === "publico" ? "publico" : PINTAR.find((p) => p.chave === pedidoPintar)?.chave ?? "vaga";
+  const anos = anosDoPintar(pintar);
+  const pedido = Number(um(sp.ano));
+  const ano = anos.includes(pedido) ? pedido : anos[anos.length - 1];
+  const cargos = cargosDoAno(ano);
+  const porte = ehMunicipal(ano) && pintar !== "voto" ? PORTES.find((p) => p.chave === um(sp.porte))?.chave : undefined;
+  return { ano, cargo: cargos.find((c) => c === um(sp.cargo)) ?? cargos[0], porte, pintar, semCargo: pintar === "voto" && um(sp.semcargo) === "1", lista: listaDe(sp.lista) };
 }
 
 /**
  * Endereço da camada Dinheiro no mapa da página inicial, com o recorte atual e as mudanças (null apaga). Trocar o
  * estado solta a cidade; trocar o ano solta o cargo que não existe nele (volta ao primeiro do ano) e, nas eleições
- * gerais, a cidade e o porte. A cidade vai pelo código do IBGE (o id_municipio muda a cada carga do banco). `ancora`
- * troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
+ * gerais, a cidade e o porte; um ano que a pergunta não tem volta ao último dela. A cidade vai pelo código do IBGE (o
+ * id_municipio muda a cada carga do banco). `ancora` troca o "#mapa" do fim (ex.: "comparar", para não subir ao mapa).
  */
 export function hrefMapaDinheiro(
-  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; medir?: string; ord?: string; quem?: string },
-  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "medir" | "ord" | "quem", string | number | null>> = {},
+  atual: { ano: number; cargo: string; uf?: string; mun?: string | number; porte?: string; pintar?: string; ord?: string; quem?: string; semCargo?: boolean; lista?: string },
+  novo: Partial<Record<"ano" | "cargo" | "uf" | "mun" | "porte" | "pintar" | "ord" | "quem" | "semCargo" | "lista", string | number | boolean | null>> = {},
   ancora = "mapa",
 ): string {
   const n = { ...atual, ...("uf" in novo ? { mun: undefined } : {}), ...novo };
-  const ano = Number(n.ano);
+  // um ano que a pergunta não tem (ex.: 2012 ao sair da pergunta 2) volta ao último
+  const anos = anosDoPintar(n.pintar ? String(n.pintar) : undefined);
+  const ano = anos.includes(Number(n.ano)) ? Number(n.ano) : anos[anos.length - 1];
   const p = new URLSearchParams({ ver: "dinheiro" });
-  if (ano !== ANOS_DINHEIRO[ANOS_DINHEIRO.length - 1]) p.set("ano", String(ano));
+  if (ano !== anos[anos.length - 1]) p.set("ano", String(ano));
   const cargos = cargosDoAno(ano);
   if (n.cargo && cargos.includes(String(n.cargo)) && n.cargo !== cargos[0]) p.set("cargo", String(n.cargo));
   if (n.uf) p.set("uf", String(n.uf));
   if (n.uf && n.mun && ehMunicipal(ano)) p.set("mun", String(n.mun));
-  if (n.porte && ehMunicipal(ano)) p.set("porte", String(n.porte));
+  if (n.porte && ehMunicipal(ano) && n.pintar !== "voto") p.set("porte", String(n.porte));
   if (n.pintar && n.pintar !== "vaga" && PINTAR.some((x) => x.chave === n.pintar)) p.set("pintar", String(n.pintar));
-  if (n.medir === "publico" && n.pintar === "voto") p.set("medir", "publico");
+  if (n.pintar === "voto" && n.semCargo) p.set("semcargo", "1");
+  if (n.pintar === "voto" && n.lista && n.lista !== "ricos" && listaDe(String(n.lista)) === n.lista) p.set("lista", String(n.lista));
   if (n.ord && n.ord !== "votos" && ORDENS_CANDIDATOS.some((o) => o.chave === n.ord)) p.set("ord", String(n.ord));
   if (n.quem === "eleitos") p.set("quem", "eleitos");
   return `/?${p}#${ancora}`;
@@ -189,17 +196,28 @@ export function hrefDinheiro(r: Recorte, novo: Partial<Record<"ano" | "cargo" | 
 }
 
 /**
+ * O gasto de um cargo com o das campanhas que não chegaram a disputar (a mesma conta da pergunta 1, q1.sql). A coluna
+ * de quem não disputou é opcional (versões antigas da API): sem ela, conta zero.
+ */
+export const gastoComForaDaDisputa = (gasto: number, foraDaDisputa: number | null | undefined): number => gasto + (foraDaDisputa ?? 0);
+
+/** O gasto das campanhas a prefeito numa cidade, com quem não chegou a disputar (null sem candidatos). */
+const gastoPrefeito = (r: LinhaResumo): number | null =>
+  (r.prefeito_candidatos > 0 ? gastoComForaDaDisputa(r.prefeito_gasto, r.prefeito_nao_disputou_gasto) : null);
+const gastoVereador = (r: LinhaResumo): number => gastoComForaDaDisputa(r.vereador_gasto, r.vereador_nao_disputou_gasto);
+
+/**
  * O valor de uma cidade numa eleição municipal, para a aba e o cargo (null = não informado). Nunca mistura cargos:
- * gasto = gasto das campanhas ao cargo ÷ vagas (prefeito: 1 vaga); público = parte pública do que as campanhas ao
+ * gasto = gasto das campanhas ao cargo, inclusive as que não chegaram a disputar, ÷ vagas (prefeito: 1 vaga); público = parte pública do que as campanhas ao
  * cargo receberam (receita zero = proporção indefinida, null, não 0%); resultado = prefeito: quem mais gastou venceu
  * (1/0); vereador: parte dos candidatos com mais recursos que se elegeu.
  */
 export function valorCidade(r: LinhaResumo | undefined, aba: Aba, cargo: string): number | null {
   if (!r) return null;
   const prefeito = cargo === "Prefeito";
-  if (aba === "gasto") return prefeito ? (r.prefeito_candidatos > 0 ? r.prefeito_gasto : null) : r.vereador_vagas > 0 ? r.vereador_gasto / r.vereador_vagas : null;
+  if (aba === "gasto") return prefeito ? gastoPrefeito(r) : r.vereador_vagas > 0 ? gastoVereador(r) / r.vereador_vagas : null;
   if (aba === "eleitor") {
-    const gasto = prefeito ? (r.prefeito_candidatos > 0 ? r.prefeito_gasto : null) : r.vereador_candidatos > 0 ? r.vereador_gasto : null;
+    const gasto = prefeito ? gastoPrefeito(r) : r.vereador_candidatos > 0 ? gastoVereador(r) : null;
     return gasto !== null && r.eleitorado ? gasto / r.eleitorado : null;
   }
   if (aba === "publico") {
@@ -352,16 +370,18 @@ export const FAIXAS_PARTE_CIDADES = [0.5, 0.6, 0.7, 0.8];
 
 /**
  * O valor de um estado (ou dos seis, sem uf) com a mesma conta da cidade, a partir da tabela "estados" da análise
- * municipios: gasto ÷ vagas; parte pública das receitas; prefeito: parte das disputas comparáveis em que quem mais
- * gastou venceu. A P2 de vereador e deputado vem da análise q2 (grupos), não daqui (null).
+ * municipios: gasto (com as campanhas que não chegaram a disputar, como na P1) ÷ vagas; parte pública das receitas;
+ * prefeito: parte das disputas comparáveis em que quem mais gastou venceu. A P2 de vereador e deputado vem da análise
+ * q2 (grupos), não daqui (null).
  */
-export function valorDoEstado(estados: { ano: number; uf: string; cargo: string; vagas: number; gasto: number; receita: number; receita_publica: number; disputas_maior: number | null; maior_venceu: number | null; eleitorado?: number | null }[],
+export function valorDoEstado(estados: { ano: number; uf: string; cargo: string; vagas: number; gasto: number; receita: number; receita_publica: number; disputas_maior: number | null; maior_venceu: number | null; eleitorado?: number | null; gasto_nao_disputou?: number | null }[],
   ano: number, uf: string | undefined, aba: Aba, cargo: string): number | null {
   const sel = estados.filter((e) => e.ano === ano && e.cargo === cargo && e.uf !== "BR" && (!uf || e.uf === uf));
   if (!sel.length) return null;
   const soma = (k: "vagas" | "gasto" | "receita" | "receita_publica" | "disputas_maior" | "maior_venceu" | "eleitorado") => sel.reduce((a, e) => a + (e[k] ?? 0), 0);
-  if (aba === "gasto") return soma("vagas") > 0 ? soma("gasto") / soma("vagas") : null;
-  if (aba === "eleitor") return soma("eleitorado") > 0 ? soma("gasto") / soma("eleitorado") : null;
+  const gasto = sel.reduce((a, e) => a + gastoComForaDaDisputa(e.gasto, e.gasto_nao_disputou), 0);
+  if (aba === "gasto") return soma("vagas") > 0 ? gasto / soma("vagas") : null;
+  if (aba === "eleitor") return soma("eleitorado") > 0 ? gasto / soma("eleitorado") : null;
   if (aba === "publico") return soma("receita") > 0 ? soma("receita_publica") / soma("receita") : null;
   if (cargo !== "Prefeito") return null;
   return soma("disputas_maior") > 0 ? soma("maior_venceu") / soma("disputas_maior") : null;
@@ -399,18 +419,19 @@ export function maisRecebeuPublico<T extends { prestou?: boolean | null; receita
 }
 
 /**
- * A conta do gasto por vaga, para mostrar por extenso ("R$ 32 milhões ÷ 37 vagas"): o gasto das campanhas ao cargo e o
- * número de vagas. Na cidade, prefeito tem 1 vaga (o gasto por vaga é o total gasto na disputa, não o do eleito);
- * no estado ou nos seis, somas de todas as campanhas e de todas as vagas. null sem dado.
+ * A conta do gasto por vaga, para mostrar por extenso ("R$ 32 milhões ÷ 37 vagas"): o gasto das campanhas ao cargo
+ * (inclusive as que não chegaram a disputar, como na P1) e o número de vagas. Na cidade, prefeito tem 1 vaga (o gasto
+ * por vaga é o total gasto na disputa, não o do eleito); no estado ou nos seis, somas de todas as campanhas e de todas
+ * as vagas. null sem dado.
  */
 export function contaGasto(r: LinhaResumo | undefined, cargo: string): { gasto: number; vagas: number } | null {
   if (!r) return null;
-  if (cargo === "Prefeito") return r.prefeito_candidatos > 0 ? { gasto: r.prefeito_gasto, vagas: 1 } : null;
-  return r.vereador_vagas > 0 ? { gasto: r.vereador_gasto, vagas: r.vereador_vagas } : null;
+  if (cargo === "Prefeito") { const gasto = gastoPrefeito(r); return gasto !== null ? { gasto, vagas: 1 } : null; }
+  return r.vereador_vagas > 0 ? { gasto: gastoVereador(r), vagas: r.vereador_vagas } : null;
 }
-export function contaGastoEstado(estados: { ano: number; uf: string; cargo: string; vagas: number; gasto: number }[], ano: number, uf: string | undefined, cargo: string): { gasto: number; vagas: number } | null {
+export function contaGastoEstado(estados: { ano: number; uf: string; cargo: string; vagas: number; gasto: number; gasto_nao_disputou?: number | null }[], ano: number, uf: string | undefined, cargo: string): { gasto: number; vagas: number } | null {
   const sel = estados.filter((e) => e.ano === ano && e.cargo === cargo && e.uf !== "BR" && (!uf || e.uf === uf));
-  const vagas = sel.reduce((a, e) => a + e.vagas, 0), gasto = sel.reduce((a, e) => a + e.gasto, 0);
+  const vagas = sel.reduce((a, e) => a + e.vagas, 0), gasto = sel.reduce((a, e) => a + gastoComForaDaDisputa(e.gasto, e.gasto_nao_disputou), 0);
   return vagas > 0 ? { gasto, vagas } : null;
 }
 
@@ -443,15 +464,17 @@ export function valorDoPorte(resumo: LinhaResumo[], ano: number, uf: string | un
   const sel = resumo.filter((r) => r.ano === ano && (!uf || r.uf === uf) && porteDe(r.eleitorado)?.chave === porte);
   const soma = (f: (r: LinhaResumo) => number) => sel.reduce((a, r) => a + f(r), 0);
   const prefeito = cargo === "Prefeito";
+  // o gasto do cargo com as campanhas que não chegaram a disputar (como na P1)
+  const gastoDe = (r: LinhaResumo) => (prefeito ? gastoPrefeito(r) ?? 0 : gastoVereador(r));
   if (aba === "gasto") {
     const comDado = sel.filter((r) => (prefeito ? r.prefeito_candidatos > 0 : r.vereador_vagas > 0));
-    const gasto = comDado.reduce((a, r) => a + (prefeito ? r.prefeito_gasto : r.vereador_gasto), 0);
+    const gasto = comDado.reduce((a, r) => a + gastoDe(r), 0);
     const vagas = prefeito ? comDado.length : comDado.reduce((a, r) => a + r.vereador_vagas, 0);
     return { valor: vagas > 0 ? gasto / vagas : null, n: comDado.length, conta: vagas > 0 ? { gasto, vagas } : null };
   }
   if (aba === "eleitor") {
     const comDado = sel.filter((r) => (prefeito ? r.prefeito_candidatos > 0 : r.vereador_candidatos > 0) && r.eleitorado);
-    const gasto = comDado.reduce((a, r) => a + (prefeito ? r.prefeito_gasto : r.vereador_gasto), 0);
+    const gasto = comDado.reduce((a, r) => a + gastoDe(r), 0);
     const eleitores = comDado.reduce((a, r) => a + (r.eleitorado ?? 0), 0);
     return { valor: eleitores > 0 ? gasto / eleitores : null, n: comDado.length, conta: null };
   }
@@ -599,7 +622,7 @@ export const GRUPOS_DESPESA: { chave: string; rotulo: string; detalhe: string }[
   { chave: "profissionais", rotulo: "Advogados, contadores e pesquisas", detalhe: "serviços advocatícios e contábeis, pesquisas" },
   { chave: "transporte", rotulo: "Transporte e combustível", detalhe: "veículos, combustível, passagens" },
   { chave: "estrutura", rotulo: "Comitê e estrutura", detalhe: "aluguel, energia, telefone, materiais, alimentação" },
-  { chave: "outros", rotulo: "Outros", detalhe: "taxas, multas, doações de bens e o que não se encaixa" },
+  { chave: "outros", rotulo: "Taxas, multas e outros", detalhe: "taxas, multas, doações de bens e o que não se encaixa" },
   { chave: "sem_categoria", rotulo: "Sem categoria", detalhe: "despesas sem categoria do TSE na base" },
 ];
 
@@ -615,6 +638,25 @@ export function foraDaDisputaPorte(resumo: LinhaResumo[], ano: number, uf: strin
   const n = sel.reduce((a, r) => a + ((prefeito ? r.prefeito_nao_disputou_n : r.vereador_nao_disputou_n) ?? 0), 0);
   const gasto = sel.reduce((a, r) => a + ((prefeito ? r.prefeito_nao_disputou_gasto : r.vereador_nao_disputou_gasto) ?? 0), 0);
   return n > 0 && gasto > 0 ? { n, gasto } : null;
+}
+
+/**
+ * O gasto de quem não chegou a disputar no recorte do painel: a cidade (a linha dela no resumo), as cidades de um porte
+ * ou o estado (ou os seis). É o que o custo da cadeira soma a mais que a disputa, para a nota "Inclui R$ X de N
+ * campanhas". null quando não há.
+ */
+export function foraDoRecorte(
+  dados: { resumo: LinhaResumo[]; estados: Parameters<typeof foraDaDisputa>[0] },
+  f: { ano: number; cargo: string; uf?: string; mun?: number; porte?: Porte },
+): { n: number; gasto: number } | null {
+  if (f.mun !== undefined) {
+    const r = dados.resumo.find((x) => x.ano === f.ano && x.id_municipio === f.mun);
+    if (!r) return null;
+    const [n, gasto] = f.cargo === "Prefeito" ? [r.prefeito_nao_disputou_n, r.prefeito_nao_disputou_gasto] : [r.vereador_nao_disputou_n, r.vereador_nao_disputou_gasto];
+    return (n ?? 0) > 0 && (gasto ?? 0) > 0 ? { n: n!, gasto: gasto! } : null;
+  }
+  if (f.porte && ehMunicipal(f.ano)) return foraDaDisputaPorte(dados.resumo, f.ano, f.uf, f.porte, f.cargo);
+  return foraDaDisputa(dados.estados, f.ano, f.uf, f.cargo);
 }
 
 /**
@@ -710,6 +752,32 @@ export function fatias(itens: { chave: string; rotulo: string; valor: number; co
     ...cabe.map((i, n) => ({ chave: i.chave, rotulo: i.rotulo, valor: i.valor, parte: i.valor / total, cor: i.cor ?? `f${n + 1}` })),
     ...(resto > 0 ? [{ chave: "outros", rotulo: outros, valor: resto, parte: resto / total, cor: "o" }] : []),
   ];
+}
+
+/** Os grupos da barra de propaganda (a legenda da nuvem), na ordem fixa; qualquer outro grupo cai em "Outra propaganda". */
+export const GRUPOS_PROPAGANDA: { chave: string; rotulo: string; cor: string }[] = [
+  { chave: "propaganda_fisica", rotulo: "Impressos e rua", cor: "pp-fis" },
+  { chave: "propaganda_audiovisual", rotulo: "Rádio, TV e vídeo", cor: "pp-av" },
+  { chave: "propaganda_digital", rotulo: "Internet", cor: "pp-dig" },
+  { chave: "outra", rotulo: "Outra propaganda", cor: "pp-outra" },
+];
+
+/** A barra da P9: o por_tipo de todos os termos da nuvem somado por grupo, em reais, nos grupos de GRUPOS_PROPAGANDA (zeros saem). */
+export function barraPropaganda(nuvem: Pick<Nuvem, "todos">): Fatia[] {
+  const soma = new Map<string, number>();
+  for (const t of nuvem.todos) for (const p of t.por_tipo) {
+    const g = GRUPOS_PROPAGANDA.some((x) => x.chave === p.grupo) ? p.grupo : "outra";
+    soma.set(g, (soma.get(g) ?? 0) + p.centavos);
+  }
+  return fatias(GRUPOS_PROPAGANDA.map((g) => ({ ...g, valor: (soma.get(g.chave) ?? 0) / 100 })), { fixo: true });
+}
+
+/** Quanto do gasto (saída de composicaoDespesas) foi para os 3 grupos de propaganda; null sem total. */
+export function parteDaPropaganda(grupos: { grupo: string; valor: number }[]): { valor: number; total: number; parte: number } | null {
+  const total = grupos.reduce((a, g) => a + g.valor, 0);
+  if (total <= 0) return null;
+  const valor = grupos.filter((g) => ["propaganda_fisica", "propaganda_digital", "propaganda_audiovisual"].includes(g.grupo)).reduce((a, g) => a + g.valor, 0);
+  return { valor, total, parte: valor / total };
 }
 
 /** O texto da barra empilhada para leitores de tela: "Título: Público 73%, Privado 27%." */
@@ -1027,6 +1095,29 @@ export function cargoDeCandidatos(cargo: string, cands: CandidatoLocal[], vagas:
     cargo, vagas, candidatos: cands.length, eleitos: cands.filter((c) => c.eleito).length, gasto, gastoEleitos,
     porCadeira: vagas > 0 ? gasto / vagas : null, medianaEleito: mediana(gastosEleitos), todos, soEleitos,
   };
+}
+
+/**
+ * Os cargos com o gasto das campanhas que não chegaram a disputar (a tabela cargos e as listas de candidatos só têm
+ * quem disputou), para o custo da cadeira bater com o da P1: gasto + fora ÷ vagas. `fora` dá o gasto de quem não
+ * disputou em cada cargo (ex.: foraDoRecorte, com as linhas de estados ou do resumo).
+ */
+export function cargosComForaDaDisputa(cargos: ResumoCargo[], fora: (cargo: string) => { gasto: number } | null): ResumoCargo[] {
+  return cargos.map((c) => {
+    const gasto = gastoComForaDaDisputa(c.gasto, fora(c.cargo)?.gasto);
+    return { ...c, gasto, porCadeira: c.vagas > 0 ? gasto / c.vagas : null };
+  });
+}
+
+/**
+ * O caminho do Legislativo com quanto custou a cadeira de cada partido no plenário, para o mesmo cargo e ano: só nas
+ * eleições gerais e só para os cargos com plenário no Legislativo (deputado federal: Câmara; senador: Senado; deputado
+ * estadual: a Assembleia do estado, que precisa da UF). null nos outros casos.
+ */
+export function hrefLegislativoCusto(ano: number, cargo: string, uf?: string): string | null {
+  if (ehMunicipal(ano)) return null;
+  const casa = cargo === "Deputado federal" ? "camara" : cargo === "Senador" ? "senado" : cargo === "Deputado estadual" && uf ? `al-${uf.toLowerCase()}` : null;
+  return casa ? `/legislativo?${new URLSearchParams({ casa, ano: String(ano), ver: "custo" })}` : null;
 }
 
 /** Um grupo de dinheiro em "de cada 100": quantos de 100 (inteiro) e quantos de verdade. */

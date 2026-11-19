@@ -110,6 +110,7 @@ COPY (
 COPY (
     SELECT ano, cargo, uf, eleito, count(*) AS candidaturas,
            round(median(total_rec), 2) AS mediana_total, round(median(publico_rec), 2) AS mediana_publico,
+           round(median(total_rec - publico_rec), 2) AS mediana_privado,
            round(median(publico_rec / total_rec) FILTER (WHERE total_rec > 0), 4) AS mediana_pct_publico
     FROM cand_pct
     GROUP BY GROUPING SETS ((ano, cargo, uf, eleito), (ano, cargo, eleito))
@@ -137,3 +138,72 @@ COPY (
     )
     GROUP BY ALL ORDER BY ano, cargo, uf, faixa
 ) TO 'painel_q8/sucesso.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- 5. Por cidade (só prefeito e vereador): eleitos e não eleitos de cada município, com as mesmas medidas da P8
+--    (medianas e maioria pública: o que cada um recebeu, inclusive de outros candidatos; somas por fonte: sem repasses).
+-------------------------------------------------------------------------------
+COPY (
+    SELECT x.ano, x.cargo, x.uf, m.cod_ibge, x.eleito,
+           count(*) AS candidaturas,
+           count(*) FILTER (WHERE x.total_rec > 0 AND x.publico_rec >= 0.5 * x.total_rec) AS maioria_publica,
+           round(median(x.total_rec), 2) AS mediana_total,
+           round(median(x.publico_rec), 2) AS mediana_publico,
+           round(median(x.total_rec - x.publico_rec), 2) AS mediana_privado,
+           round(sum(x.fundo_eleitoral + x.fundo_partidario), 2) AS fundos_publicos,
+           round(sum(x.doacoes_pessoas), 2) AS doacoes,
+           round(sum(x.recursos_proprios), 2) AS proprios,
+           round(sum(x.outros_privados), 2) AS outros
+    FROM cand_pct x
+    JOIN candidatura c ON c.id_candidatura = x.id_candidatura
+    JOIN municipio m   ON m.id_municipio = c.id_municipio
+    WHERE x.cargo IN ('Prefeito', 'Vereador') AND m.cod_ibge IS NOT NULL
+    GROUP BY ALL
+    ORDER BY x.ano, x.cargo, x.uf, m.cod_ibge, x.eleito
+) TO 'painel_q8/cidades.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- 6. Pergunta 8 por cidade (só vereador): a tabela 4 agrupada por município. Mesma faixa, comparando cada candidato
+--    só com os concorrentes da mesma cidade; dinheiro público recebido, inclusive de outros candidatos.
+-------------------------------------------------------------------------------
+COPY (
+    SELECT f.ano, f.cargo, f.uf, m.cod_ibge, f.faixa, count(*) AS candidaturas, count(*) FILTER (WHERE f.eleito) AS eleitos
+    FROM (
+        SELECT id_candidatura, ano, cargo, uf, eleito,
+               CASE WHEN NOT prestou THEN -1
+                    WHEN publico_rec <= 0 THEN 0
+                    ELSE least(4, 1 + floor(4 * percent_rank() OVER (PARTITION BY ano, cargo, disputa, publico_rec > 0 ORDER BY publico_rec)))::INTEGER
+               END AS faixa
+        FROM cand_pct
+        WHERE cargo = 'Vereador'
+    ) f
+    JOIN candidatura c ON c.id_candidatura = f.id_candidatura
+    JOIN municipio m   ON m.id_municipio = c.id_municipio
+    WHERE m.cod_ibge IS NOT NULL
+    GROUP BY ALL
+    ORDER BY f.ano, f.uf, m.cod_ibge, f.faixa
+) TO 'painel_q8/cidades_sucesso.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- 7. Prefeito por cidade: quem mais recebeu dinheiro público venceu? A página decide se a disputa é comparável
+--    (2+ candidatos, todos com prestação final, maior valor > 0, sem empate no topo).
+-------------------------------------------------------------------------------
+COPY (
+    SELECT p.ano, p.uf, m.cod_ibge,
+           count(*) AS candidaturas,
+           bool_and(p.prestou) AS todos_prestaram,
+           round(max(p.publico_rec), 2) AS maior_publico,
+           count(*) FILTER (WHERE p.topo) AS n_topo,
+           coalesce(bool_or(p.eleito AND p.topo), false) AS topo_venceu
+    FROM (
+        SELECT x.id_candidatura, x.ano, x.uf, x.eleito, x.prestou, x.publico_rec,
+               x.publico_rec = max(x.publico_rec) OVER (PARTITION BY x.ano, x.disputa) AS topo
+        FROM cand_pct x
+        WHERE x.cargo = 'Prefeito'
+    ) p
+    JOIN candidatura c ON c.id_candidatura = p.id_candidatura
+    JOIN municipio m   ON m.id_municipio = c.id_municipio
+    WHERE m.cod_ibge IS NOT NULL
+    GROUP BY ALL
+    ORDER BY p.ano, p.uf, m.cod_ibge
+) TO 'painel_q8/cidades_prefeito.csv' (HEADER);

@@ -31,6 +31,7 @@ import { compacto, inteiro, pct } from "@/lib/format";
 import { naRegua, type FichaDica } from "@/lib/dica";
 import { VisaoCandidato } from "@/components/VisaoCandidato";
 import { VisaoDinheiro } from "@/components/VisaoDinheiro";
+import { VisaoPatrimonio } from "@/components/VisaoPatrimonio";
 import { VisaoVies } from "@/components/VisaoVies";
 import { ANOS_CENSO_IDADE, MEDIDAS_IDADE, cargosDoAno as cargosVies, escolhaVies, paramsVies, type EscolhaVies } from "@/lib/vies";
 import { cargosDoAno, ehMunicipal, escolhaMapaDinheiro, hrefMapaDinheiro, opcoesMunicipio, PINTAR } from "@/lib/dinheiro";
@@ -89,7 +90,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const anoLeg = anosLeg.includes(anoPedido) ? anoPedido : anoNaLegenda(anos.includes(anoPedido) ? anoPedido : anoPadrao, anosLeg);
   const pediuLegenda = um(sp.ver) === "legenda";
   const naCandidato = um(sp.ver) === "candidato";
-  const naDinheiro = um(sp.ver) === "dinheiro";   // camada Dinheiro (perguntas 1, 2 e 8): src/components/VisaoDinheiro.tsx
+  const naDinheiro = um(sp.ver) === "dinheiro";   // camada Dinheiro (perguntas 1, 8 e 9: src/components/VisaoDinheiro.tsx; 2: VisaoPatrimonio)
   // Comparar › Idade e Comparar › Viés (perguntas 6 e 7): src/components/VisaoVies.tsx
   const subVies = um(sp.ver) === "idade" ? "idade" : um(sp.ver) === "vies" ? "vies" : null;
   const naVies = subVies !== null;
@@ -282,7 +283,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   const cargosCad = (["federal", "estadual"] as const).map((c) => ({ rotulo: `Dep. ${c}`, href: href({ cargo: c }), on: cargoDaLista(cargo) === cargoDaLista(c) }));
   const hrefAnalise = `/analises/legenda${(() => { const q = new URLSearchParams(); if (uf) q.set("uf", uf); if (juntar) q.set("juntar", "1"); if (partido) q.set("p", partido); const t = q.toString(); return t ? `?${t}` : ""; })()}`;
   // trocar de visão mantém o estado; o ano vai para o mais perto que a outra visão tem
-  // camada Dinheiro: o ano e o cargo dela (só 2018 a 2024); ao sair dela, a abstenção fica no mesmo ano
+  // camada Dinheiro: o ano e o cargo dela (2018 a 2024; a pergunta 2, 2006 a 2024); ao sair dela, a abstenção fica no mesmo ano
   const escDinheiro = escolhaMapaDinheiro(naDinheiro ? sp : { ano: String(naLegenda ? anoLeg : naInstrucao ? anoInst : ano) });
   // o ano da abstenção ao sair da legenda, da instrução ou do dinheiro
   const escViesSp = naVies ? escolhaVies(sp) : null;
@@ -429,7 +430,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
           opcoes: opcoesMunicipio(municipios.map((m) => ({ cod_ibge: m.cod_ibge, uf: m.uf, nome: nomeMun.get(m.id_municipio)! })), uf),
           atual: munDinheiro, params: paramsSem("mun"),
         } : undefined,
-        porte: naDinheiro && ehMunicipal(escDinheiro.ano) ? { opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte, params: paramsSem("porte") } : undefined,
+        porte: naDinheiro && ehMunicipal(escDinheiro.ano) && escDinheiro.pintar !== "voto" ? { opcoes: PORTES.map((p) => [p.chave, p.rotulo] as [string, string]), atual: escDinheiro.porte, params: paramsSem("porte") } : undefined,
       }}
       legenda={{
         anos: anosLeg.length ? `${anosLeg[0]} a ${anosLeg[anosLeg.length - 1]}` : "sem dados",
@@ -451,7 +452,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
   );
   const submenu = (
     <SubmenuMapa
-      resumo={ufBusca ? `Busca só em ${NOME_UF[ufBusca]}` : resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo })}
+      resumo={ufBusca ? `Busca só em ${NOME_UF[ufBusca]}` : resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo, dinheiro: naDinheiro ? PINTAR.find((x) => x.chave === escDinheiro.pintar)!.rotulo : undefined })}
       aba={naCandidato ? "candidato" : "camadas"} hrefCandidato={hrefCand} hrefCamadas={hrefAbst}
     >
       {naCandidato ? (
@@ -537,7 +538,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
       )}
     </div>
   ) : null;
-  const recorte = `${resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo })} · ${naLegenda ? (uf ?? "seis estados") : mun ? nomeMun.get(mun.id_municipio) : uf ?? "seis estados"} · ${naLegenda ? anoLeg : naInstrucao ? anoInst : ano}`;
+  const recorte = `${resumoCamadas({ ver, partido, comparativo: comparativoLigado ? infoInd.rotulo : undefined, instrucao: medida.rotulo, dinheiro: naDinheiro ? PINTAR.find((x) => x.chave === escDinheiro.pintar)!.rotulo : undefined })} · ${naLegenda ? (uf ?? "seis estados") : mun ? nomeMun.get(mun.id_municipio) : uf ?? "seis estados"} · ${naLegenda ? anoLeg : naInstrucao ? anoInst : ano}`;
 
   return (
     <>
@@ -555,7 +556,7 @@ export default async function Home({ searchParams }: { searchParams: SP }) {
               escolha={{ campanha, lista: campanhas, turno: turnoCand, turnos: turnosCand, uf: ufCand, mun: munCand }}
             />
           ) : naDinheiro ? (
-            <VisaoDinheiro menu={submenu} sp={sp} />
+            escDinheiro.pintar === "voto" ? <VisaoPatrimonio menu={submenu} sp={sp} /> : <VisaoDinheiro menu={submenu} sp={sp} />
           ) : naVies ? (
             <VisaoVies menu={submenu} sp={sp} municipios={municipios} />
           ) : (<>

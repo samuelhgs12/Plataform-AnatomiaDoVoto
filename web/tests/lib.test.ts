@@ -17,6 +17,7 @@ import {
   MEDIDAS, contarNaMedida, grauDoEleito, linhasNiveis, medidaDe, parteNaMedida, perfilEleitos, perfilPopulacao, porMunicipio, predominante, rotuloNivel,
   separarEleitos, type EleitoInstrucao, type LinhaEleitosInstrucao, type LinhaPopulacaoInstrucao, type LinhaPrefeito,
 } from "../src/lib/instrucao";
+import { colunasSucessoP8, fontesPorResultado, fraseP8, p8DaCidade, type LinhaCidadeP8, sucessoDaCidade, prefeitoDaCidade, type LinhaCidadeSucesso, type LinhaCidadePrefeito, gruposP8, maioriaPublica, partePublica, partePublicaNosAnos, setaPP, tipicosP8, topoDaRegua, vezesMais } from "../src/lib/financiamento";
 import { respostaSucesso, resumoCampanhas, semPrestacao, SEM_PRESTACAO, contarFaixas, deCada100, descreverMudancas, emCada10, ordenarPartidos, parteDosEleitos, sucessoPorFaixa, sucessoTresGrupos, type LinhaSucesso, medianasPorCargo, porAno, porPartido, porUf, somar, textoDe100, type LinhaFaixa, type LinhaFontes, type LinhaMediana } from "../src/lib/financiamento";
 
 describe("format", () => {
@@ -762,6 +763,200 @@ describe("seloUf", () => {
     expect(s.larg).toBeGreaterThan(66);
     expect(s.xSigla - -s.larg / 2).toBe(18);                          // a sigla fica à mesma distância da borda
     expect(s.xValor - (7 * 7.5) / 2 - (s.xSigla + 10)).toBe(5);       // o valor começa logo depois da sigla
+  });
+});
+
+// ---------- pergunta 8 no mapa: eleitos × não eleitos, no público e no privado ----------
+const f8 = (o: Partial<LinhaFontes>): LinhaFontes => ({
+  ano: 2022, cargo: "Deputado federal", uf: "MG", partido: "PT", eleito: false, candidaturas: 10, com_receita: 8,
+  fundo_eleitoral: 600, fundo_partidario: 100, doacoes_pessoas: 200, recursos_proprios: 100, outros_privados: 0, ...o,
+});
+const m8 = (o: Partial<LinhaMediana>): LinhaMediana => ({
+  ano: 2022, cargo: "Deputado federal", uf: "MG", eleito: true, candidaturas: 10, mediana_total: 400_000, mediana_publico: 300_000, mediana_pct_publico: 0.75, ...o,
+});
+const x8 = (o: Partial<LinhaFaixa>): LinhaFaixa => ({ ano: 2022, cargo: "Deputado federal", uf: "MG", eleito: true, faixa: "so_publico", candidaturas: 1, ...o });
+
+describe("fontesPorResultado", () => {
+  const linhas = [f8({ eleito: true }), f8({}), f8({ uf: "PE" }), f8({ ano: 2018, eleito: true })];
+  it("soma eleitos e não eleitos separados", () => {
+    const r = fontesPorResultado(linhas, { ano: 2022, cargo: "Deputado federal", uf: "MG" });
+    expect(r.eleitos.total).toBe(1000);
+    expect(r.naoEleitos.total).toBe(1000);
+  });
+  it("sem uf, os seis estados somam as UFs", () => {
+    expect(fontesPorResultado(linhas, { ano: 2022, cargo: "Deputado federal" }).naoEleitos.total).toBe(2000);
+  });
+});
+
+describe("gruposP8", () => {
+  it("junta os dois fundos no grupo público e mantém a ordem fixa, com a cor de cada fonte", () => {
+    const s = fontesPorResultado([f8({ eleito: true, outros_privados: 100 })], { ano: 2022 }).eleitos;
+    const g = gruposP8(s);
+    expect(g.map((x) => [x.rotulo, x.valor, x.cor])).toEqual([["Fundos públicos", 700, "f1"], ["Doações", 200, "f3"], ["Recursos próprios", 100, "f4"], ["Outros", 100, "f5"]]);
+    expect(g[0].parte).toBeCloseTo(700 / 1100);
+  });
+});
+
+describe("partePublica", () => {
+  it("público ÷ total, e null sem dinheiro", () => {
+    expect(partePublica(fontesPorResultado([f8({})], { ano: 2022 }).naoEleitos)).toBeCloseTo(0.7);
+    expect(partePublica(fontesPorResultado([], { ano: 2022 }).eleitos)).toBeNull();
+  });
+});
+
+describe("tipicosP8", () => {
+  it("lê eleito e não eleito do recorte; o privado só da coluna mediana_privado", () => {
+    const t = tipicosP8([m8({ mediana_privado: 90_000 }), m8({ eleito: false, mediana_total: 50_000, mediana_publico: 40_000 })], { ano: 2022, cargo: "Deputado federal", uf: "MG" });
+    expect(t.eleito).toEqual({ total: 400_000, publico: 300_000, privado: 90_000 });
+    expect(t.naoEleito).toEqual({ total: 50_000, publico: 40_000, privado: null });   // sem a coluna: nunca total − público
+  });
+  it("sem uf, a linha de uf nula; sem a linha, null", () => {
+    const t = tipicosP8([m8({ uf: null, mediana_total: 1 }), m8({})], { ano: 2022, cargo: "Deputado federal" });
+    expect(t.eleito?.total).toBe(1);
+    expect(t.naoEleito).toBeNull();
+  });
+});
+
+describe("vezesMais", () => {
+  it("arredonda e dá null quando o não eleito típico não recebeu nada", () => {
+    expect(vezesMais(400_000, 50_000)).toBe(8);
+    expect(vezesMais(10_000, 0)).toBeNull();
+  });
+});
+
+describe("maioriaPublica", () => {
+  it("só público + mais público, sobre o total do grupo, inclusive quem não recebeu nada", () => {
+    const linhas = [x8({ candidaturas: 3 }), x8({ faixa: "mais_publico", candidaturas: 3 }), x8({ faixa: "so_privado", candidaturas: 2 }), x8({ faixa: "sem_receita", candidaturas: 2 }),
+      x8({ eleito: false, faixa: "sem_receita", candidaturas: 4 }), x8({ eleito: false, candidaturas: 1 })];
+    expect(maioriaPublica(linhas, { ano: 2022, cargo: "Deputado federal", uf: "MG" })).toEqual({ eleitos: 0.6, naoEleitos: 0.2 });
+  });
+  it("devolve números finitos nos dois grupos (o que a grade e a legenda usam)", () => {
+    const m = maioriaPublica([x8({}), x8({ eleito: false, faixa: "mais_publico", candidaturas: 7 }), x8({ eleito: false, faixa: "so_privado", candidaturas: 3 })], { ano: 2022, cargo: "Deputado federal", uf: "MG" });
+    expect(Object.keys(m)).toEqual(["eleitos", "naoEleitos"]);
+    expect(Number.isFinite(m.eleitos)).toBe(true);
+    expect(Number.isFinite(m.naoEleitos)).toBe(true);
+    expect(m.naoEleitos).toBe(0.7);
+  });
+  it("sem ninguém no grupo, null; sem uf, as UFs somadas", () => {
+    expect(maioriaPublica([x8({})], { ano: 2022 }).naoEleitos).toBeNull();
+    expect(maioriaPublica([x8({}), x8({ uf: "PE", faixa: "so_privado" })], { ano: 2022 }).eleitos).toBe(0.5);
+  });
+});
+
+describe("p8DaCidade", () => {
+  const c8 = (o: Partial<LinhaCidadeP8>): LinhaCidadeP8 => ({
+    ano: 2024, cargo: "Vereador", uf: "MG", cod_ibge: "3106200", eleito: true, candidaturas: 41, maioria_publica: 30,
+    mediana_total: 200_000, mediana_publico: 150_000, mediana_privado: 40_000,
+    fundos_publicos: 6_000_000, doacoes: 1_000_000, proprios: 500_000, outros: 500_000, ...o,
+  });
+  const f = { ano: 2024, cargo: "Vereador", cod_ibge: "3106200" };
+  it("filtra por ano, cargo e cod_ibge; sem linha, null", () => {
+    const linhas = [c8({}), c8({ eleito: false, candidaturas: 900, mediana_total: 5_000 }), c8({ cod_ibge: "3100104", mediana_total: 1 }),
+      c8({ cargo: "Prefeito", mediana_total: 2 }), c8({ ano: 2020, mediana_total: 3 })];
+    const d = p8DaCidade(linhas, f)!;
+    expect(d.tipicos.eleito?.total).toBe(200_000);
+    expect(d.tipicos.naoEleito?.total).toBe(5_000);
+    expect(d.anos?.antes).toBe(2020);   // ano − 4, porque há linha de 2020
+    expect(p8DaCidade(linhas, { ...f, cod_ibge: "9999999" })).toBeNull();
+    expect(p8DaCidade(linhas, { ...f, ano: 2016 })).toBeNull();
+  });
+  it("grupo pequeno devolve a contagem; grupo grande, só a parte", () => {
+    const d = p8DaCidade([c8({ cargo: "Prefeito", candidaturas: 1, maioria_publica: 1 }), c8({ cargo: "Prefeito", eleito: false, candidaturas: 3, maioria_publica: 2 })], { ...f, cargo: "Prefeito" })!;
+    expect(d.contagens).toEqual({ eleitos: { n: 1, de: 1 }, naoEleitos: { n: 2, de: 3 } });
+    expect(d.maioria.naoEleitos).toBeCloseTo(2 / 3);
+    expect(p8DaCidade([c8({})], f)!.contagens.eleitos).toBeNull();
+    expect(p8DaCidade([c8({})], f)!.anos).toBeNull();
+  });
+  it("as barras somam as 4 colunas; a mediana do privado vem da coluna", () => {
+    const d = p8DaCidade([c8({})], f)!;
+    expect(d.somas.eleitos.total).toBe(8_000_000);
+    expect(d.partes.eleitos).toBe(0.75);
+    expect(gruposP8(d.somas.eleitos).map((x) => x.valor)).toEqual([6_000_000, 1_000_000, 500_000, 500_000]);
+    expect(d.tipicos.eleito?.privado).toBe(40_000);   // não é 200 mil − 150 mil
+  });
+});
+
+describe("sucessoDaCidade", () => {
+  const s8 = (o: Partial<LinhaCidadeSucesso>): LinhaCidadeSucesso => ({ ano: 2024, cargo: "Vereador", uf: "MG", cod_ibge: "3106200", faixa: 4, candidaturas: 100, eleitos: 20, ...o });
+  const f = { ano: 2024, cargo: "Vereador", cod_ibge: "3106200" };
+  it("filtra por ano, cargo e cod_ibge; sem linha, null", () => {
+    const d = sucessoDaCidade([s8({}), s8({ faixa: 0, candidaturas: 50, eleitos: 1 }), s8({ cod_ibge: "3100104", eleitos: 99 }), s8({ ano: 2020, eleitos: 99 }), s8({ cargo: "Prefeito", eleitos: 99 })], f)!;
+    expect(d.faixas.map((g) => g.eleitos)).toEqual([1, 0, 0, 0, 20]);
+    expect(d.faixas[4].taxa).toBe(0.2);
+    expect(d.pequena).toBe(false);   // faixas vazias não contam
+    expect(sucessoDaCidade([s8({})], { ...f, cod_ibge: "9999999" })).toBeNull();
+  });
+  it("uma faixa com candidatos abaixo do mínimo marca a cidade como pequena (sem prestação não conta)", () => {
+    expect(sucessoDaCidade([s8({}), s8({ faixa: 1, candidaturas: 8, eleitos: 1 })], f)!.pequena).toBe(true);
+    expect(sucessoDaCidade([s8({}), s8({ faixa: -1, candidaturas: 3, eleitos: 0 })], f)!.pequena).toBe(false);
+  });
+});
+
+describe("prefeitoDaCidade", () => {
+  const p8 = (o: Partial<LinhaCidadePrefeito>): LinhaCidadePrefeito => ({ ano: 2024, uf: "MG", cod_ibge: "3106200", candidaturas: 3, todos_prestaram: true, maior_publico: 1_000_000, n_topo: 1, topo_venceu: true, ...o });
+  const f = { ano: 2024, cod_ibge: "3106200" };
+  it("venceu e não venceu", () => {
+    expect(prefeitoDaCidade([p8({})], f)).toEqual({ resultado: "venceu" });
+    expect(prefeitoDaCidade([p8({ topo_venceu: false })], f)).toEqual({ resultado: "nao_venceu" });
+  });
+  it("cada motivo de não comparável; sem linha, null", () => {
+    const motivo = (o: Partial<LinhaCidadePrefeito>) => { const r = prefeitoDaCidade([p8(o)], f); return r?.resultado === "nao_comparavel" ? r.motivo : null; };
+    expect(motivo({ candidaturas: 1 })).toBe("um só candidato");
+    expect(motivo({ todos_prestaram: false })).toBe("prestação de contas incompleta");
+    expect(motivo({ maior_publico: 0 })).toBe("ninguém recebeu dinheiro público");
+    expect(motivo({ n_topo: 2 })).toBe("empate no topo");
+    expect(prefeitoDaCidade([p8({})], { ...f, ano: 2020 })).toBeNull();
+  });
+});
+
+describe("partePublicaNosAnos", () => {
+  it("a parte pública de cada grupo na eleição anterior e na atual", () => {
+    const linhas = [f8({ ano: 2018, eleito: true, fundo_eleitoral: 300, fundo_partidario: 0, doacoes_pessoas: 700, recursos_proprios: 0 }), f8({ eleito: true }), f8({ ano: 2018 }), f8({})];
+    const r = partePublicaNosAnos(linhas, { cargo: "Deputado federal", uf: "MG" }, [2018, 2022]);
+    expect(r.eleitos.antes).toBeCloseTo(0.3);
+    expect(r.eleitos.depois).toBeCloseTo(0.7);
+    expect(r.naoEleitos).toEqual({ antes: 0.7, depois: 0.7 });
+    expect(partePublicaNosAnos(linhas, { cargo: "Vereador" }, [2020, 2024]).eleitos.antes).toBeNull();
+  });
+});
+
+describe("fraseP8", () => {
+  const t = (e: number, n: number) => ({ eleito: { total: e, publico: 0, privado: null }, naoEleito: { total: n, publico: 0, privado: null } });
+  it("o número em vezes e de onde veio a parte maior (3 p.p. ou mais)", () => {
+    expect(fraseP8(t(400, 100), { eleitos: 0.8, naoEleitos: 0.6 })).toEqual({ numero: "4× mais dinheiro", frase: "e uma parte maior dele veio dos fundos públicos." });
+    expect(fraseP8(t(400, 100), { eleitos: 0.5, naoEleitos: 0.6 })!.frase).toBe("e uma parte maior dele veio dos recursos privados.");
+    expect(fraseP8(t(400, 100), { eleitos: 0.61, naoEleitos: 0.6 })!.frase).toBe("e a mistura de público e privado é parecida.");
+  });
+  it("não eleito típico sem nada: o total do eleito e a frase própria; sem medianas, null", () => {
+    expect(fraseP8(t(20_000, 0), { eleitos: 0.8, naoEleitos: 0.6 })).toEqual({ numero: reais(20_000), frase: "o não eleito típico não recebeu nada." });
+    expect(fraseP8({ eleito: null, naoEleito: null }, { eleitos: null, naoEleitos: null })).toBeNull();
+  });
+});
+
+describe("topoDaRegua e setaPP", () => {
+  it("o múltiplo de 0,1 logo acima da maior taxa", () => {
+    expect(topoDaRegua([0.05, 0.23])).toBe(0.3);
+    expect(topoDaRegua([0.3])).toBe(0.3);
+    expect(topoDaRegua([])).toBe(0.1);
+  });
+  it("a diferença em pontos percentuais, com a seta", () => {
+    expect(setaPP(0.64, 0.82)).toEqual({ texto: "▲ 18 p.p.", classe: "sobe" });
+    expect(setaPP(0.7, 0.67)).toEqual({ texto: "▼ 3 p.p.", classe: "desce" });
+    expect(setaPP(0.5, 0.5)).toEqual({ texto: "= 0 p.p.", classe: "" });
+    expect(setaPP(null, 0.5)).toBeNull();
+  });
+});
+
+describe("colunasSucessoP8", () => {
+  const s = (o: Partial<LinhaSucesso>): LinhaSucesso => ({ ano: 2022, cargo: "Deputado federal", uf: "MG", faixa: 1, candidaturas: 10, eleitos: 1, publico_min: 0, publico_max: 0, ...o });
+  it("as faixas 0 a 4, sem quem não prestou contas, com as cores e o topo da régua", () => {
+    const r = colunasSucessoP8([s({ faixa: -1, eleitos: 9 }), s({ faixa: 0, eleitos: 0 }), s({}), s({ faixa: 4, eleitos: 4 })], { ano: 2022 });
+    expect(r.colunas.map((c) => c.chave)).toEqual(["0", "1", "2", "3", "4"]);
+    expect(r.colunas.map((c) => c.classe)).toEqual(["fx5", "fx2", "fx2", "fx2", undefined]);
+    expect(r.colunas[4]).toMatchObject({ parte: 0.4, linhas: ["4 eleitos de 10"] });
+    expect(r.colunas[1].linhas).toEqual(["1 eleito de 10"]);
+    expect(r.colunas[2].parte).toBeNull();
+    expect(r.max).toBe(0.4);
   });
 });
 

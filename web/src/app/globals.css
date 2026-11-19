@@ -2313,7 +2313,7 @@ a.q-ver:active { transform: scale(0.98); }
 .din-divisao h3 { margin: 4px 0 0; font-size: clamp(20px, 1vw + 12px, 26px); letter-spacing: -0.02em; }
 
 .din-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(118px, auto); gap: var(--gap); }
-.din-kpi { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border-radius: var(--raio); background: var(--noite); color: var(--sobre-noite); text-decoration: none; }
+.din-kpi { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border-radius: var(--raio); background: var(--noite2); color: var(--sobre-noite); text-decoration: none; }
 .din-kpi small { color: var(--noite-muted); line-height: 1.3; }
 .din-kpi b { font-size: 28px; font-weight: 650; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .din-kpi > span { margin-top: auto; font-size: 13px; color: var(--noite-muted); }
@@ -2326,7 +2326,9 @@ a.q-ver:active { transform: scale(0.98); }
 .din-kpi-link > span { color: var(--brilho); font-weight: 600; }
 .din-kpi .delta.sobe { color: var(--brilho); }
 .din-kpi .delta.desce { color: var(--fx2); }
-@media (max-width: 900px) { .din-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .din-kpi-principal { grid-column: 1 / -1; grid-row: auto; } }
+/* P1: o 4º card ocupa as duas colunas que sobram ao lado do principal */
+.din-kpi-largo { grid-column: span 2; }
+@media (max-width: 900px) { .din-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .din-kpi-principal, .din-kpi-largo { grid-column: 1 / -1; grid-row: auto; } }
 @media (max-width: 520px) { .din-kpi b { font-size: 22px; } .din-kpi { padding: 14px 16px; } }
 
 .din-notas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -2359,6 +2361,10 @@ a.q-ver:active { transform: scale(0.98); }
 .empilhada .pub { background: var(--pub); } .empilhada .priv { background: var(--priv); } .empilhada .fx3 { background: var(--fx3); }
 .empilhada .o { background: var(--o); } .empilhada .f1 { background: var(--f1); } .empilhada .f2 { background: var(--f2); }
 .empilhada .f3 { background: var(--f3); } .empilhada .f4 { background: var(--f4); } .empilhada .f5 { background: var(--f5); }
+/* P9: a barra de propaganda é a legenda da nuvem (as mesmas cores, --pp-*) */
+.empilhada .pp-fis, .emp-legenda i.pp-fis { background: var(--pp-fis); } .empilhada .pp-av, .emp-legenda i.pp-av { background: var(--pp-av); }
+.empilhada .pp-dig, .emp-legenda i.pp-dig { background: var(--pp-dig); } .empilhada .pp-outra, .emp-legenda i.pp-outra { background: var(--pp-outra); }
+.emp-seg.pp-fis em, .emp-seg.pp-av em, .emp-seg.pp-dig em, .emp-seg.pp-outra em { color: var(--noite); }
 .din-origem .ver-todos { margin-top: 4px; }
 @media (max-width: 1000px) { #dinheiro-ranking, .din-origem { grid-column: 1 / -1; } }
 .legenda-titulo span { pointer-events: auto; }   /* a dica da escala aparece no mouse, mesmo com a base do palco deixando o clique passar */
@@ -2543,7 +2549,11 @@ a.q-ver:active { transform: scale(0.98); }
 }
 @media (min-width: 1100px) {
   .painel.din > .meia { grid-column: span 6; }
+  /* P1: os outros cargos (8 colunas) ao lado do ranking (4); abaixo disso, cada um na largura toda (s12) */
+  .painel.din > .din-oito { grid-column: span 8; }
+  .painel.din > .din-quatro { grid-column: span 4; }
 }
+.din-oito .cadeiras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .painel.din > .meia .anos-cargo { min-width: 0; }
 .painel.din > .meia .anos-cargo td { min-width: 0; }
 .painel.din > .meia .anos-cargo td.delta { font-size: 14px; }
@@ -2551,6 +2561,232 @@ a.q-ver:active { transform: scale(0.98); }
 .din .dinheiro-metodo ul { color: var(--noite-muted); }
 /* na largura cheia, as legendas das barras 100% (origem e destino) em colunas, sem vão entre o nome e a parte */
 .painel.din > .din-origem:not(.meia) .emp-legenda { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 48px; }
+
+
+
+/* ---------- Pergunta 2 na camada Dinheiro do mapa: patrimônio declarado dentro da disputa (VisaoPatrimonio) ----------
+   Papéis das cores (apontam para a escala do mapa): a escala divergente da metade mais rica tem o neutro no meio (o
+   cinza da escala, "pouca ou nenhuma relação"), azul abaixo e amarelo acima; as categorias do prefeito eleito vão do
+   amarelo (venceu o mais rico) ao azul (3º ou abaixo); sem bens e fora da conta ficam nos tons da noite, com hachura. */
+.observatorio, .paleta-mapa {
+  --p2-d0: var(--q0); --p2-d1: var(--q1); --p2-d2: var(--q2); --p2-d3: var(--q3); --p2-d4: var(--q4);
+  --p2-pos1: var(--q4); --p2-pos2: var(--q2); --p2-pos3: var(--q0); --p2-sem-bens: var(--c2); --p2-fora: var(--noite3);
+  --p2-poucos: var(--noite3); --p2-traco: color-mix(in srgb, var(--sobre-noite) 55%, transparent); --p2-ponto: var(--noite);
+  --p2-barra: var(--q4); --p2-barra-sem: var(--c2); --p2-eleitos: var(--q4); --p2-nao: var(--c2);
+}
+.mapa-abst .d0 { fill: var(--p2-d0); } .mapa-abst .d1 { fill: var(--p2-d1); } .mapa-abst .d2 { fill: var(--p2-d2); }
+.mapa-abst .d3 { fill: var(--p2-d3); } .mapa-abst .d4 { fill: var(--p2-d4); }
+.mapa-abst .p1 { fill: var(--p2-pos1); } .mapa-abst .p2 { fill: var(--p2-pos2); } .mapa-abst .p3 { fill: var(--p2-pos3); }
+.mapa-abst .psb { fill: var(--p2-sem-bens); } .mapa-abst .fora { fill: var(--p2-fora); } .mapa-abst .poucos { fill: var(--p2-poucos); }
+/* as marcas por cima da cor: hachura clara (poucos candidatos, fora da conta) e pontos escuros (o eleito já tinha o cargo) */
+.mapa-abst .marcas { pointer-events: none; }
+.mapa-abst .marca { stroke: none; }
+.mapa-abst .marca.hachura { fill: url(#marca-hachura); }
+.mapa-abst .marca.pontos { fill: url(#marca-pontos); }
+.mapa-abst .marca-traco { stroke: var(--p2-traco); stroke-width: 1.4; }
+.mapa-abst .marca-ponto { fill: var(--p2-ponto); }
+@media (prefers-reduced-motion: no-preference) {
+  .js .mapa-abst .marcas use { animation: mun-entra 600ms var(--ease-out) 900ms both; }
+}
+.legenda-q .d0 { background: var(--p2-d0); } .legenda-q .d1 { background: var(--p2-d1); } .legenda-q .d2 { background: var(--p2-d2); }
+.legenda-q .d3 { background: var(--p2-d3); } .legenda-q .d4 { background: var(--p2-d4); }
+.legenda-q .p1 { background: var(--p2-pos1); } .legenda-q .p2 { background: var(--p2-pos2); } .legenda-q .p3 { background: var(--p2-pos3); }
+.legenda-q .psb { background: var(--p2-sem-bens); }
+.legenda-q .fora, .legenda-q .poucos { background: repeating-linear-gradient(45deg, var(--p2-traco) 0 1.5px, var(--p2-fora) 1.5px 5px); }
+.legenda-q .pontos { background: radial-gradient(circle, var(--sobre-noite) 1.1px, transparent 1.5px) 0 0 / 5px 5px, var(--p2-pos2); }
+.legenda-p2 { flex-wrap: wrap; row-gap: 10px; }
+.legenda-p2 li { white-space: normal; min-width: 0; max-width: 10.5em; line-height: 1.25; }
+.legenda-p2 li:first-child i, .legenda-p2 li:last-child i { border-radius: 0; }
+.legenda-p2 li i { border-radius: 2px; }
+.anos-p2 { flex-wrap: wrap; justify-content: flex-end; }
+.anos-p2 .ano { padding: 6px 8px; min-height: 44px; }
+
+/* a escada: barras verticais da taxa de eleição, sem bens à parte */
+.escada-p2 { margin: 0; }
+.escada-barras { display: flex; align-items: stretch; gap: clamp(3px, 0.8vw, 10px); height: 240px; }
+.degrau { flex: 1 1 0; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 4px; text-align: center; }
+.degrau-pct { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.degrau-trilho { display: flex; align-items: flex-end; border-radius: 4px; background: color-mix(in srgb, var(--sobre-noite) 6%, transparent); }
+.degrau-trilho i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--p2-barra); }
+.degrau.sem-bens { margin-right: clamp(6px, 1.4vw, 18px); }
+.degrau.sem-bens .degrau-trilho i { background: repeating-linear-gradient(45deg, var(--p2-barra-sem) 0 3px, color-mix(in srgb, var(--p2-barra-sem) 55%, transparent) 3px 6px); }
+.degrau-rot { font-size: 13px; font-weight: 600; color: var(--sobre-noite); white-space: nowrap; }
+.degrau-valor { font-size: 12px; line-height: 1.2; color: var(--noite-muted); overflow-wrap: anywhere; }
+.escada-eixo { display: flex; justify-content: space-between; margin-top: 6px; padding-left: calc(100% / 11 + 12px); font-size: 12px; color: var(--noite-muted); }
+.escada-eixo span:first-child::before { content: "← "; } .escada-eixo span:last-child::after { content: " →"; }
+.p2-chips .chip { min-height: 44px; }
+@media (max-width: 620px) {
+  .escada-barras { height: 200px; }
+  .degrau-pct { font-size: 12px; } .degrau-rot { font-size: 11px; } .degrau-valor { font-size: 10px; }
+  .escada-eixo { padding-left: 0; }
+}
+
+/* os candidatos */
+.p2-abas { margin: 0 0 14px; }
+.p2-abas .chip { min-height: 44px; }
+.p2-cand-duas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 32px; align-items: start; }
+@media (max-width: 1000px) { .p2-cand-duas { grid-template-columns: 1fr; } }
+.lista-p2 ol { list-style: none; margin: 0; padding: 0; }
+.lista-p2 li { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(7em, 11em) 7.5em; gap: 4px 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--noite-linha); }
+.lp-foto .avatar { width: 44px; height: 52px; border-radius: 6px; overflow: hidden; font-size: 14px; display: grid; place-items: center; color: #fff; }
+.lp-foto .foto-cand { width: 100%; height: 100%; object-fit: cover; }
+.lp-nome { display: grid; gap: 2px; min-width: 0; }
+.lp-nome a { color: var(--sobre-noite); font-weight: 650; text-decoration: none; overflow-wrap: anywhere; }
+.lp-nome a:hover { text-decoration: underline; }
+.lp-nome small { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--noite-muted); }
+.lp-pos { color: var(--brilho) !important; font-weight: 600; }
+.lp-valor { display: grid; gap: 5px; }
+.lp-valor b { font-variant-numeric: tabular-nums; }
+.lp-trilho { display: block; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--sobre-noite) 9%, transparent); overflow: hidden; }
+.lp-trilho i { display: block; height: 100%; background: var(--p2-barra); }
+.lp-res { display: grid; gap: 3px; justify-items: start; font-size: 13px; }
+.lp-res b { padding: 1px 8px; border-radius: 4px; font-size: 12.5px; background: var(--noite3); }
+.lp-res b.eleito { background: var(--confirma); color: var(--noite); }
+.lp-res small { color: var(--noite-muted); }
+.lista-p2 .selo { margin: 0; background: var(--noite3); color: var(--sobre-noite); }
+@media (max-width: 620px) {
+  .lista-p2 li { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .lp-valor { grid-column: 2; } .lp-res { grid-column: 3; grid-row: 2; justify-items: end; }
+}
+
+/* a cidade em pontos: patrimônio × posição nos votos */
+.dispersao-p2 { margin: 0; }
+.dispersao-p2 svg { display: block; width: 100%; height: auto; }
+.dp-sem { fill: color-mix(in srgb, var(--sobre-noite) 6%, transparent); }
+.dp-marca line { stroke: var(--noite-linha); stroke-width: 1; }
+.dispersao-p2 text { fill: var(--noite-muted); font-size: 12px; text-anchor: middle; }
+.dispersao-p2 .dp-y { text-anchor: end; }
+.dp-eleito { fill: var(--p2-eleitos); stroke: var(--noite2); stroke-width: 1; }
+.dp-nao { fill: none; stroke: var(--p2-nao); stroke-width: 1.2; opacity: 0.8; }
+.dp-legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 6px; font-size: 12.5px; color: var(--noite-muted); }
+.dp-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* a série e a frase dos pares */
+.serie-p2 { margin: 0; }
+.serie-p2 svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sp-grade line { stroke: var(--noite-linha); stroke-width: 1; }
+.serie-p2 text { fill: var(--noite-muted); font-size: 12px; text-anchor: middle; }
+.sp-grade text { text-anchor: end; }
+.sp-ref line { stroke: var(--sobre-noite); stroke-width: 1.2; stroke-dasharray: 5 4; opacity: 0.7; }
+.sp-ref text { text-anchor: start; fill: var(--sobre-noite); font-weight: 600; }
+.sp-ref .sp-ref-eixo { text-anchor: end; }
+.sp-linha { fill: none; stroke: var(--p2-barra); stroke-width: 2.5; stroke-linejoin: round; }
+.sp-ponto circle { fill: var(--p2-barra); stroke: var(--noite2); stroke-width: 2; }
+.sp-ponto text { fill: var(--sobre-noite); font-weight: 600; }
+.sp-ponto.on circle { fill: var(--brilho); }
+.serie-p2 .sp-ano.on { fill: var(--brilho); font-weight: 700; }
+.serie-disputa { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5em, 1fr)); gap: 8px; }
+.serie-disputa li { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; padding: 8px 10px; border-radius: var(--raio); background: var(--noite3); }
+.serie-disputa li.on { box-shadow: inset 0 0 0 2px var(--brilho); }
+.sd-ano { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--noite-muted); }
+.serie-disputa i { width: 14px; height: 14px; border-radius: 3px; }
+.serie-disputa i.p1 { background: var(--p2-pos1); } .serie-disputa i.p2 { background: var(--p2-pos2); } .serie-disputa i.p3 { background: var(--p2-pos3); }
+.serie-disputa i.psb { background: var(--p2-sem-bens); } .serie-disputa i.fora, .serie-disputa i.sem { background: repeating-linear-gradient(45deg, var(--p2-traco) 0 1.5px, var(--p2-fora) 1.5px 5px); }
+.sd-txt { display: grid; font-size: 13.5px; font-weight: 600; } .sd-txt small { font-size: 12px; font-weight: 400; color: var(--noite-muted); }
+.legenda-p2 { column-gap: 6px; }
+.legenda-p2 li { min-width: 4.6em; }
+.dp-legenda span { white-space: nowrap; }
+.escada-p2.votos .degrau.sem-bens { margin-right: 0; }
+.escada-p2.votos .degrau-trilho i { background: var(--p2-nao); }
+.escada-p2.votos .degrau.eleito .degrau-trilho i { background: var(--p2-eleitos); }
+.escada-p2.votos .degrau.sem-bens .degrau-trilho i { background: repeating-linear-gradient(45deg, var(--p2-nao) 0 3px, color-mix(in srgb, var(--p2-nao) 55%, transparent) 3px 6px); }
+.escada-p2.votos .degrau.eleito .degrau-rot { color: var(--p2-eleitos); }
+.degrau-rot { overflow: hidden; text-overflow: ellipsis; }
+.dispersao-p2 svg { overflow: hidden; }
+.p2-cand-duas > *, .lista-p2, .lista-p2 li > * { min-width: 0; }
+@media (max-width: 1000px) { .p2-cand-duas { grid-template-columns: minmax(0, 1fr); } }
+.degrau.sem-bens .degrau-rot { white-space: normal; line-height: 1.1; }
+@media (max-width: 620px) { .lp-res small, .lista-p2 .selo { white-space: normal; text-align: right; } .lp-valor b { font-size: 15px; } }
+.dp-legenda span:last-child { white-space: normal; }
+@media (max-width: 620px) {
+  .anos-p2 { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .anos-p2 .ano { flex: none; min-height: 40px; padding: 4px 7px; font-size: 13px; }
+  .legenda-p2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 4px; width: 100%; font-size: 11px; }
+  .legenda-p2 li { max-width: none; gap: 3px; }
+  .legenda-p2 i { height: 7px; }
+}
+.lp-alerta { font-size: 12px; font-weight: 600; color: var(--amarelo-400); cursor: help; }
+
+/* pergunta 2, ajustes: a série com duas linhas nomeadas */
+.serie-p2 .sp-nome { text-anchor: start; font-size: 13px; font-weight: 650; fill: var(--sobre-noite); }
+.serie-p2 .sp-nome-valor { font-weight: 700; }
+
+/* pergunta 2: a cor da linha da série sem quem já tinha o cargo */
+.observatorio, .paleta-mapa { --p2-serie-sem: var(--c3); }
+/* a série: a linha sem quem já tinha o cargo, tracejada e mais clara; os nomes nas pontas */
+.serie-p2 .sp-serie.sem .sp-linha { stroke: var(--p2-serie-sem); stroke-width: 1.8; stroke-dasharray: 6 4; }
+.serie-p2 .sp-serie.sem .sp-ponto circle { fill: var(--p2-serie-sem); }
+.serie-p2 .sp-serie.sem .sp-ponto text, .serie-p2 .sp-serie.sem .sp-nome { fill: var(--p2-serie-sem); }
+.serie-p2 .sp-ref text { text-anchor: end; font-weight: 600; fill: var(--sobre-noite); }
+
+.serie-p2 .sp-compacta { display: none; }
+@media (max-width: 620px) { .serie-p2 .sp-larga { display: none; } .serie-p2 .sp-compacta { display: block; } .serie-p2 .sp-compacta text { font-size: 14px; } }
+
+/* pergunta 2, painel enxuto: a resposta (8 colunas, o mesmo número do cartão) e os números curtos ao lado (4); os
+   candidatos e a série recolhidos. Tudo na superfície dos blocos (--noite2), como os números da P1 */
+.p2-resposta { display: flex; flex-direction: column; gap: 12px; }
+.p2-grande { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.p2-grande b { font-size: clamp(38px, 2.2vw + 14px, 60px); font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--brilho); }
+.p2-grande span { max-width: 34em; font-size: 15px; line-height: 1.4; color: var(--noite-muted); }
+.p2-frase { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--sobre-noite); }
+.p2-resposta .p2-chips { margin-top: 4px; }
+/* a coluna ao lado da resposta: três cards curtos que dividem a altura (grid de linhas iguais); abaixo de 1000px, empilham */
+.painel.din > .p2-lado { display: grid; grid-auto-rows: 1fr; gap: var(--gap); min-width: 0; }
+.p2-lado > .bloco { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.p2-numeros h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.p2-vezes { margin: 0; font-size: 14px; font-weight: 700; color: var(--brilho); }
+.p2-barras-topo p i { display: block; height: 4px; margin-top: 4px; border-radius: 2px; background: var(--q1); }
+.p2-barras-topo p.on i { background: var(--brilho); }
+.p2-outra { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.p2-outra b { font-size: 30px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.p2-outra span { font-size: 14px; color: var(--noite-muted); }
+.p2-compara { margin: 0; font-size: 13px; color: var(--noite-muted); }
+@media (max-width: 1000px) { .painel.din > .p2-lado { grid-auto-rows: auto; } }
+.p2-par { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.p2-par p { margin: 0; display: grid; gap: 4px; }
+.p2-par b { font-size: 26px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: var(--sobre-noite); }
+.p2-par p:first-child b { color: var(--brilho); }
+.p2-par span { font-size: 13px; color: var(--noite-muted); }
+.p2-recolhido > summary { cursor: pointer; font-size: 18px; font-weight: 650; color: var(--sobre-noite); }
+.p2-recolhido[open] > summary { margin-bottom: 12px; }
+.p2-recolhido > p.muted { margin: 0 0 12px; }
+
+/* ---------- Pergunta 8 na camada Dinheiro do mapa: eleitos × não eleitos, no público e no privado (PublicoPrivado) ----------
+   Tudo na superfície dos blocos (--noite2) e nos cartões dentro deles (--noite3), sem --noite */
+.p8-resposta { display: flex; flex-direction: column; gap: 12px; }
+.p8-grande { margin: 0; }
+.p8-grande b { font-size: clamp(38px, 2.2vw + 14px, 68px); font-weight: 700; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--brilho); }
+.p8-frase { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--sobre-noite); }
+.p8-barras { display: grid; gap: 14px; margin-top: 6px; }
+.p8-barras .empilhada { margin: 0; }
+.din-legenda-linha { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--noite-muted); }
+.din-legenda-linha li { display: inline-flex; align-items: center; gap: 6px; }
+.din-legenda-linha i { width: 12px; height: 12px; border-radius: 3px; }
+.numeros-lado { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+.numeros-lado > .bloco { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.numeros-lado h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.din-tipicos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.din-tipicos > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: 8px; background: var(--noite3); }
+.din-tipicos small { font-size: 12px; font-weight: 600; color: var(--noite-muted); }
+.din-tipicos b { white-space: nowrap; font-size: clamp(19px, 1.2vw + 10px, 24px); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.din-tipicos > div.on b { color: var(--brilho); }
+.din-tipicos span { font-size: 12.5px; color: var(--noite-muted); }
+.p8-grades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.p8-grades figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+/* só os quadradinhos apagados: sem o :not, esta regra empata com .grade-cem i.on, vem depois e apagava os pintados */
+.p8-grades .grade-cem i:not(.on) { background: var(--noite3); }
+.p8-grades figcaption { font-size: 13.5px; font-weight: 600; color: var(--sobre-noite); }
+.p8-anos h3 { margin-bottom: 14px; }
+.din-anos-p8 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.din-anos-p8 > div { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 8px; background: var(--noite3); }
+.din-anos-p8 small { font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
+.p8-ano-linha { margin: 0; font-size: clamp(30px, 1.6vw + 16px, 44px); font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.p8-ano-linha span { color: var(--noite-muted); }
+.p8-ano-linha b { color: var(--brilho); }
+.din-anos-p8 .delta { margin: 0; font-size: 15px; font-weight: 700; color: var(--noite-muted); }
+.p8-recolhido > summary { cursor: pointer; font-size: 18px; font-weight: 650; color: var(--sobre-noite); }
+.p8-recolhido[open] > summary { margin-bottom: 6px; }
+@media (max-width: 620px) { .din-anos-p8 { grid-template-columns: 1fr; } }
 
 /* ---------- Legislativo (app/legislativo, components/Plenario.tsx) ----------
    O plenário é o centro da página. Passar o mouse numa cadeira destaca a bancada (regras :has geradas na página) e abre

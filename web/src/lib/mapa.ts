@@ -133,9 +133,9 @@ export function situacaoComparativo({ ano, anosPorCenso, uf }: { ano: number; an
  * O que o mapa está mostrando, em poucas palavras, para o botão do submenu: "Abstenção × IDHM", "Voto de legenda · PT",
  * "Instrução · Superior completo".
  */
-export function resumoCamadas({ ver, partido, comparativo, instrucao }: { ver: Visao; partido?: string; comparativo?: string; instrucao?: string }): string {
+export function resumoCamadas({ ver, partido, comparativo, instrucao, dinheiro }: { ver: Visao; partido?: string; comparativo?: string; instrucao?: string; dinheiro?: string }): string {
   if (ver === "candidato") return "Votos de um candidato";
-  if (ver === "dinheiro") return "Gasto por vaga";
+  if (ver === "dinheiro") return dinheiro ?? "Gasto por vaga";
   if (ver === "instrucao") return instrucao ? `Instrução · ${instrucao}` : "Instrução";
   if (ver === "idade") return "Idade do eleitorado";
   if (ver === "vies") return "Viés político";
