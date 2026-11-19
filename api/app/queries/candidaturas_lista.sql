@@ -1,9 +1,9 @@
 -- Parâmetros (nesta ordem): incluir_suplementares, cargo, cargo, ano, ano, uf, uf, partido, partido, eleito, eleito, ordem, tamanho, deslocamento.
--- Só titulares que chegaram a disputar. Votos do 1º turno.
+-- Só titulares que chegaram a disputar. Votos do 1º turno (a ordem usa eles) e, de quem foi ao 2º turno, os dele.
 WITH base AS (
     SELECT c.id_candidatura, c.id_candidato, c.nome_urna, c.numero_urna, c.uf, c.ano, c.ue, c.sequencial,
            p.sigla AS partido, g.nome AS cargo, r.categoria AS resultado, r.eleito,
-           coalesce(v.votos, 0) AS votos
+           coalesce(v.votos, 0) AS votos, v2.votos AS votos_2t
     FROM candidatura c
     JOIN eleicao e          ON e.id_eleicao = c.id_eleicao
     JOIN cargo g            ON g.id_cargo = e.id_cargo
@@ -11,6 +11,8 @@ WITH base AS (
     LEFT JOIN partido p     ON p.id_partido = c.id_partido
     LEFT JOIN (SELECT id_candidatura, votos FROM resultado_candidatura WHERE turno = 1) v
            ON v.id_candidatura = c.id_candidatura
+    LEFT JOIN (SELECT id_candidatura, votos FROM resultado_candidatura WHERE turno = 2) v2
+           ON v2.id_candidatura = c.id_candidatura
     WHERE g.eh_titular
       AND r.categoria <> 'NAO_DISPUTOU'
       AND (? OR e.tipo_eleicao = 'ORDINARIA')

@@ -19,6 +19,14 @@ export function curto(n: number): string {
   return inteiro(n);
 }
 
+/**
+ * Votos de uma candidatura por escrito, com o 2º turno quando ela disputou: "53,9 mi votos no 1º turno e 64,3 mi no 2º";
+ * sem 2º turno, só "21,5 mi votos". `fmt` escolhe o número (compacto, inteiro…).
+ */
+export function textoVotos(votos1t: number, votos2t: number | null | undefined, fmt: (n: number) => string = compacto): string {
+  return votos2t == null ? `${fmt(votos1t)} votos` : `${fmt(votos1t)} votos no 1º turno e ${fmt(votos2t)} no 2º`;
+}
+
 export function compacto(n: number): string {
   if (n >= 1e6) return `${(n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi`;
   if (n >= 1e3) return `${(n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;

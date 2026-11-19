@@ -12,7 +12,7 @@ import { anosDoEixo, naLinhaDoTempo, rotulosPartido } from "../src/lib/carreira"
 import type { CarreiraItem } from "../src/lib/types";
 import { destacarBusca, normalizarBusca } from "../src/lib/busca";
 import { fotoDaBusca, fotoDaPessoa, fotoDoPerfil, urlFoto } from "../src/lib/foto-candidato";
-import { compacto, curto, iniciais, pctSinal, reais } from "../src/lib/format";
+import { compacto, curto, iniciais, pctSinal, reais, textoVotos } from "../src/lib/format";
 import {
   MEDIDAS, contarNaMedida, grauDoEleito, linhasNiveis, medidaDe, parteNaMedida, perfilEleitos, perfilPopulacao, porMunicipio, predominante, rotuloNivel,
   separarEleitos, type EleitoInstrucao, type LinhaEleitosInstrucao, type LinhaPopulacaoInstrucao, type LinhaPrefeito,
@@ -762,5 +762,14 @@ describe("seloUf", () => {
     expect(s.larg).toBeGreaterThan(66);
     expect(s.xSigla - -s.larg / 2).toBe(18);                          // a sigla fica à mesma distância da borda
     expect(s.xValor - (7 * 7.5) / 2 - (s.xSigla + 10)).toBe(5);       // o valor começa logo depois da sigla
+  });
+});
+
+describe("textoVotos", () => {
+  it("só o 1º turno quando não houve 2º; os dois quando houve", () => {
+    expect(textoVotos(21_475_211, null).replace(/\u00a0/g, " ")).toBe("21,5 mi votos");
+    expect(textoVotos(1200, undefined)).toBe("1,2 mil votos");
+    expect(textoVotos(53_879_538, 64_256_232).replace(/\u00a0/g, " ")).toBe("53,9 mi votos no 1º turno e 64,3 mi no 2º");
+    expect(textoVotos(10, 0, String)).toBe("10 votos no 1º turno e 0 no 2º");
   });
 });
