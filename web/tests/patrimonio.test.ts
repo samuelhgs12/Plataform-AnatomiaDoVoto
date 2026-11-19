@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   anosDoTipo, classificar, composicaoEleitos, concordancia, concordanciaDeCandidatos, corDaMetade, corDaParteCidades, disputaDeCandidatos, escada,
-  escadaDeCandidatos, escadaDeVotos, escalaLista, eixoSerie, fraseSerie, escadaPosicoes, faixaDoValor, frasePosicao, fraseTopo, histograma, histogramaDeCandidatos, juntarPatrimonio, legendaMetade,
+  escadaDeCandidatos, escadaDeVotos, escalaLista, eixoSerie, fraseSerie, afastarRotulos, colunasComposicao, escadaPosicoes, faixaDoValor, frasePosicao, fraseTopo, histograma, histogramaDeCandidatos, juntarPatrimonio, legendaMetade,
   legendaPrefeito, listaDe, listaDeCandidatos, listaDoRecorte, marcasLog, medianaPonderada, medianasDeCandidatos, medianasDoRecorte, metadeDaCidade,
   metadeMaisRica, naEscalaLog, posicaoDoEleito, posicaoLog, quemTinha, recorteDaDisputa, serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade,
   taxaDoTopo, textoPosicao, topoDaComposicao, tituloP2, valorTipico, vitoriaDoMaisRico,
@@ -263,18 +263,42 @@ describe("as séries", () => {
 });
 
 describe("fraseSerie e eixoSerie", () => {
-  it("responde numa frase com a média dos anos com dado", () => {
-    const p = [{ ano: 2008, valor: 0.6, n: 1 }, { ano: 2012, valor: null, n: 0 }, { ano: 2016, valor: 0.64, n: 1 }];
-    expect(fraseSerie(p, "Vereador")).toBe("Desde 2008, cerca de 6 em cada 10 eleitos estão na metade mais rica");
-    expect(fraseSerie([{ ano: 2012, valor: 0.47, n: 1 }], "Prefeito")).toBe("Desde 2012, o mais rico venceu em 47% das cidades");
-    expect(fraseSerie([{ ano: 2012, valor: null, n: 0 }], "Prefeito")).toBeNull();
+  it("responde com o último ano e as duas linhas", () => {
+    const com = [{ ano: 2018, valor: 0.85, n: 1 }, { ano: 2022, valor: 0.81, n: 1 }], sem = [{ ano: 2018, valor: 0.8, n: 1 }, { ano: 2022, valor: 0.53, n: 1 }];
+    expect(fraseSerie(com, sem, "Deputado federal")).toBe("Em 2022, 8 em cada 10 eleitos estavam na metade mais rica; sem quem já tinha o cargo, 5 em cada 10");
+    expect(fraseSerie([{ ano: 2024, valor: 0.53, n: 1 }], [{ ano: 2024, valor: 0.51, n: 1 }], "Prefeito")).toBe("Em 2024, o mais rico venceu em 53% das cidades; sem disputas com reeleição, 51%");
+    expect(fraseSerie([{ ano: 2024, valor: 0.6, n: 1 }, { ano: 2020, valor: null, n: 0 }], null, "Vereador")).toBe("Em 2024, 6 em cada 10 eleitos estavam na metade mais rica");
+    expect(fraseSerie([{ ano: 2012, valor: null, n: 0 }], null, "Prefeito")).toBeNull();
   });
-  it("vereador de 40% a 80% (alarga se preciso); prefeito pelos dados", () => {
-    expect(eixoSerie([0.6, 0.66], "Vereador")).toEqual({ min: 0.4, max: 0.8, marcas: [0.5, 0.75] });
-    expect(eixoSerie([0.6, 0.88], "Deputado estadual").max).toBe(0.9);
-    const e = eixoSerie([0.45, 0.53], "Prefeito");
-    expect([e.min, e.max]).toEqual([0.4, 0.6]);
-    expect(e.marcas).toEqual([0.5]);
+  it("eixo pelos dados, com o 50% à vista para vereador e deputados", () => {
+    expect(eixoSerie([0.53, 0.96], "Deputado federal")).toEqual({ min: 0.4, max: 1, marcas: [0.5, 1] });
+    expect(eixoSerie([0.6, 0.66], "Vereador")).toEqual({ min: 0.4, max: 0.7, marcas: [0.5, 0.7] });
+    expect(eixoSerie([0.45, 0.53], "Prefeito")).toEqual({ min: 0.4, max: 0.6, marcas: [0.4, 0.6] });
+  });
+});
+
+describe("afastarRotulos", () => {
+  it("desce os que encostam e sobe o grupo se passar do fim", () => {
+    expect(afastarRotulos([10, 12, 50], 10)).toEqual([10, 20, 50]);
+    expect(afastarRotulos([90, 95, 100], 10, 0, 100)).toEqual([80, 90, 100]);
+    expect(afastarRotulos([], 10)).toEqual([]);
+  });
+});
+
+describe("colunasComposicao", () => {
+  const d = escada([dec({ decil: 0, candidatos: 60, eleitos: 39 }), dec({ decil: 3, candidatos: 20, eleitos: 21 }), dec({ decil: 7, candidatos: 15, eleitos: 29 }), dec({ decil: 10, candidatos: 5, eleitos: 11 })], { anos: [2024], cargo: "Vereador" });
+  const c = colunasComposicao(composicaoEleitos(d, { majoritario: false }));
+  it("empilha do mais rico (em cima) aos sem bens, somando a altura útil", () => {
+    const cand = c.colunas[0].segmentos;
+    expect(cand.map((s) => s.chave)).toEqual(["topo", "meio", "baixo", "sem"]);
+    expect(cand[0].y).toBe(26);
+    expect(cand.at(-1)!.y + cand.at(-1)!.h).toBeCloseTo(300 - 6);
+  });
+  it("põe fora o percentual que não cabe e afasta os nomes", () => {
+    expect(c.colunas[0].segmentos[0]).toMatchObject({ chave: "topo", dentro: false });   // 5% de 268 ≈ 13
+    expect(c.nomes[0]).toMatchObject({ chave: "topo", linhas: ["Os 10%", "mais ricos"], fora: null });   // 11% cabe
+    for (let i = 1; i < c.nomes.length; i++) expect(c.nomes[i].y - c.nomes[i - 1].y).toBeGreaterThanOrEqual(30);
+    expect(c.faixas).toHaveLength(4);
   });
 });
 

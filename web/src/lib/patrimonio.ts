@@ -350,6 +350,59 @@ export function composicaoEleitos(d: Degrau[], { majoritario }: { majoritario: b
   }).filter((g) => g.candidatos > 0);
 }
 
+/** Os nomes dos grupos em até duas linhas, para os rótulos ao lado das colunas. */
+const NOME_EM_LINHAS: Record<string, string[]> = {
+  topo: ["Os 10%", "mais ricos"], meio: ["6º ao 9º", "décimo"], baixo: ["Metade", "menos rica"], sem: ["Sem bens"],
+  "1": ["O mais", "rico"], "2": ["2º mais", "rico"], "3": ["3º mais", "rico"], "4": ["4º ou", "abaixo"],
+};
+
+/** Um pedaço de uma coluna: a posição, a altura e onde fica o percentual (dentro, se couber; senão, ao lado). */
+export interface SegmentoColuna { chave: string; cor: string; parte: number; y: number; h: number; dentro: boolean; yRotulo: number }
+export interface ColunasComposicao {
+  largura: number; altura: number; topo: number; base: number; larguraColuna: number;
+  colunas: { titulo: string; x: number; segmentos: SegmentoColuna[] }[];
+  /** os nomes à direita da coluna dos eleitos, já afastados; `fora`: o percentual dos eleitos, quando não coube dentro */
+  nomes: { chave: string; y: number; linhas: string[]; fora: string | null }[];
+  /** as faixas que ligam o mesmo grupo de uma coluna à outra (pontos do polígono) */
+  faixas: { chave: string; cor: string; pontos: string }[];
+}
+
+/**
+ * O desenho de "Quem são os eleitos" em duas colunas 100% em pé (candidatos e eleitos), com o grupo mais rico em cima e
+ * os sem bens embaixo. O percentual fica dentro do pedaço quando ele tem pelo menos `minTexto` de altura; senão, fora:
+ * à esquerda da coluna dos candidatos e junto do nome, à direita da dos eleitos. Os rótulos de fora são afastados
+ * (afastarRotulos) para não se sobreporem. Tudo em unidades do viewBox.
+ */
+export function colunasComposicao(grupos: GrupoComposicao[], { largura = 460, altura = 300, topo = 26, base = 6, larguraColuna = 92, vao = 58, esquerda = 40, minTexto = 16 } = {}): ColunasComposicao {
+  const deCima = [...grupos].reverse();
+  const util = altura - topo - base;
+  const xs = [esquerda, esquerda + larguraColuna + vao];
+  const coluna = (titulo: string, x: number, parte: (g: GrupoComposicao) => number) => {
+    let y = topo;
+    const segs = deCima.map((g) => {
+      const h = parte(g) * util;
+      const seg = { chave: g.chave, cor: g.cor, parte: parte(g), y, h, dentro: h >= minTexto, yRotulo: y + h / 2 };
+      y += h;
+      return seg;
+    });
+    // os percentuais de fora (à esquerda dos candidatos) se afastam entre si
+    const fora = segs.filter((sg) => !sg.dentro && sg.parte > 0);
+    afastarRotulos(fora.map((sg) => sg.yRotulo), 14, topo + 6, altura - base - 2).forEach((y2, i) => { fora[i].yRotulo = y2; });
+    return { titulo, x, segmentos: segs };
+  };
+  const colunas = [coluna("Candidatos", xs[0], (g) => g.parteCandidatos), coluna("Eleitos", xs[1], (g) => g.parteEleitos)];
+  const eleitos = colunas[1].segmentos;
+  const linhasDe = (sg: SegmentoColuna) => NOME_EM_LINHAS[sg.chave] ?? [sg.chave];
+  // o nome (uma ou duas linhas) fica centrado no pedaço; dois nomes de duas linhas pedem ~30 de distância
+  const centros = afastarRotulos(eleitos.map((sg) => sg.y + sg.h / 2), 30, topo + 8, altura - base - 14);
+  const nomes = eleitos.map((sg, i) => ({ chave: sg.chave, y: centros[i], linhas: linhasDe(sg), fora: sg.dentro || sg.parte <= 0 ? null : `${Math.round(sg.parte * 100)}%` }));
+  const faixas = colunas[0].segmentos.map((a, i) => {
+    const b2 = eleitos[i], x0 = xs[0] + larguraColuna, x1 = xs[1];
+    return { chave: a.chave, cor: a.cor, pontos: `${x0},${a.y} ${x1},${b2.y} ${x1},${b2.y + b2.h} ${x0},${a.y + a.h}` };
+  });
+  return { largura, altura, topo, base, larguraColuna, colunas, nomes, faixas };
+}
+
 /** O grupo de cima da composição (os 10% mais ricos ou o mais rico): a frase "é X% dos candidatos, mas Y% dos eleitos". */
 export const topoDaComposicao = (g: GrupoComposicao[]) => g.find((x) => x.chave === "topo" || x.chave === "1") ?? null;
 
@@ -498,34 +551,53 @@ export function serieMaisRico(ds: LinhaDisputa[], cargo: string, uf: string | un
   return anosDoTipo(cargo).map((ano) => { const v = vitoriaDoMaisRico(ds, { anos: [ano], cargo, uf }, { semCargo }); return { ano, valor: v.parte, n: v.comparaveis }; });
 }
 /**
- * O título da série, a resposta numa frase, com a média das eleições com dado: vereador e deputados, "Desde 2008, cerca
- * de 6 em cada 10 eleitos estão na metade mais rica"; prefeito, "Desde 2008, o mais rico venceu em 47% das cidades".
- * null sem nenhum ano com dado.
+ * O título da série, a resposta numa frase, com a última eleição que tem dado e as duas linhas: vereador e deputados,
+ * "Em 2022, 8 em cada 10 eleitos estavam na metade mais rica; sem quem já tinha o cargo, 5 em cada 10"; prefeito, "Em
+ * 2024, o mais rico venceu em 53% das cidades; sem disputas com reeleição, 51%". null sem nenhum ano com dado.
  */
-export function fraseSerie(pontos: PontoSerie[], cargo: string): string | null {
-  const v = pontos.filter((p): p is PontoSerie & { valor: number } => p.valor !== null);
-  if (!v.length) return null;
-  const media = v.reduce((a, p) => a + p.valor, 0) / v.length;
-  const desde = `Desde ${v[0].ano}`;
-  if (ehMajoritarioP2(cargo)) return `${desde}, o mais rico venceu em ${Math.round(media * 100)}% ${cargo === "Prefeito" ? "das cidades" : "das disputas"}`;
-  return `${desde}, cerca de ${Math.round(media * 10)} em cada 10 eleitos estão na metade mais rica`;
+export function fraseSerie(com: PontoSerie[], sem: PontoSerie[] | null, cargo: string): string | null {
+  const ultimo = [...com].reverse().find((p) => p.valor !== null);
+  if (!ultimo) return null;
+  const outro = sem?.find((p) => p.ano === ultimo.ano)?.valor ?? null;
+  if (ehMajoritarioP2(cargo)) {
+    const onde = cargo === "Prefeito" ? "das cidades" : "das disputas";
+    return `Em ${ultimo.ano}, o mais rico venceu em ${Math.round(ultimo.valor! * 100)}% ${onde}${outro === null ? "" : `; sem disputas com reeleição, ${Math.round(outro * 100)}%`}`;
+  }
+  const dez = (v: number) => Math.round(v * 10);
+  return `Em ${ultimo.ano}, ${dez(ultimo.valor!)} em cada 10 eleitos estavam na metade mais rica${outro === null ? "" : `; sem quem já tinha o cargo, ${dez(outro)} em cada 10`}`;
 }
 
 /**
- * O eixo da série (0 a 1): vereador e deputados, de 40% a 80% (o neutro, 50%, sempre à vista), alargado em décimos se
- * algum valor sair dele; prefeito, governador e senador, pelos dados, em décimos com folga. As marcas são as que não
- * colidem com os rótulos: 50% e 75% no primeiro caso; no outro, o meio do eixo.
+ * O eixo da série (0 a 1), pelos dados, em décimos com folga. Vereador e deputados: começa em 40% ou abaixo, para o
+ * neutro (50%) ficar à vista. Marcas só onde não colidem: o 50% (escrito "50% · sem relação") e o topo, se estiver
+ * longe dele; nos majoritários, a base e o topo.
  */
 export function eixoSerie(valores: (number | null)[], cargo: string): { min: number; max: number; marcas: number[] } {
   const v = valores.filter((x): x is number => x !== null);
-  const baixo = v.length ? Math.floor((Math.min(...v) - 0.02) * 10) / 10 : 0.4;
-  const alto = v.length ? Math.ceil((Math.max(...v) + 0.02) * 10) / 10 : 0.8;
+  const dec = (x: number) => Math.round(x * 10) / 10;
+  const baixo = v.length ? Math.floor((Math.min(...v) - 0.03) * 10) / 10 : 0.4;
+  const alto = v.length ? Math.ceil((Math.max(...v) + 0.03) * 10) / 10 : 0.8;
   if (!ehMajoritarioP2(cargo)) {
-    const min = Math.max(0, Math.min(0.4, baixo)), max = Math.min(1, Math.max(0.8, alto));
-    return { min, max, marcas: [0.5, 0.75].filter((m) => m > min && m < max) };
+    const min = dec(Math.max(0, Math.min(0.4, baixo))), max = dec(Math.min(1, Math.max(min + 0.3, alto)));
+    return { min, max, marcas: [0.5, ...(Math.round((max - 0.5) * 10) >= 2 ? [max] : [])] };
   }
-  const min = Math.max(0, baixo), max = Math.min(1, Math.round(Math.max(min + 0.2, alto) * 10) / 10);
-  return { min, max, marcas: [Math.round(((min + max) / 2) * 100) / 100] };
+  const min = dec(Math.max(0, baixo)), max = dec(Math.min(1, Math.max(min + 0.2, alto)));
+  return { min, max, marcas: [min, max] };
+}
+
+/**
+ * Afasta rótulos verticais (posições y, de cima para baixo, na ordem dada) para que fiquem a pelo menos `minimo` um do
+ * outro, mexendo o mínimo e dentro de [lo, hi]: desce os que encostam no de cima e, se o último passar do fim, sobe o
+ * grupo. Puro, para o SVG do servidor (sem medir no navegador).
+ */
+export function afastarRotulos(ys: number[], minimo: number, lo = -Infinity, hi = Infinity): number[] {
+  const r = ys.map((y) => Math.min(hi, Math.max(lo, y)));
+  for (let i = 1; i < r.length; i++) r[i] = Math.max(r[i], r[i - 1] + minimo);
+  if (r.length && r[r.length - 1] > hi) {
+    r[r.length - 1] = hi;
+    for (let i = r.length - 2; i >= 0; i--) r[i] = Math.min(r[i], r[i + 1] - minimo);
+  }
+  return r;
 }
 
 /** Uma disputa só (a cidade, para prefeito; o estado, para governador e senador) em cada eleição: onde estava o eleito. */

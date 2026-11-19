@@ -163,7 +163,8 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const medTab = dadosPainel?.pat_medianas ? comoObjetos<LinhaMedianas>(dadosPainel.pat_medianas) : [];
   const medianas = mun ? (cls ? medianasDeCandidatos(recAqui) : null) : uf ? medianasDoRecorte(medTab, { ano, cargo, uf }, { semCargo }) : null;
   const hist = mun ? (cls ? histogramaDeCandidatos(recAqui) : null) : uf && dadosPainel?.pat_faixas ? histograma(comoObjetos<LinhaFaixa>(dadosPainel.pat_faixas), { anos: [ano], cargo, uf }, { semCargo }) : null;
-  const grupos = cidadeUnica ? [] : composicaoEleitos(degraus, { majoritario });
+  // a composição é sempre por décimos (ou posições), mesmo quando a escada mostra cada candidato (cidade pequena)
+  const grupos = cidadeUnica || !uf ? [] : composicaoEleitos(poucos ? degrausDe(semCargo) : degraus, { majoritario });
   const topoComp = topoDaComposicao(grupos);
   const pares = mun ? (cls ? concordanciaDeCandidatos(recAqui) : null) : uf && dadosPainel?.pat_pares ? concordancia(comoObjetos<LinhaPares>(dadosPainel.pat_pares), { anos: [ano], cargo, uf }, { semCargo }) : null;
   const listas = dadosLista?.pat_lista ? comoObjetos<LinhaLista>(dadosLista.pat_lista) : null;
@@ -175,11 +176,11 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
     : !majoritario ? serieMetade(decis, cargo, uf, { semCargo: sc }) : cargo === "Prefeito" && !mun ? serieMaisRico(disputas, cargo, uf, { semCargo: sc }) : null);
   const [serieCom, serieSem] = [serieDe(false), serieDe(true)];
   const linhasSerie = serieCom && serieSem ? [
-    { nome: "com todos", pontos: serieCom, fina: semCargo },
-    { nome: majoritario ? "sem disputas|com reeleição" : "sem quem já|tinha o cargo", pontos: serieSem, fina: !semCargo },
+    { nome: "com todos", pontos: serieCom },
+    { nome: majoritario ? "sem disputas com reeleição" : "sem quem já tinha o cargo", pontos: serieSem, sem: true },
   ] : [];
   const eixo = eixoSerie([...(serieCom ?? []), ...(serieSem ?? [])].map((x) => x.valor), cargo);
-  const tituloSerie = (semCargo ? serieSem : serieCom) ? fraseSerie((semCargo ? serieSem : serieCom)!, cargo) : null;
+  const tituloSerie = serieCom ? fraseSerie(serieCom, serieSem, cargo) : null;
   const serieUnica = uf && majoritario && (mun || umaPorEstado) ? serieDisputa(disputas, cargo, uf, mun ? mun.id_municipio : null, { semCargo }) : null;
   const anosSerie = anosDoTipo(cargo);
   // ---------- o cartão do lugar (sobre o mapa) ----------
@@ -346,7 +347,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
             <h3>{serieUnica ? `De ${anosSerie[0]} a ${anosSerie.at(-1)}: onde estava o eleito` : tituloSerie ?? `De ${anosSerie[0]} a ${anosSerie.at(-1)}`}</h3>
           </header>
           {serieUnica ? <SerieDisputa anos={serieUnica} atual={ano} titulo={`Posição do eleito no patrimônio, ${cargoMin}, ${lugar}, ${anosSerie[0]} a ${anosSerie.at(-1)}`} />
-            : linhasSerie.length ? <SeriePatrimonio linhas={linhasSerie} eixo={eixo} atual={ano} referencia={!majoritario ? "50% = sem relação" : undefined} titulo={`${!majoritario ? "Eleitos na metade mais rica" : "Cidades que elegeram o mais rico"}, ${cargoMin}, ${lugar}, ${anosSerie[0]} a ${anosSerie.at(-1)}`} />
+            : linhasSerie.length ? <SeriePatrimonio linhas={linhasSerie} eixo={eixo} atual={ano} referencia={!majoritario} titulo={`${!majoritario ? "Eleitos na metade mais rica" : "Cidades que elegeram o mais rico"}, ${cargoMin}, ${lugar}, ${anosSerie[0]} a ${anosSerie.at(-1)}`} />
             : <p className="muted">Sem série para este recorte.</p>}
         </section>
         <details id="dinheiro-metodo" className="bloco noite s12 dinheiro-metodo">

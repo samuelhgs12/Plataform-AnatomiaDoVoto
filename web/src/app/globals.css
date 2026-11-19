@@ -2735,11 +2735,6 @@ a.q-ver:active { transform: scale(0.98); }
 @media (max-width: 620px) { .fx-linha { grid-template-columns: 4.6em 2.2em minmax(0, 1fr); gap: 6px; } .fx-eixo .fx-bins small:nth-child(even) { display: none; } }
 
 /* quem são os eleitos: candidatos × eleitos em barras 100% */
-.comp-p2 .comp-linha { display: grid; grid-template-columns: 6.2em minmax(0, 1fr); gap: 10px; align-items: center; margin-bottom: 8px; }
-.comp-rot { font-size: 14px; font-weight: 600; color: var(--sobre-noite); }
-.comp-p2 .q0 { background: var(--q0); } .comp-p2 .q1 { background: var(--q1); } .comp-p2 .q3 { background: var(--q3); } .comp-p2 .q4 { background: var(--q4); }
-.comp-p2 .o { background: repeating-linear-gradient(45deg, var(--p2-barra-sem) 0 3px, color-mix(in srgb, var(--p2-barra-sem) 55%, transparent) 3px 6px); }
-.comp-p2 .q0 em, .comp-p2 .q1 em, .comp-p2 .o em { color: var(--sobre-noite); }
 
 /* os candidatos */
 .p2-abas { margin: 0 0 14px; }
@@ -2833,14 +2828,34 @@ a.q-ver:active { transform: scale(0.98); }
 .fx-linha { height: 112px; padding-top: 20px; }
 .fx-mediana { top: -20px; }
 .fx-mediana span { top: 0; }
-.comp-legenda { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--noite-muted); }
-.comp-legenda li { display: inline-flex; align-items: center; gap: 6px; }
-.comp-legenda i { width: 12px; height: 12px; border-radius: 3px; }
-.serie-p2 .sp-serie.fina .sp-linha { stroke-width: 1.6; stroke-dasharray: 6 4; opacity: 0.85; }
-.serie-p2 .sp-serie.fina .sp-ponto circle { r: 3; }
 .serie-p2 .sp-nome { text-anchor: start; font-size: 13px; font-weight: 650; fill: var(--sobre-noite); }
-.serie-p2 .sp-serie.fina .sp-nome { font-weight: 500; fill: var(--noite-muted); }
-.serie-p2 .sp-serie.fina .sp-ponto text { fill: var(--noite-muted); }
 .fx-linha.fx-eixo { height: auto; padding-top: 0; }
 .serie-p2 .sp-nome-valor { font-weight: 700; }
-@media (max-width: 620px) { .serie-p2 text { font-size: 21px; } .serie-p2 .sp-nome { font-size: 22px; } }
+
+/* pergunta 2: quem são os eleitos em duas colunas 100% em pé (o cartão inteiro: sem espaço vazio embaixo) */
+.observatorio, .paleta-mapa { --p2-serie-sem: var(--c3); }
+.p2-composicao { display: flex; flex-direction: column; }
+.comp-p2 { flex: 1; display: flex; min-height: 280px; margin: 0; }
+.comp-p2 svg { display: block; width: 100%; height: 100%; min-height: 280px; overflow: visible; }
+.comp-seg.q0, .comp-faixa.q0 { fill: var(--q0); } .comp-seg.q1, .comp-faixa.q1 { fill: var(--q1); }
+.comp-seg.q3, .comp-faixa.q3 { fill: var(--q3); } .comp-seg.q4, .comp-faixa.q4 { fill: var(--q4); }
+.comp-seg.o { fill: url(#comp-hachura); } .comp-faixa.o { fill: var(--p2-barra-sem); }
+.comp-hachura-fundo { fill: color-mix(in srgb, var(--p2-barra-sem) 55%, transparent); } .comp-hachura-traco { stroke: var(--p2-barra-sem); stroke-width: 3; }
+.comp-seg { stroke: var(--noite2); stroke-width: 1.5; }
+.comp-faixa { opacity: 0.2; }
+.comp-p2 text { font-size: 13px; fill: var(--sobre-noite); }
+.comp-titulo { text-anchor: middle; font-weight: 650; }
+.comp-pct { text-anchor: middle; font-weight: 700; }
+.comp-pct.escuro { fill: var(--noite); }
+.comp-pct.fora { text-anchor: end; }
+.comp-nome tspan:first-child { font-weight: 650; }
+/* a série: a linha sem quem já tinha o cargo, tracejada e mais clara; os nomes nas pontas */
+.serie-p2 .sp-serie.sem .sp-linha { stroke: var(--p2-serie-sem); stroke-width: 1.8; stroke-dasharray: 6 4; }
+.serie-p2 .sp-serie.sem .sp-ponto circle { fill: var(--p2-serie-sem); }
+.serie-p2 .sp-serie.sem .sp-ponto text, .serie-p2 .sp-serie.sem .sp-nome { fill: var(--p2-serie-sem); }
+.serie-p2 .sp-ref text { text-anchor: end; font-weight: 600; fill: var(--sobre-noite); }
+@media (max-width: 620px) { .comp-p2 text { font-size: 15px; } .comp-p2 .comp-nome { font-size: 14px; } }
+@media (max-width: 1000px) { .comp-p2, .comp-p2 svg { min-height: 0; } .comp-p2 svg { height: auto; } }
+
+.serie-p2 .sp-compacta { display: none; }
+@media (max-width: 620px) { .serie-p2 .sp-larga { display: none; } .serie-p2 .sp-compacta { display: block; } .serie-p2 .sp-compacta text { font-size: 14px; } }
