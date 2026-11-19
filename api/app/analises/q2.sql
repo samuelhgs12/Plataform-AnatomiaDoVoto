@@ -180,3 +180,228 @@ COPY (
     WHERE n > 2 AND vx > 0 AND vy > 0
     ORDER BY medida, ano, cargo, uf NULLS FIRST
 ) TO 'painel_q2/correlacao.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- PATRIMÔNIO DENTRO DA DISPUTA (camada Dinheiro do mapa, "2. Patrimônio elege?"; tabelas pat_*)
+-- A pergunta é sobre relação: conforme o patrimônio declarado sobe, a chance de se eleger sobe junto? Cada candidato é
+-- comparado só com os concorrentes da mesma disputa (o município para prefeito e vereador; a UF para deputados,
+-- governador e senador). Isso controla cidades ricas × pobres e o número de vagas, e torna a inflação irrelevante: a
+-- ordem dentro de uma eleição não muda com ela (os valores em reais só aparecem como rótulos, valores da época).
+-- Patrimônio zero ("sem bens", cerca de 1/4 dos candidatos) é um grupo à parte, nunca o "menos rico": declarar zero não
+-- quer dizer não ter nada. Os valores são os declarados ao TSE, com erros de digitação possíveis (bilhões para
+-- vereador): nada é removido; como a regra usa a ORDEM dentro da disputa, um valor absurdo só muda a posição de uma pessoa.
+-- Sucesso = eleito (rótulo final); votos = 1º turno. Eleições de 2006 a 2024, sem presidente (não há disputa por UF).
+-- tinha_cargo (acima) é o fator de confusão principal: quem já tinha o cargo tem mais bens e ganha mais; toda tabela
+-- traz o recorte para ver com e sem essas pessoas. Mostra associação, não causa.
+-------------------------------------------------------------------------------
+
+-- Uma linha por candidatura, com:
+--   decil:     0 = sem bens; 1 a 10 = décimo do patrimônio entre os que declararam bens NA DISPUTA (10 = os mais ricos):
+--              least(10, 1 + floor(10 * percent_rank)). percent_rank dá a mesma posição a valores iguais: empates ficam no
+--              mesmo décimo, e os décimos têm tamanho aproximado. "Metade mais rica" = décimos 6 a 10 (percent_rank >= 0,5).
+--   posicao:   1 = o mais rico da disputa; empates com a mesma posição; sem bens por último (todos com a mesma posição).
+--   reeleicao: alguém na disputa já tinha o cargo (para prefeito, governador e senador, "sem quem já tinha o cargo" tira
+--              a disputa inteira: com um prefeito tentando a reeleição, não dá para separar o patrimônio do mandato).
+--   comparavel: a disputa teve mais de um candidato e algum eleito na base. Candidato único vence sempre (inflaria a
+--              taxa do mais rico) e disputa sem eleito (anulada, sub judice) não diz quem venceu: as duas ficam fora das
+--              escadas, medianas, faixas e listas (P1, P4 a P8); P2, P3 e P9 trazem todas, e a página conta as de fora.
+CREATE OR REPLACE TEMP TABLE pat_q2 AS
+WITH base AS (
+    SELECT id_candidatura, id_candidato, ano, cargo, uf, disputa,
+           CASE WHEN cargo IN ('Prefeito', 'Vereador') THEN substr(disputa, 2)::INTEGER END AS id_municipio,
+           eleito, votos, tinha_cargo, round(valor, 2) AS patrimonio
+    FROM medida_q2
+    WHERE medida = 'patrimonio' AND ano BETWEEN 2006 AND 2024 AND cargo <> 'Presidente'
+)
+SELECT *,
+       CASE WHEN patrimonio <= 0 THEN 0
+            ELSE least(10, 1 + floor(10 * percent_rank() OVER (PARTITION BY ano, cargo, disputa, patrimonio > 0 ORDER BY patrimonio)))::INTEGER
+       END AS decil,
+       rank() OVER (PARTITION BY ano, cargo, disputa ORDER BY patrimonio DESC) AS posicao,
+       count(*) OVER (PARTITION BY ano, cargo, disputa) AS na_disputa,
+       count(*) FILTER (WHERE patrimonio > 0) OVER (PARTITION BY ano, cargo, disputa) AS com_bens_disputa,
+       bool_or(tinha_cargo) OVER (PARTITION BY ano, cargo, disputa) AS reeleicao,
+       count(*) OVER (PARTITION BY ano, cargo, disputa) > 1 AND bool_or(eleito) OVER (PARTITION BY ano, cargo, disputa) AS comparavel
+FROM base;
+
+-------------------------------------------------------------------------------
+-- P1. A escada do estado: candidatos, eleitos e o patrimônio típico (mediana) de cada décimo, por eleição, cargo, UF e
+--     tinha_cargo. Somando as duas linhas de tinha_cargo, "com todos"; só a false, "sem quem já tinha o cargo". A soma
+--     dos décimos (0 a 10) é o total de candidatos. Os décimos são da disputa (a cidade, para vereador e prefeito): a
+--     mediana do décimo junta candidatos de cidades diferentes e serve só de rótulo ("valor típico").
+-------------------------------------------------------------------------------
+COPY (
+    SELECT ano, cargo, uf, tinha_cargo, decil, count(*) AS candidatos, count(*) FILTER (WHERE eleito) AS eleitos,
+           round(median(patrimonio), 2) AS mediana
+    FROM pat_q2
+    WHERE comparavel
+    GROUP BY ALL ORDER BY ano, cargo, uf, tinha_cargo, decil
+) TO 'painel_q2/pat_decis.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- P2. Vereador, cidade por cidade (cor do mapa): candidatos, quem declarou bens, eleitos, eleitos com bens e eleitos na
+--     metade mais rica (décimos 6 a 10), por eleição, cidade e tinha_cargo. A cor é eleitos_rica ÷ eleitos_com_bens: os
+--     eleitos sem bens ficam fora da conta (não são "menos ricos"), e a página informa quantos são.
+-------------------------------------------------------------------------------
+COPY (
+    SELECT ano, uf, id_municipio, tinha_cargo, count(*) AS candidatos, count(*) FILTER (WHERE decil > 0) AS com_bens,
+           count(*) FILTER (WHERE eleito) AS eleitos, count(*) FILTER (WHERE eleito AND decil > 0) AS eleitos_com_bens,
+           count(*) FILTER (WHERE eleito AND decil >= 6) AS eleitos_rica
+    FROM pat_q2
+    WHERE cargo = 'Vereador'
+    GROUP BY ALL ORDER BY ano, uf, id_municipio, tinha_cargo
+) TO 'painel_q2/pat_vereador.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- P3. Disputas de um eleito só (prefeito, governador; senador: 1 ou 2 vagas), uma linha por disputa: candidatos, quantos
+--     declararam bens, vagas (eleitos), a melhor posição de um eleito no patrimônio (pos_eleito; com duas vagas, a do
+--     eleito mais rico), se esse eleito não declarou bens, se algum eleito já tinha o cargo, se alguém na disputa
+--     tentava a reeleição e quantos dividem o 1º lugar (empate no topo). Sem eleito na base: pos_eleito nulo.
+-------------------------------------------------------------------------------
+COPY (
+    SELECT ano, cargo, uf, id_municipio, any_value(na_disputa) AS candidatos, any_value(com_bens_disputa) AS com_bens,
+           count(*) FILTER (WHERE eleito) AS vagas,
+           min(posicao) FILTER (WHERE eleito) AS pos_eleito,
+           coalesce(bool_and(patrimonio <= 0) FILTER (WHERE eleito), false) AS eleito_sem_bens,
+           coalesce(bool_or(tinha_cargo) FILTER (WHERE eleito), false) AS eleito_tinha,
+           any_value(reeleicao) AS reeleicao,
+           count(*) FILTER (WHERE posicao = 1 AND patrimonio > 0) AS no_topo
+    FROM pat_q2
+    WHERE cargo IN ('Prefeito', 'Governador', 'Senador')
+    GROUP BY ano, cargo, uf, id_municipio, disputa
+    ORDER BY ano, cargo, uf, id_municipio
+) TO 'painel_q2/pat_disputas.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- P4. A escada dos majoritários: candidatos e vitórias por posição no patrimônio dentro da disputa (1 = o mais rico,
+--     2, 3, 4 = 4º ou abaixo; 0 = sem bens, à parte), por eleição, cargo, UF e reeleicao (a disputa tinha alguém
+--     tentando a reeleição), com a mediana do patrimônio de cada posição.
+-------------------------------------------------------------------------------
+COPY (
+    SELECT ano, cargo, uf, reeleicao, CASE WHEN patrimonio <= 0 THEN 0 ELSE least(posicao, 4) END AS posicao,
+           count(*) AS candidatos, count(*) FILTER (WHERE eleito) AS eleitos, round(median(patrimonio), 2) AS mediana
+    FROM pat_q2
+    WHERE cargo IN ('Prefeito', 'Governador', 'Senador') AND comparavel
+    GROUP BY ALL ORDER BY ano, cargo, uf, reeleicao, posicao
+) TO 'painel_q2/pat_posicoes.csv' (HEADER);
+
+-- Os dois recortes das tabelas seguintes: sem_cargo = false, todos; true, sem quem já tinha o cargo (vereador e
+-- deputados: tira essas pessoas; prefeito, governador e senador: tira as disputas com alguém tentando a reeleição).
+CREATE OR REPLACE TEMP TABLE pat_recorte AS
+SELECT p.*, s.sem_cargo
+FROM pat_q2 p, (VALUES (false), (true)) s(sem_cargo)
+WHERE p.comparavel AND (NOT s.sem_cargo
+   OR (p.cargo IN ('Prefeito', 'Governador', 'Senador') AND NOT p.reeleicao)
+   OR (p.cargo NOT IN ('Prefeito', 'Governador', 'Senador') AND NOT p.tinha_cargo));
+
+-------------------------------------------------------------------------------
+-- P5. Eleitos e não eleitos: quanto declararam. Mediana do patrimônio de quem declarou bens (> 0) e quantos não
+--     declararam nada, em cada grupo, por eleição, cargo, UF e recorte; mediana_todos = o candidato típico (> 0).
+-------------------------------------------------------------------------------
+COPY (
+    SELECT ano, cargo, uf, sem_cargo,
+           count(*) FILTER (WHERE eleito) AS eleitos, count(*) FILTER (WHERE eleito AND patrimonio <= 0) AS eleitos_sem_bens,
+           count(*) FILTER (WHERE NOT eleito) AS nao_eleitos, count(*) FILTER (WHERE NOT eleito AND patrimonio <= 0) AS nao_sem_bens,
+           round(median(patrimonio) FILTER (WHERE eleito AND patrimonio > 0), 2) AS mediana_eleitos,
+           round(median(patrimonio) FILTER (WHERE NOT eleito AND patrimonio > 0), 2) AS mediana_nao,
+           round(median(patrimonio) FILTER (WHERE patrimonio > 0), 2) AS mediana_todos
+    FROM pat_recorte
+    GROUP BY ALL ORDER BY ano, cargo, uf, sem_cargo
+) TO 'painel_q2/pat_medianas.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- P6. Histograma em escala de 10 em 10 (para o gráfico eleitos × não eleitos, sem mandar dezenas de milhares de
+--     pontos): faixa 0 = sem bens; 1 = menos de R$ 1 mil; 2 = R$ 1 mil a 10 mil; 3 = 10 mil a 100 mil; 4 = 100 mil a
+--     1 milhão; 5 = 1 a 10 milhões; 6 = 10 milhões ou mais (valores da época). Por eleição, cargo, UF, recorte e eleito.
+-------------------------------------------------------------------------------
+COPY (
+    SELECT ano, cargo, uf, sem_cargo, eleito,
+           CASE WHEN patrimonio <= 0 THEN 0 WHEN patrimonio < 1000 THEN 1 WHEN patrimonio < 10000 THEN 2 WHEN patrimonio < 100000 THEN 3
+                WHEN patrimonio < 1000000 THEN 4 WHEN patrimonio < 10000000 THEN 5 ELSE 6 END AS faixa,
+           count(*) AS candidatos
+    FROM pat_recorte
+    GROUP BY ALL ORDER BY ano, cargo, uf, sem_cargo, eleito, faixa
+) TO 'painel_q2/pat_faixas.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- P7. Concordância por pares (a frase de resumo): dentro de cada disputa, entre pares de candidatos que declararam bens
+--     e tiveram votos diferentes, em quantos o de maior patrimônio teve mais votos. pontos = 2 por par concordante + 1
+--     por par com o mesmo patrimônio (vale meio): concordância = pontos ÷ (2 × pares); 50% = sem relação. Sem bens fica
+--     fora (não é "menos rico"). Somas exatas em inteiros. Por eleição, cargo, UF e recorte.
+-------------------------------------------------------------------------------
+COPY (
+    WITH p AS (
+        SELECT ano, cargo, uf, disputa, patrimonio, votos, tinha_cargo, reeleicao FROM pat_q2 WHERE patrimonio > 0 AND comparavel
+    ), par AS (
+        SELECT a.ano, a.cargo, a.uf,
+               CASE WHEN a.patrimonio > b.patrimonio THEN 2 WHEN a.patrimonio = b.patrimonio THEN 1 ELSE 0 END AS pts,
+               CASE WHEN a.cargo IN ('Prefeito', 'Governador', 'Senador') THEN NOT a.reeleicao
+                    ELSE NOT (a.tinha_cargo OR b.tinha_cargo) END AS sem_cargo_ok
+        FROM p a JOIN p b ON a.ano = b.ano AND a.cargo = b.cargo AND a.disputa = b.disputa AND a.votos > b.votos   -- a: o mais votado do par
+    ), somas AS (
+        SELECT ano, cargo, uf, count(*)::BIGINT AS pares, sum(pts)::BIGINT AS pontos,
+               count(*) FILTER (WHERE sem_cargo_ok)::BIGINT AS pares_sc, coalesce(sum(pts) FILTER (WHERE sem_cargo_ok), 0)::BIGINT AS pontos_sc
+        FROM par GROUP BY ALL
+    )
+    SELECT ano, cargo, uf, false AS sem_cargo, pares, pontos FROM somas
+    UNION ALL
+    SELECT ano, cargo, uf, true, pares_sc, pontos_sc FROM somas
+    ORDER BY ano, cargo, uf, sem_cargo
+) TO 'painel_q2/pat_pares.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- P8. Os candidatos, as 10 primeiras linhas de cada lista por eleição, cargo, UF e recorte: ricos = os de maior
+--     patrimônio; perderam = os de maior patrimônio entre os não eleitos; menos = os eleitos com menos bens (menor
+--     décimo da própria disputa; sem bens primeiro, depois o menor patrimônio e os mais votados). posicao e na_disputa
+--     = a posição no patrimônio dentro da própria disputa e o número de candidatos dela ("1º mais rico de 842").
+--     Empate: a candidatura de menor id primeiro. Nome de urna, partido e cidade são públicos; o id_candidato leva ao perfil.
+-------------------------------------------------------------------------------
+COPY (
+    WITH l AS (
+        SELECT r.*, k.lista,
+               row_number() OVER (PARTITION BY r.ano, r.cargo, r.uf, r.sem_cargo, k.lista ORDER BY
+                   CASE WHEN k.lista = 'menos' THEN r.decil END, CASE WHEN k.lista = 'menos' THEN r.patrimonio END,
+                   CASE WHEN k.lista = 'menos' THEN -r.votos END, CASE WHEN k.lista <> 'menos' THEN -r.patrimonio END,
+                   r.id_candidatura) AS pos
+        FROM pat_recorte r, (VALUES ('ricos'), ('perderam'), ('menos')) k(lista)
+        WHERE (k.lista = 'ricos' AND r.patrimonio > 0) OR (k.lista = 'perderam' AND NOT r.eleito AND r.patrimonio > 0)
+           OR (k.lista = 'menos' AND r.eleito)
+    )
+    SELECT l.ano, l.cargo, l.uf, l.sem_cargo, l.lista, l.pos, l.id_candidato, l.id_candidatura, c.nome_urna,
+           coalesce(p.sigla, '?') AS partido, m.nome AS municipio, l.patrimonio, l.decil, l.posicao, l.na_disputa,
+           l.votos, l.eleito, l.tinha_cargo
+    FROM l
+    JOIN candidatura c    ON c.id_candidatura = l.id_candidatura
+    LEFT JOIN partido p   ON p.id_partido = c.id_partido
+    LEFT JOIN municipio m ON m.id_municipio = l.id_municipio
+    WHERE l.pos <= 10
+    ORDER BY l.ano, l.cargo, l.uf, l.sem_cargo, l.lista, l.pos
+) TO 'painel_q2/pat_lista.csv' (HEADER);
+
+-------------------------------------------------------------------------------
+-- P9. A cidade escolhida (uma tabela por eleição municipal, para a página pedir só a do ano): o patrimônio e
+--     tinha_cargo (1/0) de cada candidato a prefeito e vereador que declarou bens ou já tinha o cargo. A página junta com
+--     a lista de candidatos da cidade (GET /api/municipios/<id>/candidatos) pelo id_candidatura; quem não está aqui
+--     declarou zero e não tinha o cargo. Com ela, src/lib/patrimonio.ts refaz na cidade as mesmas contas (décimos,
+--     posições, medianas e pares) com a mesma regra.
+-------------------------------------------------------------------------------
+COPY (
+    SELECT id_candidatura, patrimonio, tinha_cargo::INTEGER AS tinha FROM pat_q2
+    WHERE ano = 2008 AND cargo IN ('Prefeito', 'Vereador') AND (patrimonio > 0 OR tinha_cargo) ORDER BY id_candidatura
+) TO 'painel_q2/pat_cidade_2008.csv' (HEADER);
+COPY (
+    SELECT id_candidatura, patrimonio, tinha_cargo::INTEGER AS tinha FROM pat_q2
+    WHERE ano = 2012 AND cargo IN ('Prefeito', 'Vereador') AND (patrimonio > 0 OR tinha_cargo) ORDER BY id_candidatura
+) TO 'painel_q2/pat_cidade_2012.csv' (HEADER);
+COPY (
+    SELECT id_candidatura, patrimonio, tinha_cargo::INTEGER AS tinha FROM pat_q2
+    WHERE ano = 2016 AND cargo IN ('Prefeito', 'Vereador') AND (patrimonio > 0 OR tinha_cargo) ORDER BY id_candidatura
+) TO 'painel_q2/pat_cidade_2016.csv' (HEADER);
+COPY (
+    SELECT id_candidatura, patrimonio, tinha_cargo::INTEGER AS tinha FROM pat_q2
+    WHERE ano = 2020 AND cargo IN ('Prefeito', 'Vereador') AND (patrimonio > 0 OR tinha_cargo) ORDER BY id_candidatura
+) TO 'painel_q2/pat_cidade_2020.csv' (HEADER);
+COPY (
+    SELECT id_candidatura, patrimonio, tinha_cargo::INTEGER AS tinha FROM pat_q2
+    WHERE ano = 2024 AND cargo IN ('Prefeito', 'Vereador') AND (patrimonio > 0 OR tinha_cargo) ORDER BY id_candidatura
+) TO 'painel_q2/pat_cidade_2024.csv' (HEADER);

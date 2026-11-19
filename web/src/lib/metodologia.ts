@@ -35,6 +35,16 @@ export const linkFonte = (caminho: string) => `${REPOSITORIO}/blob/main/${caminh
 
 const UFS = "AP, ES, MG, PE, RJ e RR";
 
+/**
+ * A frase dos pares da pergunta 2, em "Como calculamos": com a concordância do recorte (0 a 1), o número; sem ela, a
+ * frase sem número (a /sobre, que não tem recorte).
+ */
+export function fraseParesP2(parte?: number | null, mesma = "da mesma cidade"): string {
+  const n = parte == null ? "" : ` em cerca de ${Math.round(parte * 100)} de cada 100 pares,`;
+  return `Outra forma de medir, comparando os candidatos ${mesma} dois a dois, dá resultado parecido:${n || " em mais da metade dos pares,"} o que declarou mais bens teve mais votos. Entram só os pares que declararam bens e tiveram votos diferentes no 1º turno; patrimônio igual vale meio; 50 em 100 quer dizer nenhuma relação.`;
+}
+
+
 export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
   mapa: {
     id: "mapa",
@@ -122,27 +132,35 @@ export const METODOLOGIA: Record<IdMetodologia, Metodologia> = {
 
   p2: {
     id: "p2",
-    resposta: "Se, na mesma disputa, quem declarou mais patrimônio se elegeu mais do que quem declarou menos.",
-    ondeVer: [{ rotulo: "Ver a resposta", href: "/analises/gastos" }, { rotulo: "Gasto por vaga no mapa, cidade por cidade", href: "/?ver=dinheiro#mapa" }],
-    anos: "2006–2024 (dinheiro de campanha: 2018–2024)",
-    cargos: "Todos os cargos titulares",
-    turno: "Votos do 1º turno na correlação",
-    dados: ["bem_candidato (bens declarados)", "vw_despesa_candidatura e receita_campanha (para comparar)", "resultado_candidatura e rotulo_resultado", "candidatura, eleicao e cargo"],
-    recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou"],
+    resposta: "Se, na mesma disputa, quem declarou mais patrimônio se elegeu mais: a taxa de eleição do candidato sem bens até o mais rico, cidade por cidade, com e sem quem já tinha o cargo.",
+    ondeVer: [
+      { rotulo: "Ver a resposta no mapa", href: "/?ver=dinheiro&pintar=voto#mapa" },
+      { rotulo: "Gasto de campanha e vitória (análise anterior)", href: "/analises/gastos" },
+    ],
+    anos: "2006–2024",
+    cargos: "Vereador, prefeito, deputados federal e estadual, governador e senador",
+    turno: "Votos do 1º turno (pares e posição nos votos)",
+    dados: ["bem_candidato (bens declarados)", "resultado_candidatura e rotulo_resultado", "candidatura, eleicao e cargo"],
+    recorte: ["Titulares", "Eleições ordinárias", "Quem de fato disputou", "Sem presidente (não há disputa por estado)"],
     calculo: [
-      "Patrimônio = soma dos bens que o candidato declarou ao TSE no registro da candidatura (casas, terrenos, veículos, aplicações...), no valor informado por ele, sem correção pela inflação. Quem não declarou nenhum bem entra como “nada declarado”.",
-      "Cada candidato é comparado só com os concorrentes da mesma disputa: o município (prefeito e vereador), o estado (deputados, senador e governador) ou o país (presidente).",
-      "“Muito” é cerca de 1/4 de quem declarou algo, os que mais têm na disputa; “pouco”, cerca de 1/4, os que menos têm; “médio”, o meio. Valores iguais ficam sempre no mesmo grupo, por isso os grupos têm tamanho aproximado.",
-      "Em prefeito, governador, senador e presidente há poucos candidatos por disputa, então a pergunta vira “o que tinha mais patrimônio venceu?”, comparada com a chance de um sorteio.",
-      "A resposta “Sim” ou “Não” só aparece quando a diferença é grande demais para ser acaso (teste estatístico, 95% de confiança) e de pelo menos 20%; com poucos casos, a página diz que não dá para afirmar.",
-      "Correlação: cada candidato recebe sua posição no patrimônio e nos votos (1º turno) dentro da disputa, com a média das posições em caso de empate (como no Spearman), dividida pelo número de candidatos; as posições de todas as disputas do cargo são reunidas numa só correlação.",
-      "Para comparar, a mesma conta pode ser feita com o dinheiro da campanha, da prestação de contas final (2018 em diante): o gasto, a receita (inclusive material doado por outros candidatos) ou os recursos, o maior dos dois. Quem não entregou a prestação final fica de fora: não se sabe quanto teve.",
-      "Sucesso eleitoral = ter sido eleito, conforme o resultado do TSE. Só titulares, eleições ordinárias e quem de fato disputou.",
+      "Patrimônio = soma dos bens que o candidato declarou ao TSE no registro da candidatura (casas, terrenos, veículos, aplicações...), no valor informado por ele. Quem não declarou nenhum bem fica num grupo à parte, “sem bens”, e nunca conta como “menos rico”: declarar zero não quer dizer não ter nada.",
+      "Cada candidato é comparado só com os concorrentes da mesma disputa: o município (prefeito e vereador) ou o estado (deputados, governador e senador). Assim, cidades ricas e pobres e o número de vagas não pesam, e a inflação não muda nada: a ordem dentro de uma eleição é a mesma. Valores em reais aparecem só como rótulos, valores da época.",
+      "Décimos: quem declarou bens na disputa é dividido em 10 grupos de tamanho aproximado, do menos ao mais rico (valores iguais ficam no mesmo décimo). A “metade mais rica” são os décimos 6 a 10. A escada mostra quantos de cada grupo se elegeram; o valor embaixo é o típico (mediana) do grupo.",
+      "Vereador e deputados, no mapa: a parte dos eleitos que estava na metade mais rica dos candidatos da própria disputa, contando só os eleitos que declararam bens (quantos não declararam aparece à parte). Se patrimônio e vitória não andassem juntos, ficaria perto de 50%; de 50% a 60% o mapa mostra como “pouca ou nenhuma relação”. Cidades com menos de 15 candidatos ficam hachuradas: a metade mais rica é de poucas pessoas.",
+      "Prefeito, governador e senador: cada candidato recebe a posição no patrimônio dentro da disputa (1º = o mais rico; empates com a mesma posição; sem bens por último), e a pergunta vira “o candidato mais rico venceu?”. Com duas vagas de senador, vale o eleito mais rico. Ficam fora da conta as disputas com um candidato só, sem eleito na base ou em que ninguém declarou bens.",
+      "Quem já tinha o cargo: eleito para o mesmo cargo, no mesmo lugar, na eleição anterior (4 anos antes; senador, também 8). Essas pessoas costumam ter mais bens e ganhar mais. “Sem quem já tinha o cargo” tira essas pessoas (vereador e deputados) ou as disputas inteiras com alguém tentando a reeleição (prefeito, governador e senador); os décimos continuam os da disputa inteira.",
+      fraseParesP2(),
+      "Patrimônio típico de eleitos e não eleitos: a mediana de cada grupo, contando só quem declarou bens. O décimo mais rico (o mais rico de cada disputa, em prefeito, governador e senador): a parte dos eleitos que veio dele, comparada com a parte dos candidatos que ele é.",
+      "Prefeito numa cidade, ou vereador numa cidade com menos de 15 candidatos: a escada mostra cada candidato, do que declarou menos ao que declarou mais, com a parte dos votos válidos nominais do 1º turno (com tão poucas pessoas, porcentagens por décimo não dizem nada). Governador e senador: a escada junta as cinco eleições do estado (2006 a 2022).",
+      "Ao longo do tempo: a mesma medida em cada eleição do mesmo tipo, com todos e sem quem já tinha o cargo. Os valores são da época e são comparados só dentro de cada eleição, então a inflação não muda a ordem.",
+      "Os candidatos: os de maior patrimônio, os de maior patrimônio que não se elegeram e os eleitos com menos bens (menor décimo da própria disputa; sem bens primeiro), com a posição de cada um na própria disputa.",
+      "Sucesso eleitoral = ter sido eleito, conforme o resultado final do TSE; votos do 1º turno. Só titulares, eleições ordinárias e quem de fato disputou, de 2006 a 2024.",
+      "Os valores são os declarados, com possíveis erros de digitação (bilhões para vereador): nada é removido. Como as contas usam a ordem dentro da disputa, um valor absurdo muda só a posição daquela pessoa, mas ela aparece no topo das listas.",
     ],
     limites: [
-      "Mostra que patrimônio e vitória andam juntos, não que ser rico fez ganhar: quem tem mais patrimônio também costuma ter mais dinheiro de campanha e, muitas vezes, já um mandato.",
-      "O patrimônio é o declarado pelo candidato: bens podem estar em nome de outras pessoas ou com valor desatualizado.",
-      "Sem diferença estatística não quer dizer sem relação; com poucos casos, a página diz que não dá para afirmar.",
+      "Mostra que patrimônio e vitória andam juntos, não que o patrimônio fez ganhar: quem tem mais bens também costuma ter mais dinheiro de campanha, mais contatos e, muitas vezes, já um mandato.",
+      "O patrimônio é o declarado pelo candidato: bens podem estar em nome de outras pessoas, com valor desatualizado ou digitado errado.",
+      "Com poucos candidatos (cidades pequenas, uma disputa de governador), as porcentagens mudam muito com uma pessoa a mais ou a menos.",
     ],
     sql: ["api/app/analises/q2.sql"],
   },
