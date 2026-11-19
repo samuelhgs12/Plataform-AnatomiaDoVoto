@@ -4,7 +4,7 @@ import {
   escadaDeCandidatos, escadaDeVotos, escalaLista, eixoSerie, fraseSerie, afastarRotulos, escadaPosicoes, frasePosicao, fraseTopo, juntarPatrimonio, legendaMetade,
   legendaPrefeito, listaDe, listaDeCandidatos, listaDoRecorte, marcasLog, medianaPonderada, medianasDeCandidatos, medianasDoRecorte, metadeDaCidade,
   metadeMaisRica, naEscalaLog, posicaoDoEleito, quemTinha, recorteDaDisputa, serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade,
-  taxaDoTopo, textoPosicao, topoDaComposicao, tituloP2, valorTipico, vitoriaDoMaisRico, numeroDoTopo, rotuloRespostaP2, type GrupoComposicao,
+  taxaDoTopo, textoPosicao, topoDaComposicao, tituloP2, valorTipico, vitoriaDoMaisRico, cardDoTopo, cardOutraVariante, vezesPatrimonio, rotuloRespostaP2, type GrupoComposicao,
   type CandidatoP2, type LinhaDecil, type LinhaDisputa, type LinhaLista, type LinhaMedianas, type LinhaPares, type LinhaPosicao, type LinhaVereadorCidade,
 } from "../src/lib/patrimonio";
 
@@ -291,15 +291,38 @@ describe("textos", () => {
   });
 });
 
-describe("numeroDoTopo", () => {
-  const g = (o: Partial<GrupoComposicao>): GrupoComposicao => ({ chave: "topo", rotulo: "10% mais ricos", candidatos: 10, eleitos: 6, parteCandidatos: 0.1, parteEleitos: 0.62, cor: "q4", ...o });
-  it("o número e a frase do grupo de cima, com a palavra de cada tipo de cargo", () => {
-    expect(numeroDoTopo(g({}), { majoritario: false })).toEqual({ valor: "62%", frase: "dos eleitos vieram do décimo mais rico, que é só 10% dos candidatos" });
-    expect(numeroDoTopo(g({ chave: "1", parteCandidatos: 0.3, parteEleitos: 0.55 }), { majoritario: true })).toEqual({ valor: "55%", frase: "dos eleitos eram o mais rico da própria disputa, que é só 30% dos candidatos" });
+describe("cardDoTopo", () => {
+  const g = (o: Partial<GrupoComposicao>): GrupoComposicao => ({ chave: "topo", rotulo: "10% mais ricos", candidatos: 10, eleitos: 6, parteCandidatos: 0.07, parteEleitos: 0.31, cor: "q4", ...o });
+  it("as partes dos eleitos e dos candidatos, com o título de cada tipo de cargo", () => {
+    expect(cardDoTopo(g({}), { majoritario: false })).toEqual({ titulo: "Décimo mais rico", eleitos: 0.31, candidatos: 0.07 });
+    expect(cardDoTopo(g({ chave: "1" }), { majoritario: true })?.titulo).toBe("O mais rico de cada disputa");
   });
   it("sem o grupo ou sem eleitos, nada", () => {
-    expect(numeroDoTopo(null, { majoritario: false })).toBeNull();
-    expect(numeroDoTopo(g({ eleitos: 0, parteEleitos: 0 }), { majoritario: false })).toBeNull();
+    expect(cardDoTopo(null, { majoritario: false })).toBeNull();
+    expect(cardDoTopo(g({ eleitos: 0, parteEleitos: 0 }), { majoritario: false })).toBeNull();
+  });
+});
+
+describe("vezesPatrimonio", () => {
+  it("arredonda eleito ÷ não eleito; null se o não eleito for ≤ 0 ou faltar", () => {
+    expect(vezesPatrimonio(978_000, 303_000)).toBe(3);
+    expect(vezesPatrimonio(100, 0)).toBeNull();
+    expect(vezesPatrimonio(100, -5)).toBeNull();
+    expect(vezesPatrimonio(null, 10)).toBeNull();
+  });
+});
+
+describe("cardOutraVariante", () => {
+  it("com todos ativo: mostra a variante sem quem já tinha o cargo, comparada com a de todos", () => {
+    expect(cardOutraVariante("Deputado estadual", false, "metade", 0.79, 0.68)).toEqual({
+      titulo: "Sem quem já era deputado estadual", valor: "68%", unidade: "na metade mais rica", compara: "com todos: 79%",
+    });
+  });
+  it("sem cargo ativo: mostra com todos; prefeito fala das cidades; sem a outra, null", () => {
+    expect(cardOutraVariante("Deputado estadual", true, "metade", 0.68, 0.79)).toMatchObject({ titulo: "Com todos", valor: "79%", compara: "sem quem já era deputado estadual: 68%" });
+    expect(cardOutraVariante("Prefeito", false, "vitoria", 0.53, 0.51)?.unidade).toBe("das cidades elegeram o mais rico");
+    expect(cardOutraVariante("Vereador", false, "metade", 0.6, null)).toBeNull();
+    expect(cardOutraVariante("Vereador", false, "metade", null, 0.6)?.compara).toBeNull();
   });
 });
 

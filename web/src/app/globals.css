@@ -2672,11 +2672,18 @@ a.q-ver:active { transform: scale(0.98); }
 .p2-grande span { max-width: 34em; font-size: 15px; line-height: 1.4; color: var(--noite-muted); }
 .p2-frase { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--sobre-noite); }
 .p2-resposta .p2-chips { margin-top: 4px; }
-.p2-lado { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
-.p2-lado > .bloco { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+/* a coluna ao lado da resposta: três cards curtos que dividem a altura (grid de linhas iguais); abaixo de 1000px, empilham */
+.painel.din > .p2-lado { display: grid; grid-auto-rows: 1fr; gap: var(--gap); min-width: 0; }
+.p2-lado > .bloco { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
 .p2-numeros h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--noite-muted); }
-.p2-numeros .p2-grande b { font-size: 44px; }
-.p2-numeros .din-rodape { margin-top: auto; }
+.p2-vezes { margin: 0; font-size: 14px; font-weight: 700; color: var(--brilho); }
+.p2-barras-topo p i { display: block; height: 4px; margin-top: 4px; border-radius: 2px; background: var(--q1); }
+.p2-barras-topo p.on i { background: var(--brilho); }
+.p2-outra { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.p2-outra b { font-size: 30px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--sobre-noite); }
+.p2-outra span { font-size: 14px; color: var(--noite-muted); }
+.p2-compara { margin: 0; font-size: 13px; color: var(--noite-muted); }
+@media (max-width: 1000px) { .painel.din > .p2-lado { grid-auto-rows: auto; } }
 .p2-par { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .p2-par p { margin: 0; display: grid; gap: 4px; }
 .p2-par b { font-size: 26px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: var(--sobre-noite); }
@@ -2708,7 +2715,8 @@ a.q-ver:active { transform: scale(0.98); }
 .din-tipicos span { font-size: 12.5px; color: var(--noite-muted); }
 .p8-grades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .p8-grades figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.p8-grades .grade-cem i { background: var(--noite3); }
+/* só os quadradinhos apagados: sem o :not, esta regra empata com .grade-cem i.on, vem depois e apagava os pintados */
+.p8-grades .grade-cem i:not(.on) { background: var(--noite3); }
 .p8-grades figcaption { font-size: 13.5px; font-weight: 600; color: var(--sobre-noite); }
 .p8-anos h3 { margin-bottom: 14px; }
 .din-anos-p8 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

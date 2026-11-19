@@ -320,14 +320,36 @@ export function composicaoEleitos(d: Degrau[], { majoritario }: { majoritario: b
 export const topoDaComposicao = (g: GrupoComposicao[]) => g.find((x) => x.chave === "topo" || x.chave === "1") ?? null;
 
 /**
- * O grupo de cima em um número e uma frase, para o painel: "62%" + "dos eleitos vieram do décimo mais rico, que é só
- * 10% dos candidatos" (nos majoritários, "eram o mais rico da própria disputa"). null sem o grupo ou sem eleitos.
+ * O card do grupo de cima, para a coluna ao lado da resposta: o título ("Décimo mais rico" ou, nos majoritários, "O
+ * mais rico de cada disputa") e a parte dos eleitos e a dos candidatos que ele é (0 a 1, para os números e as barras).
+ * null sem o grupo ou sem eleitos.
  */
-export function numeroDoTopo(topo: GrupoComposicao | null, { majoritario }: { majoritario: boolean }): { valor: string; frase: string } | null {
+export function cardDoTopo(topo: GrupoComposicao | null, { majoritario }: { majoritario: boolean }): { titulo: string; eleitos: number; candidatos: number } | null {
   if (!topo || topo.eleitos <= 0) return null;
+  return { titulo: majoritario ? "O mais rico de cada disputa" : "Décimo mais rico", eleitos: topo.parteEleitos, candidatos: topo.parteCandidatos };
+}
+
+/** Quantas vezes o patrimônio típico do eleito é o do não eleito (arredondado); null se o não eleito típico for ≤ 0. */
+export function vezesPatrimonio(eleito: number | null, naoEleito: number | null): number | null {
+  if (eleito === null || naoEleito === null || naoEleito <= 0) return null;
+  return Math.round(eleito / naoEleito);
+}
+
+/**
+ * O card da outra variante: a mesma medida da resposta com a escolha oposta do chip ("Sem quem já tinha o cargo" quando
+ * o chip está em "Com todos", e vice-versa), comparada com a escolha atual: "68%" + "na metade mais rica" + "com todos:
+ * 79%". `tipo`: a metade mais rica (vereador e deputados) ou as cidades que elegeram o mais rico (prefeito no estado).
+ * null sem o valor da outra variante.
+ */
+export function cardOutraVariante(cargo: string, semCargo: boolean, tipo: "metade" | "vitoria", atual: number | null, outra: number | null): { titulo: string; valor: string; unidade: string; compara: string | null } | null {
+  if (outra === null) return null;
   const pct = (p: number) => `${Math.round(p * 100)}%`;
-  const de = majoritario ? "eram o mais rico da própria disputa, que é" : "vieram do décimo mais rico, que é";
-  return { valor: pct(topo.parteEleitos), frase: `dos eleitos ${de} só ${pct(topo.parteCandidatos)} dos candidatos` };
+  return {
+    titulo: semCargo ? "Com todos" : rotuloSemCargo(cargo),
+    valor: pct(outra),
+    unidade: tipo === "metade" ? "na metade mais rica" : "das cidades elegeram o mais rico",
+    compara: atual === null ? null : `${semCargo ? `sem ${quemTinha(cargo)}` : "com todos"}: ${pct(atual)}`,
+  };
 }
 
 /** O rótulo curto do número da resposta: a posição do eleito (disputa única), o mais rico venceu (prefeito no estado) ou a metade mais rica. */

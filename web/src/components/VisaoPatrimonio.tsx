@@ -12,10 +12,10 @@ import { TELA } from "@/lib/lupa";
 import { fraseParesP2, METODOLOGIA } from "@/lib/metodologia";
 import {
   ANOS_PATRIMONIO, anosDoTipo, classificar, composicaoEleitos, concordancia, concordanciaDeCandidatos, COR_CATEGORIA, corDaMetade, corDaParteCidades,
-  disputaDeCandidatos, disputaEmOrdem, ehMajoritarioP2, escada, escadaDeCandidatos, escadaDeVotos, eixoSerie, fraseSerie, escadaPosicoes, frasePosicao, fraseTopo,
+  disputaDeCandidatos, disputaEmOrdem, ehMajoritarioP2, escada, escadaDeCandidatos, escadaDeVotos, eixoSerie, fraseSerie, escadaPosicoes, frasePosicao,
   juntarPatrimonio, legendaMetade, legendaParteCidades, legendaPrefeito, LISTAS, listaDeCandidatos, listaDoRecorte, medianasDeCandidatos,
-  medianasDoRecorte, metadeDaCidade, metadeMaisRica, MINIMO_CANDIDATOS, numeroDoTopo, posicaoDoEleito, rotuloRespostaP2, quemTinha, recorteDaDisputa, rotuloSemCargo,
-  serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade, taxaDoTopo, tituloP2, topoDaComposicao, valorTipico, vitoriaDoMaisRico,
+  medianasDoRecorte, metadeDaCidade, metadeMaisRica, MINIMO_CANDIDATOS, cardDoTopo, cardOutraVariante, vezesPatrimonio, posicaoDoEleito, rotuloRespostaP2, quemTinha, recorteDaDisputa, rotuloSemCargo,
+  serieDisputa, serieMaisRico, serieMetade, serieMetadeCidade, tituloP2, topoDaComposicao, valorTipico, vitoriaDoMaisRico,
   type Degrau, type FiltroP2, type LinhaDecil, type LinhaDisputa, type LinhaLista, type LinhaMedianas, type LinhaPares, type LinhaPessoa,
   type LinhaPosicao, type LinhaVereadorCidade, type PosicaoEleito,
 } from "@/lib/patrimonio";
@@ -149,19 +149,20 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const poucos = !!(mun && !majoritario && cls && cls.length < MINIMO_CANDIDATOS);
   const porCandidato = cidadeUnica || poucos;
   const degraus = !uf ? [] : porCandidato ? (recAqui.length ? escadaDeVotos(recAqui) : []) : degrausDe(semCargo);
-  const [topoCom, topoSem] = uf ? [taxaDoTopo(degrausDe(false), { majoritario }), taxaDoTopo(degrausDe(true), { majoritario })] : [null, null];
   const metade = !majoritario && uf ? metadeMaisRica(degrausDe(semCargo)) : null;
+  const metadeOutra = !majoritario && uf ? metadeMaisRica(degrausDe(!semCargo)) : null;
   // a disputa única (prefeito na cidade, governador ou senador no estado): onde estava o eleito
   const disputaUnica = mun && majoritario && cls ? disputaDeCandidatos(cls, { ano, cargo, uf: uf!, id_municipio: mun.id_municipio })
     : umaPorEstado && uf ? disputas.find((d) => d.ano === ano && d.cargo === cargo && d.uf === uf) ?? null : null;
   const posUnica = disputaUnica ? posicaoDoEleito(disputaUnica, { semCargo }) : null;
   const vitoria = cargo === "Prefeito" && uf && !mun ? vitoriaDoMaisRico(disputas, { anos: [ano], cargo, uf }, { semCargo }) : null;
+  const vitoriaOutra = cargo === "Prefeito" && uf && !mun ? vitoriaDoMaisRico(disputas, { anos: [ano], cargo, uf }, { semCargo: !semCargo }) : null;
   const medTab = dadosPainel?.pat_medianas ? comoObjetos<LinhaMedianas>(dadosPainel.pat_medianas) : [];
   const medianas = mun ? (cls ? medianasDeCandidatos(recAqui) : null) : uf ? medianasDoRecorte(medTab, { ano, cargo, uf }, { semCargo }) : null;
   // a composição é sempre por décimos (ou posições), mesmo quando a escada mostra cada candidato (cidade pequena)
   const grupos = cidadeUnica || !uf ? [] : composicaoEleitos(poucos ? degrausDe(semCargo) : degraus, { majoritario });
-  // o décimo mais rico (ou o mais rico de cada disputa) em um número; sem dado, o bloco não aparece
-  const topoNumero = numeroDoTopo(topoDaComposicao(grupos), { majoritario });
+  // o décimo mais rico (ou o mais rico de cada disputa): a parte dos eleitos e a dos candidatos; sem dado, o card não aparece
+  const topoCard = cardDoTopo(topoDaComposicao(grupos), { majoritario });
   const pares = mun ? (cls ? concordanciaDeCandidatos(recAqui) : null) : uf && dadosPainel?.pat_pares ? concordancia(comoObjetos<LinhaPares>(dadosPainel.pat_pares), { anos: [ano], cargo, uf }, { semCargo }) : null;
   const listas = dadosLista?.pat_lista ? comoObjetos<LinhaLista>(dadosLista.pat_lista) : null;
   const itens = mun ? (cls ? listaDeCandidatos(recAqui.length ? recAqui : [], lista) : []) : uf && listas ? listaDoRecorte(listas, { ano, cargo, uf }, lista, { semCargo }) : [];
@@ -196,11 +197,18 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
       ))}
     </nav>
   );
-  const fraseFaixa = poucos && metade ? `Poucos candidatos (${cls!.length}): ${metade.rica} de ${metade.comBens} eleitos com bens estavam na metade mais rica; com tão poucas pessoas, as porcentagens mudam muito com uma a mais ou a menos.` : cidadeUnica ? (posUnica ? `${frasePosicao(posUnica)}${posUnica.eleitoTinha && posUnica.categoria !== "fora" ? ", e já era prefeito" : ""}.` : null) : fraseTopo(cargo, topoCom, topoSem, semCargo);
+  // a frase curta da resposta, só quando o número precisa de um aviso: poucos candidatos ou o eleito que já tinha o cargo
+  // (a comparação com a outra variante do chip fica no card ao lado)
+  const fraseCurta = poucos && metade ? `Poucos candidatos (${cls!.length}): as porcentagens mudam muito com uma pessoa a mais ou a menos.`
+    : cidadeUnica && posUnica?.eleitoTinha && posUnica.categoria !== "fora" ? "Ele já era prefeito." : null;
   const semPainel = mun && (!candidatos || !pessoas);
   // o painel: a resposta à esquerda e, ao lado, os números curtos, quando houver algum
   const rotuloResposta = rotuloRespostaP2({ unica: !!posUnica, prefeitoEstado: !!vitoria });
-  const temLado = !!medianas || !!topoNumero;
+  // os três cards ao lado: o patrimônio típico, o décimo mais rico e a outra variante do chip (a mesma medida da resposta)
+  const vezes = medianas ? vezesPatrimonio(medianas.medianaEleitos, medianas.medianaNao) : null;
+  const outraCard = vitoria ? cardOutraVariante(cargo, semCargo, "vitoria", vitoria.parte, vitoriaOutra?.parte ?? null)
+    : metade ? cardOutraVariante(cargo, semCargo, "metade", metade.parte, metadeOutra?.parte ?? null) : null;
+  const temLado = !!medianas || !!topoCard || !!outraCard;
   // trocar de lista recarrega a página: a lista volta aberta
   const abrirLista = um(sp.lista) !== undefined;
 
@@ -262,15 +270,15 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
         <section id="p2-escada" className={`bloco noite s12 p2-escada p2-resposta${temLado ? " din-oito" : ""}`}>
           <p className="din-kicker">{rotuloResposta}</p>
           <p className="p2-grande"><b>{resposta?.valor ?? "—"}</b> <span>{resposta?.unidade ?? "sem dado neste recorte"}</span></p>
-          <p className="p2-frase">{fraseFaixa ?? "Sem dados para a comparação."}</p>
+          {fraseCurta && <p className="p2-frase">{fraseCurta}</p>}
           {degraus.length ? (
             <EscadaPatrimonio votos={porCandidato} degraus={degraus} titulo={porCandidato ? `Parte dos votos de cada candidato a ${cargoMin} em ${lugar}, ${ano}, do menos ao mais rico` : `Taxa de eleição por grupo de patrimônio declarado, ${cargoMin}, ${lugar}, ${umaPorEstado ? "2006 a 2022" : ano}`} />
           ) : <p className="muted">{mun && posUnica?.categoria === "fora" ? `${frasePosicao(posUnica)}.` : "Sem candidatos comparáveis neste recorte."}</p>}
           {chips("p2-escada")}
         </section>
 
-        {/* 2. ao lado (4 colunas): o patrimônio típico e o décimo mais rico, cada um em poucas palavras */}
-        {temLado && <div className="s12 din-quatro p2-lado">
+        {/* 2. ao lado (4 colunas): três cards curtos que dividem a altura, sem rodapé */}
+        {temLado && <aside className="s12 din-quatro numeros-lado p2-lado" aria-label={`${lugar} em números, ${cargoMin}, ${ano}`}>
           {medianas && (
             <section id="p2-tipico" className="bloco noite p2-numeros" aria-label={`Patrimônio típico de eleitos e não eleitos, ${cargoMin}, ${lugar}, ${ano}`}>
               <h3>Patrimônio típico</h3>
@@ -278,17 +286,26 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
                 <p><b>{valorTipico(medianas.medianaEleitos)}</b><span>eleito</span></p>
                 <p><b>{valorTipico(medianas.medianaNao)}</b><span>não eleito</span></p>
               </div>
-              <p className="din-rodape">Mediana de quem declarou bens</p>
+              {vezes !== null && <p className="p2-vezes">{vezes}× mais</p>}
             </section>
           )}
-          {topoNumero && (
-            <section id="p2-topo" className="bloco noite p2-numeros">
-              <p className="p2-grande"><b>{topoNumero.valor}</b></p>
-              <p className="p2-frase">{topoNumero.frase}</p>
-              {umaPorEstado && <p className="din-rodape">{anosDoTipo(cargo).length} eleições para {cargoMin} juntas (2006 a 2022)</p>}
+          {topoCard && (
+            <section id="p2-topo" className="bloco noite p2-numeros" aria-label={`${topoCard.titulo}: ${pc(topoCard.eleitos)} dos eleitos e ${pc(topoCard.candidatos)} dos candidatos`}>
+              <h3>{topoCard.titulo}</h3>
+              <div className="p2-par p2-barras-topo" aria-hidden="true">
+                <p className="on"><b>{pc(topoCard.eleitos)}</b><span>dos eleitos</span><i style={{ width: `${Math.round(topoCard.eleitos * 100)}%` }} /></p>
+                <p><b>{pc(topoCard.candidatos)}</b><span>dos candidatos</span><i style={{ width: `${Math.round(topoCard.candidatos * 100)}%` }} /></p>
+              </div>
             </section>
           )}
-        </div>}
+          {outraCard && (
+            <section id="p2-outra" className="bloco noite p2-numeros">
+              <h3>{outraCard.titulo}</h3>
+              <p className="p2-outra"><b>{outraCard.valor}</b> <span>{outraCard.unidade}</span></p>
+              {outraCard.compara && <p className="p2-compara">{outraCard.compara}</p>}
+            </section>
+          )}
+        </aside>}
 
         {/* 3. recolhidos: os candidatos e a série */}
         <details id="p2-candidatos" className="bloco noite s12 p2-candidatos p2-recolhido" open={abrirLista || undefined}>
