@@ -2,6 +2,8 @@
 // Os dados vêm de GET /api/analises/q8 (api/app/analises/q8.sql).
 import { compararGrupos } from "./estatistica";
 import type { CarreiraItem, Receitas } from "./types";
+import { fatias, type Fatia } from "./dinheiro";
+import { inteiro, reais } from "./format";
 
 export type Fonte = "fundo_eleitoral" | "fundo_partidario" | "doacoes_pessoas" | "recursos_proprios" | "outros_privados";
 
@@ -31,6 +33,8 @@ export interface LinhaFaixa { ano: number; cargo: string; uf: string; eleito: bo
 export interface LinhaMediana {
   ano: number; cargo: string; uf: string | null; eleito: boolean; candidaturas: number;
   mediana_total: number; mediana_publico: number; mediana_pct_publico: number | null;
+  /** Opcional: só vem depois que a API lê o q8.sql novo; sem ela, o privado típico fica "—" (nunca total − público). */
+  mediana_privado?: number | null;
 }
 /** Taxa de eleição por faixa de dinheiro público (pergunta 8). faixa -1 = sem prestação final; 0 = nada; 1–4 = quartos de quem recebeu (no mesmo ano, cargo e UF). */
 export interface LinhaSucesso { ano: number; cargo: string; uf: string; faixa: number; candidaturas: number; eleitos: number; publico_min: number; publico_max: number }
@@ -290,4 +294,107 @@ export function resumoCampanhas(campanhas: { c: CarreiraItem; r: Receitas | null
     total: r ? r.total : null, publica: r?.publica ?? 0, privada: r?.privada ?? 0,
     publicoDe100: r && r.total > 0 ? deCada100([r.publica, r.privada])[0] : 0,
   }));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Pergunta 8 na camada Dinheiro do mapa: eleitos × não eleitos, sempre nos dois lados (público e privado).
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** As somas das 5 fontes de eleitos e de não eleitos no recorte (sem uf, os seis estados). */
+export function fontesPorResultado(linhas: LinhaFontes[], f: Filtros): { eleitos: Soma; naoEleitos: Soma } {
+  return { eleitos: somar(linhas.filter((l) => l.eleito), f), naoEleitos: somar(linhas.filter((l) => !l.eleito), f) };
+}
+
+const classeDe = (c: Fonte) => FONTES.find((x) => x.chave === c)!.classe;
+/** Os 4 grupos da barra, na ordem fixa: fundos públicos (os dois fundos juntos), doações, recursos próprios e outros. */
+export const GRUPOS_P8: { chave: string; rotulo: string; fontes: Fonte[]; cor: string }[] = [
+  { chave: "publico", rotulo: "Fundos públicos", fontes: ["fundo_eleitoral", "fundo_partidario"], cor: classeDe("fundo_eleitoral") },
+  { chave: "doacoes", rotulo: "Doações", fontes: ["doacoes_pessoas"], cor: classeDe("doacoes_pessoas") },
+  { chave: "proprios", rotulo: "Recursos próprios", fontes: ["recursos_proprios"], cor: classeDe("recursos_proprios") },
+  { chave: "outros", rotulo: "Outros", fontes: ["outros_privados"], cor: classeDe("outros_privados") },
+];
+
+/** As fatias da barra de um grupo (eleitos ou não eleitos), nos 4 grupos de GRUPOS_P8, na ordem fixa. */
+export function gruposP8(s: Soma): Fatia[] {
+  return fatias(GRUPOS_P8.map((g) => ({ chave: g.chave, rotulo: g.rotulo, cor: g.cor, valor: g.fontes.reduce((a, c) => a + s.valores[c], 0) })), { fixo: true });
+}
+
+/** A parte pública do que um grupo recebeu (0 a 1); null sem dinheiro. */
+export const partePublica = (s: Soma): number | null => (s.total > 0 ? s.publico / s.total : null);
+
+/** O candidato típico (medianas): total, público e privado. */
+export interface TipicoP8 { total: number; publico: number; privado: number | null }
+
+/**
+ * O eleito típico e o não eleito típico do recorte (tabela medianas; sem uf, a linha de uf nula, como em
+ * medianasPorCargo). O privado vem só da coluna mediana_privado: medianas não se subtraem (sem a coluna, null).
+ */
+export function tipicosP8(linhas: LinhaMediana[], f: Filtros): { eleito: TipicoP8 | null; naoEleito: TipicoP8 | null } {
+  const de = (eleito: boolean): TipicoP8 | null => {
+    const l = linhas.find((x) => x.ano === f.ano && x.cargo === f.cargo && (x.uf ?? undefined) === f.uf && x.eleito === eleito);
+    return l ? { total: l.mediana_total, publico: l.mediana_publico, privado: l.mediana_privado ?? null } : null;
+  };
+  return { eleito: de(true), naoEleito: de(false) };
+}
+
+/** Quantas vezes mais o eleito típico recebeu (arredondado); null quando o não eleito típico não recebeu nada. */
+export const vezesMais = (eleito: number, naoEleito: number): number | null => (naoEleito <= 0 ? null : Math.round(eleito / naoEleito));
+
+/**
+ * A parte de cada grupo em que a maioria do dinheiro foi pública (só público ou mais público que privado), sobre o
+ * total do grupo, inclusive quem não recebeu nada. null quando o grupo não tem ninguém.
+ */
+export function maioriaPublica(linhas: LinhaFaixa[], f: Filtros): { eleitos: number | null; naoEleitos: number | null } {
+  const de = (eleito: boolean) => {
+    const { porFaixa, total } = contarFaixas(linhas, f, eleito);
+    return total > 0 ? (porFaixa.so_publico + porFaixa.mais_publico) / total : null;
+  };
+  return { eleitos: de(true), naoEleitos: de(false) };
+}
+
+/** A parte pública de eleitos e de não eleitos em dois anos (a eleição anterior do mesmo tipo e a atual). */
+export function partePublicaNosAnos(linhas: LinhaFontes[], f: { cargo?: string; uf?: string }, [antes, depois]: [number, number]) {
+  const [a, d] = [fontesPorResultado(linhas, { ...f, ano: antes }), fontesPorResultado(linhas, { ...f, ano: depois })];
+  return {
+    eleitos: { antes: partePublica(a.eleitos), depois: partePublica(d.eleitos) },
+    naoEleitos: { antes: partePublica(a.naoEleitos), depois: partePublica(d.naoEleitos) },
+  };
+}
+
+/**
+ * A resposta em um número e uma frase: "4× mais dinheiro" + de onde veio uma parte maior (diferença de 3 p.p. ou mais;
+ * abaixo disso, "a mistura é parecida"). Quando o não eleito típico não recebeu nada, o número é o total do eleito típico.
+ */
+export function fraseP8(t: { eleito: TipicoP8 | null; naoEleito: TipicoP8 | null }, partes: { eleitos: number | null; naoEleitos: number | null }): { numero: string; frase: string } | null {
+  if (!t.eleito || !t.naoEleito) return null;
+  const vezes = vezesMais(t.eleito.total, t.naoEleito.total);
+  if (vezes === null) return { numero: reais(t.eleito.total), frase: "o não eleito típico não recebeu nada." };
+  const [pe, pn] = [partes.eleitos, partes.naoEleitos];
+  const mistura = pe === null || pn === null || Math.abs(pe - pn) < 0.03 ? "e a mistura de público e privado é parecida."
+    : pe > pn ? "e uma parte maior dele veio dos fundos públicos." : "e uma parte maior dele veio dos recursos privados.";
+  return { numero: `${vezes}× mais dinheiro`, frase: mistura };
+}
+
+/** O topo da régua das colunas: o múltiplo de 0,1 logo acima da maior taxa (no mínimo 0,1). */
+export const topoDaRegua = (taxas: number[]): number => Math.max(0.1, Math.ceil(Math.max(0, ...taxas) * 10 - 1e-9) / 10);
+
+/** A variação em pontos percentuais, escrita: "▲ 18 p.p." (sobe), "▼ 3 p.p." (desce) ou "= 0 p.p."; null sem um dos lados. */
+export function setaPP(antes: number | null, depois: number | null): { texto: string; classe: "sobe" | "desce" | "" } | null {
+  if (antes === null || depois === null) return null;
+  const pp = Math.round((depois - antes) * 100);
+  return pp === 0 ? { texto: "= 0 p.p.", classe: "" } : { texto: `${pp > 0 ? "▲" : "▼"} ${Math.abs(pp)} p.p.`, classe: pp > 0 ? "sobe" : "desce" };
+}
+
+/**
+ * As colunas de "quem recebeu mais dinheiro público se elegeu mais?" (sucessoPorFaixa): as faixas 0 a 4, sem quem não
+ * prestou contas, com a taxa de eleição e "X eleitos de Y". A faixa 4 (os que mais receberam) fica na cor de destaque;
+ * a 0 (nada), em fx5; as outras, em fx2. `max`: o topo da régua (topoDaRegua).
+ */
+export function colunasSucessoP8(linhas: LinhaSucesso[], f: Filtros) {
+  const fx = sucessoPorFaixa(linhas, f);
+  const colunas = fx.map((g) => ({
+    chave: String(g.faixa), rotulo: g.rotulo, linhas: [`${inteiro(g.eleitos)} ${g.eleitos === 1 ? "eleito" : "eleitos"} de ${inteiro(g.candidaturas)}`],
+    parte: g.candidaturas ? g.taxa : null, vazia: "ninguém neste grupo", classe: g.faixa === 4 ? undefined : g.faixa === 0 ? "fx5" : "fx2",
+  }));
+  return { colunas, max: topoDaRegua(fx.filter((g) => g.candidaturas).map((g) => g.taxa)) };
 }
