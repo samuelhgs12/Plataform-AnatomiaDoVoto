@@ -151,13 +151,11 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const degraus = !uf ? [] : porCandidato ? (recAqui.length ? escadaDeVotos(recAqui) : []) : degrausDe(semCargo);
   const [topoCom, topoSem] = uf ? [taxaDoTopo(degrausDe(false), { majoritario }), taxaDoTopo(degrausDe(true), { majoritario })] : [null, null];
   const metade = !majoritario && uf ? metadeMaisRica(degrausDe(semCargo)) : null;
-  const metadeOutra = !majoritario && uf ? metadeMaisRica(degrausDe(!semCargo)) : null;
   // a disputa única (prefeito na cidade, governador ou senador no estado): onde estava o eleito
   const disputaUnica = mun && majoritario && cls ? disputaDeCandidatos(cls, { ano, cargo, uf: uf!, id_municipio: mun.id_municipio })
     : umaPorEstado && uf ? disputas.find((d) => d.ano === ano && d.cargo === cargo && d.uf === uf) ?? null : null;
   const posUnica = disputaUnica ? posicaoDoEleito(disputaUnica, { semCargo }) : null;
   const vitoria = cargo === "Prefeito" && uf && !mun ? vitoriaDoMaisRico(disputas, { anos: [ano], cargo, uf }, { semCargo }) : null;
-  const vitoriaOutra = cargo === "Prefeito" && uf && !mun ? vitoriaDoMaisRico(disputas, { anos: [ano], cargo, uf }, { semCargo: !semCargo }) : null;
   const medTab = dadosPainel?.pat_medianas ? comoObjetos<LinhaMedianas>(dadosPainel.pat_medianas) : [];
   const medianas = mun ? (cls ? medianasDeCandidatos(recAqui) : null) : uf ? medianasDoRecorte(medTab, { ano, cargo, uf }, { semCargo }) : null;
   // a composição é sempre por décimos (ou posições), mesmo quando a escada mostra cada candidato (cidade pequena)
@@ -168,7 +166,6 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const listas = dadosLista?.pat_lista ? comoObjetos<LinhaLista>(dadosLista.pat_lista) : null;
   const itens = mun ? (cls ? listaDeCandidatos(recAqui.length ? recAqui : [], lista) : []) : uf && listas ? listaDoRecorte(listas, { ano, cargo, uf }, lista, { semCargo }) : [];
   const disputaInteira = mun && majoritario && cls ? disputaEmOrdem(cls) : null;
-  const eleitoUnico = mun && majoritario && cls ? cls.filter((c) => c.eleito).sort((a, b) => a.posicao - b.posicao)[0] : undefined;
   // a série: a cidade (vereador: a metade; prefeito: a posição do eleito) ou o estado
   const serieDe = (sc: boolean) => (!uf ? null : cargo === "Vereador" ? (mun ? serieMetadeCidade(porCidade, mun.id_municipio, { semCargo: sc }) : serieMetade(decis, cargo, uf, { semCargo: sc }))
     : !majoritario ? serieMetade(decis, cargo, uf, { semCargo: sc }) : cargo === "Prefeito" && !mun ? serieMaisRico(disputas, cargo, uf, { semCargo: sc }) : null);
@@ -181,23 +178,13 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   const tituloSerie = serieCom ? fraseSerie(serieCom, serieSem, cargo) : null;
   const serieUnica = uf && majoritario && (mun || umaPorEstado) ? serieDisputa(disputas, cargo, uf, mun ? mun.id_municipio : null, { semCargo }) : null;
   const anosSerie = anosDoTipo(cargo);
-  // ---------- o cartão do lugar (sobre o mapa) ----------
-  const tipicos = medianas && (medianas.medianaEleitos !== null || medianas.medianaTodos !== null) ? `Eleito típico: ${valorTipico(medianas.medianaEleitos)} · candidato típico: ${valorTipico(medianas.medianaTodos)}` : null;
-  const outraVariante = semCargo ? "Com todos" : `Sem ${quemTinha(cargo)}`;
-  const cartao = !uf ? null : posUnica ? {
-    rotulo: `${mun ? `Município · ${uf}` : "Estado"} · ${cargo}`,
+  // ---------- o número da resposta (o painel; a camada Dinheiro não tem cartão sobre o mapa) ----------
+  const resposta = !uf ? null : posUnica ? {
     valor: seloPosicao(posUnica), unidade: frasePosicao(posUnica).replace(/^O eleito era o /, "o eleito era o "),
-    linha: eleitoUnico ? `Eleito: ${nomeProprio(eleitoUnico.nome_urna ?? "")} (${eleitoUnico.partido ?? "?"}), ${eleitoUnico.patrimonio > 0 ? valorTipico(eleitoUnico.patrimonio) : "sem bens declarados"}` : null,
-    selos: [posUnica.eleitoTinha && posUnica.categoria !== "fora" ? `já era ${cargoMin}` : null].filter((x): x is string => !!x),
   } : vitoria ? {
-    rotulo: `Estado · ${cargo}`, valor: pc(vitoria.parte), unidade: `das cidades elegeram o candidato mais rico (${inteiro(vitoria.venceu)} de ${inteiro(vitoria.comparaveis)})`,
-    linha: tipicos,
-    selos: [vitoriaOutra?.parte != null ? `${outraVariante}: ${pc(vitoriaOutra.parte)}` : null, vitoria.categorias.fora ? `${inteiro(vitoria.categorias.fora)} cidades fora da conta` : null].filter((x): x is string => !!x),
+    valor: pc(vitoria.parte), unidade: `das cidades elegeram o candidato mais rico (${inteiro(vitoria.venceu)} de ${inteiro(vitoria.comparaveis)})`,
   } : metade ? {
-    rotulo: `${mun ? `Município · ${uf}` : "Estado"} · ${cargo}`, valor: pc(metade.parte), unidade: "dos eleitos estavam na metade mais rica dos candidatos",
-    linha: tipicos,
-    selos: [metadeOutra?.parte != null ? `${outraVariante}: ${pc(metadeOutra.parte)}` : null,
-      metade.eleitos ? `${pc(metade.semBens / metade.eleitos)} dos eleitos sem bens` : null, mun && metade.candidatos < MINIMO_CANDIDATOS ? "poucos candidatos" : null].filter((x): x is string => !!x),
+    valor: pc(metade.parte), unidade: "dos eleitos estavam na metade mais rica dos candidatos",
   } : null;
   const paramsMun = Object.fromEntries(new URL(href({ mun: null }), "http://x").searchParams);
   const chips = (ancora: string) => (
@@ -211,7 +198,7 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
   );
   const fraseFaixa = poucos && metade ? `Poucos candidatos (${cls!.length}): ${metade.rica} de ${metade.comBens} eleitos com bens estavam na metade mais rica; com tão poucas pessoas, as porcentagens mudam muito com uma a mais ou a menos.` : cidadeUnica ? (posUnica ? `${frasePosicao(posUnica)}${posUnica.eleitoTinha && posUnica.categoria !== "fora" ? ", e já era prefeito" : ""}.` : null) : fraseTopo(cargo, topoCom, topoSem, semCargo);
   const semPainel = mun && (!candidatos || !pessoas);
-  // o painel: a resposta (o número do cartão) à esquerda e, ao lado, os números curtos, quando houver algum
+  // o painel: a resposta à esquerda e, ao lado, os números curtos, quando houver algum
   const rotuloResposta = rotuloRespostaP2({ unica: !!posUnica, prefeitoEstado: !!vitoria });
   const temLado = !!medianas || !!topoNumero;
   // trocar de lista recarrega a página: a lista volta aberta
@@ -239,18 +226,6 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
             destaque={mun && centro ? { ibge: mun.cod_ibge, nome: lugar, x: centro[0], y: centro[1] } : undefined}
           />
           {!uf && <p className="palco-dica">Selecione um estado para ver cidade por cidade</p>}
-          <p className="carregando-mapa" aria-hidden="true">Carregando…</p>
-          {cartao && (
-            <aside className="cartao-lugar cartao-p2" aria-label={`Resumo: ${lugar}`}>
-              <a className="cartao-fechar" href={href(mun ? { mun: null } : { uf: null })} data-mapa="" aria-label={mun ? "Voltar ao estado" : "Voltar aos seis estados"}>×</a>
-              <p className="cartao-rotulo">{cartao.rotulo} · {ano}</p>
-              <h2>{lugar}</h2>
-              <p className="cartao-valor"><b>{cartao.valor}</b> {cartao.unidade}</p>
-              {cartao.linha && <p className="cartao-linha">{cartao.linha}</p>}
-              {degraus.length > 1 && <EscadaPatrimonio mini votos={porCandidato} degraus={degraus} titulo={porCandidato ? `Votos de cada candidato, do menos ao mais rico, ${lugar}` : `Taxa de eleição por grupo de patrimônio, ${lugar}`} />}
-              <p className="cartao-selos">{cartao.selos.map((s) => <span key={s}>{s}</span>)}</p>
-            </aside>
-          )}
         </div>
 
         <div className="palco-base">
@@ -283,10 +258,10 @@ export async function VisaoPatrimonio({ menu, sp }: { menu: ReactNode; sp: SP })
 
         {semPainel && <p className="card aviso s12">Não foi possível carregar os candidatos de {lugar} agora (a API não respondeu). Recarregue a página para tentar de novo.</p>}
 
-        {/* 1. a resposta: o mesmo número do cartão, uma frase, a escada e quem entra na conta (8 colunas) */}
+        {/* 1. a resposta: o número grande, uma frase, a escada e quem entra na conta (8 colunas) */}
         <section id="p2-escada" className={`bloco noite s12 p2-escada p2-resposta${temLado ? " din-oito" : ""}`}>
           <p className="din-kicker">{rotuloResposta}</p>
-          <p className="p2-grande"><b>{cartao?.valor ?? "—"}</b> <span>{cartao?.unidade ?? "sem dado neste recorte"}</span></p>
+          <p className="p2-grande"><b>{resposta?.valor ?? "—"}</b> <span>{resposta?.unidade ?? "sem dado neste recorte"}</span></p>
           <p className="p2-frase">{fraseFaixa ?? "Sem dados para a comparação."}</p>
           {degraus.length ? (
             <EscadaPatrimonio votos={porCandidato} degraus={degraus} titulo={porCandidato ? `Parte dos votos de cada candidato a ${cargoMin} em ${lugar}, ${ano}, do menos ao mais rico` : `Taxa de eleição por grupo de patrimônio declarado, ${cargoMin}, ${lugar}, ${umaPorEstado ? "2006 a 2022" : ano}`} />
