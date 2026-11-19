@@ -110,6 +110,7 @@ COPY (
 COPY (
     SELECT ano, cargo, uf, eleito, count(*) AS candidaturas,
            round(median(total_rec), 2) AS mediana_total, round(median(publico_rec), 2) AS mediana_publico,
+           round(median(total_rec - publico_rec), 2) AS mediana_privado,
            round(median(publico_rec / total_rec) FILTER (WHERE total_rec > 0), 4) AS mediana_pct_publico
     FROM cand_pct
     GROUP BY GROUPING SETS ((ano, cargo, uf, eleito), (ano, cargo, eleito))
